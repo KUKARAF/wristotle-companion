@@ -1,50 +1,33 @@
 package com.lazydevs.wristotle.transport
 
 import android.content.Context
-import android.content.IntentFilter
-import androidx.core.content.ContextCompat
 import com.lazydevs.wristotle.AppConstants
-import com.getpebble.android.kit.Constants
-import com.getpebble.android.kit.PebbleKit
-import com.getpebble.android.kit.util.PebbleDictionary
-import java.util.UUID
+import io.rebble.pebblekit2.client.DefaultPebbleSender
+import io.rebble.pebblekit2.common.model.PebbleDictionaryItem
 
 /**
- * Thin wrapper around PebbleKit that handles all Bluetooth communication
- * with the Wristotle watch app.
- *
- * All sends are fire-and-forget — PebbleKit queues them internally and
- * delivers ACKs/NACKs asynchronously, which we don't need to track here.
+ * Thin wrapper around DefaultPebbleSender that handles all communication
+ * with the Wristotle watch app. Call [close] when the owning component is destroyed.
  */
-class PebbleTransport(private val context: Context) {
+class PebbleTransport(context: Context) : java.io.Closeable {
 
-    /** Sends a query result string back to the watch as MESSAGE_KEY_companion_response. */
-    fun sendResponse(text: String) {
-        val dict = PebbleDictionary()
-        dict.addString(MessageKeys.COMPANION_RESPONSE, text)
-        PebbleKit.sendDataToPebble(context, AppConstants.PEBBLE_UUID, dict)
+    private val sender = DefaultPebbleSender(context)
+
+    suspend fun sendResponse(text: String) {
+        sender.sendDataToPebble(
+            AppConstants.PEBBLE_UUID,
+            mapOf(MessageKeys.COMPANION_RESPONSE to PebbleDictionaryItem.Text(text))
+        )
     }
 
-    /**
-     * Announces that the companion is alive by sending MESSAGE_KEY_companion_ready.
-     * Called on service start and again whenever the watch sends a companion_ping.
-     */
-    fun sendReady() {
-        val dict = PebbleDictionary()
-        // Signals "ready"
-        dict.addUint8(MessageKeys.COMPANION_READY, AppConstants.PebbleValues.READY_SIGNAL)
-        PebbleKit.sendDataToPebble(context, AppConstants.PEBBLE_UUID, dict)
+    suspend fun sendReady() {
+        sender.sendDataToPebble(
+            AppConstants.PEBBLE_UUID,
+            mapOf(MessageKeys.COMPANION_READY to PebbleDictionaryItem.UInt8(1u))
+        )
     }
 
-    /** Registers a receiver for inbound AppMessages from the watch. */
-    fun registerReceiver(receiver: PebbleKit.PebbleDataReceiver) {
-        // Manual registration via ContextCompat to avoid SecurityException on Android 14+ (API 34+)
-        val filter = IntentFilter(Constants.INTENT_APP_RECEIVE)
-        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
-    }
-
-    /** Unregisters a previously registered data receiver. */
-    fun unregisterReceiver(receiver: PebbleKit.PebbleDataReceiver) {
-        context.unregisterReceiver(receiver)
+    override fun close() {
+        sender.close()
     }
 }

@@ -1,17 +1,21 @@
 # Wristotle Companion
 
-Android companion app for the [Wristotle](../Wristotle) Pebble watch app. Runs as a foreground service and bridges the watch to Android phone capabilities — calls, SMS, and contacts — via PebbleKit AppMessage.
+Android companion app for the [Wristotle](../Wristotle) Pebble watch app. Runs as a foreground service and bridges the watch to Android phone capabilities — calls, SMS, and contacts — via PebbleKit2 AppMessage.
 
 ## How it works
 
 The watch sends a raw voice transcription as a `companion_query` message. The companion matches it against registered handlers (call, SMS) and sends back a `companion_response` string for the watch to display.
+
+Two services work together:
+- **`WatchMessageService`** — foreground service that shows the persistent notification and announces itself to the watch on startup.
+- **`PebbleListenerService`** — bound by rePebble when a message arrives; owns the handler registry and dispatches queries.
 
 ## Prerequisites
 
 - Android Studio
 - Android SDK (min API 24)
 - A Pebble watch with the [Wristotle](../Wristotle) app installed
-- The rePebble app (or Pebble app) running on the phone
+- The [rePebble](https://rebble.io) app running on the phone
 
 ## Build & run
 
@@ -33,6 +37,7 @@ The watch sends a raw voice transcription as a `companion_query` message. The co
 
 ```
 app/src/main/java/com/lazydevs/wristotle/
+  AppConstants.kt               # PEBBLE_UUID, notification constants
   MainActivity.kt               # Starts service, requests permissions
   handlers/
     ActionHandler.kt            # Interface: canHandle() + handle()
@@ -42,10 +47,11 @@ app/src/main/java/com/lazydevs/wristotle/
   phone/
     ContactsRepository.kt       # Contact lookup
   service/
-    WatchMessageService.kt      # Foreground service — PebbleKit receiver + dispatch
+    WatchMessageService.kt      # Foreground LifecycleService — notification + sendReady on start
+    PebbleListenerService.kt    # Receives watch messages, dispatches to handlers
   transport/
-    MessageKeys.kt              # AppMessage key indices
-    PebbleTransport.kt          # PebbleKit send/receive wrapper
+    MessageKeys.kt              # AppMessage key indices (sync with watch package.json)
+    PebbleTransport.kt          # DefaultPebbleSender wrapper
   ui/
     MainScreen.kt               # Permission status (Compose)
     MainViewModel.kt            # Permission state
@@ -54,7 +60,7 @@ app/src/main/java/com/lazydevs/wristotle/
 ## Adding a new capability
 
 1. Create `handlers/YourHandler.kt` implementing `ActionHandler`.
-2. Register it in `WatchMessageService.onCreate()`:
+2. Register it in `PebbleListenerService.onCreate()`:
    ```kotlin
    registry = HandlerRegistry(listOf(
        CallHandler(this, contacts),

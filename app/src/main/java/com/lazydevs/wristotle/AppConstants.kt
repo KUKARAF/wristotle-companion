@@ -15,8 +15,4 @@ object AppConstants {
         const val CHANNEL_ID = "wristotle_service"
     }
 
-    /** Values used in Pebble AppMessage communication. */
-    object PebbleValues {
-        const val READY_SIGNAL: Byte = 1
-    }
 }

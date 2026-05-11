@@ -13,7 +13,10 @@ class HandlerRegistry(private val handlers: List<ActionHandler>) {
      * Finds the first matching handler and calls its [ActionHandler.handle].
      * Returns "Unknown command" if no handler claims the query.
      */
-    suspend fun dispatch(query: String): String =
+    suspend fun dispatch(query: String): String = try {
         handlers.firstOrNull { it.canHandle(query) }?.handle(query)
-            ?: "Unknown command"
+            ?: "Unknown command: $query"
+    } catch (e: Exception) {
+        "Error: ${e.localizedMessage ?: "Action failed"}"
+    }
 }
