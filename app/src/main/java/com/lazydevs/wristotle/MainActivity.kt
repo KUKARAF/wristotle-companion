@@ -41,7 +41,12 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        startForegroundService(Intent(this, WatchMessageService::class.java))
+        val intent = Intent(this, WatchMessageService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
         vm.refreshPermissions()
     }
 

@@ -3,11 +3,14 @@ package com.lazydevs.wristotle.service
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.getpebble.android.kit.PebbleKit
 import com.getpebble.android.kit.util.PebbleDictionary
+import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.handlers.CallHandler
 import com.lazydevs.wristotle.handlers.HandlerRegistry
@@ -32,11 +35,6 @@ import kotlinx.coroutines.launch
  */
 class WatchMessageService : LifecycleService() {
 
-    companion object {
-        private const val NOTIFICATION_ID = 1
-        private const val CHANNEL_ID      = "wristotle_service"
-    }
-
     private lateinit var transport: PebbleTransport
     private lateinit var registry: HandlerRegistry
     private var dataReceiver: PebbleKit.PebbleDataReceiver? = null
@@ -44,7 +42,16 @@ class WatchMessageService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification())
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                AppConstants.Notifications.SERVICE_NOTIFICATION_ID,
+                buildNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            startForeground(AppConstants.Notifications.SERVICE_NOTIFICATION_ID, buildNotification())
+        }
 
         transport = PebbleTransport(this)
 
@@ -73,7 +80,7 @@ class WatchMessageService : LifecycleService() {
      *                   asynchronously on [Dispatchers.IO] to avoid blocking the main thread.
      */
     private fun registerPebbleReceiver() {
-        dataReceiver = object : PebbleKit.PebbleDataReceiver(PebbleTransport.PEBBLE_UUID) {
+        dataReceiver = object : PebbleKit.PebbleDataReceiver(AppConstants.PEBBLE_UUID) {
             override fun receiveData(context: Context, transactionId: Int, data: PebbleDictionary) {
                 // ACK every message immediately so the watch doesn't retry.
                 PebbleKit.sendAckToPebble(context, transactionId)
@@ -93,18 +100,20 @@ class WatchMessageService : LifecycleService() {
         transport.registerReceiver(dataReceiver!!)
     }
 
-    private fun buildNotification() = NotificationCompat.Builder(this, CHANNEL_ID)
+    private fun buildNotification() = NotificationCompat.Builder(this, AppConstants.Notifications.CHANNEL_ID)
         .setContentTitle(getString(R.string.service_notification_title))
         .setContentText(getString(R.string.service_notification_text))
         .setSmallIcon(R.drawable.ic_launcher_foreground)
         .build()
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            getString(R.string.service_channel_name),
-            NotificationManager.IMPORTANCE_LOW
-        )
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                AppConstants.Notifications.CHANNEL_ID,
+                getString(R.string.service_channel_name),
+                NotificationManager.IMPORTANCE_LOW
+            )
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
     }
 }

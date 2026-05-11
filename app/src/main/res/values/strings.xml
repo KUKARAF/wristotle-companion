@@ -3,4 +3,23 @@
     <string name="service_channel_name">Watch Listener</string>
     <string name="service_notification_title">Wristotle</string>
     <string name="service_notification_text">Listening for watch commands</string>
+
+    <!-- Main Screen -->
+    <string name="main_screen_title">Wristotle</string>
+    <string name="status_card_title">Watch Listener</string>
+    <string name="status_active">Active — ready to handle watch commands</string>
+    <string name="status_waiting">Waiting for permissions</string>
+    <string name="permissions_header">Permissions</string>
+    <string name="grant_permissions_button">Grant Permissions</string>
+    <string name="usage_instructions">Say \"call [name]\" or \"text [name] [message]\" on your Pebble.</string>
+
+    <string name="perm_contacts_label">Read Contacts</string>
+    <string name="perm_contacts_desc">Required to look up contacts by name</string>
+    <string name="perm_calls_label">Make Calls</string>
+    <string name="perm_calls_desc">Required to dial from the watch</string>
+    <string name="perm_sms_label">Send SMS</string>
+    <string name="perm_sms_desc">Required to text from the watch</string>
+
+    <string name="content_desc_granted">Granted</string>
+    <string name="content_desc_denied">Denied</string>
 </resources>
