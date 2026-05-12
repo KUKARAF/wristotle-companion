@@ -1,8 +1,11 @@
 package com.lazydevs.wristotle.service
 
+import android.util.Log
 import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.handlers.CallHandler
+import com.lazydevs.wristotle.handlers.CancelReminderHandler
 import com.lazydevs.wristotle.handlers.HandlerRegistry
+import com.lazydevs.wristotle.handlers.ReminderHandler
 import com.lazydevs.wristotle.handlers.SmsHandler
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.transport.MessageKeys
@@ -26,15 +29,20 @@ class PebbleListenerService : BasePebbleListenerService() {
 
     private lateinit var transport: PebbleTransport
     private lateinit var registry: HandlerRegistry
+    private lateinit var reminderHandler: ReminderHandler
+    private lateinit var cancelHandler: CancelReminderHandler
 
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "Service bound by rePebble")
         transport = PebbleTransport(this)
         val contacts = ContactsRepository(this)
         registry = HandlerRegistry(listOf(
             CallHandler(this, contacts),
             SmsHandler(this, contacts),
         ))
+        reminderHandler = ReminderHandler(this, transport)
+        cancelHandler = CancelReminderHandler(this, transport)
     }
 
     override fun onDestroy() {
@@ -47,25 +55,50 @@ class PebbleListenerService : BasePebbleListenerService() {
         data: PebbleDictionary,
         watch: WatchIdentifier,
     ): ReceiveResult {
+        Log.d(TAG, "Message received from $watchappUUID: $data")
         if (watchappUUID != AppConstants.PEBBLE_UUID) return ReceiveResult.Ack
 
         if (data[MessageKeys.COMPANION_PING] != null) {
+            Log.d(TAG, "Received COMPANION_PING, sending READY")
             transport.sendReady()
+            return ReceiveResult.Ack
+        }
+
+        val reminderQuery = (data[MessageKeys.REMINDER_QUERY] as? PebbleDictionaryItem.Text)?.value
+        if (reminderQuery != null) {
+            Log.d(TAG, "Reminder query: $reminderQuery")
+            val result = reminderHandler.handle(reminderQuery)
+            transport.sendReminderResult(result)
+            return ReceiveResult.Ack
+        }
+
+        val cancelQuery = (data[MessageKeys.CANCEL_QUERY] as? PebbleDictionaryItem.Text)?.value
+        if (cancelQuery != null) {
+            Log.d(TAG, "Cancel query: $cancelQuery")
+            val result = cancelHandler.handle(cancelQuery)
+            transport.sendCancelResult(result)
             return ReceiveResult.Ack
         }
 
         val query = (data[MessageKeys.COMPANION_QUERY] as? PebbleDictionaryItem.Text)?.value
             ?: return ReceiveResult.Ack
 
+        Log.d(TAG, "Dispatching query: $query")
         val response = registry.dispatch(query)
+        Log.d(TAG, "Sending response: $response")
         transport.sendResponse(response)
 
         return ReceiveResult.Ack
     }
 
     override fun onAppOpened(watchappUUID: UUID, watch: WatchIdentifier) {
+        Log.d(TAG, "App opened: $watchappUUID")
         if (watchappUUID == AppConstants.PEBBLE_UUID) {
             coroutineScope.launch { transport.sendReady() }
         }
+    }
+
+    companion object {
+        private const val TAG = "PebbleListenerService"
     }
 }
