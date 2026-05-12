@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +25,7 @@ class WatchMessageService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "Service created")
         createNotificationChannel()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -37,12 +39,21 @@ class WatchMessageService : LifecycleService() {
         }
 
         transport = PebbleTransport(this)
-        lifecycleScope.launch { transport.sendReady() }
+        lifecycleScope.launch {
+            Log.d(TAG, "Sending COMPANION_READY on startup...")
+            val result = transport.sendReady()
+            Log.d(TAG, "sendReady result: $result")
+        }
     }
 
     override fun onDestroy() {
+        Log.d(TAG, "Service destroyed")
         transport.close()
         super.onDestroy()
+    }
+
+    companion object {
+        private const val TAG = "WatchMessageService"
     }
 
     private fun buildNotification() = NotificationCompat.Builder(this, AppConstants.Notifications.CHANNEL_ID)
