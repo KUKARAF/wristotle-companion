@@ -101,7 +101,7 @@ Build the speech-recognition library module on its own:
 |--------------------|---------------------------------------------------------------------------------------|
 | `:app`             | The companion app — services, handlers, UI, `WristotleApplication`                    |
 | `:speech`          | System-wide `android.speech.RecognitionService` + audio sources + Recognizer interface |
-| `:speech-whisper`  | whisper.cpp JNI backend (Phase 2 in progress — 2a/2b done; 2c/2d pending) |
+| `:speech-whisper`  | whisper.cpp JNI backend (Phase 2 in progress — 2a/2b/2c done; 2d pending) |
 
 The recognition backend is swappable via a single line in `WristotleApplication.onCreate`:
 
@@ -160,6 +160,9 @@ speech-whisper/                  # Phase 2 (in progress)
     whisper.cpp/                 # git submodule, pinned to v1.8.4
   src/main/java/com/lazydevs/wristotle/speech/whisper/
     WhisperNative.kt             # external fun declarations matching the JNI
+    ModelCatalog.kt              # known Whisper models + HuggingFace URLs
+    ModelStorage.kt              # filesDir/whisper-models/ + active model id
+    ModelDownloader.kt           # Flow<DownloadEvent>, resumable HTTP, throttled progress
 ```
 
 ### Adding a new command handler
@@ -193,9 +196,16 @@ More specific prefixes go first — `HandlerRegistry` returns the first match.
 | `CALL_PHONE`                   | Place calls                                            |
 | `SEND_SMS`                     | Send text messages                                     |
 | `RECORD_AUDIO`                 | Recognition service capture (mic mode + pipe fallback) |
+| `INTERNET`                     | Downloading Whisper model files from HuggingFace       |
 | `POST_NOTIFICATIONS`           | Foreground service notification (Android 13+)          |
 | `FOREGROUND_SERVICE`           | Long-running watch bridge                              |
 | `FOREGROUND_SERVICE_DATA_SYNC` | FGS type required on Android 14+                       |
+
+> **GrapheneOS / privacy-ROM note:** `INTERNET` is auto-granted on stock Android but
+> may be denied by default on GrapheneOS and similar ROMs that surface it as a runtime
+> permission. If model downloads fail with "unable to resolve host", grant it via
+> *Settings → Apps → Wristotle Companion → Permissions → Network*, or from ADB:
+> `adb shell pm grant com.lazydevs.wristotle android.permission.INTERNET`.
 
 ### Watch dictation quirk
 
@@ -207,7 +217,7 @@ The `:speech-whisper` module brings real on-device transcription:
 
 - **2a — module + NDK/CMake/JNI pipeline** ✅
 - **2b — whisper.cpp v1.8.4 submodule + JNI bridge (`loadModel`, `transcribe`, `freeModel`)** ✅
-- **2c — model picker UI + on-demand download manager**
+- **2c — model picker UI + on-demand download manager (`ModelCatalog`, `ModelStorage`, `ModelDownloader`, `WhisperModelsCard`)** ✅
 - **2d — `WhisperRecognizer` implementing `Recognizer`, wired into `WristotleApplication`**
 
 Once 2d lands, the single line in `WristotleApplication.onCreate` switches `Recognizers.provider` from `StubRecognizer` to the Whisper-backed one and the rest of the stack is unchanged.
