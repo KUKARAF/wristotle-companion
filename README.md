@@ -42,12 +42,18 @@ The phone displays a persistent low-priority notification while the bridge is ac
 
 Once enabled, anything on your phone that uses Android's `SpeechRecognizer` (keyboard mic buttons, voice search, etc.) will transcribe via Wristotle.
 
-1. In Wristotle Companion, scroll to the **Voice Input (Whisper)** card.
-2. Tap **Copy ADB activation command**.
-3. From a computer with this device connected via USB and ADB enabled, paste and run the copied command in a terminal.
-4. To revert later, run a similar ADB command that points the setting back at your previous provider.
+The Voice Input (Whisper) card in the app offers two paths:
 
-The activation requires the `WRITE_SECURE_SETTINGS` signature-level permission, which is why ADB is needed — there's no in-app shortcut.
+**Open in Settings (works on a few ROMs only)** — opens Android's `ACTION_VOICE_INPUT_SETTINGS` intent. On older LineageOS and a few forks this lands you on the actual voice-input picker where Wristotle appears alongside other recognizers. **On most devices (stock Pixel, Samsung, current GrapheneOS) this re-routes to the Digital Assistant picker — a separate setting that does *not* list Wristotle.** If that happens, use the ADB path below.
+
+**Copy ADB activation command (universal fallback)** — copies a one-liner to the clipboard. From a computer with this device connected via USB and ADB enabled, paste and run it. To revert later, run a similar command pointing the setting at your previous provider.
+
+```bash
+adb shell settings put secure voice_recognition_service \
+    com.lazydevs.wristotle/com.lazydevs.wristotle.speech.service.WhisperRecognitionService
+```
+
+The activation requires the `WRITE_SECURE_SETTINGS` signature-level permission, which is why ADB is needed — there's no in-app shortcut on stock Android.
 
 > **Note:** before transcription works you need to open the **Whisper Models** card in the app and download a model. `tiny.en` (75 MB) is the recommended starting point — fastest, English-only, fine for short watch commands. The first model you download is set active automatically.
 

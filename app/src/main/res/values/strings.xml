@@ -30,6 +30,10 @@
     <string name="copy_adb_command_button">Copy ADB activation command</string>
     <string name="adb_command_copied_toast">Command copied. Run it from a computer with ADB connected to this device.</string>
     <string name="voice_input_instructions">Activation requires WRITE_SECURE_SETTINGS, a signature-level permission. Run the copied command from a terminal on a computer connected to this device via ADB.</string>
+    <string name="voice_input_try_settings_button">Open in Settings</string>
+    <string name="voice_input_settings_caveat">Heads up: on most devices this opens the Digital Assistant picker, which is a separate setting that won\'t list Wristotle. Only some ROMs (older LineageOS, certain forks) wire it up to the actual voice-input picker. If you land in the Digital Assistant picker and don\'t see the Wristotle app in the options, use the ADB command below.</string>
+    <string name="voice_input_settings_unavailable_toast">This device doesn\'t expose a voice-input picker in Settings. Use the ADB command instead.</string>
+    <string name="voice_input_method_divider">Or</string>
 
     <!-- Whisper Models section -->
     <string name="whisper_models_header">Whisper Models</string>

@@ -1,8 +1,11 @@
 package com.lazydevs.wristotle.ui
 
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -140,6 +143,30 @@ private fun VoiceInputCard(
                         else MaterialTheme.colorScheme.error,
             )
             if (!isDefaultProvider) {
+                // Path 1: try the system picker. Works on ROMs that wire the
+                // ACTION_VOICE_INPUT_SETTINGS intent up (LineageOS, GrapheneOS,
+                // etc.); falls through to a toast on stock Pixel / Samsung.
+                OutlinedButton(
+                    onClick = { openVoiceInputSettings(context) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.voice_input_try_settings_button))
+                }
+                Text(
+                    stringResource(R.string.voice_input_settings_caveat),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Text(
+                    stringResource(R.string.voice_input_method_divider),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                // Path 2: ADB. The system permission required to flip this
+                // setting is signature-level so a regular app can't do it
+                // programmatically — ADB is the universal fallback.
                 Text(
                     stringResource(R.string.voice_input_instructions),
                     style = MaterialTheme.typography.bodySmall,
@@ -153,6 +180,21 @@ private fun VoiceInputCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * Tries to open the system's voice-input picker. The intent is documented but
+ * only wired up on a subset of Android distributions — on the others we surface
+ * a toast pointing the user to the ADB path.
+ */
+private fun openVoiceInputSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, R.string.voice_input_settings_unavailable_toast, Toast.LENGTH_LONG).show()
     }
 }
 
