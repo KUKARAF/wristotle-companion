@@ -31,6 +31,7 @@ import com.lazydevs.wristotle.R
 @Composable
 fun MainScreen(
     vm: MainViewModel,
+    modelsVm: WhisperModelsViewModel,
     onRequestPermissions: () -> Unit,
 ) {
     val perms by vm.permissions.collectAsState()
@@ -101,6 +102,8 @@ fun MainScreen(
                 isDefaultProvider = isDefaultVoiceProvider,
                 adbCommand = vm.adbActivationCommand,
             )
+
+            WhisperModelsCard(vm = modelsVm)
 
             Text(
                 stringResource(R.string.usage_instructions),

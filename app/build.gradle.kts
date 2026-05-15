@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.prettytime.nlp)
     implementation(libs.kotlinx.coroutines.android)
     implementation(project(":speech"))
+    implementation(project(":speech-whisper"))
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

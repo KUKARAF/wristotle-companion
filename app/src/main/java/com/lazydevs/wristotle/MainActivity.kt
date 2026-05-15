@@ -12,6 +12,7 @@ import androidx.activity.viewModels
 import com.lazydevs.wristotle.service.WatchMessageService
 import com.lazydevs.wristotle.ui.MainScreen
 import com.lazydevs.wristotle.ui.MainViewModel
+import com.lazydevs.wristotle.ui.WhisperModelsViewModel
 import com.lazydevs.wristotle.ui.theme.WristotleTheme
 
 /**
@@ -25,6 +26,7 @@ import com.lazydevs.wristotle.ui.theme.WristotleTheme
 class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
+    private val modelsVm: WhisperModelsViewModel by viewModels()
 
     // Registered once; result arrives asynchronously and triggers a permission refresh.
     private val permissionRequest = registerForActivityResult(
@@ -37,7 +39,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             WristotleTheme {
-                MainScreen(vm = vm, onRequestPermissions = ::requestPermissions)
+                MainScreen(
+                    vm = vm,
+                    modelsVm = modelsVm,
+                    onRequestPermissions = ::requestPermissions,
+                )
             }
         }
 
@@ -55,6 +61,7 @@ class MainActivity : ComponentActivity() {
         // Refresh in case the user granted/revoked permissions in system settings
         // while the app was in the background.
         vm.refreshPermissions()
+        modelsVm.refresh()
     }
 
     private fun requestPermissions() {
