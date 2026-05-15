@@ -59,7 +59,7 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_loadModel(
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
     JNIEnv* env, jobject /*this*/,
-    jlong handle, jshortArray jsamples, jstring jlang) {
+    jlong handle, jshortArray jsamples, jstring jlang, jint nThreads) {
 
     whisper_context* ctx = reinterpret_cast<whisper_context*>(handle);
     if (ctx == nullptr) {
@@ -99,10 +99,25 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
     wparams.print_timestamps = false;
     wparams.translate        = false;
     wparams.language         = lang.c_str();
-    wparams.n_threads        = 4;        // tune later via JNI param if needed
-    wparams.single_segment   = false;
+    // Thread count is decided by the caller (see WhisperRecognizer.kt); clamp
+    // defensively so a bogus value can't crash the inference.
+    wparams.n_threads        = nThreads > 0 ? nThreads : 4;
+    // Treat each transcribe() as one logical utterance with no carry-over from
+    // any previous call. Skip whisper's internal segment-splitting since
+    // SpeechRecognizer consumers expect a single transcript per session.
+    wparams.single_segment   = true;
+    wparams.no_context       = true;
+    // Adaptive encoder attention window. Whisper's full 30s context (1500 mel
+    // frames) is wasted on short utterances — trim to ~10s (768) when the
+    // input fits, fall back to the default (0 → 1500) for anything longer.
+    // Drops encoder compute by roughly half on the typical short utterance
+    // without affecting accuracy.
+    constexpr float SHORT_AUDIO_THRESHOLD_SECS = 8.0f;
+    const float audio_seconds = static_cast<float>(n) / 16000.0f;
+    wparams.audio_ctx        = (audio_seconds <= SHORT_AUDIO_THRESHOLD_SECS) ? 768 : 0;
 
-    LOGI("transcribe: %d samples, lang=%s", static_cast<int>(n), lang.c_str());
+    LOGI("transcribe: %d samples, lang=%s, threads=%d, audio_ctx=%d",
+         static_cast<int>(n), lang.c_str(), wparams.n_threads, wparams.audio_ctx);
     if (whisper_full(ctx, wparams, pcm32.data(), static_cast<int>(pcm32.size())) != 0) {
         throw_runtime(env, "whisper_full returned non-zero");
         return nullptr;

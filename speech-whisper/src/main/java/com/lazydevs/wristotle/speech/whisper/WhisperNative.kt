@@ -39,10 +39,30 @@ internal object WhisperNative {
      *                to `float32` internally.
      * @param langCode ISO 639-1 language code (e.g. `"en"`). Empty or `null`
      *                 falls back to English.
+     * @param nThreads number of CPU threads for inference. The caller picks the
+     *                 right value for the device (see [defaultThreadCount]); values
+     *                 ≤0 fall back to a built-in safe default.
      * @return concatenated transcript across all segments.
      * @throws RuntimeException on inference failure.
      */
-    external fun transcribe(handle: Long, samples: ShortArray, langCode: String?): String
+    external fun transcribe(
+        handle: Long,
+        samples: ShortArray,
+        langCode: String?,
+        nThreads: Int,
+    ): String
+
+    /**
+     * Picks an inference thread count appropriate for the current device.
+     *
+     * Heuristic: `availableProcessors() / 2 + 1`, clamped to `[2, 8]`. On a
+     * heterogeneous ARM phone this biases toward the big/mid cores and leaves
+     * room for the OS scheduler — adding little cores beyond that usually hurts
+     * matmul-heavy workloads more than it helps. A quad-core phone gets 3
+     * threads; an 8-core flagship gets 5; very wide chips cap at 8.
+     */
+    fun defaultThreadCount(): Int =
+        (Runtime.getRuntime().availableProcessors() / 2 + 1).coerceIn(2, 8)
 
     /**
      * Releases a model handle returned by [loadModel]. Safe to call with a
