@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
             add(Manifest.permission.READ_CONTACTS)
             add(Manifest.permission.CALL_PHONE)
             add(Manifest.permission.SEND_SMS)
+            add(Manifest.permission.RECORD_AUDIO)
             // POST_NOTIFICATIONS is only a runtime permission on Android 13+.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 add(Manifest.permission.POST_NOTIFICATIONS)

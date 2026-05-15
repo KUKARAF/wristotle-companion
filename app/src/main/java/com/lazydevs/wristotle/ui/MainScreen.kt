@@ -1,6 +1,12 @@
 package com.lazydevs.wristotle.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -10,14 +16,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 
 /**
- * Root screen showing service status and per-permission grant state.
+ * Root screen showing watch-bridge permission state and voice input activation.
  *
- * @param vm                  Provides the current [PermissionState] via a [StateFlow].
+ * @param vm                   Provides current state via StateFlows.
  * @param onRequestPermissions Triggered when the user taps the "Grant Permissions" button.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,7 +34,9 @@ fun MainScreen(
     onRequestPermissions: () -> Unit,
 ) {
     val perms by vm.permissions.collectAsState()
-    val allGranted = perms.contacts && perms.callPhone && perms.sendSms
+    val isDefaultVoiceProvider by vm.isDefaultVoiceProvider.collectAsState()
+    val watchPermsGranted = perms.contacts && perms.callPhone && perms.sendSms
+    val allPermsGranted = watchPermsGranted && perms.recordAudio
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.main_screen_title)) }) }
@@ -36,19 +45,20 @@ fun MainScreen(
             modifier = Modifier
                 .padding(padding)
                 .padding(16.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Status card — green when all permissions are granted, red otherwise.
+            // Watch-listener status card.
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(stringResource(R.string.status_card_title), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        if (allGranted) stringResource(R.string.status_active)
+                        if (watchPermsGranted) stringResource(R.string.status_active)
                         else stringResource(R.string.status_waiting),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (allGranted) MaterialTheme.colorScheme.primary
+                        color = if (watchPermsGranted) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.error
                     )
                 }
@@ -72,8 +82,13 @@ fun MainScreen(
                 stringResource(R.string.perm_sms_desc),
                 perms.sendSms
             )
+            PermissionRow(
+                stringResource(R.string.perm_record_audio_label),
+                stringResource(R.string.perm_record_audio_desc),
+                perms.recordAudio
+            )
 
-            if (!allGranted) {
+            if (!allPermsGranted) {
                 Button(
                     onClick = onRequestPermissions,
                     modifier = Modifier.fillMaxWidth()
@@ -82,7 +97,10 @@ fun MainScreen(
                 }
             }
 
-            Spacer(Modifier.weight(1f))
+            VoiceInputCard(
+                isDefaultProvider = isDefaultVoiceProvider,
+                adbCommand = vm.adbActivationCommand,
+            )
 
             Text(
                 stringResource(R.string.usage_instructions),
@@ -94,11 +112,55 @@ fun MainScreen(
 }
 
 /**
- * A single row showing a permission's label, description, and grant status icon.
- *
- * @param label       Short name shown in the primary text slot.
- * @param description One-line explanation shown in the secondary text slot.
- * @param granted     Whether the permission is currently granted.
+ * Voice-input activation card: shows whether this app is the system's default
+ * voice recognition provider and offers a one-tap "copy ADB command" button.
+ */
+@Composable
+private fun VoiceInputCard(
+    isDefaultProvider: Boolean,
+    adbCommand: String,
+) {
+    val context = LocalContext.current
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.voice_input_header), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.voice_input_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                if (isDefaultProvider) stringResource(R.string.voice_input_default_active)
+                else stringResource(R.string.voice_input_default_inactive),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isDefaultProvider) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error,
+            )
+            if (!isDefaultProvider) {
+                Text(
+                    stringResource(R.string.voice_input_instructions),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = { copyToClipboard(context, adbCommand) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.copy_adb_command_button))
+                }
+            }
+        }
+    }
+}
+
+private fun copyToClipboard(context: Context, text: String) {
+    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    cm.setPrimaryClip(ClipData.newPlainText("ADB activation command", text))
+    Toast.makeText(context, R.string.adb_command_copied_toast, Toast.LENGTH_LONG).show()
+}
+
+/**
+ * A single row showing a permission's label, description, and grant icon.
  */
 @Composable
 private fun PermissionRow(label: String, description: String, granted: Boolean) {

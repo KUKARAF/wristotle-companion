@@ -19,6 +19,17 @@
     <string name="perm_calls_desc">Required to dial from the watch</string>
     <string name="perm_sms_label">Send SMS</string>
     <string name="perm_sms_desc">Required to text from the watch</string>
+    <string name="perm_record_audio_label">Record Audio</string>
+    <string name="perm_record_audio_desc">Required for speech recognition</string>
+
+    <!-- Voice Input section -->
+    <string name="voice_input_header">Voice Input (Whisper)</string>
+    <string name="voice_input_desc">Provides system-wide speech recognition. Any app on the device that calls Android\'s SpeechRecognizer can transcribe through Wristotle.</string>
+    <string name="voice_input_default_active">Active — Wristotle is the system voice input provider</string>
+    <string name="voice_input_default_inactive">Not set as the default voice input</string>
+    <string name="copy_adb_command_button">Copy ADB activation command</string>
+    <string name="adb_command_copied_toast">Command copied. Run it from a computer with ADB connected to this device.</string>
+    <string name="voice_input_instructions">Activation requires WRITE_SECURE_SETTINGS, a signature-level permission. Run the copied command from a terminal on a computer connected to this device via ADB.</string>
 
     <string name="content_desc_granted">Granted</string>
     <string name="content_desc_denied">Denied</string>

@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Wristotle"
 include(":app")
+include(":speech")
