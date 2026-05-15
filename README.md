@@ -1,70 +1,203 @@
 # Wristotle Companion
 
-Android companion app for the [Wristotle](../Wristotle) Pebble watch app. Runs as a foreground service and bridges the watch to Android phone capabilities — calls, SMS, and contacts — via PebbleKit2 AppMessage.
+Android companion app for the [Wristotle](../Wristotle) Pebble watch app. Bridges your watch to phone capabilities — calls, SMS, contacts, reminders — and ships a system-wide on-device speech recognition provider you can plug into.
 
-## How it works
+---
 
-The watch sends a raw voice transcription as a `companion_query` message. The companion matches it against registered handlers (call, SMS) and sends back a `companion_response` string for the watch to display.
+## For users
 
-Two services work together:
-- **`WatchMessageService`** — foreground service that shows the persistent notification and announces itself to the watch on startup.
-- **`PebbleListenerService`** — bound by rePebble when a message arrives; owns the handler registry and dispatches queries.
+### What it does
 
-## Prerequisites
+Voice commands you dictate on your watch route through this companion app and execute on your phone:
 
-- Android Studio
-- Android SDK (min API 24)
-- A Pebble watch with the [Wristotle](../Wristotle) app installed
-- The [rePebble](https://rebble.io) app running on the phone
+| Say on the watch                         | What happens on the phone        |
+|------------------------------------------|----------------------------------|
+| "Call [name]" / "Dial [name]"            | Places a call to that contact    |
+| "Text [name] [message]"                  | Sends an SMS to that contact     |
+| "Remind me to [thing] at [time]"         | Creates a watch-side reminder    |
+| "Cancel reminder"                        | Cancels the most recent reminder |
 
-## Build & run
+Beyond watch dictation, Wristotle Companion can also be set as Android's *system* voice input provider, so any app on the device (keyboards, search bars, third-party apps) transcribes through the same on-device engine.
 
-1. Clone this repo and open in Android Studio.
-2. Build and install on your Android device.
-3. Launch the app and grant the requested permissions (Contacts, Phone, SMS, Notifications).
-4. The service starts automatically and stays running in the background.
+### What you need
 
-## Permissions
+- An Android phone running Android 7.0 (API 24) or newer
+- A Pebble watch with the [Wristotle](../Wristotle) watch app installed
+- A Pebble Android companion app already running on the phone (e.g. [microPebble](https://github.com/matejdro/micropebble) or [rePebble](https://rebble.io)) — this is what actually talks Bluetooth to the watch; Wristotle Companion plugs into it
 
-| Permission | Purpose |
-|-----------|---------|
-| `READ_CONTACTS` | Contact lookup by name |
-| `CALL_PHONE` | Place calls |
-| `SEND_SMS` | Send text messages |
-| `POST_NOTIFICATIONS` | Foreground service notification (Android 13+) |
+### Install
 
-## Project structure
+Grab the latest APK from [Releases](https://codeberg.org/kchinnasamy/wristotle-companion/releases) and side-load it, or build from source (see *For developers* below).
+
+### First-time setup
+
+1. Open Wristotle Companion.
+2. Tap **Grant Permissions** and accept Contacts, Phone, SMS, Microphone, and Notifications.
+3. Make sure your watch is paired and the [Wristotle](../Wristotle) watch app is installed.
+4. Open Wristotle on the watch, press Select, and dictate one of the commands above.
+
+The phone displays a persistent low-priority notification while the bridge is active — that's the foreground service that keeps the connection alive.
+
+### Optional: use Wristotle as system-wide voice input
+
+Once enabled, anything on your phone that uses Android's `SpeechRecognizer` (keyboard mic buttons, voice search, etc.) will transcribe via Wristotle.
+
+1. In Wristotle Companion, scroll to the **Voice Input (Whisper)** card.
+2. Tap **Copy ADB activation command**.
+3. From a computer with this device connected via USB and ADB enabled, paste and run the copied command in a terminal.
+4. To revert later, run a similar ADB command that points the setting back at your previous provider.
+
+The activation requires the `WRITE_SECURE_SETTINGS` signature-level permission, which is why ADB is needed — there's no in-app shortcut.
+
+> **Note:** the current build ships a stub recognizer that returns `"hello world"` for any input. Real on-device Whisper transcription is Phase 2, in progress.
+
+---
+
+## For developers
+
+### Prerequisites
+
+- **Android Studio** Iguana or later (Compose BOM 2026.02 baseline)
+- **Android SDK** with platform 36
+- **NDK** ≥ 30.0.14904198 — install via *Tools → SDK Manager → SDK Tools → NDK (Side by Side)*
+- **CMake** — same dialog, separate install (NDK alone is not enough)
+- **JDK 11+**
+
+### Clone and build
+
+```bash
+git clone https://codeberg.org/kchinnasamy/wristotle-companion.git
+cd wristotle-companion
+./gradlew :app:assembleDebug
+```
+
+Build outputs: `app/build/outputs/apk/debug/`.
+
+Install on a connected device:
+
+```bash
+./gradlew :app:installDebug
+```
+
+Build the speech-recognition library module on its own:
+
+```bash
+./gradlew :speech-whisper:assembleDebug
+```
+
+### Modules
+
+| Module             | Role                                                                                  |
+|--------------------|---------------------------------------------------------------------------------------|
+| `:app`             | The companion app — services, handlers, UI, `WristotleApplication`                    |
+| `:speech`          | System-wide `android.speech.RecognitionService` + audio sources + Recognizer interface |
+| `:speech-whisper`  | Phase 2 (in progress) whisper.cpp JNI backend — currently a hello-world toolchain proof |
+
+The recognition backend is swappable via a single line in `WristotleApplication.onCreate`:
+
+```kotlin
+Recognizers.provider = { ctx -> WhisperRecognizer(ctx, modelPath = ...) }
+```
+
+The `:speech` module and `WhisperRecognitionService` never reference a concrete recognizer.
+
+### Project structure
 
 ```
 app/src/main/java/com/lazydevs/wristotle/
   AppConstants.kt               # PEBBLE_UUID, notification constants
-  MainActivity.kt               # Starts service, requests permissions
+  MainActivity.kt               # Starts foreground service, requests permissions
+  WristotleApplication.kt       # Owns shared PebbleTransport + Recognizers provider hook
   handlers/
     ActionHandler.kt            # Interface: canHandle() + handle()
     HandlerRegistry.kt          # Dispatches to first matching handler
     CallHandler.kt              # "call/dial [name]"
     SmsHandler.kt               # "text/message [name] [body]"
+    ReminderHandler.kt          # reminder_query → insertTimelinePin
+    CancelReminderHandler.kt    # cancel_query → deleteTimelinePin via PinStore
+    TimeParser.kt               # prettytime-nlp + word-number normalisation
+    PinStore.kt                 # SharedPreferences ring buffer of recent pin IDs
   phone/
-    ContactsRepository.kt       # Contact lookup
+    ContactsRepository.kt       # Contact lookup on Dispatchers.IO
   service/
-    WatchMessageService.kt      # Foreground LifecycleService — notification + sendReady on start
-    PebbleListenerService.kt    # Receives watch messages, dispatches to handlers
+    WatchMessageService.kt      # Foreground LifecycleService — keep-alive + COMPANION_READY ping
+    PebbleListenerService.kt    # Bound by the Pebble companion; dispatches to handlers
   transport/
     MessageKeys.kt              # AppMessage key indices (sync with watch package.json)
-    PebbleTransport.kt          # DefaultPebbleSender wrapper
+    PebbleTransport.kt          # PebbleKit2 DefaultPebbleSender wrapper
   ui/
-    MainScreen.kt               # Permission status (Compose)
-    MainViewModel.kt            # Permission state
+    MainScreen.kt               # Permissions + voice input status (Compose Material3)
+    MainViewModel.kt            # Permission state + default-voice-provider state
+
+speech/src/main/java/com/lazydevs/wristotle/speech/
+  Recognizers.kt                # Service-locator: @Volatile var provider
+  audio/
+    AudioSource.kt              # samples() + stop()
+    MicAudioSource.kt           # AudioRecord, 16 kHz mono PCM-16
+    PipeAudioSource.kt          # Reads RecognizerIntent.EXTRA_AUDIO_SOURCE pipe
+  recognizer/
+    Recognizer.kt               # Backend interface
+    TranscriptionEvent.kt       # Sealed: SpeechStarted/Partial/SpeechEnded/Final/Error
+    StubRecognizer.kt           # Phase 1 backend — returns "hello world" at pipe EOF
+  service/
+    WhisperRecognitionService.kt # extends android.speech.RecognitionService
+
+speech-whisper/                  # Phase 2 (in progress)
+  build.gradle.kts               # NDK + CMake, arm64-v8a only
+  src/main/cpp/
+    CMakeLists.txt
+    wristotle_speech.cpp         # Phase 2a: JNI hello-world
+    whisper.cpp/                 # ← Phase 2b: upstream whisper.cpp git submodule (TBD)
+  src/main/java/com/lazydevs/wristotle/speech/whisper/
+    WhisperNative.kt             # JNI bridge
 ```
 
-## Adding a new capability
+### Adding a new command handler
 
-1. Create `handlers/YourHandler.kt` implementing `ActionHandler`.
+1. Implement `ActionHandler` in `handlers/`:
+
+   ```kotlin
+   class WeatherHandler(...) : ActionHandler {
+       override fun canHandle(query: String) = query.lowercase().startsWith("weather")
+       override suspend fun handle(query: String): String = "Sunny and 72°F"
+   }
+   ```
+
 2. Register it in `PebbleListenerService.onCreate()`:
+
    ```kotlin
    registry = HandlerRegistry(listOf(
        CallHandler(this, contacts),
        SmsHandler(this, contacts),
-       YourHandler(this, ...),
+       WeatherHandler(this),
    ))
    ```
+
+More specific prefixes go first — `HandlerRegistry` returns the first match.
+
+### Permissions
+
+| Permission                     | Purpose                                                |
+|--------------------------------|--------------------------------------------------------|
+| `READ_CONTACTS`                | Contact lookup by name                                 |
+| `CALL_PHONE`                   | Place calls                                            |
+| `SEND_SMS`                     | Send text messages                                     |
+| `RECORD_AUDIO`                 | Recognition service capture (mic mode + pipe fallback) |
+| `POST_NOTIFICATIONS`           | Foreground service notification (Android 13+)          |
+| `FOREGROUND_SERVICE`           | Long-running watch bridge                              |
+| `FOREGROUND_SERVICE_DATA_SYNC` | FGS type required on Android 14+                       |
+
+### Watch dictation quirk
+
+`WhisperRecognitionService` must drain the `RecognizerIntent.EXTRA_AUDIO_SOURCE` pipe to EOF *before* calling `callback.results(...)`. Returning early — even with a valid transcript — produces a malformed `DictationResult` packet on the watch firmware's side and surfaces as a generic "Could not understand. Try again." The `Recognizer` interface bakes this contract in: `TranscriptionEvent.Final` is only emitted after `AudioSource.samples()` completes.
+
+### Phase 2 roadmap
+
+The `:speech-whisper` module brings real on-device transcription:
+
+- **2a — module + NDK/CMake/JNI pipeline** ✅
+- **2b — whisper.cpp git submodule + real `loadModel` / `transcribe` / `free`**
+- **2c — model picker UI + on-demand download manager**
+- **2d — `WhisperRecognizer` implementing `Recognizer`, wired into `WristotleApplication`**
+
+Once 2d lands, the single line in `WristotleApplication.onCreate` switches `Recognizers.provider` from `StubRecognizer` to the Whisper-backed one and the rest of the stack is unchanged.

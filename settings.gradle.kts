@@ -26,3 +26,4 @@ dependencyResolutionManagement {
 rootProject.name = "Wristotle"
 include(":app")
 include(":speech")
+include(":speech-whisper")
