@@ -65,11 +65,21 @@ The activation requires the `WRITE_SECURE_SETTINGS` signature-level permission, 
 
 ### Clone and build
 
+Clone with submodules — `:speech-whisper` depends on the upstream
+[whisper.cpp](https://github.com/ggerganov/whisper.cpp) repo at a pinned tag:
+
 ```bash
-git clone https://codeberg.org/kchinnasamy/wristotle-companion.git
+git clone --recursive https://codeberg.org/kchinnasamy/wristotle-companion.git
 cd wristotle-companion
 ./gradlew :app:assembleDebug
 ```
+
+If you cloned without `--recursive`, run `git submodule update --init` once.
+
+The first `:speech-whisper:assembleDebug` compiles whisper.cpp + ggml from
+source (~5-10 min on first run; cached afterwards). The produced native libs
+total ~22 MB stripped — `libwhisper.so` (6 MB) + `libggml*.so` (~6.4 MB) +
+`libomp.so` + `libc++_shared.so` + our 197 KB `libwristotle_speech.so`.
 
 Build outputs: `app/build/outputs/apk/debug/`.
 
@@ -91,7 +101,7 @@ Build the speech-recognition library module on its own:
 |--------------------|---------------------------------------------------------------------------------------|
 | `:app`             | The companion app — services, handlers, UI, `WristotleApplication`                    |
 | `:speech`          | System-wide `android.speech.RecognitionService` + audio sources + Recognizer interface |
-| `:speech-whisper`  | Phase 2 (in progress) whisper.cpp JNI backend — currently a hello-world toolchain proof |
+| `:speech-whisper`  | whisper.cpp JNI backend (Phase 2 in progress — 2a/2b done; 2c/2d pending) |
 
 The recognition backend is swappable via a single line in `WristotleApplication.onCreate`:
 
@@ -143,13 +153,13 @@ speech/src/main/java/com/lazydevs/wristotle/speech/
     WhisperRecognitionService.kt # extends android.speech.RecognitionService
 
 speech-whisper/                  # Phase 2 (in progress)
-  build.gradle.kts               # NDK + CMake, arm64-v8a only
+  build.gradle.kts               # NDK + CMake, arm64-v8a only, NDK 30.0 pinned
   src/main/cpp/
-    CMakeLists.txt
-    wristotle_speech.cpp         # Phase 2a: JNI hello-world
-    whisper.cpp/                 # ← Phase 2b: upstream whisper.cpp git submodule (TBD)
+    CMakeLists.txt               # add_subdirectory(whisper.cpp) + JNI lib
+    wristotle_speech.cpp         # JNI bridge: loadModel / transcribe / freeModel
+    whisper.cpp/                 # git submodule, pinned to v1.8.4
   src/main/java/com/lazydevs/wristotle/speech/whisper/
-    WhisperNative.kt             # JNI bridge
+    WhisperNative.kt             # external fun declarations matching the JNI
 ```
 
 ### Adding a new command handler
@@ -196,7 +206,7 @@ More specific prefixes go first — `HandlerRegistry` returns the first match.
 The `:speech-whisper` module brings real on-device transcription:
 
 - **2a — module + NDK/CMake/JNI pipeline** ✅
-- **2b — whisper.cpp git submodule + real `loadModel` / `transcribe` / `free`**
+- **2b — whisper.cpp v1.8.4 submodule + JNI bridge (`loadModel`, `transcribe`, `freeModel`)** ✅
 - **2c — model picker UI + on-demand download manager**
 - **2d — `WhisperRecognizer` implementing `Recognizer`, wired into `WristotleApplication`**
 
