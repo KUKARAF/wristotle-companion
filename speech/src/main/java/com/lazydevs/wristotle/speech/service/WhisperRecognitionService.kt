@@ -121,7 +121,7 @@ class WhisperRecognitionService : RecognitionService() {
                     TranscriptionEvent.SpeechStarted -> callback.safeBeginning()
                     is TranscriptionEvent.Partial -> callback.safePartial(event.text)
                     TranscriptionEvent.SpeechEnded -> callback.safeEndOfSpeech()
-                    is TranscriptionEvent.Final -> callback.safeResults(event.text, event.confidence)
+                    is TranscriptionEvent.Final -> callback.safeResults(event.text)
                     is TranscriptionEvent.Error -> callback.safeError(event.code)
                 }
             }
@@ -157,22 +157,22 @@ class WhisperRecognitionService : RecognitionService() {
         .onFailure { Log.w(TAG, "error callback failed", it) }
 
     private fun Callback.safePartial(text: String) = runCatching {
-        partialResults(buildResultsBundle(text, confidence = 0.5f))
+        partialResults(buildResultsBundle(text))
     }.onSuccess { Log.d(TAG, "→ partialResults('$text')") }
         .onFailure { Log.w(TAG, "partialResults failed", it) }
 
-    private fun Callback.safeResults(text: String, confidence: Float) = runCatching {
-        results(buildResultsBundle(text, confidence))
-    }.onSuccess { Log.d(TAG, "→ results('$text', conf=$confidence)") }
+    private fun Callback.safeResults(text: String) = runCatching {
+        results(buildResultsBundle(text))
+    }.onSuccess { Log.d(TAG, "→ results('$text')") }
         .onFailure { Log.w(TAG, "results failed", it) }
 
-    private fun buildResultsBundle(text: String, @Suppress("UNUSED_PARAMETER") confidence: Float): Bundle = Bundle().apply {
+    // CONFIDENCE_SCORES intentionally omitted. rePebble's TranscriptionProviderImpl
+    // expects per-word entries in its DictationResult packet; if we send a single
+    // confidence for a multi-word transcript it produces a malformed packet that the
+    // watch firmware rejects with a non-success DictationSessionStatus. Mirrors the
+    // pattern used by whisperIMEplus, which is known to work with rePebble dictation.
+    private fun buildResultsBundle(text: String): Bundle = Bundle().apply {
         putStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION, arrayListOf(text))
-        // CONFIDENCE_SCORES intentionally omitted. rePebble's TranscriptionProviderImpl
-        // expects per-word entries in its DictationResult packet; if we send a single
-        // confidence for a multi-word transcript it produces a malformed packet that the
-        // watch firmware rejects with a non-success DictationSessionStatus. Mirrors the
-        // pattern used by whisperIMEplus, which is known to work with rePebble dictation.
     }
 
     private companion object {

@@ -10,6 +10,7 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.transport.PebbleTransport
 import kotlinx.coroutines.launch
 
@@ -38,7 +39,7 @@ class WatchMessageService : LifecycleService() {
             startForeground(AppConstants.Notifications.SERVICE_NOTIFICATION_ID, buildNotification())
         }
 
-        transport = PebbleTransport(this)
+        transport = (application as WristotleApplication).transport
         lifecycleScope.launch {
             Log.d(TAG, "Sending COMPANION_READY on startup...")
             val result = transport.sendReady()
@@ -46,11 +47,7 @@ class WatchMessageService : LifecycleService() {
         }
     }
 
-    override fun onDestroy() {
-        Log.d(TAG, "Service destroyed")
-        transport.close()
-        super.onDestroy()
-    }
+    // Transport is Application-owned; no close in onDestroy.
 
     companion object {
         private const val TAG = "WatchMessageService"

@@ -20,7 +20,7 @@ class CancelReminderHandler(context: Context, private val transport: PebbleTrans
         val result = transport.deleteReminder(pinId)
         Log.d(TAG, "deleteTimelinePin result: $result")
 
-        return if (result == TimelineResult.Success) {
+        return if (result is TimelineResult.Success) {
             pinStore.remove(pinId)
             "Reminder cancelled"
         } else {

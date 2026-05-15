@@ -57,8 +57,7 @@ class MainActivity : ComponentActivity() {
         vm.refreshPermissions()
     }
 
-    private fun requestPermissions()
-    {
+    private fun requestPermissions() {
         val permissions = buildList {
             add(Manifest.permission.READ_CONTACTS)
             add(Manifest.permission.CALL_PHONE)

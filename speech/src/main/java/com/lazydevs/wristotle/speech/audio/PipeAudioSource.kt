@@ -49,6 +49,11 @@ class PipeAudioSource(
     }
 
     override fun samples(): Flow<ShortArray> = flow {
+        // Reset the stop flag for this collection. The class is contracted as a
+        // single-active-session source; this reset is defensive in case a prior
+        // stop() left the flag set before samples() was first collected.
+        stopRequested = false
+
         val bytesPerChunk = sampleRate / 10 * 2  // 100 ms
         val byteBuf = ByteArray(bytesPerChunk)
         var chunkIdx = 0

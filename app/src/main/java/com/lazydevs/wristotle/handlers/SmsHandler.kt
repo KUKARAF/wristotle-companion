@@ -4,8 +4,11 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.telephony.SmsManager
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.lazydevs.wristotle.phone.ContactsRepository
+
+private const val TAG = "SmsHandler"
 
 /**
  * Handles SMS queries in the form "[prefix] [contact] [message body]".
@@ -23,10 +26,7 @@ class SmsHandler(
     // (e.g. "send message to" must be checked before "send message").
     private val prefixes = listOf("send message to ", "send message ", "text ", "message ")
 
-    override fun canHandle(query: String): Boolean {
-        val lower = query.lowercase()
-        return prefixes.any { lower.startsWith(it) }
-    }
+    override fun canHandle(query: String): Boolean = matchPrefix(query) != null
 
     override suspend fun handle(query: String): String {
         if (!contacts.hasPermission()) return "Contacts permission not granted"
@@ -35,10 +35,8 @@ class SmsHandler(
 
         // Strip the matched prefix, then split on the first space to separate
         // the contact name (one word) from the message body (everything else).
-        val lower = query.lowercase()
-        val rest  = prefixes.firstOrNull { lower.startsWith(it) }
-            ?.let { query.substring(it.length).trim() }
-            ?: query
+        val prefix = matchPrefix(query) ?: return "Unrecognized SMS command"
+        val rest = query.substring(prefix.length).trim()
 
         val spaceIdx = rest.indexOf(' ')
         if (spaceIdx < 0) return "No message body"
@@ -55,7 +53,14 @@ class SmsHandler(
             smsManager.sendTextMessage(contact.number, null, body, null, null)
             "Sent to ${contact.name}"
         } catch (e: Exception) {
+            Log.w(TAG, "sendTextMessage failed for ${contact.name}", e)
             "Could not send to ${contact.name}"
         }
+    }
+
+    /** Returns the prefix matched by [query], or null if no prefix matches. */
+    private fun matchPrefix(query: String): String? {
+        val lower = query.lowercase()
+        return prefixes.firstOrNull { lower.startsWith(it) }
     }
 }

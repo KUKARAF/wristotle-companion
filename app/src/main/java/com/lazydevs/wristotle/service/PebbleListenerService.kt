@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.service
 
 import android.util.Log
 import com.lazydevs.wristotle.AppConstants
+import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.handlers.CallHandler
 import com.lazydevs.wristotle.handlers.CancelReminderHandler
 import com.lazydevs.wristotle.handlers.HandlerRegistry
@@ -35,7 +36,7 @@ class PebbleListenerService : BasePebbleListenerService() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service bound by rePebble")
-        transport = PebbleTransport(this)
+        transport = (application as WristotleApplication).transport
         val contacts = ContactsRepository(this)
         registry = HandlerRegistry(listOf(
             CallHandler(this, contacts),
@@ -45,10 +46,9 @@ class PebbleListenerService : BasePebbleListenerService() {
         cancelHandler = CancelReminderHandler(this, transport)
     }
 
-    override fun onDestroy() {
-        transport.close()
-        super.onDestroy()
-    }
+    // Transport is Application-owned; no close in onDestroy. The base class cancels
+    // its coroutineScope during onDestroy(), which terminates any in-flight handler
+    // coroutines cleanly before super returns.
 
     override suspend fun onMessageReceived(
         watchappUUID: UUID,

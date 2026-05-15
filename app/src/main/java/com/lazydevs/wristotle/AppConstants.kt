@@ -14,5 +14,4 @@ object AppConstants {
         const val SERVICE_NOTIFICATION_ID = 1
         const val CHANNEL_ID = "wristotle_service"
     }
-
 }

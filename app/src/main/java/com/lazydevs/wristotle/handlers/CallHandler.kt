@@ -6,8 +6,11 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.telecom.TelecomManager
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.lazydevs.wristotle.phone.ContactsRepository
+
+private const val TAG = "CallHandler"
 
 /**
  * Handles "call [name]" and "dial [name]" queries by placing a phone call
@@ -38,6 +41,7 @@ class CallHandler(
             telecom.placeCall(Uri.fromParts("tel", contact.number, null), Bundle())
             "Calling ${contact.name}"
         } catch (e: Exception) {
+            Log.w(TAG, "placeCall failed for ${contact.name}", e)
             "Could not call ${contact.name}"
         }
     }

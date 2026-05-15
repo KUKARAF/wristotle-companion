@@ -33,6 +33,11 @@ class MicAudioSource : AudioSource {
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun samples(): Flow<ShortArray> = flow {
+        // Reset the stop flag for this collection. The class is contracted as a
+        // single-active-session source, but resetting here lets a fresh collection
+        // start cleanly even if an earlier session left the flag set.
+        stopRequested = false
+
         val minBuf = AudioRecord.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,

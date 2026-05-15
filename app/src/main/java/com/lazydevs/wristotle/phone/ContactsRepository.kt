@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.ContactsContract
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Read-only access to the device contacts database. */
 class ContactsRepository(private val context: Context) {
@@ -24,15 +26,17 @@ class ContactsRepository(private val context: Context) {
      * Among multiple matches, a contact whose display name starts with [query]
      * (case-insensitive) is preferred over one that merely contains it.
      * The first phone number on record is used when a contact has several.
+     *
+     * Runs on [Dispatchers.IO] — ContentResolver queries are blocking.
      */
-    fun findContact(query: String): Contact? {
+    suspend fun findContact(query: String): Contact? = withContext(Dispatchers.IO) {
         val nameCursor = context.contentResolver.query(
             ContactsContract.Contacts.CONTENT_URI,
             arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME_PRIMARY),
             "${ContactsContract.Contacts.DISPLAY_NAME_PRIMARY} LIKE ?",
             arrayOf("%$query%"),
             "${ContactsContract.Contacts.DISPLAY_NAME_PRIMARY} ASC"
-        ) ?: return null
+        ) ?: return@withContext null
 
         var contactId: String? = null
         var contactName: String? = null
@@ -50,8 +54,8 @@ class ContactsRepository(private val context: Context) {
             }
         }
 
-        val id   = contactId   ?: return null
-        val name = contactName ?: return null
+        val id   = contactId   ?: return@withContext null
+        val name = contactName ?: return@withContext null
 
         val phoneCursor = context.contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -59,12 +63,12 @@ class ContactsRepository(private val context: Context) {
             "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
             arrayOf(id),
             null
-        ) ?: return null
+        ) ?: return@withContext null
 
         val number = phoneCursor.use { cursor ->
             if (cursor.moveToFirst()) cursor.getString(0) else null
-        } ?: return null
+        } ?: return@withContext null
 
-        return Contact(name, number)
+        Contact(name, number)
     }
 }
