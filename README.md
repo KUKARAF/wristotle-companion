@@ -49,7 +49,7 @@ Once enabled, anything on your phone that uses Android's `SpeechRecognizer` (key
 
 The activation requires the `WRITE_SECURE_SETTINGS` signature-level permission, which is why ADB is needed — there's no in-app shortcut.
 
-> **Note:** the current build ships a stub recognizer that returns `"hello world"` for any input. Real on-device Whisper transcription is Phase 2, in progress.
+> **Note:** before transcription works you need to open the **Whisper Models** card in the app and download a model. `tiny.en` (75 MB) is the recommended starting point — fastest, English-only, fine for short watch commands. The first model you download is set active automatically.
 
 ---
 
@@ -101,7 +101,7 @@ Build the speech-recognition library module on its own:
 |--------------------|---------------------------------------------------------------------------------------|
 | `:app`             | The companion app — services, handlers, UI, `WristotleApplication`                    |
 | `:speech`          | System-wide `android.speech.RecognitionService` + audio sources + Recognizer interface |
-| `:speech-whisper`  | whisper.cpp JNI backend (Phase 2 in progress — 2a/2b/2c done; 2d pending) |
+| `:speech-whisper`  | whisper.cpp JNI backend, model catalog/storage/downloader, `WhisperRecognizer` |
 
 The recognition backend is swappable via a single line in `WristotleApplication.onCreate`:
 
@@ -159,7 +159,8 @@ speech-whisper/                  # Phase 2 (in progress)
     wristotle_speech.cpp         # JNI bridge: loadModel / transcribe / freeModel
     whisper.cpp/                 # git submodule, pinned to v1.8.4
   src/main/java/com/lazydevs/wristotle/speech/whisper/
-    WhisperNative.kt             # external fun declarations matching the JNI
+    WhisperNative.kt             # JNI external fun decls + defaultThreadCount()
+    WhisperRecognizer.kt         # Recognizer impl — buffers to EOF, runs whisper_full
     ModelCatalog.kt              # known Whisper models + HuggingFace URLs
     ModelStorage.kt              # filesDir/whisper-models/ + active model id
     ModelDownloader.kt           # Flow<DownloadEvent>, resumable HTTP, throttled progress
@@ -218,6 +219,18 @@ The `:speech-whisper` module brings real on-device transcription:
 - **2a — module + NDK/CMake/JNI pipeline** ✅
 - **2b — whisper.cpp v1.8.4 submodule + JNI bridge (`loadModel`, `transcribe`, `freeModel`)** ✅
 - **2c — model picker UI + on-demand download manager (`ModelCatalog`, `ModelStorage`, `ModelDownloader`, `WhisperModelsCard`)** ✅
-- **2d — `WhisperRecognizer` implementing `Recognizer`, wired into `WristotleApplication`**
+- **2d — `WhisperRecognizer` implementing `Recognizer`, wired into `WristotleApplication`, with perf tuning** ✅
 
-Once 2d lands, the single line in `WristotleApplication.onCreate` switches `Recognizers.provider` from `StubRecognizer` to the Whisper-backed one and the rest of the stack is unchanged.
+### Performance
+
+Measured on a Pixel 10a (Tensor G3) with `tiny.en`:
+
+| Audio length | Inference | Ratio |
+|---|---|---|
+| 4.4 s | 0.71 s | 0.16× realtime |
+| 5.0 s | 0.71 s | 0.14× realtime |
+| 15.0 s | 2.11 s | 0.14× realtime |
+
+Model loads ~100 ms (tiny.en) / ~600 ms (base.en) **once** — the loaded handle is cached across sessions in `WristotleApplication`. The recognition service's per-session `close()` is a no-op so reload happens only when the user switches the active model.
+
+The native code is built with `-O3 -DNDEBUG` regardless of gradle's debug/release variant (forced in `speech-whisper/src/main/cpp/CMakeLists.txt`) — whisper.cpp at `-O0` is ~100× realtime, well past any companion app's dictation timeout. Thread count is picked at runtime via `Runtime.availableProcessors() / 2 + 1` clamped to `[2, 8]` so the same APK scales sensibly from quad-cores to 9-core flagships. The encoder's attention window is adaptive: 768 mel frames (~10 s) for short utterances, the default 1500 for anything longer.
