@@ -1,26 +1,27 @@
+# IDE
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+.idea/
 .DS_Store
-/build
+
+# Build
+.gradle/
+**/build/
 /captures
 .externalNativeBuild
-.cxx
-local.properties
+.cxx/
+out/
+gen/
 
-# Module build outputs (any subproject)
-**/build/
+# Local config
+local.properties
+*.log
+hs_err_pid*.log
 
 # Signing
 *.keystore
 *.jks
 keystore.properties
+google-services.json
 
 # Build outputs
 *.apk
