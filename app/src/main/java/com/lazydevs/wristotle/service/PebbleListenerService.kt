@@ -11,6 +11,7 @@ import com.lazydevs.wristotle.handlers.SmsHandler
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.transport.MessageKeys
 import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.transport.int32
 import com.lazydevs.wristotle.transport.text
 import io.rebble.pebblekit2.client.BasePebbleListenerService
 import io.rebble.pebblekit2.common.model.PebbleDictionary
@@ -57,6 +58,16 @@ class PebbleListenerService : BasePebbleListenerService() {
     ): ReceiveResult {
         Log.d(TAG, "Message received from $watchappUUID: $data")
         if (watchappUUID != AppConstants.PEBBLE_UUID) return ReceiveResult.Ack
+
+        // Under microPebble fan-out, each watch→phone message is delivered to both
+        // PKJS and this companion in parallel. The watch tags routed traffic with
+        // MSG_TARGET so the unintended side can drop it. Untagged messages (ping,
+        // ready, settings) are companion- or pkjs-specific by key and bypass this.
+        val target = data.int32(MessageKeys.MSG_TARGET)
+        if (target != null && target != MessageKeys.TARGET_COMPANION) {
+            Log.d(TAG, "Ignoring message — msg_target=$target (not for companion)")
+            return ReceiveResult.Ack
+        }
 
         if (data[MessageKeys.COMPANION_PING] != null) {
             Log.d(TAG, "Received COMPANION_PING, sending READY")

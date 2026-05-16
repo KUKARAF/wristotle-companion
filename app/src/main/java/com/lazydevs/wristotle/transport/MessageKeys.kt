@@ -16,4 +16,8 @@ object MessageKeys {
     val COMPANION_READY: UInt    = 10010u
     val COMPANION_QUERY: UInt    = 10011u
     val COMPANION_RESPONSE: UInt = 10012u
+    val MSG_TARGET: UInt         = 10014u
+
+    /** Value of MSG_TARGET that means "this message is for the Android companion". */
+    const val TARGET_COMPANION: Int = 1
 }
