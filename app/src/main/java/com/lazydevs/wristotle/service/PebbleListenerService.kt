@@ -11,9 +11,9 @@ import com.lazydevs.wristotle.handlers.SmsHandler
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.transport.MessageKeys
 import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.transport.text
 import io.rebble.pebblekit2.client.BasePebbleListenerService
 import io.rebble.pebblekit2.common.model.PebbleDictionary
-import io.rebble.pebblekit2.common.model.PebbleDictionaryItem
 import io.rebble.pebblekit2.common.model.ReceiveResult
 import io.rebble.pebblekit2.common.model.WatchIdentifier
 import kotlinx.coroutines.launch
@@ -64,7 +64,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             return ReceiveResult.Ack
         }
 
-        val reminderQuery = (data[MessageKeys.REMINDER_QUERY] as? PebbleDictionaryItem.Text)?.value
+        val reminderQuery = data.text(MessageKeys.REMINDER_QUERY)
         if (reminderQuery != null) {
             Log.d(TAG, "Reminder query: $reminderQuery")
             val result = reminderHandler.handle(reminderQuery)
@@ -72,7 +72,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             return ReceiveResult.Ack
         }
 
-        val cancelQuery = (data[MessageKeys.CANCEL_QUERY] as? PebbleDictionaryItem.Text)?.value
+        val cancelQuery = data.text(MessageKeys.CANCEL_QUERY)
         if (cancelQuery != null) {
             Log.d(TAG, "Cancel query: $cancelQuery")
             val result = cancelHandler.handle(cancelQuery)
@@ -80,7 +80,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             return ReceiveResult.Ack
         }
 
-        val query = (data[MessageKeys.COMPANION_QUERY] as? PebbleDictionaryItem.Text)?.value
+        val query = data.text(MessageKeys.COMPANION_QUERY)
             ?: return ReceiveResult.Ack
 
         Log.d(TAG, "Dispatching query: $query")

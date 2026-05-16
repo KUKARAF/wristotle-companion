@@ -32,13 +32,15 @@ class ModelStorage(context: Context) {
         ?: emptyList()
 
     /**
-     * Deletes the model file. If it was the active model, [activeModelId] is
-     * cleared. Returns true if a file was actually removed.
+     * Ensures the model file is absent. If it was the active model, [activeModelId]
+     * is cleared. Returns true if the postcondition holds — either the file was
+     * just removed *or* it didn't exist to begin with.
      */
     fun delete(modelId: String): Boolean {
-        val deleted = modelFile(modelId).delete()
-        if (deleted && activeModelId == modelId) activeModelId = null
-        return deleted
+        val file = modelFile(modelId)
+        val absent = !file.exists() || file.delete()
+        if (absent && activeModelId == modelId) activeModelId = null
+        return absent
     }
 
     /** Id of the currently active model, or null if none is set. */

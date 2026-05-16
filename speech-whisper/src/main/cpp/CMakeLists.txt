@@ -9,10 +9,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # -O3 + NDEBUG for all native code in this module regardless of gradle's
 # debug/release variant. Whisper is heavily matmul-bound; loop optimisations
 # and NEON SIMD auto-vectorisation only kick in at -O2 or higher.
-set(CMAKE_C_FLAGS_DEBUG     "-O3 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG   "-O3 -DNDEBUG")
-set(CMAKE_C_FLAGS_RELEASE   "-O3 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+#
+# Listed for every standard CMake build type so a future variant
+# (e.g. RelWithDebInfo for profiling) doesn't silently inherit -O2.
+foreach(_cfg DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+    set(CMAKE_C_FLAGS_${_cfg}   "-O3 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_${_cfg} "-O3 -DNDEBUG")
+endforeach()
 
 # Pull in whisper.cpp (+ ggml) from the submodule. WHISPER_STANDALONE is unset
 # when used via add_subdirectory, which keeps BUILD_TESTS / EXAMPLES / SERVER

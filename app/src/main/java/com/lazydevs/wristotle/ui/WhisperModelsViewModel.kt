@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.speech.whisper.DownloadEvent
 import com.lazydevs.wristotle.speech.whisper.ModelCatalog
 import com.lazydevs.wristotle.speech.whisper.ModelDownloader
@@ -13,6 +14,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 private const val TAG = "WhisperModelsViewModel"
 
@@ -42,7 +44,13 @@ class WhisperModelsViewModel(app: Application) : AndroidViewModel(app) {
     private val _models = MutableStateFlow(snapshot())
     val models: StateFlow<List<ModelUiState>> = _models
 
-    private val downloadJobs = mutableMapOf<String, Job>()
+    /**
+     * Per-model download jobs. Concurrent because writes happen from two
+     * dispatchers: the launching coroutine (main) puts the job in, while
+     * `invokeOnCompletion` (which fires on whichever dispatcher completed the
+     * job — typically Dispatchers.IO from the downloader) removes it.
+     */
+    private val downloadJobs = ConcurrentHashMap<String, Job>()
 
     /** Re-reads filesystem + active-id state. Call when the screen resumes. */
     fun refresh() {
@@ -95,7 +103,14 @@ class WhisperModelsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun delete(modelId: String) {
         if (downloadJobs[modelId]?.isActive == true) cancelDownload(modelId)
+        // Capture the path before deletion — the WhisperRecognizer cache in
+        // WristotleApplication is keyed by absolute path, and we need to evict
+        // the stale entry so re-downloading the same model loads it fresh
+        // instead of returning the cached recognizer pointing at the old file.
+        val pathBeingDeleted = storage.modelFile(modelId).absolutePath
         storage.delete(modelId)
+        (getApplication<Application>() as? WristotleApplication)
+            ?.evictRecognizer(pathBeingDeleted)
         refresh()
     }
 

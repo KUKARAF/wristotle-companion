@@ -37,14 +37,30 @@ class WhisperRecognizer(
     private val language: String = "en",
 ) : Recognizer {
 
-    private val loadLock = Any()
+    /**
+     * Guards [handle], [inFlight], and [releaseDeferred] as a single state
+     * machine. Synchronous, non-coroutine — held only briefly for state
+     * mutation, never across the long native inference call.
+     */
+    private val nativeLock = Any()
 
+    /** The native whisper_context pointer (cast to Long), 0L until loaded. */
     @Volatile
     private var handle: Long = 0L
 
+    /** True while a [transcribe] is between acquiring the handle and finishing the native call. */
+    private var inFlight: Boolean = false
+
+    /**
+     * Set by [release] when the caller wants the model freed but a [transcribe]
+     * is currently using the handle. The transcribe's `finally` performs the
+     * actual free after the native call returns, preventing a use-after-free.
+     */
+    private var releaseDeferred: Boolean = false
+
     override fun transcribe(source: AudioSource): Flow<TranscriptionEvent> = flow {
         val activeHandle = try {
-            ensureLoaded()
+            acquireHandle()
         } catch (t: Throwable) {
             Log.e(TAG, "model load failed", t)
             emit(TranscriptionEvent.Error(
@@ -112,6 +128,8 @@ class WhisperRecognizer(
                 "whisper inference failed: ${t.message}",
             ))
             return@flow
+        } finally {
+            finishInFlight()
         }
 
         if (text.isEmpty()) {
@@ -136,12 +154,17 @@ class WhisperRecognizer(
     override fun close() = Unit
 
     /**
-     * Actually frees the native model handle. Idempotent; safe to call
-     * concurrently. After [release] the recognizer is unusable — create a new
-     * instance for further transcriptions.
+     * Frees the native model handle. If a transcribe is still mid-flight (rare
+     * but possible during a model switch), the free is deferred to the
+     * transcribe's `finally` to prevent a use-after-free. Idempotent.
      */
     fun release() {
-        val toFree = synchronized(loadLock) {
+        val toFree = synchronized(nativeLock) {
+            if (inFlight) {
+                releaseDeferred = true
+                Log.d(TAG, "release deferred — transcribe in flight on handle $handle")
+                return@synchronized 0L
+            }
             val h = handle
             handle = 0L
             h
@@ -152,13 +175,40 @@ class WhisperRecognizer(
         }
     }
 
-    /** Double-checked load. Safe to call from any thread. */
-    private fun ensureLoaded(): Long {
-        handle.takeIf { it != 0L }?.let { return it }
-        return synchronized(loadLock) {
-            handle.takeIf { it != 0L }?.let { return@synchronized it }
+    /**
+     * Loads the model if needed and marks the recognizer as in-flight. Holds
+     * the lock only across the load itself — the native call runs unlocked
+     * after this returns, so [release] can be invoked from another thread
+     * during transcribe without blocking it.
+     *
+     * Throws if [release] has already been called (recognizer is dead).
+     */
+    private fun acquireHandle(): Long = synchronized(nativeLock) {
+        check(!releaseDeferred) { "WhisperRecognizer released" }
+        if (handle == 0L) {
             Log.d(TAG, "loading model: $modelPath")
-            WhisperNative.loadModel(modelPath).also { handle = it }
+            handle = WhisperNative.loadModel(modelPath)
+        }
+        inFlight = true
+        handle
+    }
+
+    /**
+     * Clears the in-flight flag at the end of a transcribe. If [release] was
+     * called during the native call, performs the deferred free now.
+     */
+    private fun finishInFlight() {
+        val toFree = synchronized(nativeLock) {
+            inFlight = false
+            if (releaseDeferred && handle != 0L) {
+                val h = handle
+                handle = 0L
+                h
+            } else 0L
+        }
+        if (toFree != 0L) {
+            Log.d(TAG, "performing deferred release of handle $toFree")
+            WhisperNative.freeModel(toFree)
         }
     }
 }

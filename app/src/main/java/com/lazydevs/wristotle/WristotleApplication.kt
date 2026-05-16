@@ -60,6 +60,22 @@ class WristotleApplication : Application() {
     }
 
     /**
+     * Evicts a cached recognizer by model file path and releases its native
+     * memory. Called from the UI when the user deletes a downloaded model —
+     * without this, the cached recognizer's loaded model handle stays in
+     * memory until the next active-model switch, and re-downloading the same
+     * model returns the stale recognizer instead of loading the new file.
+     */
+    fun evictRecognizer(modelPath: String) {
+        synchronized(whisperRecognizers) {
+            whisperRecognizers.remove(modelPath)?.also {
+                Log.d(TAG, "evicting recognizer for $modelPath (model deleted)")
+                it.release()
+            }
+        }
+    }
+
+    /**
      * Returns a cached [WhisperRecognizer] for [path], creating one if needed.
      * Frees any cached recognizers for *other* paths via [WhisperRecognizer.release]
      * — that's how a model switch reclaims the previous model's native memory
