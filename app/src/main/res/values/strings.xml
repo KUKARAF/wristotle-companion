@@ -1,8 +1,9 @@
 <resources>
     <string name="app_name">Wristotle Companion</string>
     <string name="service_channel_name">Watch Listener</string>
-    <string name="service_notification_title">Wristotle</string>
-    <string name="service_notification_text">Listening for watch commands</string>
+    <string name="service_notification_title">Wristotle is active</string>
+    <string name="service_notification_text">Safe to dismiss — keeps running</string>
+    <string name="service_notification_big_text">Listening for watch commands. Safe to dismiss this notification — the watch bridge keeps running in the background.</string>
 
     <!-- Main Screen -->
     <string name="main_screen_title">Wristotle</string>

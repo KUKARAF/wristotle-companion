@@ -56,6 +56,13 @@ class WatchMessageService : LifecycleService() {
     private fun buildNotification() = NotificationCompat.Builder(this, AppConstants.Notifications.CHANNEL_ID)
         .setContentTitle(getString(R.string.service_notification_title))
         .setContentText(getString(R.string.service_notification_text))
+        // Expanded body explains that dismissing the notification does not stop
+        // the service — Android 13+ made foreground service notifications
+        // user-dismissable, which is easy to misread as "service stopped".
+        .setStyle(
+            NotificationCompat.BigTextStyle()
+                .bigText(getString(R.string.service_notification_big_text)),
+        )
         .setSmallIcon(R.drawable.ic_launcher_foreground)
         .build()
 
