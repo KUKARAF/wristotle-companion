@@ -17,6 +17,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -121,12 +124,17 @@ fun MainScreen(
  * Voice-input activation card: shows whether this app is the system's default
  * voice recognition provider and offers a one-tap "copy ADB command" button.
  */
+/** The two ways a user can flip Wristotle on as the system voice-input provider. */
+private enum class ActivationMethod(val labelRes: Int) {
+    Adb(R.string.voice_input_method_adb),
+    Settings(R.string.voice_input_method_settings),
+}
+
 @Composable
 private fun VoiceInputCard(
     isDefaultProvider: Boolean,
     adbCommand: String,
 ) {
-    val context = LocalContext.current
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.voice_input_header), style = MaterialTheme.typography.titleMedium)
@@ -143,41 +151,78 @@ private fun VoiceInputCard(
                         else MaterialTheme.colorScheme.error,
             )
             if (!isDefaultProvider) {
-                // Path 1: try the system picker. Works on ROMs that wire the
-                // ACTION_VOICE_INPUT_SETTINGS intent up (LineageOS, GrapheneOS,
-                // etc.); falls through to a toast on stock Pixel / Samsung.
-                OutlinedButton(
-                    onClick = { openVoiceInputSettings(context) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.voice_input_try_settings_button))
-                }
-                Text(
-                    stringResource(R.string.voice_input_settings_caveat),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                ActivationMethodPicker(adbCommand = adbCommand)
+            }
+        }
+    }
+}
 
-                Text(
-                    stringResource(R.string.voice_input_method_divider),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+/**
+ * Activation-method dropdown + the action / hint for whatever method is selected.
+ * Single visible action keeps the card tight; switching methods is one tap away.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActivationMethodPicker(adbCommand: String) {
+    val context = LocalContext.current
+    var method by rememberSaveable { mutableStateOf(ActivationMethod.Adb) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
-                // Path 2: ADB. The system permission required to flip this
-                // setting is signature-level so a regular app can't do it
-                // programmatically — ADB is the universal fallback.
-                Text(
-                    stringResource(R.string.voice_input_instructions),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = stringResource(method.labelRes),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.voice_input_method_label)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            ActivationMethod.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(option.labelRes)) },
+                    onClick = {
+                        method = option
+                        expanded = false
+                    },
                 )
-                OutlinedButton(
-                    onClick = { copyToClipboard(context, adbCommand) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.copy_adb_command_button))
-                }
+            }
+        }
+    }
+
+    when (method) {
+        ActivationMethod.Adb -> {
+            Text(
+                stringResource(R.string.voice_input_instructions),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(
+                onClick = { copyToClipboard(context, adbCommand) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.copy_adb_command_button))
+            }
+        }
+        ActivationMethod.Settings -> {
+            Text(
+                stringResource(R.string.voice_input_settings_caveat),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(
+                onClick = { openVoiceInputSettings(context) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.voice_input_try_settings_button))
             }
         }
     }

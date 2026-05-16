@@ -1,6 +1,25 @@
 # Wristotle Companion
 
-Android companion app for the [Wristotle](../Wristotle) Pebble watch app. Bridges your watch to phone capabilities — calls, SMS, contacts, reminders — and ships a system-wide on-device speech recognition provider you can plug into.
+Android companion app for the [Wristotle](../Wristotle) Pebble watch app. Bridges your watch to phone capabilities — calls, SMS, contacts, reminders — and ships a system-wide, on-device speech recognition provider you can plug into.
+
+---
+
+**Contents**
+
+- [For users](#for-users)
+  - [What it does](#what-it-does)
+  - [What you need](#what-you-need)
+  - [Install](#install)
+  - [First-time setup](#first-time-setup)
+  - [Use Wristotle as system-wide voice input *(optional)*](#use-wristotle-as-system-wide-voice-input-optional)
+- [For developers](#for-developers)
+  - [Prerequisites](#prerequisites)
+  - [Clone and build](#clone-and-build)
+  - [Modules](#modules)
+  - [Project structure](#project-structure)
+  - [Adding a new command handler](#adding-a-new-command-handler)
+  - [Permissions](#permissions)
+  - [Watch dictation quirk](#watch-dictation-quirk)
 
 ---
 
@@ -8,16 +27,16 @@ Android companion app for the [Wristotle](../Wristotle) Pebble watch app. Bridge
 
 ### What it does
 
-Voice commands you dictate on your watch route through this companion app and execute on your phone:
+Dictate from your watch; the command runs on your phone. Supported phrases:
 
-| Say on the watch                         | What happens on the phone        |
-|------------------------------------------|----------------------------------|
-| "Call [name]" / "Dial [name]"            | Places a call to that contact    |
-| "Text [name] [message]"                  | Sends an SMS to that contact     |
-| "Remind me to [thing] at [time]"         | Creates a watch-side reminder    |
-| "Cancel reminder"                        | Cancels the most recent reminder |
+| Say on the watch                 | What happens on the phone        |
+|----------------------------------|----------------------------------|
+| "Call [name]" / "Dial [name]"    | Places a call to that contact    |
+| "Text [name] [message]"          | Sends an SMS to that contact     |
+| "Remind me to [thing] at [time]" | Creates a watch-side reminder    |
+| "Cancel reminder"                | Cancels the most recent reminder |
 
-Beyond watch dictation, Wristotle Companion can also be set as Android's *system* voice input provider, so any app on the device (keyboards, search bars, third-party apps) transcribes through the same on-device engine.
+Beyond watch dictation, Wristotle Companion can also register as Android's *system-wide* voice input provider, so any app on the device — keyboards, search bars, third-party apps — transcribes through the same on-device Whisper engine.
 
 ### What you need
 
@@ -27,35 +46,105 @@ Beyond watch dictation, Wristotle Companion can also be set as Android's *system
 
 ### Install
 
-Grab the latest APK from [Releases](https://codeberg.org/kchinnasamy/wristotle-companion/releases) and side-load it, or build from source (see *For developers* below).
+Grab the latest APK from [Releases](https://codeberg.org/kchinnasamy/wristotle-companion/releases) and sideload it, or build from source — see [For developers](#for-developers).
 
 ### First-time setup
 
-1. Open Wristotle Companion.
-2. Tap **Grant Permissions** and accept Contacts, Phone, SMS, Microphone, and Notifications.
-3. Make sure your watch is paired and the [Wristotle](../Wristotle) watch app is installed.
-4. Open Wristotle on the watch, press Select, and dictate one of the commands above.
+1. **Open Wristotle Companion.**
+2. **Grant permissions.** Tap *Grant Permissions* and accept Contacts, Phone, SMS, Microphone, and Notifications.
+3. **Download a Whisper model.** Open the *Whisper Models* card and tap *Download* on a model. `tiny.en` (~75 MB) is the recommended starting point — fastest, English-only, accurate enough for short watch commands. The first model you download is set active automatically.
+4. **Pair the watch.** Make sure your watch is paired and the [Wristotle](../Wristotle) watch app is installed.
+5. **Try it.** Open Wristotle on the watch, press *Select*, and dictate one of the commands from the table above.
 
-The phone displays a persistent low-priority notification while the bridge is active — that's the foreground service that keeps the connection alive.
+While the bridge is active the phone displays a persistent low-priority notification — that's the foreground service keeping the connection alive.
 
-### Optional: use Wristotle as system-wide voice input
+### Use Wristotle as system-wide voice input *(optional)*
 
 Once enabled, anything on your phone that uses Android's `SpeechRecognizer` (keyboard mic buttons, voice search, etc.) will transcribe via Wristotle.
 
-The Voice Input (Whisper) card in the app offers two paths:
+The *Voice Input (Whisper)* card in the app offers two activation methods via a dropdown:
 
-**Open in Settings (works on a few ROMs only)** — opens Android's `ACTION_VOICE_INPUT_SETTINGS` intent. On older LineageOS and a few forks this lands you on the actual voice-input picker where Wristotle appears alongside other recognizers. **On most devices (stock Pixel, Samsung, current GrapheneOS) this re-routes to the Digital Assistant picker — a separate setting that does *not* list Wristotle.** If that happens, use the ADB path below.
+- **System Settings** — works on a few ROMs (older LineageOS, certain forks). On stock Pixel / Samsung / current GrapheneOS the underlying intent re-routes to the Digital Assistant picker, which is a different setting that does *not* list Wristotle.
+- **ADB command** — the universal path. Works on every Android device. Requires a one-time ADB setup; walkthrough below.
 
-**Copy ADB activation command (universal fallback)** — copies a one-liner to the clipboard. From a computer with this device connected via USB and ADB enabled, paste and run it. To revert later, run a similar command pointing the setting at your previous provider.
+#### ADB activation walkthrough
+
+The activation requires `WRITE_SECURE_SETTINGS`, a signature-level permission only granted to the `shell` user — so the command must run from a computer with ADB.
+
+##### 1. Install ADB on your computer
+
+| Platform | Command                                                                                  |
+|----------|------------------------------------------------------------------------------------------|
+| macOS    | `brew install --cask android-platform-tools`                                             |
+| Linux    | `sudo apt install android-tools-adb` *(Debian/Ubuntu)*, or your distro's package         |
+| Windows  | Download [Android SDK Platform Tools](https://developer.android.com/tools/releases/platform-tools), unzip, add the folder to `PATH` |
+
+Verify with `adb version` — it should print a version string.
+
+##### 2. Enable Developer Options on the phone
+
+*Settings → About phone → Build number* — tap **7 times**. You'll see *"You are now a developer"*.
+
+##### 3. Enable USB debugging
+
+*Settings → System → Developer options → USB debugging* — toggle on.
+
+##### 4. Connect the phone to the computer via USB
+
+The phone will prompt **"Allow USB debugging?"** with the computer's RSA fingerprint — tap **Allow**. Optionally tick *Always allow from this computer*.
+
+##### 5. Confirm the connection
+
+```bash
+adb devices
+```
+
+You should see your device listed with status `device` (not `unauthorized`). If `unauthorized`, unplug and replug — the dialog will appear again.
+
+##### 6. Run the activation command
+
+Tap *Copy ADB activation command* in Wristotle's *Voice Input* card, then paste into a terminal:
 
 ```bash
 adb shell settings put secure voice_recognition_service \
     com.lazydevs.wristotle/com.lazydevs.wristotle.speech.service.WhisperRecognitionService
 ```
 
-The activation requires the `WRITE_SECURE_SETTINGS` signature-level permission, which is why ADB is needed — there's no in-app shortcut on stock Android.
+No output on success. Re-open Wristotle Companion — the *Voice Input* card should now read *"Active — Wristotle is the system voice input provider"*.
 
-> **Note:** before transcription works you need to open the **Whisper Models** card in the app and download a model. `tiny.en` (75 MB) is the recommended starting point — fastest, English-only, fine for short watch commands. The first model you download is set active automatically.
+##### 7. Verify *(optional)*
+
+```bash
+adb shell settings get secure voice_recognition_service
+```
+
+Should print `com.lazydevs.wristotle/com.lazydevs.wristotle.speech.service.WhisperRecognitionService`.
+
+#### Wireless ADB *(Android 11+)*
+
+If you'd rather not keep a USB cable around, Android 11+ supports wireless debugging:
+
+1. On the phone: *Settings → System → Developer options → Wireless debugging* → **Pair device with pairing code**. Note the IP:port and 6-digit code.
+2. On the computer: `adb pair <ip>:<port>` — enter the 6-digit code when prompted.
+3. Then: `adb connect <ip>:<port>` *(use the port shown on the Wireless debugging screen itself, not the pairing port).*
+4. Run the activation command exactly as in step 6 above.
+
+Pairing persists; subsequent sessions only need step 3.
+
+#### Reverting
+
+Switch back to the stock Google service:
+
+```bash
+adb shell settings put secure voice_recognition_service \
+    com.google.android.tts/com.google.android.apps.speech.tts.googletts.service.GoogleTTSRecognitionService
+```
+
+Or clear the setting entirely (Android falls back to whatever it considers default):
+
+```bash
+adb shell settings delete secure voice_recognition_service
+```
 
 ---
 
@@ -71,8 +160,7 @@ The activation requires the `WRITE_SECURE_SETTINGS` signature-level permission, 
 
 ### Clone and build
 
-Clone with submodules — `:speech-whisper` depends on the upstream
-[whisper.cpp](https://github.com/ggerganov/whisper.cpp) repo at a pinned tag:
+Clone with submodules — `:speech-whisper` depends on [whisper.cpp](https://github.com/ggerganov/whisper.cpp) at a pinned tag:
 
 ```bash
 git clone --recursive https://codeberg.org/kchinnasamy/wristotle-companion.git
@@ -82,12 +170,9 @@ cd wristotle-companion
 
 If you cloned without `--recursive`, run `git submodule update --init` once.
 
-The first `:speech-whisper:assembleDebug` compiles whisper.cpp + ggml from
-source (~5-10 min on first run; cached afterwards). The produced native libs
-total ~22 MB stripped — `libwhisper.so` (6 MB) + `libggml*.so` (~6.4 MB) +
-`libomp.so` + `libc++_shared.so` + our 197 KB `libwristotle_speech.so`.
+The first `:speech-whisper:assembleDebug` compiles whisper.cpp + ggml from source (~5–10 min on first run; cached afterwards). The produced native libs total ~22 MB stripped — `libwhisper.so` (6 MB) + `libggml*.so` (~6.4 MB) + `libomp.so` + `libc++_shared.so` + the 197 KB `libwristotle_speech.so` JNI bridge.
 
-Build outputs: `app/build/outputs/apk/debug/`.
+Build outputs land in `app/build/outputs/apk/debug/`.
 
 Install on a connected device:
 
@@ -95,7 +180,7 @@ Install on a connected device:
 ./gradlew :app:installDebug
 ```
 
-Build the speech-recognition library module on its own:
+Build just the speech-recognition library:
 
 ```bash
 ./gradlew :speech-whisper:assembleDebug
@@ -103,11 +188,11 @@ Build the speech-recognition library module on its own:
 
 ### Modules
 
-| Module             | Role                                                                                  |
-|--------------------|---------------------------------------------------------------------------------------|
-| `:app`             | The companion app — services, handlers, UI, `WristotleApplication`                    |
-| `:speech`          | System-wide `android.speech.RecognitionService` + audio sources + Recognizer interface |
-| `:speech-whisper`  | whisper.cpp JNI backend, model catalog/storage/downloader, `WhisperRecognizer` |
+| Module            | Role                                                                                   |
+|-------------------|----------------------------------------------------------------------------------------|
+| `:app`            | The companion app — services, handlers, UI, `WristotleApplication`                     |
+| `:speech`         | System-wide `android.speech.RecognitionService` + audio sources + Recognizer interface |
+| `:speech-whisper` | whisper.cpp JNI backend, model catalog / storage / downloader, `WhisperRecognizer`     |
 
 The recognition backend is swappable via a single line in `WristotleApplication.onCreate`:
 
@@ -115,7 +200,7 @@ The recognition backend is swappable via a single line in `WristotleApplication.
 Recognizers.provider = { ctx -> WhisperRecognizer(ctx, modelPath = ...) }
 ```
 
-The `:speech` module and `WhisperRecognitionService` never reference a concrete recognizer.
+Neither the `:speech` module nor `WhisperRecognitionService` ever references a concrete recognizer.
 
 ### Project structure
 
@@ -136,7 +221,7 @@ app/src/main/java/com/lazydevs/wristotle/
   phone/
     ContactsRepository.kt       # Contact lookup on Dispatchers.IO
   service/
-    WatchMessageService.kt      # Foreground LifecycleService — keep-alive + COMPANION_READY ping
+    WatchMessageService.kt      # Foreground LifecycleService — keep-alive + COMPANION_READY
     PebbleListenerService.kt    # Bound by the Pebble companion; dispatches to handlers
   transport/
     MessageKeys.kt              # AppMessage key indices (sync with watch package.json)
@@ -154,22 +239,22 @@ speech/src/main/java/com/lazydevs/wristotle/speech/
   recognizer/
     Recognizer.kt               # Backend interface
     TranscriptionEvent.kt       # Sealed: SpeechStarted/Partial/SpeechEnded/Final/Error
-    StubRecognizer.kt           # Phase 1 backend — returns "hello world" at pipe EOF
+    StubRecognizer.kt           # Phase 1 backend — "hello world" at pipe EOF
   service/
     WhisperRecognitionService.kt # extends android.speech.RecognitionService
 
-speech-whisper/                  # Phase 2 (in progress)
-  build.gradle.kts               # NDK + CMake, arm64-v8a only, NDK 30.0 pinned
+speech-whisper/
+  build.gradle.kts              # NDK + CMake, arm64-v8a only, NDK 30.0 pinned
   src/main/cpp/
-    CMakeLists.txt               # add_subdirectory(whisper.cpp) + JNI lib
-    wristotle_speech.cpp         # JNI bridge: loadModel / transcribe / freeModel
-    whisper.cpp/                 # git submodule, pinned to v1.8.4
+    CMakeLists.txt              # add_subdirectory(whisper.cpp) + JNI lib
+    wristotle_speech.cpp        # JNI bridge: loadModel / transcribe / freeModel
+    whisper.cpp/                # git submodule, pinned to v1.8.4
   src/main/java/com/lazydevs/wristotle/speech/whisper/
-    WhisperNative.kt             # JNI external fun decls + defaultThreadCount()
-    WhisperRecognizer.kt         # Recognizer impl — buffers to EOF, runs whisper_full
-    ModelCatalog.kt              # known Whisper models + HuggingFace URLs
-    ModelStorage.kt              # filesDir/whisper-models/ + active model id
-    ModelDownloader.kt           # Flow<DownloadEvent>, resumable HTTP, throttled progress
+    WhisperNative.kt            # JNI external fun decls + defaultThreadCount()
+    WhisperRecognizer.kt        # Recognizer impl — buffers to EOF, runs whisper_full
+    ModelCatalog.kt             # Known Whisper models + HuggingFace URLs
+    ModelStorage.kt             # filesDir/whisper-models/ + active model id
+    ModelDownloader.kt          # Flow<DownloadEvent>, resumable HTTP, throttled progress
 ```
 
 ### Adding a new command handler
@@ -208,35 +293,12 @@ More specific prefixes go first — `HandlerRegistry` returns the first match.
 | `FOREGROUND_SERVICE`           | Long-running watch bridge                              |
 | `FOREGROUND_SERVICE_DATA_SYNC` | FGS type required on Android 14+                       |
 
-> **GrapheneOS / privacy-ROM note:** `INTERNET` is auto-granted on stock Android but
-> may be denied by default on GrapheneOS and similar ROMs that surface it as a runtime
-> permission. If model downloads fail with "unable to resolve host", grant it via
-> *Settings → Apps → Wristotle Companion → Permissions → Network*, or from ADB:
-> `adb shell pm grant com.lazydevs.wristotle android.permission.INTERNET`.
+> **GrapheneOS / privacy-ROM note:** `INTERNET` is auto-granted on stock Android but may be denied by default on GrapheneOS and similar ROMs that surface it as a runtime permission. If model downloads fail with *"unable to resolve host"*, grant it via *Settings → Apps → Wristotle Companion → Permissions → Network*, or from ADB:
+>
+> ```bash
+> adb shell pm grant com.lazydevs.wristotle android.permission.INTERNET
+> ```
 
 ### Watch dictation quirk
 
-`WhisperRecognitionService` must drain the `RecognizerIntent.EXTRA_AUDIO_SOURCE` pipe to EOF *before* calling `callback.results(...)`. Returning early — even with a valid transcript — produces a malformed `DictationResult` packet on the watch firmware's side and surfaces as a generic "Could not understand. Try again." The `Recognizer` interface bakes this contract in: `TranscriptionEvent.Final` is only emitted after `AudioSource.samples()` completes.
-
-### Phase 2 roadmap
-
-The `:speech-whisper` module brings real on-device transcription:
-
-- **2a — module + NDK/CMake/JNI pipeline** ✅
-- **2b — whisper.cpp v1.8.4 submodule + JNI bridge (`loadModel`, `transcribe`, `freeModel`)** ✅
-- **2c — model picker UI + on-demand download manager (`ModelCatalog`, `ModelStorage`, `ModelDownloader`, `WhisperModelsCard`)** ✅
-- **2d — `WhisperRecognizer` implementing `Recognizer`, wired into `WristotleApplication`, with perf tuning** ✅
-
-### Performance
-
-Measured on a Pixel 10a (Tensor G3) with `tiny.en`:
-
-| Audio length | Inference | Ratio |
-|---|---|---|
-| 4.4 s | 0.71 s | 0.16× realtime |
-| 5.0 s | 0.71 s | 0.14× realtime |
-| 15.0 s | 2.11 s | 0.14× realtime |
-
-Model loads ~100 ms (tiny.en) / ~600 ms (base.en) **once** — the loaded handle is cached across sessions in `WristotleApplication`. The recognition service's per-session `close()` is a no-op so reload happens only when the user switches the active model.
-
-The native code is built with `-O3 -DNDEBUG` regardless of gradle's debug/release variant (forced in `speech-whisper/src/main/cpp/CMakeLists.txt`) — whisper.cpp at `-O0` is ~100× realtime, well past any companion app's dictation timeout. Thread count is picked at runtime via `Runtime.availableProcessors() / 2 + 1` clamped to `[2, 8]` so the same APK scales sensibly from quad-cores to 9-core flagships. The encoder's attention window is adaptive: 768 mel frames (~10 s) for short utterances, the default 1500 for anything longer.
+`WhisperRecognitionService` must drain the `RecognizerIntent.EXTRA_AUDIO_SOURCE` pipe to EOF *before* calling `callback.results(...)`. Returning early — even with a valid transcript — produces a malformed `DictationResult` packet on the watch firmware's side and surfaces as a generic *"Could not understand. Try again."* The `Recognizer` interface bakes this contract in: `TranscriptionEvent.Final` is only emitted after `AudioSource.samples()` completes.
