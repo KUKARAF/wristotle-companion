@@ -14,6 +14,12 @@
     <string name="grant_permissions_button">Grant Permissions</string>
     <string name="usage_instructions">Say \"call [name]\" or \"text [name] [message]\" on your Pebble.</string>
 
+    <!-- Bottom navigation -->
+    <string name="nav_watch">Watch</string>
+    <string name="nav_voice">Voice</string>
+    <string name="nav_models">Models</string>
+    <string name="nav_attention_badge_desc">Needs attention</string>
+
     <string name="perm_contacts_label">Read Contacts</string>
     <string name="perm_contacts_desc">Required to look up contacts by name</string>
     <string name="perm_calls_label">Make Calls</string>

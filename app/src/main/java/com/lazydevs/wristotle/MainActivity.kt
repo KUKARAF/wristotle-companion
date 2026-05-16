@@ -54,7 +54,8 @@ class MainActivity : ComponentActivity() {
                 MainScreen(
                     vm = vm,
                     modelsVm = modelsVm,
-                    onRequestPermissions = ::requestPermissions,
+                    onRequestWatchPermissions = ::requestWatchPermissions,
+                    onRequestVoicePermissions = ::requestVoicePermissions,
                 )
             }
         }
@@ -76,13 +77,28 @@ class MainActivity : ComponentActivity() {
         modelsVm.refresh()
     }
 
-    private fun requestPermissions() {
+    /** Runtime perms the watch-bridge handlers need (Watch tab Grant button). */
+    private fun requestWatchPermissions() {
         val permissions = buildList {
             add(Manifest.permission.READ_CONTACTS)
             add(Manifest.permission.CALL_PHONE)
             add(Manifest.permission.SEND_SMS)
-            add(Manifest.permission.RECORD_AUDIO)
             // POST_NOTIFICATIONS is only a runtime permission on Android 13+.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        permissionRequest.launch(permissions.toTypedArray())
+    }
+
+    /**
+     * Runtime perms the speech recognition feature needs (Voice tab Grant
+     * button). The post-grant callback chains into the battery-optimization
+     * exemption dialog if it hasn't been granted yet.
+     */
+    private fun requestVoicePermissions() {
+        val permissions = buildList {
+            add(Manifest.permission.RECORD_AUDIO)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 add(Manifest.permission.POST_NOTIFICATIONS)
             }
