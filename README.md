@@ -120,6 +120,8 @@ adb shell settings get secure voice_recognition_service
 
 Should print `com.lazydevs.wristotle/com.lazydevs.wristotle.speech.service.WhisperRecognitionService`.
 
+> **One-time setup.** The setting persists across phone restarts and Wristotle Companion updates — you only need to repeat this if you intentionally change the voice provider, uninstall the app, or factory-reset the device.
+
 #### Wireless ADB *(Android 11+)*
 
 If you'd rather not keep a USB cable around, Android 11+ supports wireless debugging:
