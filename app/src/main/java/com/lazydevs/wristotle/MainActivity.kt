@@ -2,8 +2,10 @@ package com.lazydevs.wristotle
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -29,8 +31,18 @@ class MainActivity : ComponentActivity() {
     private val modelsVm: WhisperModelsViewModel by viewModels()
 
     // Registered once; result arrives asynchronously and triggers a permission refresh.
+    // After the runtime perms dialog resolves, chain into the battery-optimization
+    // system dialog if the app isn't already whitelisted — the foreground watch
+    // bridge gets killed under Doze on aggressive OEM ROMs without that whitelist.
     private val permissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        vm.refreshPermissions()
+        maybeRequestBatteryOptimizationsExemption()
+    }
+
+    private val batteryOptimizationRequest = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
     ) { vm.refreshPermissions() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,5 +88,17 @@ class MainActivity : ComponentActivity() {
             }
         }
         permissionRequest.launch(permissions.toTypedArray())
+    }
+
+    /**
+     * Fires the system battery-optimization-exemption dialog if the app isn't
+     * already whitelisted. Invoked from the runtime-perms result callback so
+     * one tap of "Grant Permissions" walks the user through both prompts.
+     */
+    private fun maybeRequestBatteryOptimizationsExemption() {
+        if (vm.isIgnoringBatteryOptimizations()) return
+        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+            .setData(Uri.parse("package:$packageName"))
+        batteryOptimizationRequest.launch(intent)
     }
 }

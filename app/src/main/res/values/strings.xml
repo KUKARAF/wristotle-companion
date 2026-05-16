@@ -21,6 +21,8 @@
     <string name="perm_sms_desc">Required to text from the watch</string>
     <string name="perm_record_audio_label">Record Audio</string>
     <string name="perm_record_audio_desc">Required for speech recognition</string>
+    <string name="perm_battery_label">Ignore Battery Optimization</string>
+    <string name="perm_battery_desc">Keeps the watch bridge alive in the background</string>
 
     <!-- Voice Input section -->
     <string name="voice_input_header">Voice Input (Whisper)</string>

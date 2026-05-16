@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Application
 import android.content.ComponentName
 import android.content.pm.PackageManager
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
@@ -14,12 +15,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Snapshot of the runtime permissions the companion app uses. */
+/** Snapshot of the runtime permissions + system-setting state the companion app uses. */
 data class PermissionState(
     val contacts: Boolean = false,
     val callPhone: Boolean = false,
     val sendSms: Boolean = false,
     val recordAudio: Boolean = false,
+    /**
+     * True when the app is on the system's battery-optimization-ignored list.
+     * Keeps the foreground watch bridge alive under Doze and lowers the
+     * service's kill priority under memory pressure.
+     */
+    val ignoringBatteryOptimizations: Boolean = false,
 )
 
 /**
@@ -55,14 +62,26 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _permissions.update {
                 PermissionState(
-                    contacts    = app.hasPermission(Manifest.permission.READ_CONTACTS),
-                    callPhone   = app.hasPermission(Manifest.permission.CALL_PHONE),
-                    sendSms     = app.hasPermission(Manifest.permission.SEND_SMS),
-                    recordAudio = app.hasPermission(Manifest.permission.RECORD_AUDIO),
+                    contacts                     = app.hasPermission(Manifest.permission.READ_CONTACTS),
+                    callPhone                    = app.hasPermission(Manifest.permission.CALL_PHONE),
+                    sendSms                      = app.hasPermission(Manifest.permission.SEND_SMS),
+                    recordAudio                  = app.hasPermission(Manifest.permission.RECORD_AUDIO),
+                    ignoringBatteryOptimizations = isIgnoringBatteryOptimizations(),
                 )
             }
             _isDefaultVoiceProvider.update { isThisAppTheDefaultVoiceProvider() }
         }
+    }
+
+    /**
+     * Returns true when the app is on the system's battery-optimization-ignored
+     * list. Read via [PowerManager] — there's no runtime permission to check;
+     * the setting is flipped via the [Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS]
+     * system dialog (see `MainActivity.batteryOptimizationRequest`).
+     */
+    fun isIgnoringBatteryOptimizations(): Boolean {
+        val pm = app.getSystemService(PowerManager::class.java) ?: return false
+        return pm.isIgnoringBatteryOptimizations(app.packageName)
     }
 
     private fun isThisAppTheDefaultVoiceProvider(): Boolean {

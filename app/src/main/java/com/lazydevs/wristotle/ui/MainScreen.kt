@@ -43,7 +43,9 @@ fun MainScreen(
     val perms by vm.permissions.collectAsState()
     val isDefaultVoiceProvider by vm.isDefaultVoiceProvider.collectAsState()
     val watchPermsGranted = perms.contacts && perms.callPhone && perms.sendSms
-    val allPermsGranted = watchPermsGranted && perms.recordAudio
+    val allPermsGranted = watchPermsGranted &&
+        perms.recordAudio &&
+        perms.ignoringBatteryOptimizations
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.main_screen_title)) }) }
@@ -93,6 +95,11 @@ fun MainScreen(
                 stringResource(R.string.perm_record_audio_label),
                 stringResource(R.string.perm_record_audio_desc),
                 perms.recordAudio
+            )
+            PermissionRow(
+                stringResource(R.string.perm_battery_label),
+                stringResource(R.string.perm_battery_desc),
+                perms.ignoringBatteryOptimizations
             )
 
             if (!allPermsGranted) {
