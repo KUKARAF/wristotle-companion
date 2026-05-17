@@ -6,8 +6,15 @@ import com.lazydevs.wristotle.history.ConversationDatabase
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.history.ConversationSettings
 import com.lazydevs.wristotle.speech.Recognizers
+import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
 import com.lazydevs.wristotle.speech.nlu.StubIntentClassifier
+import com.lazydevs.wristotle.speech.nlu.bank.ExampleBank
+import com.lazydevs.wristotle.speech.nlu.bank.NluDatabase
+import com.lazydevs.wristotle.speech.nlu.embedding.EmbeddingIntentClassifier
+import com.lazydevs.wristotle.speech.nlu.embedding.MiniLmEmbedder
+import com.lazydevs.wristotle.speech.nlu.embedding.Tokenizer
+import com.lazydevs.wristotle.speech.nlu.model.NluModelStorage
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.StubRecognizer
 import com.lazydevs.wristotle.speech.whisper.ModelStorage
@@ -50,6 +57,8 @@ class WristotleApplication : Application() {
         private set
 
     private lateinit var modelStorage: ModelStorage
+    private lateinit var nluModelStorage: NluModelStorage
+    private lateinit var nluBank: ExampleBank
 
     /**
      * Application-scoped scope for fire-and-forget housekeeping (DB pruning, etc).
@@ -60,10 +69,19 @@ class WristotleApplication : Application() {
     /** Cache: modelPath → recognizer. Built on demand by the provider lambda. */
     private val whisperRecognizers = mutableMapOf<String, WhisperRecognizer>()
 
+    /**
+     * Single cached intent classifier for the currently-active NLU model path,
+     * or null if the user hasn't downloaded + activated one yet. Falls back to
+     * [StubIntentClassifier] when null. Synchronization mirrors [whisperRecognizers].
+     */
+    private var cachedClassifier: Pair<String, EmbeddingIntentClassifier>? = null
+    private val classifierLock = Any()
+
     override fun onCreate() {
         super.onCreate()
         transport = PebbleTransport(this)
         modelStorage = ModelStorage(this)
+        nluModelStorage = NluModelStorage(this)
 
         val database = ConversationDatabase.build(this)
         conversationSettings = ConversationSettings(this)
@@ -73,15 +91,21 @@ class WristotleApplication : Application() {
         // came back. Subsequent inserts also prune.
         appScope.launch { conversationRepository.prune() }
 
+        nluBank = ExampleBank(NluDatabase.build(this).exampleDao())
+
         Recognizers.provider = provider@{ _ ->
             val path = modelStorage.activeModelPath()
                 ?: return@provider StubRecognizer()
             getOrCreateRecognizer(path)
         }
 
-        // Phase 1: always-Unknown stub. Phase 2 will swap in the
-        // EmbeddingIntentClassifier when an NLU model is active.
-        IntentClassifiers.provider = { StubIntentClassifier() }
+        IntentClassifiers.provider = { _ -> getOrCreateClassifier() }
+
+        // Pre-warm the classifier if a model is already active so the first
+        // user query doesn't pay the ~500 ms tokenizer + seed-embedding cost.
+        appScope.launch {
+            (getOrCreateClassifier() as? EmbeddingIntentClassifier)?.warmUp()
+        }
     }
 
     override fun onTerminate() {
@@ -127,6 +151,35 @@ class WristotleApplication : Application() {
         whisperRecognizers.getOrPut(path) {
             Log.d(TAG, "creating recognizer for active model: $path")
             WhisperRecognizer(modelPath = path)
+        }
+    }
+
+    /**
+     * Returns the cached [EmbeddingIntentClassifier] for the currently-active
+     * NLU model, building it lazily on first access. Falls back to
+     * [StubIntentClassifier] when no model is active. Tokenizer + embedder
+     * are heavy; cache by path so a model switch tears down the previous one.
+     */
+    private fun getOrCreateClassifier(): IntentClassifier {
+        val path = nluModelStorage.activeModelPath() ?: return StubIntentClassifier()
+        return synchronized(classifierLock) {
+            val cached = cachedClassifier
+            if (cached != null && cached.first == path) return@synchronized cached.second
+
+            // Stale (active model switched) — close the old session before building anew.
+            cached?.second?.also {
+                Log.d(TAG, "releasing intent classifier for inactive model: ${cached.first}")
+                // EmbeddingIntentClassifier doesn't own anything closeable directly;
+                // the embedder it holds does. For now, leave embedder lifecycle to
+                // GC since model-switch is rare and the runtime is process-scoped.
+            }
+
+            Log.d(TAG, "creating intent classifier for active model: $path")
+            val tokenizer = Tokenizer.fromContext(this, com.lazydevs.wristotle.speech.nlu.R.raw.minilm_vocab)
+            val embedder = MiniLmEmbedder(modelPath = path)
+            val classifier = EmbeddingIntentClassifier(embedder, tokenizer, nluBank)
+            cachedClassifier = path to classifier
+            classifier
         }
     }
 }

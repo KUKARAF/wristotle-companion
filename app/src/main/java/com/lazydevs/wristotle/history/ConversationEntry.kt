@@ -41,4 +41,13 @@ data class ConversationEntry(
     val audioCtx: Int? = null,
     /** Whisper confidence score in [0.0, 1.0], if reported. */
     val confidence: Float? = null,
+    /**
+     * NLU classifier's predicted intent name (e.g. "Call") for this query.
+     * Phase 2 logs the prediction in shadow mode — the actual handler still
+     * comes from the legacy prefix dispatch. Null when no NLU model is
+     * active (classifier falls back to the always-Unknown stub).
+     */
+    val nluIntent: String? = null,
+    /** Cosine confidence of [nluIntent], 0..1. Null when no prediction was made. */
+    val nluConfidence: Float? = null,
 )

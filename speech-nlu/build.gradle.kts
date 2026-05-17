@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -20,7 +21,8 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
-    // ONNX Runtime + Room/KSP deps land in Phase 2 — Phase 1 only needs the
-    // stub classifier and the model-download UX scaffolding (which reuses
-    // :speech-whisper's primitives).
+    implementation(libs.onnxruntime.android)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 }

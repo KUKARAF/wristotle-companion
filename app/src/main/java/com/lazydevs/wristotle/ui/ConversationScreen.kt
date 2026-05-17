@@ -185,6 +185,19 @@ private fun EntryCard(entry: ConversationEntry) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            // Shadow-mode NLU prediction. Phase 2 only logs it; Phase 3 will
+            // actually route on it. Surfaced so users (and us) can see what
+            // the classifier would have picked before flipping the switch.
+            val nluIntent = entry.nluIntent
+            val nluConfidence = entry.nluConfidence
+            if (nluIntent != null && nluConfidence != null) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "predicted: %s (%.2f)".format(nluIntent, nluConfidence),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

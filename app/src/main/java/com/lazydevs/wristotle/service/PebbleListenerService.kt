@@ -12,6 +12,8 @@ import com.lazydevs.wristotle.handlers.SmsHandler
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.phone.ContactsRepository
+import com.lazydevs.wristotle.speech.nlu.IntentClassifier
+import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
 import com.lazydevs.wristotle.transport.MessageKeys
 import com.lazydevs.wristotle.transport.PebbleTransport
 import com.lazydevs.wristotle.transport.int32
@@ -37,6 +39,7 @@ class PebbleListenerService : BasePebbleListenerService() {
     private lateinit var registry: HandlerRegistry
     private lateinit var reminderHandler: ReminderHandler
     private lateinit var cancelHandler: CancelReminderHandler
+    private lateinit var intentClassifier: IntentClassifier
 
     override fun onCreate() {
         super.onCreate()
@@ -44,6 +47,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         val app = application as WristotleApplication
         transport = app.transport
         conversationRepository = app.conversationRepository
+        intentClassifier = IntentClassifiers.provider(this)
         val contacts = ContactsRepository(this)
         registry = HandlerRegistry(listOf(
             CallHandler(this, contacts),
@@ -103,7 +107,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             Log.d(TAG, "Reminder query: $reminderQuery")
             val result = reminderHandler.handle(reminderQuery)
             transport.sendReminderResult(result)
-            logInteraction(reminderQuery, result, handler = "reminder", requiresCompanion = true)
+            logInteractionWithNlu(reminderQuery, result, handler = "reminder", requiresCompanion = true)
             return ReceiveResult.Ack
         }
 
@@ -112,7 +116,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             Log.d(TAG, "Cancel query: $cancelQuery")
             val result = cancelHandler.handle(cancelQuery)
             transport.sendCancelResult(result)
-            logInteraction(cancelQuery, result, handler = "cancel", requiresCompanion = true)
+            logInteractionWithNlu(cancelQuery, result, handler = "cancel", requiresCompanion = true)
             return ReceiveResult.Ack
         }
 
@@ -123,7 +127,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         val dispatchResult = registry.dispatch(query)
         Log.d(TAG, "Sending response: ${dispatchResult.response}")
         transport.sendResponse(dispatchResult.response)
-        logInteraction(
+        logInteractionWithNlu(
             query,
             dispatchResult.response,
             handler = dispatchResult.handler,
@@ -132,6 +136,41 @@ class PebbleListenerService : BasePebbleListenerService() {
         )
 
         return ReceiveResult.Ack
+    }
+
+    /**
+     * Wraps [logInteraction] with a shadow-mode NLU classification: runs the
+     * classifier on the query, records its predicted intent + confidence on
+     * the row, but doesn't act on the prediction. Phase 3 will let the
+     * prediction actually drive dispatch.
+     *
+     * Failures in the classifier never block the user-visible response —
+     * the prediction is best-effort, the row is persisted either way.
+     */
+    private fun logInteractionWithNlu(
+        query: String,
+        response: String,
+        handler: String,
+        requiresCompanion: Boolean,
+        success: Boolean = isSuccessResponse(response),
+    ) {
+        coroutineScope.launch {
+            val prediction = runCatching { intentClassifier.classify(query) }
+                .onFailure { Log.w(TAG, "NLU classify failed", it) }
+                .getOrNull()
+            val entry = ConversationEntry(
+                timestampEpochMs = System.currentTimeMillis(),
+                userQuery = query,
+                responseText = response,
+                handler = handler,
+                requiresCompanion = requiresCompanion,
+                success = success,
+                nluIntent = prediction?.intent?.name,
+                nluConfidence = prediction?.confidence,
+            )
+            runCatching { conversationRepository.add(entry) }
+                .onFailure { Log.w(TAG, "Failed to persist conversation entry", it) }
+        }
     }
 
     /**
