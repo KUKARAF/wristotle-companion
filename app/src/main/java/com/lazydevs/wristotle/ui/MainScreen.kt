@@ -53,10 +53,15 @@ fun MainScreen(
     val isDefaultVoiceProvider by vm.isDefaultVoiceProvider.collectAsState()
     val models by modelsVm.models.collectAsState()
 
-    val watchAttention = !(perms.contacts && perms.callPhone && perms.sendSms)
-    val voiceAttention = !(perms.recordAudio && perms.ignoringBatteryOptimizations) ||
+    // Permissions tab badges if any of the watch perms (Contacts/Phone/SMS),
+    // voice perms (Record Audio + battery exemption), or the default-voice-
+    // provider setting still need user attention. Settings tab badges if no
+    // Whisper model is downloaded/active yet — the only blocking thing in
+    // Settings at the moment.
+    val permissionsAttention = !(perms.contacts && perms.callPhone && perms.sendSms) ||
+        !(perms.recordAudio && perms.ignoringBatteryOptimizations) ||
         !isDefaultVoiceProvider
-    val modelsAttention = models.none { it.isDownloaded } || models.none { it.isActive }
+    val settingsAttention = models.none { it.isDownloaded } || models.none { it.isActive }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.main_screen_title)) }) },
@@ -67,9 +72,8 @@ fun MainScreen(
                 Screen.entries.forEach { screen ->
                     val attention = when (screen) {
                         Screen.Conversation -> false
-                        Screen.Watch        -> watchAttention
-                        Screen.Voice        -> voiceAttention
-                        Screen.Models       -> modelsAttention
+                        Screen.Permissions  -> permissionsAttention
+                        Screen.Settings     -> settingsAttention
                     }
                     NavigationBarItem(
                         selected = currentRoute == screen.route,
@@ -120,19 +124,18 @@ fun MainScreen(
                     ConversationScreen(vm = conversationVm)
                 }
             }
-            composable(Screen.Watch.route) {
+            composable(Screen.Permissions.route) {
                 Box(padding) {
-                    WatchScreen(vm = vm, onRequestWatchPermissions = onRequestWatchPermissions)
+                    PermissionsScreen(
+                        vm = vm,
+                        onRequestWatchPermissions = onRequestWatchPermissions,
+                        onRequestVoicePermissions = onRequestVoicePermissions,
+                    )
                 }
             }
-            composable(Screen.Voice.route) {
+            composable(Screen.Settings.route) {
                 Box(padding) {
-                    VoiceScreen(vm = vm, onRequestVoicePermissions = onRequestVoicePermissions)
-                }
-            }
-            composable(Screen.Models.route) {
-                Box(padding) {
-                    ModelsScreen(vm = modelsVm)
+                    SettingsScreen(modelsVm = modelsVm, conversationVm = conversationVm)
                 }
             }
         }

@@ -3,7 +3,6 @@ package com.lazydevs.wristotle.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,27 +17,20 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Watch
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -53,39 +45,23 @@ import java.util.Date
  * the user query, the response that was sent back to the watch, a handler
  * badge, a success/failure indicator, and the wall-clock time.
  *
- * The header has a Clear All action (icon button + confirm dialog) so users
- * who want a clean slate aren't stuck waiting for the 30-day prune.
+ * Clearing history lives on the Settings tab; this screen is read-only.
  */
 @Composable
 fun ConversationScreen(vm: ConversationViewModel) {
     val entries by vm.entries.collectAsState()
-    var showClearConfirm by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.conversation_header),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Text(
-                    stringResource(R.string.conversation_subheader),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (entries.isNotEmpty()) {
-                IconButton(onClick = { showClearConfirm = true }) {
-                    Icon(
-                        Icons.Default.DeleteOutline,
-                        contentDescription = stringResource(R.string.conversation_clear_all),
-                    )
-                }
-            }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                stringResource(R.string.conversation_header),
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Text(
+                stringResource(R.string.conversation_subheader),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Spacer(Modifier.height(12.dp))
 
@@ -101,25 +77,6 @@ fun ConversationScreen(vm: ConversationViewModel) {
                 }
             }
         }
-    }
-
-    if (showClearConfirm) {
-        AlertDialog(
-            onDismissRequest = { showClearConfirm = false },
-            title = { Text(stringResource(R.string.conversation_clear_confirm_title)) },
-            text = { Text(stringResource(R.string.conversation_clear_confirm_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    vm.clearAll()
-                    showClearConfirm = false
-                }) { Text(stringResource(R.string.conversation_clear_all)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearConfirm = false }) {
-                    Text(stringResource(R.string.dialog_cancel))
-                }
-            },
-        )
     }
 }
 

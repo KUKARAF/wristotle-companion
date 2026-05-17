@@ -3,9 +3,8 @@ package com.lazydevs.wristotle.ui.nav
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Watch
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.lazydevs.wristotle.R
 
@@ -14,6 +13,8 @@ import com.lazydevs.wristotle.R
  *
  * Order in [entries] is also the tab order in the bar — `Conversation` first
  * so it's the landing screen and the default tab a returning user sees.
+ * Permissions consolidates the former Watch + Voice tabs; Settings owns the
+ * Whisper model catalog and conversation-history maintenance.
  */
 enum class Screen(
     val route: String,
@@ -21,9 +22,8 @@ enum class Screen(
     val icon: ImageVector,
 ) {
     Conversation("conversation", R.string.nav_conversation, Icons.AutoMirrored.Filled.Chat),
-    Watch("watch", R.string.nav_watch, Icons.Default.Watch),
-    Voice("voice", R.string.nav_voice, Icons.Default.Mic),
-    Models("models", R.string.nav_models, Icons.Default.Download),
+    Permissions("permissions", R.string.nav_permissions, Icons.Default.Shield),
+    Settings("settings", R.string.nav_settings, Icons.Default.Settings),
     ;
 
     companion object {

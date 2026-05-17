@@ -16,10 +16,13 @@
 
     <!-- Bottom navigation -->
     <string name="nav_conversation">Chat</string>
-    <string name="nav_watch">Watch</string>
-    <string name="nav_voice">Voice</string>
-    <string name="nav_models">Models</string>
+    <string name="nav_permissions">Permissions</string>
+    <string name="nav_settings">Settings</string>
     <string name="nav_attention_badge_desc">Needs attention</string>
+
+    <!-- Settings screen -->
+    <string name="settings_history_header">Conversation history</string>
+    <string name="settings_history_desc">Removes every saved interaction from this phone. The 30-day window starts fresh.</string>
 
     <!-- Conversation screen -->
     <string name="conversation_header">Conversation</string>
