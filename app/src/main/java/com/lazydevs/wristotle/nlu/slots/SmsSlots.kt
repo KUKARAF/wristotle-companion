@@ -22,7 +22,17 @@ import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
  * (3) fixes the long-standing bug where "text john smith hi" sent to
  * contact "john" with body "smith hi".
  */
-class SmsSlots(private val contacts: ContactsRepository) : SlotExtractor {
+/**
+ * [findContact] is the only side-effectful dependency — defaulted to the
+ * real [ContactsRepository.findContact] in production wiring and replaced
+ * with a fake lambda in tests so this extractor stays pure-function
+ * testable without a Context.
+ */
+class SmsSlots(
+    private val findContact: suspend (String) -> ContactsRepository.Contact?,
+) : SlotExtractor {
+    constructor(contacts: ContactsRepository) : this(contacts::findContact)
+
 
     override suspend fun extract(query: String): Map<String, Any> {
         val lower = query.lowercase().trim()
@@ -50,7 +60,7 @@ class SmsSlots(private val contacts: ContactsRepository) : SlotExtractor {
         val words = rest.split(Regex("\\s+")).map(::cleanNameToken).filter { it.isNotEmpty() }
         for (n in minOf(MAX_NAME_WORDS, words.size) downTo 1) {
             val candidate = words.subList(0, n).joinToString(" ")
-            if (contacts.findContact(candidate) != null) {
+            if (findContact(candidate) != null) {
                 val body = if (n < words.size) words.subList(n, words.size).joinToString(" ").trim() else ""
                 if (body.isNotEmpty()) {
                     return mapOf("contact" to candidate, "body" to body)
