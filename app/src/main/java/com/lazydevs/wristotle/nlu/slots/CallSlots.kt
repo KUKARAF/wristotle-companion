@@ -37,7 +37,13 @@ class CallSlots : SlotExtractor {
 
     private companion object {
         val CALL_VERBS = Regex("(?i)\\b(call|dial|phone|ring)\\b")
-        val FILLERS = Regex("(?i)\\b(my|the|please|would you|could you|can you|i want to|i'd like to|let's|to|up)\\b")
-        val TRAILING = Regex("(?i)\\s*(a (call|ring)|on (the )?phone)\\s*$")
+        // "give" and "get" pick up the "give John a call" / "get me Mom" patterns;
+        // "a" handles the article in "give X a call" / "want a call"; the rest are
+        // common conversational filler. Apply word-boundary-anchored so we don't
+        // chew into contact-name characters.
+        val FILLERS = Regex("(?i)\\b(give|get|my|a|the|please|would you|could you|can you|i want to|i'd like to|let's|to|up)\\b")
+        // Trailing fragments that come after the contact name: "give X a call",
+        // "call X on the phone", "call X for me", "call X back".
+        val TRAILING = Regex("(?i)\\s*(a (call|ring)|on (the )?phone|for me|back)\\s*$")
     }
 }
