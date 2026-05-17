@@ -14,7 +14,7 @@ prettytime = "5.0.7.Final"
 navigationCompose = "2.8.5"
 room = "2.7.1"
 ksp = "2.2.10-2.0.2"
-onnxruntime = "1.20.0"
+onnxruntime = "1.22.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
