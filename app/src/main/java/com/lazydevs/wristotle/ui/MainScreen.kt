@@ -45,6 +45,7 @@ fun MainScreen(
     vm: MainViewModel,
     modelsVm: WhisperModelsViewModel,
     nluModelsVm: NluModelsViewModel,
+    nluSettingsVm: NluSettingsViewModel,
     conversationVm: ConversationViewModel,
     onRequestWatchPermissions: () -> Unit,
     onRequestVoicePermissions: () -> Unit,
@@ -139,6 +140,7 @@ fun MainScreen(
                     SettingsScreen(
                         modelsVm = modelsVm,
                         nluModelsVm = nluModelsVm,
+                        nluSettingsVm = nluSettingsVm,
                         conversationVm = conversationVm,
                     )
                 }

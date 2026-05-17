@@ -2,46 +2,49 @@ package com.lazydevs.wristotle.handlers
 
 import android.content.Context
 import android.util.Log
+import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.transport.PebbleTransport
 import io.rebble.pebblekit2.common.model.TimelineLayout
 import io.rebble.pebblekit2.common.model.TimelineLayoutType
 import io.rebble.pebblekit2.common.model.TimelinePin
 import io.rebble.pebblekit2.common.model.TimelineResult
+import java.util.Date
 import java.util.UUID
 import kotlin.time.ExperimentalTime
 import kotlin.time.toKotlinInstant
 
 private const val TAG = "ReminderHandler"
 
-// Phrases stripped when building the reminder title from a voice transcription.
-private val STRIP_PREFIXES = Regex(
-    """(?i)^(remind me (to|about|that)?|reminder (to|about)?)\s*""",
-)
-private val STRIP_TIME_PHRASES = Regex(
-    """(?i)\s*(at|in|by|on|next|this|every)\s+[\w\s:.,]+${'$'}""",
-)
-
+/**
+ * Handles [Intent.Reminder] — creates a Pebble timeline pin scheduled for
+ * `slots["time"]` (a [Date]) with title `slots["title"]`. Both slots are
+ * populated by `ReminderSlots`, which wraps the legacy TimeParser + the
+ * title-stripping regex from this file's history.
+ */
 @OptIn(ExperimentalTime::class)
-class ReminderHandler(context: Context, private val transport: PebbleTransport) {
+class ReminderHandler(context: Context, private val transport: PebbleTransport) : ActionHandler {
 
     private val pinStore = PinStore(context)
 
-    suspend fun handle(transcription: String): String {
-        Log.d(TAG, "reminder: $transcription")
+    override val tag: String = "reminder"
+    override val intent: Intent = Intent.Reminder
 
-        val parsed = parseTime(transcription)
-        if (parsed == null) {
-            Log.d(TAG, "no time found in: $transcription")
+    override suspend fun handle(result: IntentResult): String {
+        val time = result.slots["time"] as? Date
+        if (time == null) {
+            Log.d(TAG, "no time slot in: ${result.rawQuery}")
             return "Couldn't understand the time"
         }
+        val title = (result.slots["title"] as? String)?.takeIf { it.isNotBlank() }
+            ?: result.rawQuery.replaceFirstChar { it.uppercaseChar() }
 
-        val title = buildTitle(transcription)
-        Log.d(TAG, "date=${parsed.date}  title=$title")
+        Log.d(TAG, "date=$time  title=$title")
 
         val pinId = UUID.randomUUID().toString()
         val pin = TimelinePin(
             id = pinId,
-            startTime = parsed.date.toInstant().toKotlinInstant(),
+            startTime = time.toInstant().toKotlinInstant(),
             layout = TimelineLayout(
                 type = TimelineLayoutType.GENERIC_PIN,
                 title = title,
@@ -49,24 +52,16 @@ class ReminderHandler(context: Context, private val transport: PebbleTransport) 
             )
         )
 
-        val result = transport.insertReminder(pin)
-        Log.d(TAG, "insertTimelinePin: $result")
+        val pinResult = transport.insertReminder(pin)
+        Log.d(TAG, "insertTimelinePin: $pinResult")
 
-        return if (result == TimelineResult.Success) {
+        return if (pinResult == TimelineResult.Success) {
             pinStore.save(pinId)
-            val formatted = android.text.format.DateFormat.format("MMM d 'at' h:mm a", parsed.date).toString()
+            val formatted = android.text.format.DateFormat.format("MMM d 'at' h:mm a", time).toString()
             "Reminder set:\n$title\n$formatted"
         } else {
-            Log.w(TAG, "insertTimelinePin failed: $result")
-            "Failed to set reminder ($result)"
+            Log.w(TAG, "insertTimelinePin failed: $pinResult")
+            "Failed to set reminder ($pinResult)"
         }
     }
-
-    private fun buildTitle(transcription: String): String =
-        transcription
-            .replace(STRIP_PREFIXES, "")
-            .replace(STRIP_TIME_PHRASES, "")
-            .trim()
-            .replaceFirstChar { it.uppercaseChar() }
-            .ifEmpty { transcription.replaceFirstChar { it.uppercaseChar() } }
 }

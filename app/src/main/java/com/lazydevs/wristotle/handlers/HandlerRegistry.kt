@@ -1,17 +1,17 @@
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.IntentResult
+
 /**
- * Result of dispatching a query through the [HandlerRegistry].
+ * Result of dispatching an [IntentResult] through the [HandlerRegistry].
  *
- * @property response  The text that will be sent back to the watch chat UI.
- * @property handler   Short tag identifying which handler produced the response
- *                     ("call", "sms", "unknown", "error"). Logged into the
- *                     conversation history so future tuning can see which paths
- *                     are taken most often / fail most.
+ * @property response  Text sent back to the watch chat UI.
+ * @property handler   Short tag identifying which handler ran ("call", "sms", …).
  * @property success   Heuristic — false if the response is a known failure
- *                     string ("Contact not found", "Couldn't…", "Error:",
- *                     "Unknown command"), true otherwise. Used to badge entries
- *                     in the Conversation screen.
+ *                     prefix ("Contact not found", "Couldn't…", "Error:",
+ *                     "Unknown command"). Drives the success/failure badge
+ *                     in conversation history and gates implicit learning.
  */
 data class HandlerResult(
     val response: String,
@@ -20,22 +20,39 @@ data class HandlerResult(
 )
 
 /**
- * Dispatches a voice query to the first [ActionHandler] whose [ActionHandler.canHandle]
- * returns true, then returns the result for the watch display + persistence.
+ * Maps each [Intent] to exactly one [ActionHandler] and dispatches the
+ * classified result. Replaces the prior linear `canHandle` scan now that
+ * the NLU layer makes routing deterministic from the intent itself.
  *
- * Handlers are checked in registration order, so more specific matchers
- * (e.g. "send message to") should be registered before broader ones (e.g. "message").
+ * Multiple handlers claiming the same intent is a programming error —
+ * Kotlin's `associateBy` will silently drop earlier ones; we throw
+ * eagerly so the misconfiguration shows up at startup, not at first use.
  */
-class HandlerRegistry(private val handlers: List<ActionHandler>) {
+class HandlerRegistry(handlers: List<ActionHandler>) {
 
-    suspend fun dispatch(query: String): HandlerResult {
-        val handler = handlers.firstOrNull { it.canHandle(query) }
+    private val byIntent: Map<Intent, ActionHandler> = run {
+        val grouped = handlers.groupBy { it.intent }
+        val duplicates = grouped.filter { it.value.size > 1 }
+        require(duplicates.isEmpty()) {
+            "Duplicate intent handlers: " + duplicates.map { (intent, list) ->
+                "$intent → ${list.map { it.tag }}"
+            }.joinToString("; ")
+        }
+        grouped.mapValues { (_, list) -> list.first() }
+    }
+
+    suspend fun dispatch(result: IntentResult): HandlerResult {
+        val handler = byIntent[result.intent]
         return try {
             if (handler != null) {
-                val response = handler.handle(query)
+                val response = handler.handle(result)
                 HandlerResult(response, handler.tag, success = isSuccessResponse(response))
             } else {
-                HandlerResult("Unknown command: $query", handler = "unknown", success = false)
+                HandlerResult(
+                    response = "Unknown command: ${result.rawQuery}",
+                    handler = "unknown",
+                    success = false,
+                )
             }
         } catch (e: Exception) {
             HandlerResult(
@@ -50,7 +67,7 @@ class HandlerRegistry(private val handlers: List<ActionHandler>) {
         // Conservative prefix list — anything we send back that starts with one
         // of these strings is treated as a failure for history badging. Keep in
         // sync with handler response strings; over-classifying as failure is
-        // safer than under-classifying.
+        // safer than under-classifying for a history-badging use case.
         private val FAILURE_PREFIXES = listOf(
             "Contact not found",
             "Couldn't",
@@ -61,6 +78,8 @@ class HandlerRegistry(private val handlers: List<ActionHandler>) {
             "Query too long",
             "Contacts permission",
             "SMS permission",
+            "No contact",
+            "No message",
         )
 
         fun isSuccessResponse(response: String): Boolean =

@@ -9,12 +9,19 @@ import android.telecom.TelecomManager
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.lazydevs.wristotle.phone.ContactsRepository
+import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.IntentResult
 
 private const val TAG = "CallHandler"
 
 /**
- * Handles "call [name]" and "dial [name]" queries by placing a phone call
- * via [TelecomManager]. Requires READ_CONTACTS and CALL_PHONE permissions.
+ * Handles [Intent.Call] — places a phone call via [TelecomManager] to the
+ * contact named in `slots["contact"]`. Requires READ_CONTACTS and CALL_PHONE
+ * permissions.
+ *
+ * Slot extractor (`CallSlots`) strips call/dial/phone/ring trigger words +
+ * fillers and hands back the residue as the contact name. ContactsRepository
+ * preserves the prefix-preferred LIKE matching used today.
  */
 class CallHandler(
     private val context: Context,
@@ -22,19 +29,16 @@ class CallHandler(
 ) : ActionHandler {
 
     override val tag: String = "call"
+    override val intent: Intent = Intent.Call
 
-    override fun canHandle(query: String): Boolean {
-        val lower = query.lowercase()
-        return lower.startsWith("call ") || lower.startsWith("dial ")
-    }
-
-    override suspend fun handle(query: String): String {
+    override suspend fun handle(result: IntentResult): String {
         if (!contacts.hasPermission()) return "Contacts permission not granted"
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE)
             != PackageManager.PERMISSION_GRANTED) return "Call permission not granted"
 
-        // Everything after the first word ("call" / "dial") is the contact name.
-        val contactName = query.substringAfter(" ").trim()
+        val contactName = (result.slots["contact"] as? String)?.trim().orEmpty()
+        if (contactName.isEmpty()) return "No contact specified"
+
         val contact = contacts.findContact(contactName)
             ?: return "Contact not found: $contactName"
 

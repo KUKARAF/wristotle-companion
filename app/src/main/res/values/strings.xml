@@ -82,6 +82,15 @@
     <!-- NLU Models section -->
     <string name="nlu_models_header">Intent Model</string>
     <string name="nlu_models_desc">Optional. Download a small sentence encoder to let Wristotle understand commands phrased in natural ways (e.g. \"ring Mom\" or \"tell Dad I\'ll be late\"). Without it, the existing prefix matching is used.</string>
+
+    <!-- Intent learning section -->
+    <string name="settings_learning_header">Intent learning</string>
+    <string name="settings_learning_desc">When on, every successful command improves recognition for similar phrasings next time. Stays on the phone — nothing leaves the device.</string>
+    <string name="settings_learning_toggle">Learn from my voice commands</string>
+    <string name="settings_learning_clear_button">Clear learned examples</string>
+    <string name="settings_learning_clear_title">Clear learned examples?</string>
+    <string name="settings_learning_clear_message">Removes everything Wristotle has learned from your past commands. The seed examples bundled with the app stay.</string>
+    <string name="settings_learning_clear_apply">Clear</string>
     <string name="whisper_model_status_active">Active</string>
     <string name="whisper_model_status_downloaded">Downloaded</string>
     <string name="whisper_model_action_download">Download</string>

@@ -2,29 +2,39 @@ package com.lazydevs.wristotle.handlers
 
 import android.content.Context
 import android.util.Log
+import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.transport.PebbleTransport
 import io.rebble.pebblekit2.common.model.TimelineResult
 
 private const val TAG = "CancelReminderHandler"
 
-class CancelReminderHandler(context: Context, private val transport: PebbleTransport) {
+/**
+ * Handles [Intent.Cancel] — deletes the most-recent timeline pin. Today
+ * the transcription itself is ignored; future work could honor a
+ * `slots["target"]` slot for "cancel my 5 pm reminder" style queries.
+ */
+class CancelReminderHandler(context: Context, private val transport: PebbleTransport) : ActionHandler {
 
     private val pinStore = PinStore(context)
 
-    suspend fun handle(transcription: String): String {
-        Log.d(TAG, "cancel: $transcription")
+    override val tag: String = "cancel"
+    override val intent: Intent = Intent.Cancel
+
+    override suspend fun handle(result: IntentResult): String {
+        Log.d(TAG, "cancel: ${result.rawQuery}")
 
         val pinId = pinStore.latest()
             ?: return "No reminders to cancel"
 
-        val result = transport.deleteReminder(pinId)
-        Log.d(TAG, "deleteTimelinePin result: $result")
+        val cancelResult = transport.deleteReminder(pinId)
+        Log.d(TAG, "deleteTimelinePin result: $cancelResult")
 
-        return if (result is TimelineResult.Success) {
+        return if (cancelResult is TimelineResult.Success) {
             pinStore.remove(pinId)
             "Reminder cancelled"
         } else {
-            "Failed to cancel reminder ($result)"
+            "Failed to cancel reminder ($cancelResult)"
         }
     }
 }

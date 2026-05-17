@@ -18,6 +18,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,9 +36,10 @@ import com.lazydevs.wristotle.R
 import kotlinx.coroutines.launch
 
 /**
- * Settings tab — holds three cards:
+ * Settings tab — holds four cards:
  *   • Whisper model catalog / download / activation
  *   • NLU sentence-encoder model (optional; enables natural-language commands)
+ *   • Intent learning (toggle + clear learned examples)
  *   • Conversation-history maintenance (retention picker + Clear all)
  *
  * Add more setting sections as new cards here as features grow.
@@ -46,12 +48,15 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     modelsVm: WhisperModelsViewModel,
     nluModelsVm: NluModelsViewModel,
+    nluSettingsVm: NluSettingsViewModel,
     conversationVm: ConversationViewModel,
 ) {
     val retentionDays by conversationVm.retentionDays.collectAsState()
+    val learningEnabled by nluSettingsVm.learningEnabled.collectAsState()
     val scope = rememberCoroutineScope()
     // State for the "you're about to shrink the window and lose N entries" confirm dialog.
     var pendingShrink by remember { mutableStateOf<PendingShrink?>(null) }
+    var showClearLearnedConfirm by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -62,6 +67,11 @@ fun SettingsScreen(
     ) {
         WhisperModelsCard(vm = modelsVm)
         NluModelsCard(vm = nluModelsVm)
+        IntentLearningCard(
+            learningEnabled = learningEnabled,
+            onToggle = nluSettingsVm::setLearningEnabled,
+            onClearLearned = { showClearLearnedConfirm = true },
+        )
         HistoryRetentionCard(
             selectedDays = retentionDays,
             options = conversationVm.retentionOptions,
@@ -94,6 +104,70 @@ fun SettingsScreen(
             },
             onDismiss = { pendingShrink = null },
         )
+    }
+
+    if (showClearLearnedConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearLearnedConfirm = false },
+            title = { Text(stringResource(R.string.settings_learning_clear_title)) },
+            text = { Text(stringResource(R.string.settings_learning_clear_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    nluSettingsVm.clearLearned()
+                    showClearLearnedConfirm = false
+                }) { Text(stringResource(R.string.settings_learning_clear_apply)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearLearnedConfirm = false }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun IntentLearningCard(
+    learningEnabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onClearLearned: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.settings_learning_header),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.settings_learning_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.settings_learning_toggle),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Switch(checked = learningEnabled, onCheckedChange = onToggle)
+            }
+            Button(
+                onClick = onClearLearned,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_learning_clear_button))
+            }
+        }
     }
 }
 

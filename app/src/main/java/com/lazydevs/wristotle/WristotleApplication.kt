@@ -5,7 +5,16 @@ import android.util.Log
 import com.lazydevs.wristotle.history.ConversationDatabase
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.history.ConversationSettings
+import com.lazydevs.wristotle.nlu.LearningCollector
+import com.lazydevs.wristotle.nlu.NluSettings
+import com.lazydevs.wristotle.nlu.slots.CallSlots
+import com.lazydevs.wristotle.nlu.slots.CancelSlots
+import com.lazydevs.wristotle.nlu.slots.FindPhoneSlots
+import com.lazydevs.wristotle.nlu.slots.ReminderSlots
+import com.lazydevs.wristotle.nlu.slots.SmsSlots
+import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.Recognizers
+import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
 import com.lazydevs.wristotle.speech.nlu.StubIntentClassifier
@@ -15,6 +24,7 @@ import com.lazydevs.wristotle.speech.nlu.embedding.EmbeddingIntentClassifier
 import com.lazydevs.wristotle.speech.nlu.embedding.MiniLmEmbedder
 import com.lazydevs.wristotle.speech.nlu.embedding.Tokenizer
 import com.lazydevs.wristotle.speech.nlu.model.NluModelStorage
+import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.StubRecognizer
 import com.lazydevs.wristotle.speech.whisper.ModelStorage
@@ -58,7 +68,22 @@ class WristotleApplication : Application() {
 
     private lateinit var modelStorage: ModelStorage
     private lateinit var nluModelStorage: NluModelStorage
-    private lateinit var nluBank: ExampleBank
+
+    /** Example bank backing the NLU classifier. Exposed for the Settings "clear learned" action. */
+    lateinit var nluBank: ExampleBank
+        private set
+
+    /** NLU preferences (learning toggle). Application-scoped, lifetime = process. */
+    lateinit var nluSettings: NluSettings
+        private set
+
+    /** Implicit-learning insertion + debounced rebuild. */
+    lateinit var learningCollector: LearningCollector
+        private set
+
+    /** Slot extractors keyed by intent. Reused by every dispatch in PebbleListenerService. */
+    lateinit var slotExtractors: SlotExtractorRegistry
+        private set
 
     /**
      * Application-scoped scope for fire-and-forget housekeeping (DB pruning, etc).
@@ -92,6 +117,25 @@ class WristotleApplication : Application() {
         appScope.launch { conversationRepository.prune() }
 
         nluBank = ExampleBank(NluDatabase.build(this).exampleDao())
+        nluSettings = NluSettings(this)
+
+        // Slot extractors are stateless aside from the contacts dep shared with
+        // SmsHandler, so building them once at startup is fine.
+        val contacts = ContactsRepository(this)
+        slotExtractors = SlotExtractorRegistry(mapOf(
+            Intent.Call to CallSlots(),
+            Intent.Sms to SmsSlots(contacts),
+            Intent.Reminder to ReminderSlots(),
+            Intent.Cancel to CancelSlots(),
+            Intent.FindPhone to FindPhoneSlots(),
+        ))
+
+        learningCollector = LearningCollector(
+            scope = appScope,
+            bank = nluBank,
+            classifierProvider = { (cachedClassifier?.second) },
+            settings = nluSettings,
+        )
 
         Recognizers.provider = provider@{ _ ->
             val path = modelStorage.activeModelPath()

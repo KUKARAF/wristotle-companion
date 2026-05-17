@@ -16,6 +16,7 @@ import com.lazydevs.wristotle.ui.ConversationViewModel
 import com.lazydevs.wristotle.ui.MainScreen
 import com.lazydevs.wristotle.ui.MainViewModel
 import com.lazydevs.wristotle.ui.NluModelsViewModel
+import com.lazydevs.wristotle.ui.NluSettingsViewModel
 import com.lazydevs.wristotle.ui.WhisperModelsViewModel
 import com.lazydevs.wristotle.ui.theme.WristotleTheme
 
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
     private val vm: MainViewModel by viewModels()
     private val modelsVm: WhisperModelsViewModel by viewModels()
     private val nluModelsVm: NluModelsViewModel by viewModels()
+    private val nluSettingsVm: NluSettingsViewModel by viewModels()
     private val conversationVm: ConversationViewModel by viewModels()
 
     // Registered once; result arrives asynchronously and triggers a permission refresh.
@@ -59,6 +61,7 @@ class MainActivity : ComponentActivity() {
                     vm = vm,
                     modelsVm = modelsVm,
                     nluModelsVm = nluModelsVm,
+                    nluSettingsVm = nluSettingsVm,
                     conversationVm = conversationVm,
                     onRequestWatchPermissions = ::requestWatchPermissions,
                     onRequestVoicePermissions = ::requestVoicePermissions,
