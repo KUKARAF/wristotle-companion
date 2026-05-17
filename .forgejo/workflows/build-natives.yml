@@ -55,6 +55,15 @@ jobs:
       - name: Install pinned NDK + CMake
         run: sdkmanager --install "ndk;30.0.14904198" "cmake;3.22.1"
 
+      - name: Ensure jq is available
+        # Self-hosted runner images often don't bundle jq the way
+        # Codeberg's shared catthehacker/ubuntu image does.
+        shell: bash
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            apt-get update && apt-get install -y --no-install-recommends jq
+          fi
+
       - name: Build the :speech-whisper release AAR
         # AAR build runs CMake for arm64-v8a and stuffs every required
         # .so into jni/arm64-v8a/. We extract from there rather than

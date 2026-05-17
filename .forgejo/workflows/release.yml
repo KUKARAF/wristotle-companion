@@ -88,6 +88,18 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/wristotle-release.keystore"
           test -s "$GITHUB_WORKSPACE/wristotle-release.keystore"
 
+      - name: Ensure jq is available
+        # Codeberg's shared runner image (catthehacker/ubuntu) ships with
+        # jq pre-installed; the leaner image self-hosted runners often
+        # default to doesn't. The publish step builds its JSON payloads
+        # via jq, so install it up front instead of failing later with
+        # an opaque 422 from the Codeberg API.
+        shell: bash
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            apt-get update && apt-get install -y --no-install-recommends jq
+          fi
+
       - name: Run unit tests
         # Fail fast before paying the release-build cost if a recent commit
         # broke a dedup / slot / prefix test.

@@ -88,6 +88,16 @@ jobs:
           tar -xzf natives.tar.gz -C speech-whisper/src/main/jniLibs
           ls -lh speech-whisper/src/main/jniLibs/arm64-v8a/
 
+      - name: Ensure jq is available
+        # Self-hosted runner images often don't bundle jq the way
+        # Codeberg's shared catthehacker/ubuntu image does. The download
+        # + publish steps lean on jq, so install it up front.
+        shell: bash
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            apt-get update && apt-get install -y --no-install-recommends jq
+          fi
+
       - name: Decode release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.WRISTOTLE_KEYSTORE_BASE64 }}
