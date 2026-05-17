@@ -38,7 +38,7 @@ Dictate from your watch; the command runs on your phone. Supported phrases:
 
 Beyond watch dictation, Wristotle Companion can also register as Android's *system-wide* voice input provider, so any app on the device — keyboards, search bars, third-party apps — transcribes through the same on-device Whisper engine.
 
-Every interaction — calls, texts, reminders, locally-handled commands like "what time is it" — is saved to a local **Conversation** history on the phone, kept for 30 days. The Conversation tab is the app's landing screen; long-press any message bubble to copy text, or tap the trash icon to clear history early.
+Every interaction — calls, texts, reminders, locally-handled commands like "what time is it" — is saved to a local **Conversation** history on the phone. The Conversation tab is the app's landing screen; long-press any message bubble to copy text. The **Settings** tab lets you choose how long to keep history (1 / 10 / 20 / 30 days, default 30) and wipe it on demand. The third tab, **Permissions**, consolidates the watch-bridge perms (Contacts / Phone / SMS) and the voice perms (Record Audio, battery exemption, default-voice-provider activation) in one place.
 
 ### What you need
 
@@ -224,9 +224,10 @@ app/src/main/java/com/lazydevs/wristotle/
     PinStore.kt                 # SharedPreferences ring buffer of recent pin IDs
   history/
     ConversationEntry.kt        # Room @Entity — one row per interaction
-    ConversationDao.kt          # insert / observe-newest-first / prune-older-than / delete-all
+    ConversationDao.kt          # insert / observe-newest-first / prune / count-older-than / delete-all
     ConversationDatabase.kt     # Room @Database, built once in WristotleApplication
-    ConversationRepository.kt   # 30-day retention wrapper, prunes on insert + on app start
+    ConversationRepository.kt   # retention wrapper, prunes on insert + on app start
+    ConversationSettings.kt     # SharedPreferences-backed retention window (1/10/20/30 days)
   phone/
     ContactsRepository.kt       # Contact lookup on Dispatchers.IO
   service/
@@ -236,11 +237,13 @@ app/src/main/java/com/lazydevs/wristotle/
     MessageKeys.kt              # AppMessage key indices (sync with watch package.json)
     PebbleTransport.kt          # PebbleKit2 DefaultPebbleSender wrapper + NACK retry
   ui/
-    MainScreen.kt               # Bottom-nav shell (Compose Material3)
+    MainScreen.kt               # Bottom-nav shell with three tabs (Chat / Permissions / Settings)
     MainViewModel.kt            # Permission state + default-voice-provider state
-    ConversationScreen.kt       # Default tab — chat-style history list, copy-text, clear-all
-    ConversationViewModel.kt    # Wraps ConversationRepository.observeAll() as StateFlow
-    WatchScreen.kt / VoiceScreen.kt / ModelsScreen.kt   # Other tabs
+    ConversationScreen.kt       # Default tab — chat-style history list, long-press to copy
+    ConversationViewModel.kt    # Wraps ConversationRepository.observeAll() + retention setter
+    PermissionsScreen.kt        # Tab 2 — Watch Bridge card + Voice Input card stacked
+    SettingsScreen.kt           # Tab 3 — Whisper models card + history retention picker + Clear all
+    WhisperModelsCard.kt        # One-line-per-model compact list, tap-to-activate
     WhisperModelsViewModel.kt   # Model catalog + download / activate state
 
 speech/src/main/java/com/lazydevs/wristotle/speech/
