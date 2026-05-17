@@ -21,6 +21,15 @@ package com.lazydevs.wristotle.speech.whisper
  * four down to two instead of one. Shortest-first finds the natural
  * sentence/phrase unit and reduces all copies to one.
  *
+ * Minimum unit length is **2 tokens**. Single-word repeats are far more
+ * likely to be intentional user input — emphasis in an SMS body
+ * (`text dad saying yes yes yes`), a list (`milk milk milk` in a
+ * reminder), a confirmation (`ok ok`) — than a hallucination. The
+ * one real single-word hallucination Whisper produces is on silence
+ * (`dio dio dio`), which has no matching intent and routes to Unknown
+ * either way, so the cosmetic difference isn't worth shredding user
+ * content.
+ *
  * Comparison is case-insensitive and strips trailing punctuation so
  * `"call me"` matches `"call me."` (Whisper's punctuation placement on
  * repetitions is inconsistent).
@@ -42,9 +51,10 @@ internal fun dedupeRepeatedPhrases(text: String): String {
         var collapsed = false
         // Shortest-first: the smallest repeating unit is the natural phrase
         // boundary. Bounded at half the remaining length since a repeat
-        // needs at least one full copy after.
+        // needs at least one full copy after. Minimum 2 — see docstring
+        // for why single-word repeats are preserved as user content.
         val maxK = (raw.size - i) / 2
-        var k = 1
+        var k = 2
         while (k <= maxK) {
             if (normalized.subList(i, i + k) == normalized.subList(i + k, i + 2 * k)) {
                 // Phrase of length k repeats. Keep one copy, advance past
