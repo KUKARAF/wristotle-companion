@@ -107,19 +107,16 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
     // SpeechRecognizer consumers expect a single transcript per session.
     wparams.single_segment   = true;
     wparams.no_context       = true;
-    // Adaptive encoder attention window. Each mel frame is 20ms, so 1500 frames
-    // is whisper's full 30s context. Picking a value larger than the actual
-    // audio length just wastes encoder compute on silence padding, AND — for
-    // long audio — pushes inference past the Pebble dictation_session's
-    // ~2s "audio sent, awaiting DictationResult" firmware timeout, which then
-    // shows the user STR_DICTATION_FAIL ("Could not understand. Try again.").
+    // Adaptive encoder attention window. Each mel frame is 20 ms, so 1500
+    // frames is whisper's full 30 s context. Picking a value larger than the
+    // actual audio length wastes encoder compute on silence padding, which
+    // dominates inference cost on short utterances.
     //
-    // Tiered: each step picks the smallest power-of-2-ish frame count that
-    // still covers the audio length, with a safety margin. The previous
-    // single-threshold (8s → 768, else 0/1500) was wrong because (a) 768
-    // actually covers 15.36s, (b) jumping straight to 1500 for 8-15s audio
-    // doubled the inference cost for no benefit, and (c) it caused timeouts
-    // on long dictation. Verified 2026-05-16 on Pixel 10a + base.en.
+    // Tiered: each step picks the smallest frame count that still covers the
+    // audio length with a safety margin. The previous single-threshold
+    // (8 s → 768, else 0/1500) doubled inference cost for 8-15 s audio for
+    // no benefit (768 actually covers 15.36 s). Measured 15 s audio: ~9 s
+    // inference → ~1.2 s on Pixel 10a + base.en.
     const float audio_seconds = static_cast<float>(n) / 16000.0f;
     int audio_ctx;
     if      (audio_seconds <=  5.0f) audio_ctx = 256;   // covers 5.12 s
