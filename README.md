@@ -38,7 +38,9 @@ Dictate from your watch; the command runs on your phone. Supported phrases:
 
 Beyond watch dictation, Wristotle Companion can also register as Android's *system-wide* voice input provider, so any app on the device — keyboards, search bars, third-party apps — transcribes through the same on-device Whisper engine.
 
-Every interaction — calls, texts, reminders, locally-handled commands like "what time is it" — is saved to a local **Conversation** history on the phone. The Conversation tab is the app's landing screen; long-press any message bubble to copy text. The **Settings** tab lets you choose how long to keep history (1 / 10 / 20 / 30 days, default 30) and wipe it on demand. The third tab, **Permissions**, consolidates the watch-bridge perms (Contacts / Phone / SMS) and the voice perms (Record Audio, battery exemption, default-voice-provider activation) in one place.
+Phrasings beyond the canonical verbs work too — once you download the optional **Intent Model** (a small on-device sentence encoder), Wristotle understands natural variants like "ring Mom", "tell Dad I'm running late", or "buzz me at 3" by routing them to the right intent. Without the model, the existing prefix matching is used and the canonical phrasings above still work.
+
+Every interaction — calls, texts, reminders, locally-handled commands like "what time is it" — is saved to a local **Conversation** history on the phone. The Conversation tab is the app's landing screen; long-press any message bubble to copy text. The **Settings** tab lets you choose how long to keep history (1 / 10 / 20 / 30 days, default 30), wipe it on demand, and optionally **save the audio** of your last few dictations (capped at 5, off by default) so you can replay any command from the chat. The third tab, **Permissions**, consolidates the watch-bridge perms (Contacts / Phone / SMS) and the voice perms (Record Audio, battery exemption, default-voice-provider activation) in one place.
 
 ### What you need
 
@@ -54,7 +56,7 @@ Grab the latest APK from [Releases](https://codeberg.org/kchinnasamy/wristotle-c
 
 1. **Open Wristotle Companion.**
 2. **Grant permissions.** Tap *Grant Permissions* and accept Contacts, Phone, SMS, Microphone, and Notifications.
-3. **Download a Whisper model.** Open the *Whisper Models* card and tap *Download* on a model. `tiny.en` (~75 MB) is the recommended starting point — fastest, English-only, accurate enough for short watch commands. The first model you download is set active automatically.
+3. **Download a Whisper model.** Open the *Whisper Models* card and tap *Download* on a model. `Tiny (English, quantized)` (~32 MB) is the recommended starting point — fastest, smallest, accurate enough for short watch commands. The first model you download is set active automatically.
 4. **Pair the watch.** Make sure your watch is paired and the [Wristotle](../Wristotle) watch app is installed.
 5. **Try it.** Open Wristotle on the watch, press *Select*, and dictate one of the commands from the table above.
 
@@ -194,17 +196,22 @@ Build just the speech-recognition library:
 
 | Module            | Role                                                                                   |
 |-------------------|----------------------------------------------------------------------------------------|
-| `:app`            | The companion app — services, handlers, UI, `WristotleApplication`                     |
+| `:app`            | The companion app — services, handlers, slot extractors, UI, `WristotleApplication`    |
 | `:speech`         | System-wide `android.speech.RecognitionService` + audio sources + Recognizer interface |
 | `:speech-whisper` | whisper.cpp JNI backend, model catalog / storage / downloader, `WhisperRecognizer`     |
+| `:speech-nlu`     | Intent classifier interface + ONNX-MiniLM embedding implementation + per-intent slot extractors + learnable example bank |
 
-The recognition backend is swappable via a single line in `WristotleApplication.onCreate`:
+Both the recognition backend and the intent classifier are swappable via
+single-line provider hooks in `WristotleApplication.onCreate`:
 
 ```kotlin
-Recognizers.provider = { ctx -> WhisperRecognizer(ctx, modelPath = ...) }
+Recognizers.provider       = { ctx -> WhisperRecognizer(ctx, modelPath = ...) }
+IntentClassifiers.provider = { ctx -> EmbeddingIntentClassifier(...) }
 ```
 
-Neither the `:speech` module nor `WhisperRecognitionService` ever references a concrete recognizer.
+Neither the `:speech` module nor `WhisperRecognitionService` references a
+concrete recognizer; nothing outside `:app` and `:speech-nlu` references
+a concrete classifier.
 
 ### Project structure
 
@@ -212,50 +219,55 @@ Neither the `:speech` module nor `WhisperRecognitionService` ever references a c
 app/src/main/java/com/lazydevs/wristotle/
   AppConstants.kt               # PEBBLE_UUID, notification constants
   MainActivity.kt               # Starts foreground service, requests permissions
-  WristotleApplication.kt       # Owns shared PebbleTransport + Recognizers provider hook
+  WristotleApplication.kt       # Owns shared PebbleTransport, recognizer + classifier
+                                #   providers, slot extractor registry, conversation
+                                #   audio store. Skips NLU on isLowRamDevice().
   handlers/
-    ActionHandler.kt            # Interface: tag + canHandle() + handle()
-    HandlerRegistry.kt          # Dispatches to first matching handler; returns (response, handler, success)
-    CallHandler.kt              # "call/dial [name]"
-    SmsHandler.kt               # "text/message [name] [body]"
-    ReminderHandler.kt          # reminder_query → insertTimelinePin
-    CancelReminderHandler.kt    # cancel_query → deleteTimelinePin via PinStore
-    TimeParser.kt               # prettytime-nlp + word-number normalisation
+    ActionHandler.kt            # Interface: tag + intent + handle(IntentResult)
+    HandlerRegistry.kt          # 1:1 intent → handler map; returns (response, handler, success)
+    CallHandler.kt, SmsHandler.kt, ReminderHandler.kt,
+    CancelReminderHandler.kt, FindPhoneHandler.kt
+    TimeParser.kt               # prettytime-nlp + word-number normalisation (called from ReminderSlots)
     PinStore.kt                 # SharedPreferences ring buffer of recent pin IDs
+  nlu/
+    NluSettings.kt              # Learning toggle + ROUTE_THRESHOLD/ROUTE_MARGIN constants
+    LearningCollector.kt        # Dedupe-insert + debounced classifier rebuild on success
+    PrefixHints.kt              # Opening-verb tie-breaker for ambiguous classifier output
+    slots/
+      CallSlots.kt, SmsSlots.kt, ReminderSlots.kt,
+      CancelSlots.kt, FindPhoneSlots.kt
+      SlotUtils.kt              # stripTrailingEmphasis() + cleanNameToken() helpers
   history/
-    ConversationEntry.kt        # Room @Entity — one row per interaction
+    ConversationEntry.kt        # Room @Entity (audio + NLU fields included)
     ConversationDao.kt          # insert / observe-newest-first / prune / count-older-than / delete-all
-    ConversationDatabase.kt     # Room @Database, built once in WristotleApplication
-    ConversationRepository.kt   # retention wrapper, prunes on insert + on app start
+    ConversationDatabase.kt     # Room @Database with v1→v2→v3 migrations
+    ConversationRepository.kt   # Retention wrapper; wipes audio dir on clearAll
     ConversationSettings.kt     # SharedPreferences-backed retention window (1/10/20/30 days)
+    ConversationAudioSettings.kt # SharedPreferences-backed capture toggle (default off)
+    ConversationAudioStore.kt   # filesDir/conversation-audio/, FIFO eviction at MAX_FILES=5
   phone/
     ContactsRepository.kt       # Contact lookup on Dispatchers.IO
   service/
     WatchMessageService.kt      # Foreground LifecycleService — keep-alive + COMPANION_READY
-    PebbleListenerService.kt    # Bound by the Pebble companion; dispatches + logs to history
+    PebbleListenerService.kt    # Bound by Pebble companion; resolveIntent + dispatch + log
   transport/
     MessageKeys.kt              # AppMessage key indices (sync with watch package.json)
     PebbleTransport.kt          # PebbleKit2 DefaultPebbleSender wrapper + NACK retry
   ui/
     MainScreen.kt               # Bottom-nav shell with three tabs (Chat / Permissions / Settings)
     MainViewModel.kt            # Permission state + default-voice-provider state
-    ConversationScreen.kt       # Default tab — chat-style history list, long-press to copy
-    ConversationViewModel.kt    # Wraps ConversationRepository.observeAll() + retention setter
+    ConversationScreen.kt       # Default tab — chat-style history, inline play button per row
+    ConversationViewModel.kt    # Wraps repository + audio settings + retention setter
     PermissionsScreen.kt        # Tab 2 — Watch Bridge card + Voice Input card stacked
-    SettingsScreen.kt           # Tab 3 — Whisper models card + history retention picker + Clear all
+    SettingsScreen.kt           # Tab 3 — sectioned cards (Speech / Intent / Storage)
     WhisperModelsCard.kt        # One-line-per-model compact list, tap-to-activate
     WhisperModelsViewModel.kt   # Model catalog + download / activate state
+    NluModelsCard.kt, NluModelsViewModel.kt        # Twin of Whisper card for the NLU model
 
 speech/src/main/java/com/lazydevs/wristotle/speech/
   Recognizers.kt                # Service-locator: @Volatile var provider
-  audio/
-    AudioSource.kt              # samples() + stop()
-    MicAudioSource.kt           # AudioRecord, 16 kHz mono PCM-16
-    PipeAudioSource.kt          # Reads RecognizerIntent.EXTRA_AUDIO_SOURCE pipe
-  recognizer/
-    Recognizer.kt               # Backend interface
-    TranscriptionEvent.kt       # Sealed: SpeechStarted/Partial/SpeechEnded/Final/Error
-    StubRecognizer.kt           # Phase 1 backend — "hello world" at pipe EOF
+  audio/                        # AudioSource interface + MicAudioSource + PipeAudioSource
+  recognizer/                   # Recognizer interface + TranscriptionEvent + StubRecognizer
   service/
     WhisperRecognitionService.kt # extends android.speech.RecognitionService
 
@@ -263,29 +275,56 @@ speech-whisper/
   build.gradle.kts              # NDK + CMake, arm64-v8a only, NDK 30.0 pinned
   src/main/cpp/
     CMakeLists.txt              # add_subdirectory(whisper.cpp) + JNI lib
-    wristotle_speech.cpp        # JNI bridge: loadModel / transcribe / freeModel
-    whisper.cpp/                # git submodule, pinned to v1.8.4
+    wristotle_speech.cpp        # JNI bridge + per-call timing logs + silence trim
+    whisper.cpp/                # git submodule
   src/main/java/com/lazydevs/wristotle/speech/whisper/
     WhisperNative.kt            # JNI external fun decls + defaultThreadCount()
     WhisperRecognizer.kt        # Recognizer impl — buffers to EOF, runs whisper_full
-    ModelCatalog.kt             # Known Whisper models + HuggingFace URLs
+    TranscriptDedup.kt          # Collapses repeated phrases from Whisper hallucinations
+    ModelCatalog.kt             # Known Whisper models + HuggingFace URLs (incl. q5_1 quants)
     ModelStorage.kt             # filesDir/whisper-models/ + active model id
     ModelDownloader.kt          # Flow<DownloadEvent>, resumable HTTP, throttled progress
+
+speech-nlu/
+  src/main/java/com/lazydevs/wristotle/speech/nlu/
+    Intent.kt, IntentResult.kt
+    IntentClassifier.kt, IntentClassifiers.kt      # Interface + service-locator
+    StubIntentClassifier.kt                        # Always-Unknown fallback
+    slot/SlotExtractor.kt, SlotExtractorRegistry.kt
+    embedding/MiniLmEmbedder.kt, Tokenizer.kt,
+              CosineSimilarity.kt, EmbeddingIntentClassifier.kt
+    bank/ExampleEntry.kt, ExampleDao.kt,
+         NluDatabase.kt, ExampleBank.kt
+    seed/SeedExamples.kt                           # Bundled phrasings per intent
+    model/NluModelCatalog.kt, NluModelStorage.kt,
+          NluModelDownloader.kt                    # Mirrors :speech-whisper's pattern
+  src/main/res/raw/minilm_vocab                    # WordPiece vocab for the embedder
 ```
 
 ### Adding a new command handler
 
-1. Implement `ActionHandler` in `handlers/`:
+Routing is now intent-based — the NLU classifier picks the intent, the
+`HandlerRegistry` maps it to a handler. Adding a brand-new capability
+(e.g. Weather) takes six steps:
+
+1. Add `Weather` to the `Intent` enum in `:speech-nlu`.
+2. Add ~15 seed phrasings in `SeedExamples.kt` so the classifier can
+   route to it.
+3. (Optional) Implement `SlotExtractor` in `app/.../nlu/slots/WeatherSlots.kt`
+   to pull structured fields from the query, and register it in
+   `WristotleApplication`'s `SlotExtractorRegistry` map.
+4. Implement `ActionHandler` in `handlers/`:
 
    ```kotlin
    class WeatherHandler(...) : ActionHandler {
-       override val tag = "weather"   // shown as the handler chip in Conversation history
-       override fun canHandle(query: String) = query.lowercase().startsWith("weather")
-       override suspend fun handle(query: String): String = "Sunny and 72°F"
+       override val tag = "weather"          // shown as the chip in Conversation history
+       override val intent = Intent.Weather  // 1:1 with HandlerRegistry's intent map
+       override suspend fun handle(result: IntentResult): String =
+           "Sunny and 72°F in ${result.slots["location"] ?: "your area"}"
    }
    ```
 
-2. Register it in `PebbleListenerService.onCreate()`:
+5. Register the handler in `PebbleListenerService.onCreate()`:
 
    ```kotlin
    registry = HandlerRegistry(listOf(
@@ -295,7 +334,11 @@ speech-whisper/
    ))
    ```
 
-More specific prefixes go first — `HandlerRegistry` returns the first match.
+6. (Optional) Add a `PrefixHints` rule so an unambiguous opening verb
+   (`weather`) wins ambiguous classifier calls.
+
+Watch app needs no changes — natural-language queries arrive over
+`COMPANION_QUERY` and the classifier picks the right intent.
 
 ### Permissions
 
