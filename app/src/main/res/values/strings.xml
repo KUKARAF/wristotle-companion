@@ -77,7 +77,7 @@
 
     <!-- Whisper Models section -->
     <string name="whisper_models_header">Whisper Models</string>
-    <string name="whisper_models_desc">Download a model to enable on-device transcription. The first model you download is set active automatically.</string>
+    <string name="whisper_models_desc">Download a model to enable on-device transcription. Tap any downloaded model to make it the active one.</string>
     <string name="whisper_model_status_active">Active</string>
     <string name="whisper_model_status_downloaded">Downloaded</string>
     <string name="whisper_model_action_download">Download</string>

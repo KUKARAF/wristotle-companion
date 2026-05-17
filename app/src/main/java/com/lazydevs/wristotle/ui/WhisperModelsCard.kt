@@ -1,5 +1,6 @@
 package com.lazydevs.wristotle.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Card
@@ -32,14 +32,15 @@ import com.lazydevs.wristotle.R
  * Compact card listing available Whisper models. One row per model:
  *
  *   ┌──────────────────────────────────────────────────────────────┐
- *   │ tiny.en  ·  75 MB English   [Active]              [✓] [🗑]    │
+ *   │ tiny.en  ·  75 MB English   [Active]                     [🗑] │
  *   │ ▓▓▓▓▓░░░░  47%               (only while downloading)         │
  *   │ Error message in red          (only on failure)               │
  *   └──────────────────────────────────────────────────────────────┘
  *
- * Actions move to single-purpose icon buttons (download / set-active /
- * delete / cancel) to fit on one line. The progress bar and error text
- * only render when relevant, so idle models collapse to a single line.
+ * Interaction: tap an unactive downloaded row to make it the active
+ * model. Right-side icon button is single-purpose by state — Download
+ * for not-yet-downloaded, Delete for downloaded, Cancel for in-flight
+ * download. The progress bar and error text only render when relevant.
  */
 @Composable
 fun WhisperModelsCard(
@@ -82,7 +83,14 @@ private fun ModelRow(
     onDelete: () -> Unit,
     onSetActive: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+    // Whole row is clickable when this is a downloaded but inactive model —
+    // tap-to-activate is more discoverable than a small icon button.
+    val rowModifier = if (state.isDownloaded && !state.isActive && state.progress == null) {
+        Modifier.fillMaxWidth().clickable(onClick = onSetActive).padding(vertical = 2.dp)
+    } else {
+        Modifier.fillMaxWidth().padding(vertical = 2.dp)
+    }
+    Column(modifier = rowModifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 state.info.displayName,
@@ -153,7 +161,7 @@ private fun RowActions(
     onDownload: () -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
-    onSetActive: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onSetActive: () -> Unit,  // wired via row click, kept for symmetry
 ) {
     when {
         state.progress != null -> {
@@ -165,14 +173,6 @@ private fun RowActions(
             }
         }
         state.isDownloaded -> {
-            if (!state.isActive) {
-                IconButton(onClick = onSetActive) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = stringResource(R.string.whisper_model_action_set_active),
-                    )
-                }
-            }
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.DeleteOutline,
