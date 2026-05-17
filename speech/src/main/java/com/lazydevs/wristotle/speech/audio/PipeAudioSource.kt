@@ -58,10 +58,20 @@ class PipeAudioSource(
         val byteBuf = ByteArray(bytesPerChunk)
         var chunkIdx = 0
         var totalBytes = 0L
+        // Per-chunk timing instrumentation. Goal: tell apart "fast steady drain
+        // then long silence-detection tail" vs "slow drain throughout" when long
+        // dictations overrun the watch's session timer. STALL_THRESHOLD_MS=200
+        // means a read took longer than 2× the chunk wall-clock duration (100 ms
+        // real-time), which is a producer hiccup worth surfacing individually.
+        val startNanos = System.nanoTime()
+        var prevReadEndNanos = startNanos
+        var maxGapMs = 0L
+        var stallCount = 0
         Log.d(TAG, "pipe read loop starting")
 
         ParcelFileDescriptor.AutoCloseInputStream(fd).use { input ->
             while (!stopRequested) {
+                val readStartNanos = System.nanoTime()
                 val read = try {
                     input.read(byteBuf)
                 } catch (e: IOException) {
@@ -71,8 +81,18 @@ class PipeAudioSource(
                     Log.d(TAG, "pipe IOException after $chunkIdx chunks (${totalBytes}B): ${e.message} — treating as EOF")
                     break
                 }
+                val now = System.nanoTime()
+                val gapMs = (now - prevReadEndNanos) / 1_000_000
+                prevReadEndNanos = now
+                if (gapMs > maxGapMs) maxGapMs = gapMs
+                if (gapMs > STALL_THRESHOLD_MS) {
+                    stallCount++
+                    Log.d(TAG, "pipe stall: chunk=$chunkIdx gap=${gapMs}ms totalBytes=$totalBytes elapsed=${(now - startNanos) / 1_000_000}ms")
+                }
+
                 if (read < 0) {
-                    Log.d(TAG, "pipe EOF after $chunkIdx chunks (${totalBytes}B)")
+                    val elapsedMs = (now - startNanos) / 1_000_000
+                    Log.d(TAG, "pipe EOF after $chunkIdx chunks (${totalBytes}B) elapsed=${elapsedMs}ms maxGap=${maxGapMs}ms stalls=$stallCount")
                     break
                 }
                 if (read == 0) continue  // Defensive: shouldn't happen on blocking read.
@@ -88,4 +108,8 @@ class PipeAudioSource(
         }
         Log.d(TAG, "pipe read loop ended (chunks=$chunkIdx bytes=$totalBytes stop=$stopRequested)")
     }.flowOn(Dispatchers.IO)
+
+    private companion object {
+        const val STALL_THRESHOLD_MS = 200L
+    }
 }
