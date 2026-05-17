@@ -1,6 +1,8 @@
 package com.lazydevs.wristotle
 
+import android.app.ActivityManager
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import com.lazydevs.wristotle.history.ConversationAudioSettings
 import com.lazydevs.wristotle.history.ConversationAudioStore
@@ -174,10 +176,16 @@ class WristotleApplication : Application() {
 
         IntentClassifiers.provider = { _ -> getOrCreateClassifier() }
 
-        // Pre-warm the classifier if a model is already active so the first
-        // user query doesn't pay the ~500 ms tokenizer + seed-embedding cost.
-        appScope.launch {
-            (getOrCreateClassifier() as? EmbeddingIntentClassifier)?.warmUp()
+        // Pre-warm only on devices Android doesn't flag as low-RAM. On
+        // capable hardware the ~500 ms tokenizer + seed-embedding burst is
+        // worth absorbing now so the first user query feels instant. On
+        // low-RAM 2019-era hardware that same burst competes with other
+        // apps initialising during cold-boot and risks an OOM kill; let
+        // the first query pay the cost lazily instead.
+        if (!isLowRamDevice()) {
+            appScope.launch {
+                (getOrCreateClassifier() as? EmbeddingIntentClassifier)?.warmUp()
+            }
         }
     }
 
@@ -243,10 +251,18 @@ class WristotleApplication : Application() {
     /**
      * Returns the cached [EmbeddingIntentClassifier] for the currently-active
      * NLU model, building it lazily on first access. Falls back to
-     * [StubIntentClassifier] when no model is active. Tokenizer + embedder
-     * are heavy; cache by path so a model switch tears down the previous one.
+     * [StubIntentClassifier] when no model is active *or* when Android
+     * reports this is a low-RAM device — the embedder + ONNX session add
+     * ~80–100 MB of resident memory and the prefix-match path that the
+     * stub triggers is acceptable degradation on memory-constrained
+     * hardware. Tokenizer + embedder are heavy; cache by path so a
+     * model switch tears down the previous one.
      */
     private fun getOrCreateClassifier(): IntentClassifier {
+        if (isLowRamDevice()) {
+            Log.d(TAG, "low-RAM device — skipping NLU classifier, using stub")
+            return StubIntentClassifier()
+        }
         val path = nluModelStorage.activeModelPath() ?: return StubIntentClassifier()
         return synchronized(classifierLock) {
             val cached = cachedClassifier
@@ -267,5 +283,16 @@ class WristotleApplication : Application() {
             cachedClassifier = path to classifier
             classifier
         }
+    }
+
+    /**
+     * Android's own signal that the device should run in low-memory mode.
+     * True on phones with ≲1 GB RAM and on emulators with the equivalent
+     * config. When set, we skip the embedder + ONNX session (~80–100 MB
+     * resident) and fall back to the prefix-match stub classifier.
+     */
+    private fun isLowRamDevice(): Boolean {
+        val am = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        return am?.isLowRamDevice == true
     }
 }
