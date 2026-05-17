@@ -107,14 +107,27 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
     // SpeechRecognizer consumers expect a single transcript per session.
     wparams.single_segment   = true;
     wparams.no_context       = true;
-    // Adaptive encoder attention window. Whisper's full 30s context (1500 mel
-    // frames) is wasted on short utterances — trim to ~10s (768) when the
-    // input fits, fall back to the default (0 → 1500) for anything longer.
-    // Drops encoder compute by roughly half on the typical short utterance
-    // without affecting accuracy.
-    constexpr float SHORT_AUDIO_THRESHOLD_SECS = 8.0f;
+    // Adaptive encoder attention window. Each mel frame is 20ms, so 1500 frames
+    // is whisper's full 30s context. Picking a value larger than the actual
+    // audio length just wastes encoder compute on silence padding, AND — for
+    // long audio — pushes inference past the Pebble dictation_session's
+    // ~2s "audio sent, awaiting DictationResult" firmware timeout, which then
+    // shows the user STR_DICTATION_FAIL ("Could not understand. Try again.").
+    //
+    // Tiered: each step picks the smallest power-of-2-ish frame count that
+    // still covers the audio length, with a safety margin. The previous
+    // single-threshold (8s → 768, else 0/1500) was wrong because (a) 768
+    // actually covers 15.36s, (b) jumping straight to 1500 for 8-15s audio
+    // doubled the inference cost for no benefit, and (c) it caused timeouts
+    // on long dictation. Verified 2026-05-16 on Pixel 10a + base.en.
     const float audio_seconds = static_cast<float>(n) / 16000.0f;
-    wparams.audio_ctx        = (audio_seconds <= SHORT_AUDIO_THRESHOLD_SECS) ? 768 : 0;
+    int audio_ctx;
+    if      (audio_seconds <=  5.0f) audio_ctx = 256;   // covers 5.12 s
+    else if (audio_seconds <= 10.0f) audio_ctx = 512;   // covers 10.24 s
+    else if (audio_seconds <= 15.0f) audio_ctx = 768;   // covers 15.36 s
+    else if (audio_seconds <= 20.0f) audio_ctx = 1024;  // covers 20.48 s
+    else                              audio_ctx = 0;     // full 1500, ~30 s
+    wparams.audio_ctx        = audio_ctx;
 
     LOGI("transcribe: %d samples, lang=%s, threads=%d, audio_ctx=%d",
          static_cast<int>(n), lang.c_str(), wparams.n_threads, wparams.audio_ctx);
