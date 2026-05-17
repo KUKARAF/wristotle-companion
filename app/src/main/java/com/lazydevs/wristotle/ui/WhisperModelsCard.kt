@@ -6,14 +6,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,16 +29,17 @@ import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 
 /**
- * Card listing available Whisper models with per-row status + actions.
+ * Compact card listing available Whisper models. One row per model:
  *
- * Layout per row:
- *   ┌──────────────────────────────────────────────────────┐
- *   │ Display name                              [Status pill]│
- *   │ {size} MB · {language}                                │
- *   │ ▓▓▓▓▓░░░░░ 47%                  (only while downloading)
- *   │ Error message in red             (only on failure)    │
- *   │ [Action button] [Action button]                       │
- *   └──────────────────────────────────────────────────────┘
+ *   ┌──────────────────────────────────────────────────────────────┐
+ *   │ tiny.en  ·  75 MB English   [Active]              [✓] [🗑]    │
+ *   │ ▓▓▓▓▓░░░░  47%               (only while downloading)         │
+ *   │ Error message in red          (only on failure)               │
+ *   └──────────────────────────────────────────────────────────────┘
+ *
+ * Actions move to single-purpose icon buttons (download / set-active /
+ * delete / cancel) to fit on one line. The progress bar and error text
+ * only render when relevant, so idle models collapse to a single line.
  */
 @Composable
 fun WhisperModelsCard(
@@ -43,7 +49,7 @@ fun WhisperModelsCard(
     val models by vm.models.collectAsState()
 
     Card(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 stringResource(R.string.whisper_models_header),
                 style = MaterialTheme.typography.titleMedium,
@@ -52,6 +58,7 @@ fun WhisperModelsCard(
                 stringResource(R.string.whisper_models_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 4.dp),
             )
             models.forEachIndexed { i, state ->
                 if (i > 0) HorizontalDivider()
@@ -75,104 +82,111 @@ private fun ModelRow(
     onDelete: () -> Unit,
     onSetActive: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 state.info.displayName,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-            StatusPill(state)
-        }
-        Text(
-            stringResource(
-                R.string.whisper_model_size_format,
-                approxSizeMb(state.info.approxSizeBytes),
-                state.info.languageLabel,
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        val progress = state.progress
-        if (progress != null) {
-            LinearProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                stringResource(R.string.whisper_model_progress_format, (progress * 100).toInt()),
+                "  · " + stringResource(
+                    R.string.whisper_model_size_format,
+                    approxSizeMb(state.info.approxSizeBytes),
+                    state.info.languageLabel,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
             )
+            if (state.isActive) ActivePill()
+            RowActions(state, onDownload, onCancel, onDelete, onSetActive)
+        }
+        val progress = state.progress
+        if (progress != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            ) {
+                LinearProgressIndicator(
+                    progress = { progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    stringResource(R.string.whisper_model_progress_format, (progress * 100).toInt()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         state.errorMessage?.let { msg ->
             Text(
                 msg,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 2.dp),
             )
         }
-        ActionRow(state, onDownload, onCancel, onDelete, onSetActive)
     }
 }
 
 @Composable
-private fun StatusPill(state: ModelUiState) {
-    val (label, color) = when {
-        state.isActive -> stringResource(R.string.whisper_model_status_active) to MaterialTheme.colorScheme.primary
-        state.isDownloaded -> stringResource(R.string.whisper_model_status_downloaded) to MaterialTheme.colorScheme.secondary
-        else -> return
-    }
+private fun ActivePill() {
     Surface(
-        color = color.copy(alpha = 0.15f),
-        contentColor = color,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+        contentColor = MaterialTheme.colorScheme.primary,
         shape = MaterialTheme.shapes.small,
+        modifier = Modifier.padding(end = 4.dp),
     ) {
-        Box(modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)) {
-            Text(label, style = MaterialTheme.typography.labelSmall)
+        Box(modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
+            Text(
+                stringResource(R.string.whisper_model_status_active),
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
     }
 }
 
 @Composable
-private fun ActionRow(
+private fun RowActions(
     state: ModelUiState,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
     onSetActive: () -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        when {
-            state.progress != null -> {
-                OutlinedButton(onClick = onCancel) {
-                    Text(stringResource(R.string.whisper_model_action_cancel))
+    when {
+        state.progress != null -> {
+            IconButton(onClick = onCancel) {
+                Icon(
+                    Icons.Default.Cancel,
+                    contentDescription = stringResource(R.string.whisper_model_action_cancel),
+                )
+            }
+        }
+        state.isDownloaded -> {
+            if (!state.isActive) {
+                IconButton(onClick = onSetActive) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = stringResource(R.string.whisper_model_action_set_active),
+                    )
                 }
             }
-            state.isDownloaded -> {
-                if (!state.isActive) {
-                    OutlinedButton(onClick = onSetActive) {
-                        Text(stringResource(R.string.whisper_model_action_set_active))
-                    }
-                }
-                TextButton(
-                    onClick = onDelete,
-                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
-                ) {
-                    Text(stringResource(R.string.whisper_model_action_delete))
-                }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Default.DeleteOutline,
+                    contentDescription = stringResource(R.string.whisper_model_action_delete),
+                    tint = MaterialTheme.colorScheme.error,
+                )
             }
-            else -> {
-                OutlinedButton(onClick = onDownload) {
-                    Text(stringResource(R.string.whisper_model_action_download))
-                }
+        }
+        else -> {
+            IconButton(onClick = onDownload) {
+                Icon(
+                    Icons.Default.Download,
+                    contentDescription = stringResource(R.string.whisper_model_action_download),
+                )
             }
         }
     }
