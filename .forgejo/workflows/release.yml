@@ -101,20 +101,13 @@ jobs:
           WRISTOTLE_KEY_PASSWORD: ${{ secrets.WRISTOTLE_KEY_PASSWORD }}
           WRISTOTLE_VERSION_NAME: ${{ steps.version.outputs.name }}
           WRISTOTLE_VERSION_CODE: ${{ steps.version.outputs.code }}
-          # First v0.1.0 attempt got OOM-killed (exit 137) on the medium
-          # runner during CMake configure. Codeberg's medium tier is ~4 GB
-          # and the default Gradle daemon (2 GB) + Kotlin daemon (1.5 GB)
-          # + KSP + ninja was over budget. Cap each piece tight, force
-          # --no-daemon so the launcher JVM IS the daemon (no double
-          # heap), and limit the C++ compile parallelism so ninja can't
-          # spawn 4 g++ processes simultaneously.
-          GRADLE_OPTS: '-Xmx1536m -Dfile.encoding=UTF-8'
+          # JVM heaps live in gradle.properties so the daemon actually
+          # honours them (CLI overrides reach the launcher only, not the
+          # daemon). What's left here is ninja's parallel-compile cap so
+          # whisper.cpp + ggml don't fork 4 g++ subprocesses on top of
+          # the ~3 GB of JVM heap and exceed the medium runner's budget.
           CMAKE_BUILD_PARALLEL_LEVEL: '2'
-        run: |
-          ./gradlew --no-daemon \
-            -Dorg.gradle.workers.max=2 \
-            -Pkotlin.daemon.jvmargs='-Xmx1024m' \
-            :app:assembleRelease
+        run: ./gradlew --no-daemon -Dorg.gradle.workers.max=2 :app:assembleRelease
 
       - name: Stage APK under a versioned name
         run: |
