@@ -35,15 +35,19 @@ class SmsSlots(private val contacts: ContactsRepository) : SlotExtractor {
         // 2. Conjunction split.
         val conjMatch = CONJUNCTIONS.find(rest)
         if (conjMatch != null) {
-            val contact = rest.substring(0, conjMatch.range.first).trim()
+            // Strip trailing emphasis from the contact side only — the body
+            // is meaningful payload, even if it's "yes yes yes".
+            val contact = stripTrailingEmphasis(rest.substring(0, conjMatch.range.first).trim())
             val body = rest.substring(conjMatch.range.last + 1).trim()
             if (contact.isNotEmpty() && body.isNotEmpty()) {
                 return mapOf("contact" to contact, "body" to body)
             }
         }
 
-        // 3. Greedy contact-name lookup.
-        val words = rest.split(Regex("\\s+"))
+        // 3. Greedy contact-name lookup. Each word may carry attached
+        // punctuation from Whisper (e.g. "john,") which would never
+        // match a clean contact-name row in the DB; normalise per token.
+        val words = rest.split(Regex("\\s+")).map(::cleanNameToken).filter { it.isNotEmpty() }
         for (n in minOf(MAX_NAME_WORDS, words.size) downTo 1) {
             val candidate = words.subList(0, n).joinToString(" ")
             if (contacts.findContact(candidate) != null) {

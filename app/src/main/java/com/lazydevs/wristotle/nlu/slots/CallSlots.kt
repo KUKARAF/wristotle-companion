@@ -32,6 +32,11 @@ class CallSlots : SlotExtractor {
         // Collapse runs of whitespace, trim, drop trailing punctuation.
         working = working.replace(Regex("\\s+"), " ").trim().trimEnd('.', ',', '!', '?')
 
+        // Drop trailing emphatic runs ("john yes yes yes" → "john"). Done
+        // last so the earlier filler/trailing regexes don't have to know
+        // about every yes/no/please variant.
+        working = stripTrailingEmphasis(working)
+
         return if (working.isEmpty()) emptyMap() else mapOf("contact" to working)
     }
 

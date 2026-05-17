@@ -21,14 +21,17 @@ package com.lazydevs.wristotle.speech.whisper
  * four down to two instead of one. Shortest-first finds the natural
  * sentence/phrase unit and reduces all copies to one.
  *
- * Minimum unit length is **2 tokens**. Single-word repeats are far more
- * likely to be intentional user input — emphasis in an SMS body
- * (`text dad saying yes yes yes`), a list (`milk milk milk` in a
- * reminder), a confirmation (`ok ok`) — than a hallucination. The
- * one real single-word hallucination Whisper produces is on silence
+ * Minimum unit length is **2 tokens**, AND the unit must contain more
+ * than one distinct token. Both rules protect the same intent: don't
+ * shred a user's emphatic repetition. Without the "distinct" rule, four
+ * copies of the same single word ("yes yes yes yes") would look like
+ * two copies of the 2-token unit `[yes yes]` and collapse to half,
+ * regardless of how many times the user actually said it.
+ *
+ * The one real single-word hallucination Whisper produces is on silence
  * (`dio dio dio`), which has no matching intent and routes to Unknown
- * either way, so the cosmetic difference isn't worth shredding user
- * content.
+ * either way, so leaving any all-same-word run intact costs nothing
+ * meaningful.
  *
  * Comparison is case-insensitive and strips trailing punctuation so
  * `"call me"` matches `"call me."` (Whisper's punctuation placement on
@@ -57,6 +60,13 @@ internal fun dedupeRepeatedPhrases(text: String): String {
         var k = 2
         while (k <= maxK) {
             if (normalized.subList(i, i + k) == normalized.subList(i + k, i + 2 * k)) {
+                // Skip unit that's effectively a single word repeated —
+                // e.g. ["yes","yes"] is just two yeses, not a multi-word
+                // hallucination pattern. Preserves emphatic user input.
+                if (normalized.subList(i, i + k).toSet().size <= 1) {
+                    k++
+                    continue
+                }
                 // Phrase of length k repeats. Keep one copy, advance past
                 // every subsequent consecutive copy.
                 for (j in 0 until k) keptIndices.add(i + j)
