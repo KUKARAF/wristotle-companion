@@ -63,35 +63,48 @@ fun SettingsScreen(
             .fillMaxSize()
             .padding(16.dp)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        WhisperModelsCard(vm = modelsVm)
-        NluModelsCard(vm = nluModelsVm)
-        IntentLearningCard(
-            learningEnabled = learningEnabled,
-            onToggle = nluSettingsVm::setLearningEnabled,
-            onClearLearned = { showClearLearnedConfirm = true },
-        )
-        HistoryRetentionCard(
-            selectedDays = retentionDays,
-            options = conversationVm.retentionOptions,
-            onSelect = { newDays ->
-                if (newDays >= retentionDays) {
-                    // Growing the window can't delete anything — apply silently.
-                    conversationVm.setRetentionDays(newDays)
-                } else {
-                    // Shrinking always shows a confirm dialog — even if zero
-                    // entries would be lost today, the user is committing to
-                    // tighter pruning for future ones, which is worth a
-                    // deliberate Yes.
-                    scope.launch {
-                        val count = conversationVm.countOlderThan(newDays)
-                        pendingShrink = PendingShrink(newDays, count)
+        // Section: speech-to-text — only Whisper for now, but the header
+        // is here so adding alternative ASR engines later doesn't break
+        // the visual rhythm.
+        SettingsSection(stringResource(R.string.settings_section_speech)) {
+            WhisperModelsCard(vm = modelsVm)
+        }
+
+        // Section: intent classifier + its learning toggle, grouped together.
+        SettingsSection(stringResource(R.string.settings_section_intent)) {
+            NluModelsCard(vm = nluModelsVm)
+            IntentLearningCard(
+                learningEnabled = learningEnabled,
+                onToggle = nluSettingsVm::setLearningEnabled,
+                onClearLearned = { showClearLearnedConfirm = true },
+            )
+        }
+
+        // Section: storage / data retention.
+        SettingsSection(stringResource(R.string.settings_section_storage)) {
+            HistoryRetentionCard(
+                selectedDays = retentionDays,
+                options = conversationVm.retentionOptions,
+                onSelect = { newDays ->
+                    if (newDays >= retentionDays) {
+                        // Growing the window can't delete anything — apply silently.
+                        conversationVm.setRetentionDays(newDays)
+                    } else {
+                        // Shrinking always shows a confirm dialog — even if zero
+                        // entries would be lost today, the user is committing to
+                        // tighter pruning for future ones, which is worth a
+                        // deliberate Yes.
+                        scope.launch {
+                            val count = conversationVm.countOlderThan(newDays)
+                            pendingShrink = PendingShrink(newDays, count)
+                        }
                     }
-                }
-            },
-            onClear = conversationVm::clearAll,
-        )
+                },
+                onClear = conversationVm::clearAll,
+            )
+        }
     }
 
     pendingShrink?.let { shrink ->
@@ -126,6 +139,27 @@ fun SettingsScreen(
     }
 }
 
+/**
+ * Visually groups one or more cards under a section header. Tighter spacing
+ * inside the section so the cards read as a unit; the outer Column owns the
+ * inter-section gap.
+ */
+@Composable
+private fun SettingsSection(
+    title: String,
+    content: @Composable () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+        )
+        content()
+    }
+}
+
 @Composable
 private fun IntentLearningCard(
     learningEnabled: Boolean,
@@ -148,12 +182,17 @@ private fun IntentLearningCard(
             )
             androidx.compose.foundation.layout.Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
+                // weight on the label so it gets all available width up to
+                // the Switch; otherwise SpaceBetween lets the Text overflow
+                // and the Switch renders on top of it.
                 Text(
                     stringResource(R.string.settings_learning_toggle),
                     style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
                 )
                 Switch(checked = learningEnabled, onCheckedChange = onToggle)
             }

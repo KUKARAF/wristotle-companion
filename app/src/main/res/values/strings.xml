@@ -79,6 +79,11 @@
     <string name="whisper_models_header">Whisper Models</string>
     <string name="whisper_models_desc">Download a model to enable on-device transcription. Tap any downloaded model to make it the active one.</string>
 
+    <!-- Section headers grouping related Settings cards -->
+    <string name="settings_section_speech">Speech recognition</string>
+    <string name="settings_section_intent">Intent understanding (beta)</string>
+    <string name="settings_section_storage">Storage</string>
+
     <!-- NLU Models section -->
     <string name="nlu_models_header">Intent Model</string>
     <string name="nlu_models_desc">Optional. Download a small sentence encoder to let Wristotle understand commands phrased in natural ways (e.g. \"ring Mom\" or \"tell Dad I\'ll be late\"). Without it, the existing prefix matching is used.</string>
