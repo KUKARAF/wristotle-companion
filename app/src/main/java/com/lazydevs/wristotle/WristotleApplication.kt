@@ -2,6 +2,8 @@ package com.lazydevs.wristotle
 
 import android.app.Application
 import android.util.Log
+import com.lazydevs.wristotle.history.ConversationAudioSettings
+import com.lazydevs.wristotle.history.ConversationAudioStore
 import com.lazydevs.wristotle.history.ConversationDatabase
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.history.ConversationSettings
@@ -66,6 +68,27 @@ class WristotleApplication : Application() {
     lateinit var conversationSettings: ConversationSettings
         private set
 
+    /** User preference for whether to capture audio per dictation. */
+    lateinit var conversationAudioSettings: ConversationAudioSettings
+        private set
+
+    /** Manages the bounded conversation-audio directory. */
+    lateinit var conversationAudioStore: ConversationAudioStore
+        private set
+
+    /**
+     * Path of the most-recently-saved audio file, published by the
+     * recognizer's [WhisperRecognizer.audioSink] and consumed by
+     * [com.lazydevs.wristotle.service.PebbleListenerService] when attaching
+     * audio to a freshly-dispatched [com.lazydevs.wristotle.history.ConversationEntry].
+     *
+     * Volatile so the listener service sees writes from the recognizer
+     * thread without an explicit sync. A short race window between
+     * back-to-back dictations is acceptable for v1 — wall-clock-wise
+     * dictations are seconds apart.
+     */
+    @Volatile var lastCapturedAudioPath: String? = null
+
     private lateinit var modelStorage: ModelStorage
     private lateinit var nluModelStorage: NluModelStorage
 
@@ -110,7 +133,13 @@ class WristotleApplication : Application() {
 
         val database = ConversationDatabase.build(this)
         conversationSettings = ConversationSettings(this)
-        conversationRepository = ConversationRepository(database.conversationDao(), conversationSettings)
+        conversationAudioSettings = ConversationAudioSettings(this)
+        conversationAudioStore = ConversationAudioStore(this)
+        conversationRepository = ConversationRepository(
+            dao = database.conversationDao(),
+            settings = conversationSettings,
+            audioStore = conversationAudioStore,
+        )
         // Drop anything past the retention window on startup so storage doesn't
         // grow unbounded if the user uninstalled the app for a while and then
         // came back. Subsequent inserts also prune.
@@ -194,7 +223,20 @@ class WristotleApplication : Application() {
         }
         whisperRecognizers.getOrPut(path) {
             Log.d(TAG, "creating recognizer for active model: $path")
-            WhisperRecognizer(modelPath = path)
+            // Optional audio sink — only saves a .wav when the user has the
+            // capture toggle on. ConversationAudioStore caps the directory
+            // at ConversationAudioSettings.MAX_FILES, FIFO eviction. The
+            // saved path is published on lastCapturedAudioPath so the
+            // listener service can attach it to the matching ConversationEntry.
+            WhisperRecognizer(
+                modelPath = path,
+                audioSink = { samples ->
+                    if (conversationAudioSettings.captureEnabled.value) {
+                        val saved = conversationAudioStore.save(samples, sampleRate = 16_000)
+                        if (saved != null) lastCapturedAudioPath = saved.absolutePath
+                    }
+                },
+            )
         }
     }
 

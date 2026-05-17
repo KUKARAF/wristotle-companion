@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ConversationEntry::class],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class ConversationDatabase : RoomDatabase() {
@@ -21,7 +21,7 @@ abstract class ConversationDatabase : RoomDatabase() {
         // Single instance per process — built lazily by WristotleApplication.
         fun build(context: Context): ConversationDatabase =
             Room.databaseBuilder(context.applicationContext, ConversationDatabase::class.java, DB_NAME)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
 
         /**
@@ -32,6 +32,17 @@ abstract class ConversationDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE conversation_entries ADD COLUMN nluIntent TEXT")
                 db.execSQL("ALTER TABLE conversation_entries ADD COLUMN nluConfidence REAL")
+            }
+        }
+
+        /**
+         * v2 → v3: add nullable audioFilePath. Existing rows get NULL → no
+         * play button on those entries. Only new captures (with the
+         * audio-capture setting enabled) populate it.
+         */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE conversation_entries ADD COLUMN audioFilePath TEXT")
             }
         }
     }

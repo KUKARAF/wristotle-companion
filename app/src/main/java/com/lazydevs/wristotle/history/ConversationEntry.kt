@@ -50,4 +50,11 @@ data class ConversationEntry(
     val nluIntent: String? = null,
     /** Cosine confidence of [nluIntent], 0..1. Null when no prediction was made. */
     val nluConfidence: Float? = null,
+    /**
+     * Absolute path to the `.wav` recording for this dictation, when the user
+     * has audio capture enabled and the file still exists on disk (the store
+     * caps at 5 most-recent so older entries' files get evicted — UI checks
+     * existence before rendering the play button).
+     */
+    val audioFilePath: String? = null,
 )

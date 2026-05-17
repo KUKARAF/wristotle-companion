@@ -52,6 +52,7 @@ fun SettingsScreen(
     conversationVm: ConversationViewModel,
 ) {
     val retentionDays by conversationVm.retentionDays.collectAsState()
+    val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
     val learningEnabled by nluSettingsVm.learningEnabled.collectAsState()
     val scope = rememberCoroutineScope()
     // State for the "you're about to shrink the window and lose N entries" confirm dialog.
@@ -82,7 +83,7 @@ fun SettingsScreen(
             )
         }
 
-        // Section: storage / data retention.
+        // Section: storage / data retention + audio capture.
         SettingsSection(stringResource(R.string.settings_section_storage)) {
             HistoryRetentionCard(
                 selectedDays = retentionDays,
@@ -103,6 +104,10 @@ fun SettingsScreen(
                     }
                 },
                 onClear = conversationVm::clearAll,
+            )
+            AudioCaptureCard(
+                enabled = audioCaptureEnabled,
+                onToggle = conversationVm::setAudioCaptureEnabled,
             )
         }
     }
@@ -157,6 +162,42 @@ private fun SettingsSection(
             modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
         )
         content()
+    }
+}
+
+@Composable
+private fun AudioCaptureCard(
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.settings_audio_header),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.settings_audio_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.settings_audio_toggle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                )
+                Switch(checked = enabled, onCheckedChange = onToggle)
+            }
+        }
     }
 }
 

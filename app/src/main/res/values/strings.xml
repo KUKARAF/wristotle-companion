@@ -37,6 +37,13 @@
     <string name="settings_history_shrink_message_none">Switching to %d days. Nothing is older than that yet, but future entries will be pruned more aggressively.</string>
     <string name="settings_history_shrink_apply">Apply</string>
 
+    <!-- Conversation audio capture -->
+    <string name="settings_audio_header">Audio capture</string>
+    <string name="settings_audio_desc">Save the recording from each dictation so you can replay it from the chat. Only the 5 most recent are kept; older ones are deleted automatically. Stays on this phone — nothing is uploaded.</string>
+    <string name="settings_audio_toggle">Save dictation audio</string>
+    <string name="conversation_play_audio">Play recorded audio</string>
+    <string name="conversation_stop_audio">Stop playback</string>
+
     <!-- Conversation screen -->
     <string name="conversation_header">Conversation</string>
     <string name="conversation_subheader">Every command from your watch, kept for 30 days on this phone.</string>

@@ -157,6 +157,11 @@ class PebbleListenerService : BasePebbleListenerService() {
             coroutineScope.launch { learningCollector.record(query, routed.intent) }
         }
 
+        // Claim and clear the audio path published by WhisperRecognizer for
+        // this dictation, so the next session can publish a fresh one.
+        val audioPath = (application as WristotleApplication).lastCapturedAudioPath
+        (application as WristotleApplication).lastCapturedAudioPath = null
+
         logInteraction(
             query = query,
             response = dispatchResult.response,
@@ -165,6 +170,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             success = dispatchResult.success,
             nluIntent = classified?.intent?.name,
             nluConfidence = classified?.confidence,
+            audioFilePath = audioPath,
         )
 
         return ReceiveResult.Ack
@@ -229,6 +235,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         success: Boolean = isSuccessResponse(response),
         nluIntent: String? = null,
         nluConfidence: Float? = null,
+        audioFilePath: String? = null,
     ) {
         val entry = ConversationEntry(
             timestampEpochMs = System.currentTimeMillis(),
@@ -239,6 +246,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             success = success,
             nluIntent = nluIntent,
             nluConfidence = nluConfidence,
+            audioFilePath = audioFilePath,
         )
         coroutineScope.launch {
             runCatching { conversationRepository.add(entry) }

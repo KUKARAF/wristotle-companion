@@ -19,6 +19,12 @@ import java.util.concurrent.TimeUnit
 class ConversationRepository(
     private val dao: ConversationDao,
     private val settings: ConversationSettings,
+    /**
+     * Optional audio store — when present, deletes the underlying `.wav`
+     * file whenever a row's audio is pruned or the table is cleared.
+     * Null when audio capture has never been wired up.
+     */
+    private val audioStore: ConversationAudioStore? = null,
 ) {
 
     fun observeAll(): Flow<List<ConversationEntry>> = dao.observeAllNewestFirst()
@@ -30,6 +36,9 @@ class ConversationRepository(
 
     suspend fun clearAll() {
         dao.deleteAll()
+        // Always wipe orphan audio files when the user wants a clean slate,
+        // regardless of whether capture is currently enabled.
+        audioStore?.deleteAll()
     }
 
     /** Called from WristotleApplication on startup AND after the user changes
