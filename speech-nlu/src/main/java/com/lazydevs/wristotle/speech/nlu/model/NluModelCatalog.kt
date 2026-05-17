@@ -15,9 +15,9 @@ object NluModelCatalog {
     val all: List<NluModelInfo> = listOf(
         NluModelInfo(
             id = "minilm-l6-v2-int8",
-            displayName = "MiniLM L6 v2 (INT8, ~23 MB)",
+            displayName = "MiniLM L6 v2",
             approxSizeBytes = 23_000_000L,
-            architectureLabel = "MiniLM-L6",
+            architectureLabel = "INT8 quantized",
             url = "$HF_BASE/model_quint8_avx2.onnx",
         ),
     )

@@ -85,16 +85,19 @@ private fun NluModelRow(
     }
     Column(modifier = rowModifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                state.info.displayName,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                "  · " + state.info.architectureLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
+            // Left column: stack name above metadata so long display names
+            // don't squeeze the secondary text into a 1-char-wide vertical.
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    state.info.displayName,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    "${approxSizeMb(state.info.approxSizeBytes)} MB · ${state.info.architectureLabel}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (state.isActive) ActivePill()
             RowActions(state, onDownload, onCancel, onDelete)
         }
@@ -143,6 +146,9 @@ private fun ActivePill() {
         }
     }
 }
+
+/** Round bytes to the nearest MB for display. Matches WhisperModelsCard. */
+private fun approxSizeMb(bytes: Long): Int = (bytes / 1_000_000L).toInt()
 
 @Composable
 private fun RowActions(

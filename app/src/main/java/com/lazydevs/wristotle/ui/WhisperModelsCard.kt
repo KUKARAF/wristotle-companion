@@ -92,20 +92,24 @@ private fun ModelRow(
     }
     Column(modifier = rowModifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                state.info.displayName,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                "  · " + stringResource(
-                    R.string.whisper_model_size_format,
-                    approxSizeMb(state.info.approxSizeBytes),
-                    state.info.languageLabel,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
+            // Stack name above size+lang on the left so long display names
+            // (e.g. "Base (Multilingual)") don't squeeze the secondary line
+            // into a 1-char-wide vertical column.
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    state.info.displayName,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    stringResource(
+                        R.string.whisper_model_size_format,
+                        approxSizeMb(state.info.approxSizeBytes),
+                        state.info.languageLabel,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (state.isActive) ActivePill()
             RowActions(state, onDownload, onCancel, onDelete, onSetActive)
         }
