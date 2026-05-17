@@ -56,7 +56,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        # Forgejo's action mirror (data.forgejo.org) only carries a subset
+        # of upstream actions, and android-actions/setup-android isn't
+        # among them. Use the GitHub URL explicitly — Forgejo Actions
+        # accepts the full https://github.com/owner/repo@ref form.
+        uses: https://github.com/android-actions/setup-android@v3
 
       - name: Install pinned NDK + CMake
         # The :speech-whisper module pins ndkVersion = 30.0.14904198 and
