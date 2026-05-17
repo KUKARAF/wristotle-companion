@@ -18,6 +18,11 @@ interface ConversationDao {
     @Query("DELETE FROM conversation_entries WHERE timestampEpochMs < :cutoffEpochMs")
     suspend fun pruneOlderThan(cutoffEpochMs: Long): Int
 
+    /** How many entries would be removed by a [pruneOlderThan] at the same cutoff.
+     *  Used to preview the impact before shrinking the retention window. */
+    @Query("SELECT COUNT(*) FROM conversation_entries WHERE timestampEpochMs < :cutoffEpochMs")
+    suspend fun countOlderThan(cutoffEpochMs: Long): Int
+
     @Query("DELETE FROM conversation_entries")
     suspend fun deleteAll()
 

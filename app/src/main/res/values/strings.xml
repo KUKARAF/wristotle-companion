@@ -22,7 +22,20 @@
 
     <!-- Settings screen -->
     <string name="settings_history_header">Conversation history</string>
-    <string name="settings_history_desc">Removes every saved interaction from this phone. The 30-day window starts fresh.</string>
+    <string name="settings_history_retention_label">Retention window</string>
+    <string name="settings_history_retention_desc">How long every interaction is kept on this phone. Older entries are pruned automatically.</string>
+    <string name="settings_history_desc">Or wipe everything immediately — useful before handing the phone to someone else.</string>
+    <plurals name="settings_history_retention_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="settings_history_shrink_title">Shorten retention window?</string>
+    <plurals name="settings_history_shrink_message">
+        <item quantity="one">Switching to %2$d days will delete %1$d entry older than that. This can\'t be undone.</item>
+        <item quantity="other">Switching to %2$d days will delete %1$d entries older than that. This can\'t be undone.</item>
+    </plurals>
+    <string name="settings_history_shrink_message_none">Switching to %d days. Nothing is older than that yet, but future entries will be pruned more aggressively.</string>
+    <string name="settings_history_shrink_apply">Apply</string>
 
     <!-- Conversation screen -->
     <string name="conversation_header">Conversation</string>

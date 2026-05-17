@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import com.lazydevs.wristotle.history.ConversationDatabase
 import com.lazydevs.wristotle.history.ConversationRepository
+import com.lazydevs.wristotle.history.ConversationSettings
 import com.lazydevs.wristotle.speech.Recognizers
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.StubRecognizer
@@ -42,6 +43,10 @@ class WristotleApplication : Application() {
     lateinit var conversationRepository: ConversationRepository
         private set
 
+    /** User preferences for the conversation history (retention window). */
+    lateinit var conversationSettings: ConversationSettings
+        private set
+
     private lateinit var modelStorage: ModelStorage
 
     /**
@@ -59,7 +64,8 @@ class WristotleApplication : Application() {
         modelStorage = ModelStorage(this)
 
         val database = ConversationDatabase.build(this)
-        conversationRepository = ConversationRepository(database.conversationDao())
+        conversationSettings = ConversationSettings(this)
+        conversationRepository = ConversationRepository(database.conversationDao(), conversationSettings)
         // Drop anything past the retention window on startup so storage doesn't
         // grow unbounded if the user uninstalled the app for a while and then
         // came back. Subsequent inserts also prune.
