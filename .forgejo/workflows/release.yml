@@ -19,7 +19,11 @@ on:
 
 jobs:
   build:
-    runs-on: docker
+    # Codeberg's shared runners use sized labels rather than the generic
+    # `docker`/`ubuntu-latest` GitHub conventions. The whisper.cpp + ggml
+    # cold compile is the bulk of the wall time and benefits from the
+    # extra CPU/RAM on the medium tier; small would also work but slower.
+    runs-on: codeberg-medium
     steps:
       - name: Checkout (with whisper.cpp submodule)
         uses: actions/checkout@v4
