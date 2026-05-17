@@ -35,15 +35,17 @@ import com.lazydevs.wristotle.R
 import kotlinx.coroutines.launch
 
 /**
- * Settings tab — currently holds two cards:
+ * Settings tab — holds three cards:
  *   • Whisper model catalog / download / activation
- *   • Conversation-history maintenance (Clear all)
+ *   • NLU sentence-encoder model (optional; enables natural-language commands)
+ *   • Conversation-history maintenance (retention picker + Clear all)
  *
  * Add more setting sections as new cards here as features grow.
  */
 @Composable
 fun SettingsScreen(
     modelsVm: WhisperModelsViewModel,
+    nluModelsVm: NluModelsViewModel,
     conversationVm: ConversationViewModel,
 ) {
     val retentionDays by conversationVm.retentionDays.collectAsState()
@@ -59,6 +61,7 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         WhisperModelsCard(vm = modelsVm)
+        NluModelsCard(vm = nluModelsVm)
         HistoryRetentionCard(
             selectedDays = retentionDays,
             options = conversationVm.retentionOptions,

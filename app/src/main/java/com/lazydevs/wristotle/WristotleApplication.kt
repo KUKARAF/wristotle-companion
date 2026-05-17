@@ -6,6 +6,8 @@ import com.lazydevs.wristotle.history.ConversationDatabase
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.history.ConversationSettings
 import com.lazydevs.wristotle.speech.Recognizers
+import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
+import com.lazydevs.wristotle.speech.nlu.StubIntentClassifier
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.StubRecognizer
 import com.lazydevs.wristotle.speech.whisper.ModelStorage
@@ -76,6 +78,10 @@ class WristotleApplication : Application() {
                 ?: return@provider StubRecognizer()
             getOrCreateRecognizer(path)
         }
+
+        // Phase 1: always-Unknown stub. Phase 2 will swap in the
+        // EmbeddingIntentClassifier when an NLU model is active.
+        IntentClassifiers.provider = { StubIntentClassifier() }
     }
 
     override fun onTerminate() {

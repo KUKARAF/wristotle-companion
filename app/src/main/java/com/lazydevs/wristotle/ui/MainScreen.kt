@@ -44,6 +44,7 @@ import com.lazydevs.wristotle.ui.nav.Screen
 fun MainScreen(
     vm: MainViewModel,
     modelsVm: WhisperModelsViewModel,
+    nluModelsVm: NluModelsViewModel,
     conversationVm: ConversationViewModel,
     onRequestWatchPermissions: () -> Unit,
     onRequestVoicePermissions: () -> Unit,
@@ -135,7 +136,11 @@ fun MainScreen(
             }
             composable(Screen.Settings.route) {
                 Box(padding) {
-                    SettingsScreen(modelsVm = modelsVm, conversationVm = conversationVm)
+                    SettingsScreen(
+                        modelsVm = modelsVm,
+                        nluModelsVm = nluModelsVm,
+                        conversationVm = conversationVm,
+                    )
                 }
             }
         }
