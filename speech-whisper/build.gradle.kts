@@ -2,6 +2,15 @@ plugins {
     alias(libs.plugins.android.library)
 }
 
+// When -PskipNativeBuild=true, the externalNativeBuild blocks are
+// skipped entirely and AGP packages whatever `.so` files already exist
+// in src/main/jniLibs/arm64-v8a/. CI uses this with prebuilts fetched
+// from the build-natives workflow so the release build doesn't have
+// to recompile whisper.cpp + ggml on every tag push (which is what
+// kept blowing through the medium runner's memory + time budget).
+val skipNative: Boolean =
+    providers.gradleProperty("skipNativeBuild").orNull?.toBoolean() == true
+
 android {
     namespace = "com.lazydevs.wristotle.speech.whisper"
     compileSdk = 36
@@ -17,22 +26,28 @@ android {
             // to ship to 32-bit devices.
             abiFilters += "arm64-v8a"
         }
-        externalNativeBuild {
-            cmake {
-                cppFlags += "-std=c++17"
-                arguments += listOf(
-                    "-DANDROID_STL=c++_shared",
-                    "-DANDROID_ARM_NEON=ON",
-                )
+        if (!skipNative) {
+            externalNativeBuild {
+                cmake {
+                    cppFlags += "-std=c++17"
+                    arguments += listOf(
+                        "-DANDROID_STL=c++_shared",
+                        "-DANDROID_ARM_NEON=ON",
+                    )
+                }
             }
         }
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
+    if (!skipNative) {
+        externalNativeBuild {
+            cmake {
+                path = file("src/main/cpp/CMakeLists.txt")
+                version = "3.22.1"
+            }
         }
+    } else {
+        logger.lifecycle(":speech-whisper using prebuilt natives from src/main/jniLibs/")
     }
 
     compileOptions {

@@ -1,0 +1,6 @@
+# Prebuilt native libs land here when CI fetches them from the
+# build-natives workflow's release artifact, or when a developer runs
+# the local extract script. They're generated artefacts — never commit
+# them to the source tree.
+arm64-v8a/
+*.so

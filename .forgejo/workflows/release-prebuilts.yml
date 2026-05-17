@@ -1,0 +1,176 @@
+# Alternative release workflow that uses prebuilt native libs from the
+# build-natives workflow instead of compiling whisper.cpp + ggml in this
+# job. Significantly faster + lighter than release.yml — useful when
+# Codeberg's medium runner can't fit the full native compile, or when
+# you're shipping a release that only touches Kotlin code.
+#
+# To use:
+#   1. Trigger the "Build native libs" workflow manually first (only
+#      needed when the whisper.cpp submodule changes — same prebuilts
+#      are reused across many Kotlin-only releases).
+#   2. Push a tag of the form `v0.1.0-prebuilt` (the `-prebuilt` suffix
+#      is what selects this workflow over the default release.yml).
+#
+# If you bumped whisper.cpp without rerunning build-natives first, this
+# workflow will fail at the "Download prebuilt natives" step — meaning
+# no natives release exists for the current submodule SHA. Either run
+# build-natives first or push a non-`-prebuilt` tag to fall back to
+# full compile.
+
+name: Release APK (prebuilt natives)
+
+on:
+  push:
+    tags:
+      - 'v*-prebuilt'
+
+jobs:
+  build:
+    runs-on: codeberg-medium
+    steps:
+      - name: Checkout (with whisper.cpp submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Derive version + natives SHA
+        id: meta
+        shell: bash
+        run: |
+          set -eu
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          VERSION="${VERSION%-prebuilt}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          SHA=$(git -C speech-whisper/src/main/cpp/whisper.cpp rev-parse --short HEAD)
+          echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "natives_sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "natives_tag=natives-$SHA" >> "$GITHUB_OUTPUT"
+          echo "Resolved $TAG → versionName=$VERSION, versionCode=$VERSION_CODE, natives=$SHA"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle (with build cache)
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Set up Android SDK
+        # No NDK or CMake needed — we're skipping the C++ build entirely.
+        uses: https://github.com/android-actions/setup-android@v3
+
+      - name: Download prebuilt natives for current whisper.cpp SHA
+        env:
+          CODEBERG_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NATIVES_TAG: ${{ steps.meta.outputs.natives_tag }}
+          NATIVES_SHA: ${{ steps.meta.outputs.natives_sha }}
+        shell: bash
+        run: |
+          set -eu
+          ASSETS=$(curl -fsS \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/tags/${NATIVES_TAG}" \
+            -H "Authorization: token ${CODEBERG_TOKEN}" \
+            | jq '.assets')
+          URL=$(echo "$ASSETS" | jq -r ".[] | select(.name | startswith(\"wristotle-natives-\")) | .browser_download_url")
+          if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+            echo "No prebuilt natives found at tag ${NATIVES_TAG}."
+            echo "Run the 'Build native libs' workflow first, then re-tag."
+            exit 1
+          fi
+          echo "Fetching $URL"
+          curl -fsSL "$URL" -o natives.tar.gz
+          mkdir -p speech-whisper/src/main/jniLibs
+          tar -xzf natives.tar.gz -C speech-whisper/src/main/jniLibs
+          ls -lh speech-whisper/src/main/jniLibs/arm64-v8a/
+
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.WRISTOTLE_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/wristotle-release.keystore"
+          test -s "$GITHUB_WORKSPACE/wristotle-release.keystore"
+
+      - name: Run unit tests
+        run: ./gradlew --no-daemon -PskipNativeBuild=true :app:testDebugUnitTest :speech-whisper:testDebugUnitTest
+
+      - name: Build release APK (skip native compile)
+        env:
+          WRISTOTLE_KEYSTORE_FILE: ${{ github.workspace }}/wristotle-release.keystore
+          WRISTOTLE_KEYSTORE_PASSWORD: ${{ secrets.WRISTOTLE_KEYSTORE_PASSWORD }}
+          WRISTOTLE_KEY_ALIAS: ${{ secrets.WRISTOTLE_KEY_ALIAS }}
+          WRISTOTLE_KEY_PASSWORD: ${{ secrets.WRISTOTLE_KEY_PASSWORD }}
+          WRISTOTLE_VERSION_NAME: ${{ steps.meta.outputs.name }}
+          WRISTOTLE_VERSION_CODE: ${{ steps.meta.outputs.code }}
+        run: ./gradlew --no-daemon -Dorg.gradle.workers.max=2 -PskipNativeBuild=true :app:assembleRelease
+
+      - name: Stage APK under a versioned name
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk \
+             wristotle-companion-${{ steps.meta.outputs.name }}.apk
+
+      - name: Publish release + upload APK
+        env:
+          CODEBERG_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.meta.outputs.name }}
+        shell: bash
+        run: |
+          set -eu
+
+          BODY=$(cat <<EOF
+          Built from \`$TAG\` ($(git rev-parse --short HEAD)) using prebuilt
+          arm64-v8a native libs from the natives release.
+
+          See the commit log on the [Code tab](https://codeberg.org/${GITHUB_REPOSITORY}/commits/branch/main) for the full set of changes since the last release.
+
+          Install: download the APK below, sideload onto an Android 7.0+ phone, then follow the first-time setup in the README.
+          EOF
+          )
+
+          api() { curl -sS -w '\n%{http_code}' "$@"; }
+
+          LOOKUP=$(api \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" \
+            -H "Authorization: token ${CODEBERG_TOKEN}")
+          LOOKUP_BODY=$(printf '%s' "$LOOKUP" | sed '$d')
+          LOOKUP_STATUS=$(printf '%s' "$LOOKUP" | tail -n1)
+
+          if [ "$LOOKUP_STATUS" = "200" ]; then
+            RELEASE_ID=$(echo "$LOOKUP_BODY" | jq -r '.id')
+            curl -fsS -X PATCH \
+              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+              -H "Authorization: token ${CODEBERG_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
+                    '{name: $name, body: $body, draft: false, prerelease: false}')" \
+              > /dev/null
+          else
+            CREATE=$(curl -fsS -X POST \
+              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases" \
+              -H "Authorization: token ${CODEBERG_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg tag "$TAG" --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
+                    '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: false}')")
+            RELEASE_ID=$(echo "$CREATE" | jq -r '.id')
+          fi
+
+          ASSETS=$(curl -fsS \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets" \
+            -H "Authorization: token ${CODEBERG_TOKEN}")
+          DUP=$(echo "$ASSETS" | jq -r ".[] | select(.name == \"wristotle-companion-${VERSION}.apk\") | .id")
+          if [ -n "$DUP" ] && [ "$DUP" != "null" ]; then
+            curl -fsS -X DELETE \
+              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets/${DUP}" \
+              -H "Authorization: token ${CODEBERG_TOKEN}"
+          fi
+
+          curl -fsS -X POST \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets?name=wristotle-companion-${VERSION}.apk" \
+            -H "Authorization: token ${CODEBERG_TOKEN}" \
+            -F "attachment=@wristotle-companion-${VERSION}.apk"
+          echo "Published release ${RELEASE_ID} with APK attached."

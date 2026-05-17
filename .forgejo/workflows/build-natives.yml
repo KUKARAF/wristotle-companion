@@ -1,0 +1,136 @@
+# Compiles the arm64-v8a native libs that :speech-whisper would
+# otherwise produce on every release build (whisper.cpp + ggml + the
+# wristotle_speech JNI wrapper), packages them into a tarball, and
+# uploads it to a tagged release. The main release workflow can then
+# download the tarball into src/main/jniLibs/ and run with
+# -PskipNativeBuild=true, skipping the heavy C++ compile entirely.
+#
+# Triggers:
+#   - Manual (workflow_dispatch) — rerun whenever the whisper.cpp
+#     submodule SHA changes, or you bump the NDK, or you tweak the
+#     JNI wrapper.
+#
+# Output:
+#   A Codeberg release tagged `natives-<short-sha-of-whisper.cpp>` with
+#   one asset: wristotle-natives-<sha>.tar.gz containing
+#   arm64-v8a/*.so (libwhisper, libggml-base, libggml-cpu, libggml,
+#   libomp, libwristotle_speech, plus the c++_shared runtime).
+
+name: Build native libs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: codeberg-medium
+    steps:
+      - name: Checkout (with whisper.cpp submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Resolve whisper.cpp SHA + tag name
+        id: meta
+        shell: bash
+        run: |
+          SHA=$(git -C speech-whisper/src/main/cpp/whisper.cpp rev-parse --short HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "tag=natives-$SHA" >> "$GITHUB_OUTPUT"
+          echo "Building natives for whisper.cpp $SHA"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle (with build cache)
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Set up Android SDK
+        uses: https://github.com/android-actions/setup-android@v3
+
+      - name: Install pinned NDK + CMake
+        run: sdkmanager --install "ndk;30.0.14904198" "cmake;3.22.1"
+
+      - name: Build the :speech-whisper release AAR
+        # AAR build runs CMake for arm64-v8a and stuffs every required
+        # .so into jni/arm64-v8a/. We extract from there rather than
+        # poking around the intermediate cmake output, since AAR
+        # packaging also pulls in libc++_shared.so from the NDK.
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: '2'
+        run: ./gradlew --no-daemon -Dorg.gradle.workers.max=2 :speech-whisper:assembleRelease
+
+      - name: Stage tarball
+        id: stage
+        shell: bash
+        run: |
+          set -eu
+          AAR=speech-whisper/build/outputs/aar/speech-whisper-release.aar
+          test -s "$AAR"
+          mkdir -p natives/arm64-v8a
+          unzip -j "$AAR" 'jni/arm64-v8a/*.so' -d natives/arm64-v8a/
+          ls -lh natives/arm64-v8a/
+          TARBALL="wristotle-natives-${{ steps.meta.outputs.sha }}.tar.gz"
+          tar -czf "$TARBALL" -C natives arm64-v8a
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+
+      - name: Publish natives release
+        env:
+          CODEBERG_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          SHA: ${{ steps.meta.outputs.sha }}
+          TARBALL: ${{ steps.stage.outputs.tarball }}
+        shell: bash
+        run: |
+          set -eu
+
+          BODY="Prebuilt arm64-v8a native libs for whisper.cpp commit ${SHA}.
+          Fetched by the main release workflow when -PskipNativeBuild=true.
+
+          Contents: libwhisper, libggml-base, libggml-cpu, libggml, libomp,
+          libwristotle_speech, and libc++_shared (the NDK's shared C++
+          runtime that whisper links against)."
+
+          api() { curl -sS -w '\n%{http_code}' "$@"; }
+
+          # Look up existing release for this tag; create if missing.
+          LOOKUP=$(api \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" \
+            -H "Authorization: token ${CODEBERG_TOKEN}")
+          LOOKUP_BODY=$(printf '%s' "$LOOKUP" | sed '$d')
+          LOOKUP_STATUS=$(printf '%s' "$LOOKUP" | tail -n1)
+
+          if [ "$LOOKUP_STATUS" = "200" ]; then
+            RELEASE_ID=$(echo "$LOOKUP_BODY" | jq -r '.id')
+            echo "Updating existing natives release ${RELEASE_ID}."
+          else
+            CREATE=$(curl -fsS -X POST \
+              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases" \
+              -H "Authorization: token ${CODEBERG_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg tag "$TAG" --arg name "Native libs (whisper.cpp ${SHA})" --arg body "$BODY" \
+                    '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: true}')")
+            RELEASE_ID=$(echo "$CREATE" | jq -r '.id')
+            echo "Created natives release ${RELEASE_ID}."
+          fi
+
+          # Drop a stale asset with the same name if present.
+          ASSETS=$(curl -fsS \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets" \
+            -H "Authorization: token ${CODEBERG_TOKEN}")
+          DUP=$(echo "$ASSETS" | jq -r ".[] | select(.name == \"${TARBALL}\") | .id")
+          if [ -n "$DUP" ] && [ "$DUP" != "null" ]; then
+            curl -fsS -X DELETE \
+              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets/${DUP}" \
+              -H "Authorization: token ${CODEBERG_TOKEN}"
+          fi
+
+          curl -fsS -X POST \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets?name=${TARBALL}" \
+            -H "Authorization: token ${CODEBERG_TOKEN}" \
+            -F "attachment=@${TARBALL}"
+          echo "Published ${TARBALL} to ${TAG}."
