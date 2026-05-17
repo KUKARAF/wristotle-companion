@@ -8,6 +8,8 @@ import com.lazydevs.wristotle.speech.recognizer.TranscriptionEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "WhisperRecognizer"
 
@@ -43,6 +45,24 @@ class WhisperRecognizer(
      * mutation, never across the long native inference call.
      */
     private val nativeLock = Any()
+
+    /**
+     * Serializes the JNI [WhisperNative.transcribe] call so two concurrent
+     * sessions don't end up running on the same `whisper_context` handle.
+     *
+     * The recognizer is cached per-model in [com.lazydevs.wristotle.WristotleApplication]
+     * and reused across sessions. The recognition service cancels its session
+     * coroutine on [WhisperRecognitionService.onCancel], but a blocking JNI
+     * call can't be cancelled and runs to completion regardless — so a new
+     * `onStartListening` right after a cancel can launch a second transcribe
+     * on the same handle. `whisper_context` isn't thread-safe; we observed
+     * 30× slowdown (cache thrashing) plus the previous session's transcript
+     * leaking into the next 0.26 s session. Mutex queues the second call
+     * until the first returns. UX cost is small — whisper is single-threaded
+     * per context, so the second call would have been blocked at the kernel
+     * level anyway, just at a layer where it caused corruption.
+     */
+    private val transcribeMutex = Mutex()
 
     /** The native whisper_context pointer (cast to Long), 0L until loaded. */
     @Volatile
@@ -118,7 +138,9 @@ class WhisperRecognizer(
         val text = try {
             val threads = WhisperNative.defaultThreadCount()
             Log.d(TAG, "inference start: $totalSamples samples (~${totalSamples / 16_000.0}s), threads=$threads")
-            WhisperNative.transcribe(activeHandle, flat, language, threads)
+            transcribeMutex.withLock {
+                WhisperNative.transcribe(activeHandle, flat, language, threads)
+            }
                 .trim()
                 .also { Log.d(TAG, "inference done: '$it'") }
         } catch (t: Throwable) {
