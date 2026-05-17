@@ -38,6 +38,8 @@ Dictate from your watch; the command runs on your phone. Supported phrases:
 
 Beyond watch dictation, Wristotle Companion can also register as Android's *system-wide* voice input provider, so any app on the device — keyboards, search bars, third-party apps — transcribes through the same on-device Whisper engine.
 
+Every interaction — calls, texts, reminders, locally-handled commands like "what time is it" — is saved to a local **Conversation** history on the phone, kept for 30 days. The Conversation tab is the app's landing screen; long-press any message bubble to copy text, or tap the trash icon to clear history early.
+
 ### What you need
 
 - An Android phone running Android 7.0 (API 24) or newer
@@ -212,25 +214,34 @@ app/src/main/java/com/lazydevs/wristotle/
   MainActivity.kt               # Starts foreground service, requests permissions
   WristotleApplication.kt       # Owns shared PebbleTransport + Recognizers provider hook
   handlers/
-    ActionHandler.kt            # Interface: canHandle() + handle()
-    HandlerRegistry.kt          # Dispatches to first matching handler
+    ActionHandler.kt            # Interface: tag + canHandle() + handle()
+    HandlerRegistry.kt          # Dispatches to first matching handler; returns (response, handler, success)
     CallHandler.kt              # "call/dial [name]"
     SmsHandler.kt               # "text/message [name] [body]"
     ReminderHandler.kt          # reminder_query → insertTimelinePin
     CancelReminderHandler.kt    # cancel_query → deleteTimelinePin via PinStore
     TimeParser.kt               # prettytime-nlp + word-number normalisation
     PinStore.kt                 # SharedPreferences ring buffer of recent pin IDs
+  history/
+    ConversationEntry.kt        # Room @Entity — one row per interaction
+    ConversationDao.kt          # insert / observe-newest-first / prune-older-than / delete-all
+    ConversationDatabase.kt     # Room @Database, built once in WristotleApplication
+    ConversationRepository.kt   # 30-day retention wrapper, prunes on insert + on app start
   phone/
     ContactsRepository.kt       # Contact lookup on Dispatchers.IO
   service/
     WatchMessageService.kt      # Foreground LifecycleService — keep-alive + COMPANION_READY
-    PebbleListenerService.kt    # Bound by the Pebble companion; dispatches to handlers
+    PebbleListenerService.kt    # Bound by the Pebble companion; dispatches + logs to history
   transport/
     MessageKeys.kt              # AppMessage key indices (sync with watch package.json)
-    PebbleTransport.kt          # PebbleKit2 DefaultPebbleSender wrapper
+    PebbleTransport.kt          # PebbleKit2 DefaultPebbleSender wrapper + NACK retry
   ui/
-    MainScreen.kt               # Permissions + voice input status (Compose Material3)
+    MainScreen.kt               # Bottom-nav shell (Compose Material3)
     MainViewModel.kt            # Permission state + default-voice-provider state
+    ConversationScreen.kt       # Default tab — chat-style history list, copy-text, clear-all
+    ConversationViewModel.kt    # Wraps ConversationRepository.observeAll() as StateFlow
+    WatchScreen.kt / VoiceScreen.kt / ModelsScreen.kt   # Other tabs
+    WhisperModelsViewModel.kt   # Model catalog + download / activate state
 
 speech/src/main/java/com/lazydevs/wristotle/speech/
   Recognizers.kt                # Service-locator: @Volatile var provider
@@ -265,6 +276,7 @@ speech-whisper/
 
    ```kotlin
    class WeatherHandler(...) : ActionHandler {
+       override val tag = "weather"   // shown as the handler chip in Conversation history
        override fun canHandle(query: String) = query.lowercase().startsWith("weather")
        override suspend fun handle(query: String): String = "Sunny and 72°F"
    }
