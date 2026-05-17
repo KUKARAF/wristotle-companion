@@ -172,12 +172,10 @@ class WhisperRecognizer(
             finishInFlight()
         }
 
-        // Whisper greedy + single_segment hallucinates phrase loops on short
-        // or trailing-silence audio ("call me" → "call me. call me.", "give
-        // john dial" → "give john dial give john dial give john dial dio").
-        // Collapse those before downstream consumers (NLU classifier, slot
-        // extractors, watch chat) see the duplicated mess. No-op when the
-        // transcript is already clean.
+        // Whisper greedy + single_segment hallucinates phrase loops on
+        // short or trailing-silence audio. Collapse them before downstream
+        // consumers (NLU classifier, slot extractors, watch chat) see the
+        // duplicated mess. No-op when the transcript is already clean.
         val text = dedupeRepeatedPhrases(rawText).also {
             if (it != rawText) Log.d(TAG, "deduped: '$it'")
         }

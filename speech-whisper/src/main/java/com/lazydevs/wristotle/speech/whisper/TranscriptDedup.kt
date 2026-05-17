@@ -4,16 +4,22 @@ package com.lazydevs.wristotle.speech.whisper
  * Collapses immediately-repeating word sequences in Whisper transcripts.
  *
  * Whisper with greedy sampling + `single_segment=true` (our config) tends
- * to hallucinate phrase loops on short or trailing-silence audio:
+ * to hallucinate phrase loops on short or trailing-silence audio. The
+ * loop may also end with a truncated *partial* copy of the unit, and
+ * "silence" itself can hallucinate as a single token repeated several
+ * times.
  *
- *   "call me" → "call me. call me."
- *   "give john dial" → "give john dial give john dial give john dial dio"
- *   "(silence)" → "dio dio dio"
+ * This walks the token stream and, at each position, looks for the
+ * **shortest** n-gram that immediately repeats. When it finds one
+ * (`words[i..i+k] == words[i+k..i+2k]`), it emits the phrase once,
+ * skips every subsequent consecutive full copy, and additionally drops
+ * a trailing *partial* copy whose tokens prefix-match the unit
+ * (handles Whisper truncating its last hallucinated repeat).
  *
- * This walks the token stream and, at each position, looks for the longest
- * n-gram that immediately repeats. When it finds one (`words[i..i+k] ==
- * words[i+k..i+2k]`), it emits the phrase once and skips every subsequent
- * consecutive copy.
+ * Why shortest-first: with longest-first, four copies of a 4-token unit
+ * could match as `k=8` (two copies of an 8-token unit) and collapse the
+ * four down to two instead of one. Shortest-first finds the natural
+ * sentence/phrase unit and reduces all copies to one.
  *
  * Comparison is case-insensitive and strips trailing punctuation so
  * `"call me"` matches `"call me."` (Whisper's punctuation placement on
@@ -34,11 +40,12 @@ internal fun dedupeRepeatedPhrases(text: String): String {
     var i = 0
     while (i < raw.size) {
         var collapsed = false
-        // Try the longest plausible repetition first; bounded at half the
-        // remaining length since a repeat needs at least one full copy after.
+        // Shortest-first: the smallest repeating unit is the natural phrase
+        // boundary. Bounded at half the remaining length since a repeat
+        // needs at least one full copy after.
         val maxK = (raw.size - i) / 2
-        var k = maxK
-        while (k >= 1) {
+        var k = 1
+        while (k <= maxK) {
             if (normalized.subList(i, i + k) == normalized.subList(i + k, i + 2 * k)) {
                 // Phrase of length k repeats. Keep one copy, advance past
                 // every subsequent consecutive copy.
@@ -48,11 +55,21 @@ internal fun dedupeRepeatedPhrases(text: String): String {
                        normalized.subList(pos, pos + k) == normalized.subList(i, i + k)) {
                     pos += k
                 }
+                // Also swallow a trailing *partial* copy when the leftover
+                // tokens are a prefix of the unit. Without this, a Whisper
+                // run that ends with a truncated last sentence still leaks
+                // that fragment into the deduped text.
+                val remaining = raw.size - pos
+                if (remaining in 1 until k &&
+                    normalized.subList(pos, pos + remaining) ==
+                    normalized.subList(i, i + remaining)) {
+                    pos += remaining
+                }
                 i = pos
                 collapsed = true
                 break
             }
-            k--
+            k++
         }
         if (!collapsed) {
             keptIndices.add(i)

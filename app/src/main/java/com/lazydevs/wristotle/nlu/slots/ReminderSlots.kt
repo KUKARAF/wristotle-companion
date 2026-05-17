@@ -7,9 +7,8 @@ import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.Reminder]:
  *   - `time`  — parsed [java.util.Date], from the legacy `TimeParser`
  *               (PrettyTime + word-form number normalization).
- *   - `title` — the reminder body, with reminder-prefix + time-phrase
- *               stripped so "remind me to pick up milk at 5 pm" yields
- *               "Pick up milk".
+ *   - `title` — the reminder body, with the reminder-prefix and any
+ *               recognised time phrase stripped, then capitalised.
  *
  * Both slots are populated independently — if the time fails to parse,
  * the handler reports "Couldn't understand the time"; if the title strips
