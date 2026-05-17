@@ -21,6 +21,8 @@ class CallHandler(
     private val contacts: ContactsRepository,
 ) : ActionHandler {
 
+    override val tag: String = "call"
+
     override fun canHandle(query: String): Boolean {
         val lower = query.lowercase()
         return lower.startsWith("call ") || lower.startsWith("dial ")

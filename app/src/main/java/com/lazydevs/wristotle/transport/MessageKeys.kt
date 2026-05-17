@@ -18,6 +18,12 @@ object MessageKeys {
     val COMPANION_RESPONSE: UInt = 10012u
     val MSG_TARGET: UInt         = 10014u
 
+    /** Watch → companion logging payload (locally-handled commands the companion
+     *  never sees through query channels). All three keys arrive in one message. */
+    val LOG_QUERY: UInt          = 10023u
+    val LOG_RESPONSE: UInt       = 10024u
+    val LOG_HANDLER: UInt        = 10025u
+
     /** Value of MSG_TARGET that means "this message is for the Android companion". */
     const val TARGET_COMPANION: Int = 1
 }

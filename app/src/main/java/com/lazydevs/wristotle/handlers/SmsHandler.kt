@@ -22,6 +22,8 @@ class SmsHandler(
     private val contacts: ContactsRepository,
 ) : ActionHandler {
 
+    override val tag: String = "sms"
+
     // Ordered longest-first so the more specific prefixes are stripped correctly
     // (e.g. "send message to" must be checked before "send message").
     private val prefixes = listOf("send message to ", "send message ", "text ", "message ")

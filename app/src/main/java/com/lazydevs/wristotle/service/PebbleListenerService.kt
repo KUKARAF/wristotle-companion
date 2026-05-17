@@ -6,8 +6,11 @@ import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.handlers.CallHandler
 import com.lazydevs.wristotle.handlers.CancelReminderHandler
 import com.lazydevs.wristotle.handlers.HandlerRegistry
+import com.lazydevs.wristotle.handlers.HandlerRegistry.Companion.isSuccessResponse
 import com.lazydevs.wristotle.handlers.ReminderHandler
 import com.lazydevs.wristotle.handlers.SmsHandler
+import com.lazydevs.wristotle.history.ConversationEntry
+import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.transport.MessageKeys
 import com.lazydevs.wristotle.transport.PebbleTransport
@@ -30,6 +33,7 @@ import java.util.UUID
 class PebbleListenerService : BasePebbleListenerService() {
 
     private lateinit var transport: PebbleTransport
+    private lateinit var conversationRepository: ConversationRepository
     private lateinit var registry: HandlerRegistry
     private lateinit var reminderHandler: ReminderHandler
     private lateinit var cancelHandler: CancelReminderHandler
@@ -37,7 +41,9 @@ class PebbleListenerService : BasePebbleListenerService() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service bound by rePebble")
-        transport = (application as WristotleApplication).transport
+        val app = application as WristotleApplication
+        transport = app.transport
+        conversationRepository = app.conversationRepository
         val contacts = ContactsRepository(this)
         registry = HandlerRegistry(listOf(
             CallHandler(this, contacts),
@@ -75,11 +81,29 @@ class PebbleListenerService : BasePebbleListenerService() {
             return ReceiveResult.Ack
         }
 
+        // Fire-and-forget log of a watch-local command (time/battery/find_phone/etc).
+        // No response needed — the watch has already shown its result; we just persist
+        // it so it appears in the Conversation screen.
+        val logQuery = data.text(MessageKeys.LOG_QUERY)
+        if (logQuery != null) {
+            val logResponse = data.text(MessageKeys.LOG_RESPONSE).orEmpty()
+            val logHandler = data.text(MessageKeys.LOG_HANDLER) ?: "unknown"
+            Log.d(TAG, "Watch-local log: handler=$logHandler query=$logQuery")
+            logInteraction(
+                query = logQuery,
+                response = logResponse,
+                handler = logHandler,
+                requiresCompanion = false,
+            )
+            return ReceiveResult.Ack
+        }
+
         val reminderQuery = data.text(MessageKeys.REMINDER_QUERY)
         if (reminderQuery != null) {
             Log.d(TAG, "Reminder query: $reminderQuery")
             val result = reminderHandler.handle(reminderQuery)
             transport.sendReminderResult(result)
+            logInteraction(reminderQuery, result, handler = "reminder", requiresCompanion = true)
             return ReceiveResult.Ack
         }
 
@@ -88,6 +112,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             Log.d(TAG, "Cancel query: $cancelQuery")
             val result = cancelHandler.handle(cancelQuery)
             transport.sendCancelResult(result)
+            logInteraction(cancelQuery, result, handler = "cancel", requiresCompanion = true)
             return ReceiveResult.Ack
         }
 
@@ -95,11 +120,44 @@ class PebbleListenerService : BasePebbleListenerService() {
             ?: return ReceiveResult.Ack
 
         Log.d(TAG, "Dispatching query: $query")
-        val response = registry.dispatch(query)
-        Log.d(TAG, "Sending response: $response")
-        transport.sendResponse(response)
+        val dispatchResult = registry.dispatch(query)
+        Log.d(TAG, "Sending response: ${dispatchResult.response}")
+        transport.sendResponse(dispatchResult.response)
+        logInteraction(
+            query,
+            dispatchResult.response,
+            handler = dispatchResult.handler,
+            requiresCompanion = true,
+            success = dispatchResult.success,
+        )
 
         return ReceiveResult.Ack
+    }
+
+    /**
+     * Persists one interaction into the conversation history. Called for every
+     * dispatch path (reminder/cancel/registry). Reminder + cancel use the heuristic
+     * success classifier from [HandlerRegistry] since they don't return rich results.
+     */
+    private fun logInteraction(
+        query: String,
+        response: String,
+        handler: String,
+        requiresCompanion: Boolean,
+        success: Boolean = isSuccessResponse(response),
+    ) {
+        val entry = ConversationEntry(
+            timestampEpochMs = System.currentTimeMillis(),
+            userQuery = query,
+            responseText = response,
+            handler = handler,
+            requiresCompanion = requiresCompanion,
+            success = success,
+        )
+        coroutineScope.launch {
+            runCatching { conversationRepository.add(entry) }
+                .onFailure { Log.w(TAG, "Failed to persist conversation entry", it) }
+        }
     }
 
     override fun onAppOpened(watchappUUID: UUID, watch: WatchIdentifier) {
