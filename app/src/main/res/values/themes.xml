@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Theme.Wristotle" parent="android:Theme.Material.Light.NoActionBar" />
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- App theme. Parent stays on the framework Material.Light NoActionBar
+         since the UI is Compose-driven; we only override what controls the
+         splash screen (Android 12+) so the icon's cyan canvas continues
+         past launch into the splash instead of flashing on a white wall. -->
+    <style name="Theme.Wristotle" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground" tools:targetApi="31">@color/ic_launcher_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@mipmap/ic_launcher_foreground</item>
+    </style>
 </resources>
