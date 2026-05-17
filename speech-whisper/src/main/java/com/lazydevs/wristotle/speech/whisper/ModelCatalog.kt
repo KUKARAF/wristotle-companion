@@ -28,6 +28,25 @@ object ModelCatalog {
     private const val HF_BASE = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main"
 
     val all: List<ModelInfo> = listOf(
+        // Quantized (q5_1) variants — ~50–60% the disk + memory footprint
+        // of the full models with negligible accuracy loss on short
+        // commands. Smaller weights = less memory bandwidth per encoder
+        // pass, which is the dominant cost in our inference. Recommended
+        // default for older / lower-RAM phones.
+        ModelInfo(
+            id = "tiny.en-q5_1",
+            displayName = "Tiny (English, quantized)",
+            approxSizeBytes = 32_000_000L,
+            languageLabel = "English",
+            url = "$HF_BASE/ggml-tiny.en-q5_1.bin",
+        ),
+        ModelInfo(
+            id = "base.en-q5_1",
+            displayName = "Base (English, quantized)",
+            approxSizeBytes = 60_000_000L,
+            languageLabel = "English",
+            url = "$HF_BASE/ggml-base.en-q5_1.bin",
+        ),
         ModelInfo(
             id = "tiny.en",
             displayName = "Tiny (English)",
