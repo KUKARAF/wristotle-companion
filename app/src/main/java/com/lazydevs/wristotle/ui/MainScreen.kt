@@ -44,6 +44,7 @@ import com.lazydevs.wristotle.ui.nav.Screen
 fun MainScreen(
     vm: MainViewModel,
     modelsVm: WhisperModelsViewModel,
+    conversationVm: ConversationViewModel,
     onRequestWatchPermissions: () -> Unit,
     onRequestVoicePermissions: () -> Unit,
 ) {
@@ -65,9 +66,10 @@ fun MainScreen(
                     .value?.destination?.route
                 Screen.entries.forEach { screen ->
                     val attention = when (screen) {
-                        Screen.Watch  -> watchAttention
-                        Screen.Voice  -> voiceAttention
-                        Screen.Models -> modelsAttention
+                        Screen.Conversation -> false
+                        Screen.Watch        -> watchAttention
+                        Screen.Voice        -> voiceAttention
+                        Screen.Models       -> modelsAttention
                     }
                     NavigationBarItem(
                         selected = currentRoute == screen.route,
@@ -113,6 +115,11 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxWidth(),
         ) {
+            composable(Screen.Conversation.route) {
+                Box(padding) {
+                    ConversationScreen(vm = conversationVm)
+                }
+            }
             composable(Screen.Watch.route) {
                 Box(padding) {
                     WatchScreen(vm = vm, onRequestWatchPermissions = onRequestWatchPermissions)

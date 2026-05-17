@@ -15,10 +15,23 @@
     <string name="usage_instructions">Say \"call [name]\" or \"text [name] [message]\" on your Pebble.</string>
 
     <!-- Bottom navigation -->
+    <string name="nav_conversation">Chat</string>
     <string name="nav_watch">Watch</string>
     <string name="nav_voice">Voice</string>
     <string name="nav_models">Models</string>
     <string name="nav_attention_badge_desc">Needs attention</string>
+
+    <!-- Conversation screen -->
+    <string name="conversation_header">Conversation</string>
+    <string name="conversation_subheader">Every command from your watch, kept for 30 days on this phone.</string>
+    <string name="conversation_empty_title">No conversations yet</string>
+    <string name="conversation_empty_subtitle">Talk to your watch and the history will show up here.</string>
+    <string name="conversation_clear_all">Clear all</string>
+    <string name="conversation_clear_confirm_title">Clear conversation history?</string>
+    <string name="conversation_clear_confirm_message">This permanently removes every saved interaction. The 30-day window will start fresh.</string>
+    <string name="conversation_location_phone">Phone</string>
+    <string name="conversation_location_watch">Watch</string>
+    <string name="dialog_cancel">Cancel</string>
 
     <string name="perm_contacts_label">Read Contacts</string>
     <string name="perm_contacts_desc">Required to look up contacts by name</string>

@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.lazydevs.wristotle.service.WatchMessageService
+import com.lazydevs.wristotle.ui.ConversationViewModel
 import com.lazydevs.wristotle.ui.MainScreen
 import com.lazydevs.wristotle.ui.MainViewModel
 import com.lazydevs.wristotle.ui.WhisperModelsViewModel
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
     private val modelsVm: WhisperModelsViewModel by viewModels()
+    private val conversationVm: ConversationViewModel by viewModels()
 
     // Registered once; result arrives asynchronously and triggers a permission refresh.
     // After the runtime perms dialog resolves, chain into the battery-optimization
@@ -54,6 +56,7 @@ class MainActivity : ComponentActivity() {
                 MainScreen(
                     vm = vm,
                     modelsVm = modelsVm,
+                    conversationVm = conversationVm,
                     onRequestWatchPermissions = ::requestWatchPermissions,
                     onRequestVoicePermissions = ::requestVoicePermissions,
                 )
