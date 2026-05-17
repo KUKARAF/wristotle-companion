@@ -117,18 +117,58 @@ jobs:
           Install: download the APK below, sideload onto an Android 7.0+ phone, then follow the first-time setup in the README.
           EOF
           )
-          # POST the release; capture its numeric id.
-          RELEASE_JSON=$(curl -fsS -X POST \
-            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases" \
-            -H "Authorization: token ${CODEBERG_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n --arg tag "$TAG" --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
-                  '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: false}')")
-          RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id')
+
+          api() { curl -sS -w '\n%{http_code}' "$@"; }
+
+          # Codeberg auto-creates a release entry for every pushed tag, so a
+          # release for $TAG already exists by the time this workflow runs.
+          # Look it up first; only create if the lookup 404s. The release we
+          # find (or create) carries an id we use to attach the APK asset.
+          RELEASE_LOOKUP=$(api \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" \
+            -H "Authorization: token ${CODEBERG_TOKEN}")
+          LOOKUP_BODY=$(printf '%s' "$RELEASE_LOOKUP" | sed '$d')
+          LOOKUP_STATUS=$(printf '%s' "$RELEASE_LOOKUP" | tail -n1)
+
+          if [ "$LOOKUP_STATUS" = "200" ]; then
+            RELEASE_ID=$(echo "$LOOKUP_BODY" | jq -r '.id')
+            echo "Found existing release ${RELEASE_ID} for ${TAG}; updating name + body."
+            # Refresh name/body so the auto-created entry shows useful info.
+            curl -fsS -X PATCH \
+              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+              -H "Authorization: token ${CODEBERG_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
+                    '{name: $name, body: $body, draft: false, prerelease: false}')" \
+              > /dev/null
+          else
+            echo "No existing release for ${TAG} (lookup status ${LOOKUP_STATUS}); creating."
+            CREATE_RESP=$(curl -fsS -X POST \
+              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases" \
+              -H "Authorization: token ${CODEBERG_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg tag "$TAG" --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
+                    '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: false}')")
+            RELEASE_ID=$(echo "$CREATE_RESP" | jq -r '.id')
+          fi
+
           if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
-            echo "Failed to create release:"
-            echo "$RELEASE_JSON"
+            echo "Couldn't resolve a release id."
             exit 1
+          fi
+
+          # If an asset with this name was already uploaded (re-run of the
+          # workflow on the same tag), delete it first — Codeberg's upload
+          # endpoint rejects duplicate filenames within a release.
+          EXISTING_ASSETS=$(curl -fsS \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets" \
+            -H "Authorization: token ${CODEBERG_TOKEN}")
+          DUP_ID=$(echo "$EXISTING_ASSETS" | jq -r ".[] | select(.name == \"wristotle-companion-${VERSION}.apk\") | .id")
+          if [ -n "$DUP_ID" ] && [ "$DUP_ID" != "null" ]; then
+            echo "Removing previously-uploaded asset ${DUP_ID}."
+            curl -fsS -X DELETE \
+              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets/${DUP_ID}" \
+              -H "Authorization: token ${CODEBERG_TOKEN}"
           fi
 
           # Attach the APK as a release asset.
