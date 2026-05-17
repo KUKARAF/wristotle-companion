@@ -2,12 +2,18 @@ package com.lazydevs.wristotle
 
 import android.app.Application
 import android.util.Log
+import com.lazydevs.wristotle.history.ConversationDatabase
+import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.speech.Recognizers
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.StubRecognizer
 import com.lazydevs.wristotle.speech.whisper.ModelStorage
 import com.lazydevs.wristotle.speech.whisper.WhisperRecognizer
 import com.lazydevs.wristotle.transport.PebbleTransport
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 private const val TAG = "WristotleApplication"
 
@@ -32,7 +38,17 @@ class WristotleApplication : Application() {
     lateinit var transport: PebbleTransport
         private set
 
+    /** Conversation history store — Application-scoped, lifetime matches the process. */
+    lateinit var conversationRepository: ConversationRepository
+        private set
+
     private lateinit var modelStorage: ModelStorage
+
+    /**
+     * Application-scoped scope for fire-and-forget housekeeping (DB pruning, etc).
+     * SupervisorJob so one failure doesn't cancel siblings.
+     */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Cache: modelPath → recognizer. Built on demand by the provider lambda. */
     private val whisperRecognizers = mutableMapOf<String, WhisperRecognizer>()
@@ -41,6 +57,13 @@ class WristotleApplication : Application() {
         super.onCreate()
         transport = PebbleTransport(this)
         modelStorage = ModelStorage(this)
+
+        val database = ConversationDatabase.build(this)
+        conversationRepository = ConversationRepository(database.conversationDao())
+        // Drop anything past the retention window on startup so storage doesn't
+        // grow unbounded if the user uninstalled the app for a while and then
+        // came back. Subsequent inserts also prune.
+        appScope.launch { conversationRepository.prune() }
 
         Recognizers.provider = provider@{ _ ->
             val path = modelStorage.activeModelPath()
