@@ -135,7 +135,7 @@ class WhisperRecognizer(
             offset += c.size
         }
 
-        val text = try {
+        val rawText = try {
             val threads = WhisperNative.defaultThreadCount()
             Log.d(TAG, "inference start: $totalSamples samples (~${totalSamples / 16_000.0}s), threads=$threads")
             transcribeMutex.withLock {
@@ -152,6 +152,16 @@ class WhisperRecognizer(
             return@flow
         } finally {
             finishInFlight()
+        }
+
+        // Whisper greedy + single_segment hallucinates phrase loops on short
+        // or trailing-silence audio ("call me" → "call me. call me.", "give
+        // john dial" → "give john dial give john dial give john dial dio").
+        // Collapse those before downstream consumers (NLU classifier, slot
+        // extractors, watch chat) see the duplicated mess. No-op when the
+        // transcript is already clean.
+        val text = dedupeRepeatedPhrases(rawText).also {
+            if (it != rawText) Log.d(TAG, "deduped: '$it'")
         }
 
         if (text.isEmpty()) {
