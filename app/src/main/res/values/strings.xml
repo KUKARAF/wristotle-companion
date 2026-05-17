@@ -41,6 +41,10 @@
     <string name="settings_audio_header">Audio capture</string>
     <string name="settings_audio_desc">Save the recording from each dictation so you can replay it from the chat. Only the 5 most recent are kept; older ones are deleted automatically. Stays on this phone — nothing is uploaded.</string>
     <string name="settings_audio_toggle">Save dictation audio</string>
+    <string name="settings_audio_clear_button">Delete saved audio</string>
+    <string name="settings_audio_clear_title">Delete all saved audio?</string>
+    <string name="settings_audio_clear_message">Removes every recording on this phone. Play buttons on past conversations disappear; the capture toggle stays where it is.</string>
+    <string name="settings_audio_clear_apply">Delete</string>
     <string name="conversation_play_audio">Play recorded audio</string>
     <string name="conversation_stop_audio">Stop playback</string>
 

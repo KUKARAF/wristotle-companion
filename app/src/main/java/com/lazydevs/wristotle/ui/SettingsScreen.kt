@@ -58,6 +58,7 @@ fun SettingsScreen(
     // State for the "you're about to shrink the window and lose N entries" confirm dialog.
     var pendingShrink by remember { mutableStateOf<PendingShrink?>(null) }
     var showClearLearnedConfirm by remember { mutableStateOf(false) }
+    var showClearAudioConfirm by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -108,6 +109,7 @@ fun SettingsScreen(
             AudioCaptureCard(
                 enabled = audioCaptureEnabled,
                 onToggle = conversationVm::setAudioCaptureEnabled,
+                onClearAudio = { showClearAudioConfirm = true },
             )
         }
     }
@@ -142,6 +144,25 @@ fun SettingsScreen(
             },
         )
     }
+
+    if (showClearAudioConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearAudioConfirm = false },
+            title = { Text(stringResource(R.string.settings_audio_clear_title)) },
+            text = { Text(stringResource(R.string.settings_audio_clear_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    conversationVm.deleteAllAudio()
+                    showClearAudioConfirm = false
+                }) { Text(stringResource(R.string.settings_audio_clear_apply)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearAudioConfirm = false }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            },
+        )
+    }
 }
 
 /**
@@ -169,6 +190,7 @@ private fun SettingsSection(
 private fun AudioCaptureCard(
     enabled: Boolean,
     onToggle: (Boolean) -> Unit,
+    onClearAudio: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -196,6 +218,18 @@ private fun AudioCaptureCard(
                         .padding(end = 8.dp),
                 )
                 Switch(checked = enabled, onCheckedChange = onToggle)
+            }
+            // Separate from the toggle — sometimes the user wants to wipe
+            // existing recordings without flipping capture off.
+            Button(
+                onClick = onClearAudio,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_audio_clear_button))
             }
         }
     }

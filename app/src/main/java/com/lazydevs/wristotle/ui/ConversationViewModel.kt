@@ -41,10 +41,17 @@ class ConversationViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun setAudioCaptureEnabled(enabled: Boolean) {
         audioSettings.setCaptureEnabled(enabled)
-        if (!enabled) {
-            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                audioStore.deleteAll()
-            }
+        if (!enabled) deleteAllAudio()
+    }
+
+    /**
+     * Wipe every saved recording without touching the capture toggle.
+     * Past conversation rows lose their play button (the existence check
+     * in [ConversationScreen] hides it once the file is gone).
+     */
+    fun deleteAllAudio() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            audioStore.deleteAll()
         }
     }
 
