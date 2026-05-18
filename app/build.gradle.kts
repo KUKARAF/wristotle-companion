@@ -105,6 +105,13 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        // Make `android.util.Log` calls no-op rather than throw the
+        // "Method not mocked" RuntimeException in JVM unit tests.
+        // Lets pure-function code that happens to log (e.g. AppIndex)
+        // be unit-tested without dragging in Robolectric.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {

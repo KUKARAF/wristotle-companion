@@ -52,7 +52,12 @@ internal fun stripVerbBody(query: String, verbs: Regex, fillers: Regex): String 
         .replace(verbs, " ")
         .replace(fillers, " ")
         .replace(MULTI_WHITESPACE, " ")
-        .trim()
-        .trimEnd('.', ',', '!', '?')
+        // Single trim pass over both whitespace and punctuation —
+        // Whisper transcripts like "Pause, Absorb." leave a leading
+        // ", " or trailing " ." after verb stripping, and downstream
+        // consumers shouldn't have to deal with either.
+        .trim { it.isWhitespace() || it in TRIM_PUNCT }
+
+private val TRIM_PUNCT = setOf('.', ',', '!', '?')
 
 private val MULTI_WHITESPACE = Regex("\\s+")

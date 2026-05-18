@@ -54,4 +54,40 @@ class SlotUtilsTest {
     @Test fun `clean token passes through unchanged`() {
         assertEquals("John", cleanNameToken("John"))
     }
+
+    // --- stripVerbBody ------------------------------------------------------
+
+    private val verbs = Regex("(?i)\\b(play|resume)\\b")
+    private val fillers = Regex("(?i)\\b(the|some|please|on)\\b")
+
+    @Test fun `stripVerbBody strips a leading verb and returns the body`() {
+        assertEquals("spotify", stripVerbBody("play spotify", verbs, fillers))
+    }
+
+    @Test fun `stripVerbBody strips fillers anywhere in the query`() {
+        assertEquals("youtube", stripVerbBody("play the youtube please", verbs, fillers))
+    }
+
+    @Test fun `stripVerbBody lowercases the input`() {
+        assertEquals("spotify", stripVerbBody("Play SPOTIFY", verbs, fillers))
+    }
+
+    @Test fun `stripVerbBody collapses runs of whitespace`() {
+        assertEquals("spotify", stripVerbBody("play    spotify", verbs, fillers))
+    }
+
+    @Test fun `stripVerbBody trims trailing sentence punctuation`() {
+        assertEquals("spotify", stripVerbBody("play spotify.", verbs, fillers))
+        assertEquals("spotify", stripVerbBody("play spotify,", verbs, fillers))
+        assertEquals("spotify", stripVerbBody("play spotify!", verbs, fillers))
+        assertEquals("spotify", stripVerbBody("play spotify?", verbs, fillers))
+    }
+
+    @Test fun `stripVerbBody returns empty when only the verb is present`() {
+        assertEquals("", stripVerbBody("play", verbs, fillers))
+    }
+
+    @Test fun `stripVerbBody returns empty when verb plus only fillers`() {
+        assertEquals("", stripVerbBody("play the some please", verbs, fillers))
+    }
 }

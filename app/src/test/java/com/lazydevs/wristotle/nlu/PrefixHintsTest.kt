@@ -58,4 +58,82 @@ class PrefixHintsTest {
         assertEquals(Intent.Sms, PrefixHints.hintFor("Text John"))
         assertEquals(Intent.Sms, PrefixHints.hintFor("TEXT JOHN"))
     }
+
+    // --- Media prefix rules ----------------------------------------
+
+    @Test fun `play prefix maps to MediaPlay`() {
+        assertEquals(Intent.MediaPlay, PrefixHints.hintFor("play"))
+        assertEquals(Intent.MediaPlay, PrefixHints.hintFor("play spotify"))
+        assertEquals(Intent.MediaPlay, PrefixHints.hintFor("resume"))
+        assertEquals(Intent.MediaPlay, PrefixHints.hintFor("continue podcast"))
+    }
+
+    @Test fun `pause prefix maps to MediaPause`() {
+        assertEquals(Intent.MediaPause, PrefixHints.hintFor("pause"))
+        assertEquals(Intent.MediaPause, PrefixHints.hintFor("pause music"))
+        assertEquals(Intent.MediaPause, PrefixHints.hintFor("halt"))
+    }
+
+    @Test fun `next and skip map to MediaNext`() {
+        assertEquals(Intent.MediaNext, PrefixHints.hintFor("next"))
+        assertEquals(Intent.MediaNext, PrefixHints.hintFor("next song"))
+        assertEquals(Intent.MediaNext, PrefixHints.hintFor("skip"))
+    }
+
+    @Test fun `previous and last map to MediaPrevious`() {
+        assertEquals(Intent.MediaPrevious, PrefixHints.hintFor("previous"))
+        assertEquals(Intent.MediaPrevious, PrefixHints.hintFor("previous track"))
+        assertEquals(Intent.MediaPrevious, PrefixHints.hintFor("last song"))
+    }
+
+    @Test fun `seek-forward variants map to MediaSeekForward`() {
+        assertEquals(Intent.MediaSeekForward, PrefixHints.hintFor("skip ahead 30 seconds"))
+        assertEquals(Intent.MediaSeekForward, PrefixHints.hintFor("fast forward"))
+        assertEquals(Intent.MediaSeekForward, PrefixHints.hintFor("jump forward"))
+        assertEquals(Intent.MediaSeekForward, PrefixHints.hintFor("forward 30 seconds"))
+    }
+
+    @Test fun `seek-backward variants map to MediaSeekBackward`() {
+        assertEquals(Intent.MediaSeekBackward, PrefixHints.hintFor("rewind"))
+        assertEquals(Intent.MediaSeekBackward, PrefixHints.hintFor("skip back"))
+        assertEquals(Intent.MediaSeekBackward, PrefixHints.hintFor("go back 10 seconds"))
+        assertEquals(Intent.MediaSeekBackward, PrefixHints.hintFor("back ten seconds"))
+    }
+
+    @Test fun `seek rules win over the broader next previous rules`() {
+        // "skip ahead" must NOT be MediaNext just because it starts
+        // with "skip". The seek rules are listed first in the
+        // HINTS list specifically to claim these phrasings.
+        assertEquals(Intent.MediaSeekForward, PrefixHints.hintFor("skip ahead 30"))
+        assertEquals(Intent.MediaSeekBackward, PrefixHints.hintFor("go back 30 seconds"))
+    }
+
+    // --- OpenApp prefix rules --------------------------------------
+
+    @Test fun `open and launch and fire up map to OpenApp`() {
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("open spotify"))
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("launch the camera"))
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("fire up settings"))
+    }
+
+    @Test fun `bring up switch to go to all map to OpenApp`() {
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("bring up calendar"))
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("switch to messages"))
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("go to the play store"))
+    }
+
+    @Test fun `start run load only map to OpenApp when followed by a target`() {
+        // The rule requires \S after the verb so a bare "start" doesn't
+        // get captured (it's too ambiguous on its own).
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("start spotify"))
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("run chrome"))
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("load instagram"))
+    }
+
+    @Test fun `play with a body does not get captured by OpenApp rule`() {
+        // OpenApp sits BELOW the MediaPlay rule in the HINTS list so
+        // "play youtube" stays MediaPlay even though "play" isn't an
+        // open-verb itself.
+        assertEquals(Intent.MediaPlay, PrefixHints.hintFor("play youtube"))
+    }
 }
