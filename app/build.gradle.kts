@@ -54,6 +54,17 @@ android {
         versionName = System.getenv("WRISTOTLE_VERSION_NAME") ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            // Restrict the APK to arm64-v8a. The :speech-whisper module
+            // already filters here, but the ONNX Runtime AAR (pulled in via
+            // :speech-nlu) ships .so files for x86_64 / x86 / armeabi-v7a /
+            // arm64-v8a — without this app-level filter, the APK ships all
+            // four variants of libonnxruntime.so (~75 MB combined) when only
+            // arm64-v8a is loadable on the target devices. Adding the filter
+            // here drops the unused variants and shrinks the APK by ~56 MB.
+            abiFilters += "arm64-v8a"
+        }
     }
 
     signingConfigs {
