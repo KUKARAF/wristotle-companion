@@ -209,29 +209,29 @@ class PebbleListenerService : BasePebbleListenerService() {
                 rawQuery = query,
             )
         }
-        // Confidence + margin gate. Below threshold → Unknown unconditionally
-        // (we don't trust any prediction). Above threshold but within margin
-        // of a runner-up → ambiguous; try a prefix-verb tie-breaker before
-        // giving up, because "Text John …" beating "Call John …" by only
-        // 0.03 cosine is still very obviously Sms to a human.
+        // Confidence + margin gate. Three paths:
+        //   1. Above threshold AND margin clear of the runner-up: trust
+        //      the classifier's pick directly.
+        //   2. Above threshold but tight margin OR below threshold:
+        //      check for an unambiguous opening verb (`text`/`call`/
+        //      `remind`/`cancel`/`find phone`). If the prefix hint
+        //      resolves cleanly, route to that — a verb at the front
+        //      of the query is deterministic evidence the embedder
+        //      may have missed (e.g. when a long body dilutes the
+        //      cosine to the canonical intent centroid below 0.55).
+        //   3. No hint AND no usable classifier pick → Unknown.
         val runnerUp = classified.alternates.firstOrNull()?.score ?: 0f
-        if (classified.confidence < NluSettings.ROUTE_THRESHOLD) {
-            Log.d(TAG, "below-threshold (conf=${classified.confidence}) → Unknown")
-            return classified.copy(intent = Intent.Unknown, slots = emptyMap())
-        }
-        val ambiguous = (classified.confidence - runnerUp) < NluSettings.ROUTE_MARGIN
-        if (ambiguous) {
+        val below = classified.confidence < NluSettings.ROUTE_THRESHOLD
+        val ambiguous = !below && (classified.confidence - runnerUp) < NluSettings.ROUTE_MARGIN
+        if (below || ambiguous) {
+            val why = if (below) "below-threshold" else "ambiguous"
             val hint = PrefixHints.hintFor(query)
-            val hintMatchesTopOrRunnerUp =
-                hint != null &&
-                (hint == classified.intent ||
-                    classified.alternates.any { it.intent == hint })
-            if (hintMatchesTopOrRunnerUp) {
-                Log.d(TAG, "ambiguous (conf=${classified.confidence} runnerUp=$runnerUp) → prefix hint $hint wins")
-                val slots = slotExtractors.extract(hint!!, query)
+            if (hint != null) {
+                Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) → prefix hint $hint wins")
+                val slots = slotExtractors.extract(hint, query)
                 return classified.copy(intent = hint, slots = slots)
             }
-            Log.d(TAG, "ambiguous (conf=${classified.confidence} runnerUp=$runnerUp) and no prefix hint → Unknown")
+            Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) and no prefix hint → Unknown")
             return classified.copy(intent = Intent.Unknown, slots = emptyMap())
         }
         val slots = slotExtractors.extract(classified.intent, query)
