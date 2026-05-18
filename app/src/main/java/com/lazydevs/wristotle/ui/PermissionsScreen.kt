@@ -176,14 +176,9 @@ private fun VoiceInputCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                stringResource(R.string.voice_input_header),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                stringResource(R.string.voice_input_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            CardTitleWithInfo(
+                title = stringResource(R.string.voice_input_header),
+                description = stringResource(R.string.voice_input_desc),
             )
             Text(
                 if (isDefaultVoiceProvider) stringResource(R.string.voice_input_default_active)
@@ -332,9 +327,9 @@ private fun MediaControlCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                stringResource(R.string.media_control_header),
-                style = MaterialTheme.typography.titleMedium,
+            CardTitleWithInfo(
+                title = stringResource(R.string.media_control_header),
+                description = stringResource(R.string.media_control_desc),
             )
             Text(
                 if (granted) stringResource(R.string.media_control_active)
@@ -343,16 +338,16 @@ private fun MediaControlCard(
                 color = if (granted) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.error,
             )
-            Text(
-                stringResource(R.string.media_control_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Button(
-                onClick = onOpenSettings,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.media_control_open_settings))
+            // Button hides once granted — the system page is a long list
+            // of every notification-listener app, awkward to land on
+            // when there's nothing to change.
+            if (!granted) {
+                Button(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.media_control_open_settings))
+                }
             }
         }
     }

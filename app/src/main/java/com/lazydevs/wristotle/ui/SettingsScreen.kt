@@ -68,16 +68,18 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        // Section: speech-to-text — only Whisper for now, but the header
-        // is here so adding alternative ASR engines later doesn't break
-        // the visual rhythm.
-        SettingsSection(stringResource(R.string.settings_section_speech)) {
+        SettingsSection(stringResource(R.string.settings_section_models)) {
             WhisperModelsCard(vm = modelsVm)
+            NluModelsCard(vm = nluModelsVm)
         }
 
-        // Section: intent classifier + its learning toggle, grouped together.
-        SettingsSection(stringResource(R.string.settings_section_intent)) {
-            NluModelsCard(vm = nluModelsVm)
+        // "Learning" groups the two things the user can teach the
+        // companion: which apps are installed (powers `open <app>` /
+        // `play <app>`) and natural-phrasing intent classification
+        // (powers paraphrases like "ring Mom"). Each card's title
+        // doubles as the sub-section label.
+        SettingsSection(stringResource(R.string.settings_section_learning)) {
+            AppIndexCard(vm = appIndexVm)
             IntentLearningCard(
                 learningEnabled = learningEnabled,
                 onToggle = nluSettingsVm::setLearningEnabled,
@@ -85,14 +87,11 @@ fun SettingsScreen(
             )
         }
 
-        // Section: app launcher — index of installed apps for the
-        // "open <app>" / "play <app>" commands.
-        SettingsSection(stringResource(R.string.settings_section_apps)) {
-            AppIndexCard(vm = appIndexVm)
-        }
-
-        // Section: storage / data retention + audio capture.
-        SettingsSection(stringResource(R.string.settings_section_storage)) {
+        // Two sub-sections grouped under one "Conversation" header —
+        // History (retention + clear) and Audio (capture toggle +
+        // delete). Each card's own title doubles as the sub-section
+        // label, so the visual nesting is one fewer line.
+        SettingsSection(stringResource(R.string.settings_section_conversation)) {
             HistoryRetentionCard(
                 selectedDays = retentionDays,
                 options = conversationVm.retentionOptions,
@@ -204,14 +203,9 @@ private fun AudioCaptureCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                stringResource(R.string.settings_audio_header),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                stringResource(R.string.settings_audio_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            CardTitleWithInfo(
+                title = stringResource(R.string.settings_audio_header),
+                description = stringResource(R.string.settings_audio_desc),
             )
             androidx.compose.foundation.layout.Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -253,14 +247,9 @@ private fun IntentLearningCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                stringResource(R.string.settings_learning_header),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                stringResource(R.string.settings_learning_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            CardTitleWithInfo(
+                title = stringResource(R.string.settings_learning_header),
+                description = stringResource(R.string.settings_learning_desc),
             )
             androidx.compose.foundation.layout.Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -348,14 +337,9 @@ private fun HistoryRetentionCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                stringResource(R.string.settings_history_header),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                stringResource(R.string.settings_history_retention_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            CardTitleWithInfo(
+                title = stringResource(R.string.settings_history_header),
+                description = stringResource(R.string.settings_history_retention_desc),
             )
 
             ExposedDropdownMenuBox(

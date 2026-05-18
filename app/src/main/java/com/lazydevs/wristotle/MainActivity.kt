@@ -51,6 +51,16 @@ class MainActivity : ComponentActivity() {
 
     private val batteryOptimizationRequest = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
+    ) {
+        vm.refreshPermissions()
+        // Chain to notification access *after* the battery dialog so
+        // the user steps through one system page at a time during
+        // first-run rather than getting two stacked at once.
+        maybeRequestNotificationAccess()
+    }
+
+    private val notificationAccessRequest = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
     ) { vm.refreshPermissions() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -122,12 +132,34 @@ class MainActivity : ComponentActivity() {
     /**
      * Fires the system battery-optimization-exemption dialog if the app isn't
      * already whitelisted. Invoked from the runtime-perms result callback so
-     * one tap of "Grant Permissions" walks the user through both prompts.
+     * one tap of "Grant Permissions" walks the user through all the prompts.
      */
     private fun maybeRequestBatteryOptimizationsExemption() {
-        if (vm.isIgnoringBatteryOptimizations()) return
+        if (vm.isIgnoringBatteryOptimizations()) {
+            // Already exempt; skip to the next step in the chain.
+            maybeRequestNotificationAccess()
+            return
+        }
         val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
             .setData(Uri.parse("package:$packageName"))
         batteryOptimizationRequest.launch(intent)
+    }
+
+    /**
+     * Opens the system Notification Listener Access settings if we don't
+     * have it yet. Notification Access is what unlocks the cross-app
+     * media-control feature (play/pause/next any app from the watch).
+     * Last step in the first-run permission chain.
+     */
+    private fun maybeRequestNotificationAccess() {
+        if (vm.hasNotificationAccess()) return
+        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            notificationAccessRequest.launch(intent)
+        } catch (_: android.content.ActivityNotFoundException) {
+            // Device lacks the system page (rare). Silently skip — the
+            // Media Control card still surfaces the manual entry point.
+        }
     }
 }

@@ -21,10 +21,10 @@
     <string name="nav_attention_badge_desc">Needs attention</string>
 
     <!-- Settings screen -->
-    <string name="settings_history_header">Conversation history</string>
+    <string name="settings_history_header">History</string>
     <string name="settings_history_retention_label">Retention window</string>
-    <string name="settings_history_retention_desc">How long every interaction is kept on this phone. Older entries are pruned automatically.</string>
-    <string name="settings_history_desc">Or wipe everything immediately — useful before handing the phone to someone else.</string>
+    <string name="settings_history_retention_desc">How long each command and its response are kept on this phone. Older entries are pruned automatically. Nothing leaves the device — the history lives only in this app\'s private storage and is wiped on uninstall.</string>
+    <string name="settings_history_desc">Wipe everything now — useful before handing the phone to someone else.</string>
     <plurals name="settings_history_retention_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>
@@ -38,8 +38,8 @@
     <string name="settings_history_shrink_apply">Apply</string>
 
     <!-- Conversation audio capture -->
-    <string name="settings_audio_header">Audio capture</string>
-    <string name="settings_audio_desc">Save the recording from each dictation so you can replay it from the chat. Only the 5 most recent are kept; older ones are deleted automatically. Stays on this phone — nothing is uploaded.</string>
+    <string name="settings_audio_header">Audio</string>
+    <string name="settings_audio_desc">Saves the raw recording for each dictation as a WAV file so you can replay it from the chat tab. Only the 5 most recent recordings are kept; older ones are deleted automatically to cap disk usage. Stays on this phone — nothing is uploaded. Off by default since audio is more sensitive than the transcript.</string>
     <string name="settings_audio_toggle">Save dictation audio</string>
     <string name="settings_audio_clear_button">Delete saved audio</string>
     <string name="settings_audio_clear_title">Delete all saved audio?</string>
@@ -50,7 +50,6 @@
 
     <!-- Conversation screen -->
     <string name="conversation_header">Conversation</string>
-    <string name="conversation_subheader">Every command from your watch, kept for 30 days on this phone.</string>
     <string name="conversation_empty_title">No conversations yet</string>
     <string name="conversation_empty_subtitle">Talk to your watch and the history will show up here.</string>
     <string name="conversation_clear_all">Clear all</string>
@@ -75,13 +74,13 @@
     <string name="media_control_header">Media Control</string>
     <string name="media_control_active">Active — Wristotle can control media apps</string>
     <string name="media_control_inactive">Not granted — say \"play\" / \"pause\" / \"next\" won\'t do anything yet</string>
-    <string name="media_control_desc">Lets the watch say \"play\", \"pause\", \"next\", \"rewind\" to control whatever app is currently playing audio. Android calls this Notification Access; it\'s how the OS lets us see what\'s playing.</string>
+    <string name="media_control_desc">Lets the watch control any media app on this phone — \"play\", \"pause\", \"next\", \"previous\", \"rewind ten seconds\", \"play YouTube\", \"pause Spotify\". Android calls this Notification Access; it\'s the system gate that lets one app see active media sessions. Grant it once and the watch can drive playback in any installed media app.</string>
     <string name="media_control_open_settings">Open Notification Access settings</string>
     <string name="media_control_no_settings_toast">This device doesn\'t expose the Notification Access page in Settings.</string>
 
     <!-- Voice Input section -->
     <string name="voice_input_header">Voice Input (Whisper)</string>
-    <string name="voice_input_desc">Provides system-wide speech recognition. Any app on the device that calls Android\'s SpeechRecognizer can transcribe through Wristotle.</string>
+    <string name="voice_input_desc">Provides system-wide speech recognition. Any app on this phone that calls Android\'s SpeechRecognizer — Wear OS, voice search, accessibility services, third-party apps — will transcribe through Wristotle\'s on-device Whisper instead of Google\'s cloud service. Enable as the default voice input via the picker below or via the ADB command.</string>
     <string name="voice_input_default_active">Active — Wristotle is the system voice input provider</string>
     <string name="voice_input_default_inactive">Not set as the default voice input</string>
     <string name="copy_adb_command_button">Copy ADB activation command</string>
@@ -95,18 +94,17 @@
     <string name="voice_input_method_settings">System Settings</string>
 
     <!-- Whisper Models section -->
-    <string name="whisper_models_header">Whisper Models</string>
-    <string name="whisper_models_desc">Download a model to enable on-device transcription. Tap any downloaded model to make it the active one.</string>
+    <string name="whisper_models_header">Speech</string>
+    <string name="whisper_models_desc">Downloads a Whisper speech recognition model that runs entirely on this device — no audio is sent to the cloud. Larger models are more accurate but slower; tiny.en is the fastest for short watch commands while base.en handles longer dictation better. Tap any downloaded model to make it the active one.</string>
 
     <!-- Section headers grouping related Settings cards -->
-    <string name="settings_section_speech">Speech recognition</string>
-    <string name="settings_section_intent">Intent understanding (beta)</string>
-    <string name="settings_section_apps">Apps</string>
-    <string name="settings_section_storage">Storage</string>
+    <string name="settings_section_models">Models</string>
+    <string name="settings_section_learning">Learning</string>
+    <string name="settings_section_conversation">Conversation</string>
 
     <!-- Installed apps index -->
     <string name="app_index_header">Installed apps</string>
-    <string name="app_index_desc">Scan this device so the watch can open and play things by app name (\"open Spotify\", \"play Audible\"). Re-scan whenever you install or uninstall apps.</string>
+    <string name="app_index_desc">Scans this phone\'s installed apps so the watch can open or play them by name — \"open Spotify\", \"play Audible\", \"launch Maps\". The index is stored locally on this phone and is only refreshed when you tap below; re-scan whenever you install or uninstall an app so the watch knows about it.</string>
     <string name="app_index_status_empty">Not scanned yet — tap below.</string>
     <string name="app_index_status_format">%1$d apps indexed · scanned %2$s</string>
     <string name="app_index_status_never">never</string>
@@ -114,12 +112,12 @@
     <string name="app_index_scanning">Scanning…</string>
 
     <!-- NLU Models section -->
-    <string name="nlu_models_header">Intent Model</string>
-    <string name="nlu_models_desc">Optional. Download a small sentence encoder to let Wristotle understand commands phrased in natural ways (e.g. \"ring Mom\" or \"tell Dad I\'ll be late\"). Without it, the existing prefix matching is used.</string>
+    <string name="nlu_models_header">Intent</string>
+    <string name="nlu_models_desc">Optional sentence encoder (~23 MB) so the watch understands commands phrased naturally — \"ring Mom\", \"tell Dad I\'ll be late\", \"buzz me at three\" — instead of the literal verb-first patterns. Without it, the watch falls back to prefix matching, which works for \"call Mom\" or \"text Dad …\" but misses paraphrases.</string>
 
     <!-- Intent learning section -->
-    <string name="settings_learning_header">Intent learning</string>
-    <string name="settings_learning_desc">When on, every successful command improves recognition for similar phrasings next time. Stays on the phone — nothing leaves the device.</string>
+    <string name="settings_learning_header">Intent</string>
+    <string name="settings_learning_desc">When on, every successful command is added to the intent classifier\'s example bank so similar phrasings are recognized more confidently next time. Learned examples stay on this phone — nothing leaves the device — and can be cleared anytime with the button below.</string>
     <string name="settings_learning_toggle">Learn from my voice commands</string>
     <string name="settings_learning_clear_button">Clear learned examples</string>
     <string name="settings_learning_clear_title">Clear learned examples?</string>
@@ -136,4 +134,8 @@
 
     <string name="content_desc_granted">Granted</string>
     <string name="content_desc_denied">Denied</string>
+
+    <!-- CardTitleWithInfo accessibility labels -->
+    <string name="card_info_show">Show description</string>
+    <string name="card_info_hide">Hide description</string>
 </resources>

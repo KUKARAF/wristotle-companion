@@ -40,7 +40,7 @@ class ConversationSettings(context: Context) {
         private const val PREFS_NAME = "wristotle_conversation_settings"
         private const val KEY_RETENTION_DAYS = "retention_days"
 
-        const val DEFAULT_RETENTION_DAYS = 30
+        const val DEFAULT_RETENTION_DAYS = 10
         val ALLOWED_RETENTION_DAYS = listOf(1, 10, 20, 30)
     }
 }

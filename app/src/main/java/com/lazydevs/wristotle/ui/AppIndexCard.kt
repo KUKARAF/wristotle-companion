@@ -35,14 +35,9 @@ fun AppIndexCard(vm: AppIndexViewModel) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                stringResource(R.string.app_index_header),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                stringResource(R.string.app_index_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            CardTitleWithInfo(
+                title = stringResource(R.string.app_index_header),
+                description = stringResource(R.string.app_index_desc),
             )
 
             val statusText = when {

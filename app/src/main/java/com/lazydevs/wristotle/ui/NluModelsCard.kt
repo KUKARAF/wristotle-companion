@@ -44,15 +44,9 @@ fun NluModelsCard(
 
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.nlu_models_header),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                stringResource(R.string.nlu_models_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 4.dp),
+            CardTitleWithInfo(
+                title = stringResource(R.string.nlu_models_header),
+                description = stringResource(R.string.nlu_models_desc),
             )
             models.forEachIndexed { i, state ->
                 if (i > 0) HorizontalDivider()

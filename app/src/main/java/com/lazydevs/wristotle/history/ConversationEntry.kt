@@ -8,7 +8,9 @@ import androidx.room.PrimaryKey
  *
  * Stored locally on the phone; the watch only keeps the last 5 in RAM for
  * at-a-glance review. Retention is enforced by [ConversationRepository] —
- * entries older than 30 days are pruned on app start and after every insert.
+ * entries older than the user's configured retention window
+ * ([ConversationSettings.retentionDays]) are pruned on app start
+ * and after every insert.
  *
  * Fields that aren't always available (timings on local-only commands, etc.)
  * are nullable so we can persist a row immediately and still capture

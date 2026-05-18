@@ -79,17 +79,10 @@ fun ConversationScreen(vm: ConversationViewModel) {
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                stringResource(R.string.conversation_header),
-                style = MaterialTheme.typography.titleLarge,
-            )
-            Text(
-                stringResource(R.string.conversation_subheader),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        Text(
+            stringResource(R.string.conversation_header),
+            style = MaterialTheme.typography.titleLarge,
+        )
         Spacer(Modifier.height(12.dp))
 
         if (entries.isEmpty()) {
