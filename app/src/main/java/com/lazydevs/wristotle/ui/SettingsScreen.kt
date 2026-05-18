@@ -50,6 +50,7 @@ fun SettingsScreen(
     nluModelsVm: NluModelsViewModel,
     nluSettingsVm: NluSettingsViewModel,
     conversationVm: ConversationViewModel,
+    appIndexVm: AppIndexViewModel,
 ) {
     val retentionDays by conversationVm.retentionDays.collectAsState()
     val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
@@ -82,6 +83,12 @@ fun SettingsScreen(
                 onToggle = nluSettingsVm::setLearningEnabled,
                 onClearLearned = { showClearLearnedConfirm = true },
             )
+        }
+
+        // Section: app launcher — index of installed apps for the
+        // "open <app>" / "play <app>" commands.
+        SettingsSection(stringResource(R.string.settings_section_apps)) {
+            AppIndexCard(vm = appIndexVm)
         }
 
         // Section: storage / data retention + audio capture.

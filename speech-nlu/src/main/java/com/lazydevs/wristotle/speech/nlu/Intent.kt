@@ -35,6 +35,11 @@ enum class Intent {
     /** Seek backward within the current track. Slot: `seconds: Int` (default 10). */
     MediaSeekBackward,
 
+    /** Launch an installed app by spoken name ("open Spotify", "launch
+     *  Audible"). Slot: `app: String` (raw name as the user said it) —
+     *  the handler resolves it to a package id via the AppIndex. */
+    OpenApp,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

@@ -14,6 +14,7 @@ import com.lazydevs.wristotle.handlers.MediaPlayHandler
 import com.lazydevs.wristotle.handlers.MediaPlayPauseHandler
 import com.lazydevs.wristotle.handlers.MediaPreviousHandler
 import com.lazydevs.wristotle.handlers.MediaSeekHandler
+import com.lazydevs.wristotle.handlers.OpenAppHandler
 import com.lazydevs.wristotle.handlers.ReminderHandler
 import com.lazydevs.wristotle.handlers.SmsHandler
 import com.lazydevs.wristotle.history.ConversationEntry
@@ -73,19 +74,21 @@ class PebbleListenerService : BasePebbleListenerService() {
 
         val contacts = ContactsRepository(this)
         val media = app.activeMediaSession
+        val appIndex = app.appIndex
         registry = HandlerRegistry(listOf(
             CallHandler(this, contacts),
             SmsHandler(this, contacts),
             ReminderHandler(this, transport),
             CancelReminderHandler(this, transport),
             FindPhoneHandler(),
-            MediaPlayHandler(media),
+            MediaPlayHandler(this, media, appIndex),
             MediaPauseHandler(media),
             MediaPlayPauseHandler(media),
             MediaNextHandler(media),
             MediaPreviousHandler(media),
             MediaSeekHandler(media, intent = com.lazydevs.wristotle.speech.nlu.Intent.MediaSeekForward),
             MediaSeekHandler(media, intent = com.lazydevs.wristotle.speech.nlu.Intent.MediaSeekBackward),
+            OpenAppHandler(this, appIndex),
         ))
     }
 

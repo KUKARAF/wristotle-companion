@@ -101,7 +101,17 @@
     <!-- Section headers grouping related Settings cards -->
     <string name="settings_section_speech">Speech recognition</string>
     <string name="settings_section_intent">Intent understanding (beta)</string>
+    <string name="settings_section_apps">Apps</string>
     <string name="settings_section_storage">Storage</string>
+
+    <!-- Installed apps index -->
+    <string name="app_index_header">Installed apps</string>
+    <string name="app_index_desc">Scan this device so the watch can open and play things by app name (\"open Spotify\", \"play Audible\"). Re-scan whenever you install or uninstall apps.</string>
+    <string name="app_index_status_empty">Not scanned yet — tap below.</string>
+    <string name="app_index_status_format">%1$d apps indexed · scanned %2$s</string>
+    <string name="app_index_status_never">never</string>
+    <string name="app_index_scan_button">Scan installed apps</string>
+    <string name="app_index_scanning">Scanning…</string>
 
     <!-- NLU Models section -->
     <string name="nlu_models_header">Intent Model</string>

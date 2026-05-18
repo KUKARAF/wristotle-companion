@@ -4,6 +4,9 @@ import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import com.lazydevs.wristotle.apps.AppIndex
+import com.lazydevs.wristotle.apps.AppIndexDatabase
+import com.lazydevs.wristotle.apps.AppIndexer
 import com.lazydevs.wristotle.history.ConversationAudioSettings
 import com.lazydevs.wristotle.history.ConversationAudioStore
 import com.lazydevs.wristotle.history.ConversationDatabase
@@ -15,7 +18,9 @@ import com.lazydevs.wristotle.nlu.NluSettings
 import com.lazydevs.wristotle.nlu.slots.CallSlots
 import com.lazydevs.wristotle.nlu.slots.CancelSlots
 import com.lazydevs.wristotle.nlu.slots.FindPhoneSlots
+import com.lazydevs.wristotle.nlu.slots.MediaPlaySlots
 import com.lazydevs.wristotle.nlu.slots.MediaSeekSlots
+import com.lazydevs.wristotle.nlu.slots.OpenAppSlots
 import com.lazydevs.wristotle.nlu.slots.ReminderSlots
 import com.lazydevs.wristotle.nlu.slots.SmsSlots
 import com.lazydevs.wristotle.phone.ContactsRepository
@@ -119,6 +124,14 @@ class WristotleApplication : Application() {
     lateinit var activeMediaSession: ActiveMediaSession
         private set
 
+    /** Installed-app index used by OpenAppHandler and the body-aware
+     *  branch of MediaPlayHandler. Populated on demand from the Settings
+     *  "Scan installed apps" card; empty until the user first taps it. */
+    lateinit var appIndex: AppIndex
+        private set
+    lateinit var appIndexer: AppIndexer
+        private set
+
     /**
      * Application-scoped scope for fire-and-forget housekeeping (DB pruning, etc).
      * SupervisorJob so one failure doesn't cancel siblings.
@@ -161,6 +174,10 @@ class WristotleApplication : Application() {
 
         activeMediaSession = ActiveMediaSession(this)
 
+        val appIndexDao = AppIndexDatabase.build(this).installedAppDao()
+        appIndex = AppIndex(appIndexDao)
+        appIndexer = AppIndexer(this, appIndexDao)
+
         // Slot extractors are stateless aside from the contacts dep shared with
         // SmsHandler, so building them once at startup is fine. The single
         // MediaSeekSlots instance handles BOTH MediaSeekForward and
@@ -174,8 +191,10 @@ class WristotleApplication : Application() {
             Intent.Reminder to ReminderSlots(),
             Intent.Cancel to CancelSlots(),
             Intent.FindPhone to FindPhoneSlots(),
+            Intent.MediaPlay to MediaPlaySlots(),
             Intent.MediaSeekForward to mediaSeekSlots,
             Intent.MediaSeekBackward to mediaSeekSlots,
+            Intent.OpenApp to OpenAppSlots(),
         ))
 
         learningCollector = LearningCollector(

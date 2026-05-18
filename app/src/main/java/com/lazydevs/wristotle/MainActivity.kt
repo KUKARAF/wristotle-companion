@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.lazydevs.wristotle.service.WatchMessageService
+import com.lazydevs.wristotle.ui.AppIndexViewModel
 import com.lazydevs.wristotle.ui.ConversationViewModel
 import com.lazydevs.wristotle.ui.MainScreen
 import com.lazydevs.wristotle.ui.MainViewModel
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity() {
     private val nluModelsVm: NluModelsViewModel by viewModels()
     private val nluSettingsVm: NluSettingsViewModel by viewModels()
     private val conversationVm: ConversationViewModel by viewModels()
+    private val appIndexVm: AppIndexViewModel by viewModels()
 
     // Registered once; result arrives asynchronously and triggers a permission refresh.
     // After the runtime perms dialog resolves, chain into the battery-optimization
@@ -63,6 +65,7 @@ class MainActivity : ComponentActivity() {
                     nluModelsVm = nluModelsVm,
                     nluSettingsVm = nluSettingsVm,
                     conversationVm = conversationVm,
+                    appIndexVm = appIndexVm,
                     onRequestWatchPermissions = ::requestWatchPermissions,
                     onRequestVoicePermissions = ::requestVoicePermissions,
                 )
@@ -84,6 +87,7 @@ class MainActivity : ComponentActivity() {
         // while the app was in the background.
         vm.refreshPermissions()
         modelsVm.refresh()
+        appIndexVm.refresh()
     }
 
     /** Runtime perms the watch-bridge handlers need (Watch tab Grant button). */

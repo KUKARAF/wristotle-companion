@@ -238,6 +238,26 @@ object SeedExamples {
             "back thirty seconds",
             "play that again",
         ))
+        // ── OpenApp ─────────────────────────────────────────────────────
+        // Verb-led patterns; the actual app name is open-vocabulary and
+        // handled by the slot extractor + AppIndex lookup at dispatch
+        // time, so the seeds focus on teaching the classifier the verb
+        // shapes rather than every possible app name.
+        addAll(Intent.OpenApp, listOf(
+            "open spotify",
+            "open youtube",
+            "open chrome",
+            "open the calculator",
+            "launch maps",
+            "launch the camera",
+            "start gmail",
+            "start the browser",
+            "fire up settings",
+            "load instagram",
+            "bring up calendar",
+            "switch to messages",
+            "go to the play store",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }
