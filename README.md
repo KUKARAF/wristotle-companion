@@ -406,3 +406,9 @@ Watch app needs no changes — natural-language queries arrive over
 ### Watch dictation quirk
 
 `WhisperRecognitionService` must drain the `RecognizerIntent.EXTRA_AUDIO_SOURCE` pipe to EOF *before* calling `callback.results(...)`. Returning early — even with a valid transcript — produces a malformed `DictationResult` packet on the watch firmware's side and surfaces as a generic *"Could not understand. Try again."* The `Recognizer` interface bakes this contract in: `TranscriptionEvent.Final` is only emitted after `AudioSource.samples()` completes.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE). The bundled `whisper.cpp` submodule is also MIT (Georgi Gerganov); ONNX Runtime is MIT (Microsoft); MiniLM-L6-v2 is Apache 2.0 (Microsoft Research). Per-dependency licenses ship with each library's metadata.
