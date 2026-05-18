@@ -353,7 +353,7 @@ Watch app needs no changes — natural-language queries arrive over
 | `INTERNET`                     | Downloading Whisper model files from HuggingFace       |
 | `POST_NOTIFICATIONS`           | Foreground service notification (Android 13+)          |
 | `FOREGROUND_SERVICE`           | Long-running watch bridge                              |
-| `FOREGROUND_SERVICE_DATA_SYNC` | FGS type required on Android 14+                       |
+| `FOREGROUND_SERVICE_CONNECTED_DEVICE` | FGS type for the wearable bridge (Android 14+)         |
 
 > **GrapheneOS / privacy-ROM note:** `INTERNET` is auto-granted on stock Android but may be denied by default on GrapheneOS and similar ROMs that surface it as a runtime permission. If model downloads fail with *"unable to resolve host"*, grant it via *Settings → Apps → Wristotle Companion → Permissions → Network*, or from ADB:
 >

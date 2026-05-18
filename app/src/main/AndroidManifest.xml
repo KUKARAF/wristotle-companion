@@ -7,7 +7,23 @@
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- The companion bridges to a connected wearable (Pebble watch via
+         rePebble / microPebble). `connectedDevice` is the semantically
+         correct FGS type and, unlike `dataSync`, has no per-app daily
+         time budget on Android 14+ — `dataSync` was burning through its
+         ~6 h/day quota during heavy dev iteration and crashing onCreate
+         with ForegroundServiceStartNotAllowedException. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- Required by the FGS-type-CONNECTED_DEVICE validator on Android
+         14+: an app declaring "I'm running a foreground service for a
+         connected device" must also hold at least one paired hardware
+         permission (BLUETOOTH_CONNECT / NFC / USB host / etc). NFC is
+         normal-protection so it satisfies the validator with no
+         runtime prompt and no user-visible permission entry. We don't
+         actually use NFC; the real Pebble-BLE link runs inside the
+         rePebble companion app's process, which holds the real
+         Bluetooth permissions. -->
+    <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
@@ -36,7 +52,7 @@
         <service
             android:name=".service.WatchMessageService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="connectedDevice" />
 
         <service
             android:name=".service.PebbleListenerService"

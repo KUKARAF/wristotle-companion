@@ -33,7 +33,7 @@ class WatchMessageService : LifecycleService() {
             startForeground(
                 AppConstants.Notifications.SERVICE_NOTIFICATION_ID,
                 buildNotification(),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
             )
         } else {
             startForeground(AppConstants.Notifications.SERVICE_NOTIFICATION_ID, buildNotification())
