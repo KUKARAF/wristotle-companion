@@ -70,7 +70,7 @@ fun NluModelsCard(
 
 @Composable
 private fun NluModelRow(
-    state: NluModelUiState,
+    state: ModelUiState<com.lazydevs.wristotle.speech.nlu.model.NluModelInfo>,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
@@ -134,7 +134,7 @@ private fun NluModelRow(
 
 @Composable
 private fun RowActions(
-    state: NluModelUiState,
+    state: ModelUiState<com.lazydevs.wristotle.speech.nlu.model.NluModelInfo>,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit,

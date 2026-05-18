@@ -75,7 +75,7 @@ fun WhisperModelsCard(
 
 @Composable
 private fun ModelRow(
-    state: ModelUiState,
+    state: ModelUiState<com.lazydevs.wristotle.speech.whisper.ModelInfo>,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
@@ -142,7 +142,7 @@ private fun ModelRow(
 
 @Composable
 private fun RowActions(
-    state: ModelUiState,
+    state: ModelUiState<com.lazydevs.wristotle.speech.whisper.ModelInfo>,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
