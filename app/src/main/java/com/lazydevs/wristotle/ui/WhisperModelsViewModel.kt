@@ -116,10 +116,10 @@ class WhisperModelsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setActive(modelId: String) {
         if (!storage.isDownloaded(modelId)) {
-            android.util.Log.w("WhisperModelsViewModel", "setActive($modelId) ignored — not downloaded")
+            Log.w(TAG, "setActive($modelId) ignored — not downloaded")
             return
         }
-        android.util.Log.d("WhisperModelsViewModel", "setActive: $modelId")
+        Log.d(TAG, "setActive: $modelId")
         storage.activeModelId = modelId
         refresh()
     }

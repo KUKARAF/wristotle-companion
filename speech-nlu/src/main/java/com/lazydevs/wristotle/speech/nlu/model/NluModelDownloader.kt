@@ -20,15 +20,10 @@ sealed interface NluDownloadEvent {
 }
 
 /**
- * Twin of `ModelDownloader` in :speech-whisper — same resumable HTTP +
- * manual-redirect logic, retyped for [NluModelInfo] / [NluModelStorage].
- *
- * Kept as a verbatim copy (not a shared generic) so :speech-nlu doesn't
- * have to depend on :speech-whisper and the two modules can evolve
- * independently. If/when a third downloadable model family appears, the
- * common HTTP logic should be hoisted into :speech and both consumers
- * should switch — until then, duplication is cheaper than a premature
- * abstraction.
+ * Twin of `ModelDownloader` in :speech-whisper — kept as a verbatim
+ * copy (not a shared generic) so the two model modules can evolve
+ * independently. Hoist the common HTTP logic into :speech if/when a
+ * third downloadable model family appears.
  */
 class NluModelDownloader(private val storage: NluModelStorage) {
 

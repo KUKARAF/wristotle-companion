@@ -2,7 +2,6 @@ package com.lazydevs.wristotle.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,7 +16,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -110,7 +108,7 @@ private fun ModelRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (state.isActive) ActivePill()
+            if (state.isActive) ActiveModelPill()
             RowActions(state, onDownload, onCancel, onDelete, onSetActive)
         }
         val progress = state.progress
@@ -137,23 +135,6 @@ private fun ModelRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ActivePill() {
-    Surface(
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-        contentColor = MaterialTheme.colorScheme.primary,
-        shape = MaterialTheme.shapes.small,
-        modifier = Modifier.padding(end = 4.dp),
-    ) {
-        Box(modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
-            Text(
-                stringResource(R.string.whisper_model_status_active),
-                style = MaterialTheme.typography.labelSmall,
             )
         }
     }
@@ -196,5 +177,3 @@ private fun RowActions(
     }
 }
 
-/** Round bytes to the nearest MB for display. */
-private fun approxSizeMb(bytes: Long): Int = (bytes / 1_000_000L).toInt()
