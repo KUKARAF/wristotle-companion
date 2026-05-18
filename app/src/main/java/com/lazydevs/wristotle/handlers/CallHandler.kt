@@ -2,15 +2,14 @@ package com.lazydevs.wristotle.handlers
 
 import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.telecom.TelecomManager
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.util.hasPermission
 
 private const val TAG = "CallHandler"
 
@@ -33,8 +32,7 @@ class CallHandler(
 
     override suspend fun handle(result: IntentResult): String {
         if (!contacts.hasPermission()) return "Contacts permission not granted"
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE)
-            != PackageManager.PERMISSION_GRANTED) return "Call permission not granted"
+        if (!context.hasPermission(Manifest.permission.CALL_PHONE)) return "Call permission not granted"
 
         val contactName = (result.slots["contact"] as? String)?.trim().orEmpty()
         if (contactName.isEmpty()) return "No contact specified"

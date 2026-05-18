@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.handlers
 
 import android.content.Context
 import com.lazydevs.wristotle.apps.AppIndex
+import com.lazydevs.wristotle.apps.AppLookup
 import com.lazydevs.wristotle.apps.launchApp
 import com.lazydevs.wristotle.apps.packageLabel
 import com.lazydevs.wristotle.speech.nlu.Intent
@@ -32,7 +33,12 @@ class OpenAppHandler(
         if (appIndex.count() == 0) {
             return "App index is empty — open Settings and tap Scan installed apps."
         }
-        val pkg = appIndex.find(name) ?: return "Couldn't find an app called $name"
+        val pkg = when (val lookup = appIndex.lookup(name)) {
+            is AppLookup.Match -> lookup.packageId
+            // Generic and NotFound both surface as "couldn't find" —
+            // OpenApp has no active-session fallback to defer to.
+            AppLookup.Generic, is AppLookup.NotFound -> return "Couldn't find an app called $name"
+        }
         return if (launchApp(context, pkg)) "Opening ${packageLabel(context, pkg)}"
         else "Couldn't launch ${packageLabel(context, pkg)}"
     }

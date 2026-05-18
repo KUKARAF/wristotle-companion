@@ -21,8 +21,7 @@ import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
  *
  * (3) fixes the long-standing bug where "text john smith hi" sent to
  * contact "john" with body "smith hi".
- */
-/**
+ *
  * [findContact] is the only side-effectful dependency — defaulted to the
  * real [ContactsRepository.findContact] in production wiring and replaced
  * with a fake lambda in tests so this extractor stays pure-function
@@ -32,7 +31,6 @@ class SmsSlots(
     private val findContact: suspend (String) -> ContactsRepository.Contact?,
 ) : SlotExtractor {
     constructor(contacts: ContactsRepository) : this(contacts::findContact)
-
 
     override suspend fun extract(query: String): Map<String, Any> {
         val lower = query.lowercase().trim()

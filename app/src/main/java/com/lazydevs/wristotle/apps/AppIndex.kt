@@ -47,14 +47,6 @@ class AppIndex(private val dao: InstalledAppDao) {
     suspend fun count(): Int = dao.count()
     suspend fun latestScanAt(): Long? = dao.latestScanAt()
 
-    /**
-     * Convenience wrapper for callers that only care about a hit —
-     * collapses Generic and NotFound into null. New code should
-     * prefer [lookup] so it can distinguish the two.
-     */
-    suspend fun find(query: String): String? =
-        (lookup(query) as? AppLookup.Match)?.packageId
-
     /** See the [AppLookup] doc for what each return value means. */
     suspend fun lookup(query: String): AppLookup {
         val normalized = normalizeForIndex(query)

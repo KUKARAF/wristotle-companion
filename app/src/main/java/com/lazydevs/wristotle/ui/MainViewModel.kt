@@ -3,14 +3,13 @@ package com.lazydevs.wristotle.ui
 import android.Manifest
 import android.app.Application
 import android.content.ComponentName
-import android.content.pm.PackageManager
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.speech.service.WhisperRecognitionService
+import com.lazydevs.wristotle.util.hasPermission
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -109,9 +108,6 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
         val expected = ComponentName(app, WhisperRecognitionService::class.java)
         return current == expected
     }
-
-    private fun Application.hasPermission(permission: String) =
-        ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 
     private companion object {
         // The Settings.Secure constant is hidden; the underlying setting name is

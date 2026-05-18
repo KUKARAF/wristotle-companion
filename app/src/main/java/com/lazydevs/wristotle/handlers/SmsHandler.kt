@@ -2,13 +2,12 @@ package com.lazydevs.wristotle.handlers
 
 import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.telephony.SmsManager
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.util.hasPermission
 
 private const val TAG = "SmsHandler"
 
@@ -32,8 +31,7 @@ class SmsHandler(
 
     override suspend fun handle(result: IntentResult): String {
         if (!contacts.hasPermission()) return "Contacts permission not granted"
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS)
-            != PackageManager.PERMISSION_GRANTED) return "SMS permission not granted"
+        if (!context.hasPermission(Manifest.permission.SEND_SMS)) return "SMS permission not granted"
 
         val contactName = (result.slots["contact"] as? String)?.trim().orEmpty()
         val body = (result.slots["body"] as? String)?.trim().orEmpty()
