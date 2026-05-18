@@ -25,8 +25,8 @@ Then create a sidecar .csv at /tmp/wristotle-spike/expected.csv with
 the intended command for each clip (so we can score correctness):
 
   filename,expected_text,intent
-  <epoch>-<samples>.wav,call <contact>,Call
-  <epoch>-<samples>.wav,text <contact> saying <body>,Sms
+  1779001234567-48000.wav,call dad,Call
+  1779001235000-72000.wav,text mom saying running late,Sms
 
 Optionally drop a .txt next to each .wav with the same basename
 containing what Whisper transcribed; the script will include it in
@@ -152,7 +152,7 @@ def main() -> int:
     if args.contacts and args.contacts.exists():
         contacts = [line.strip() for line in args.contacts.read_text().splitlines() if line.strip()]
     if not contacts:
-        contacts = ["alpha", "beta", "gamma"]
+        contacts = ["mom", "dad", "sister"]
         print(f"!! no --contacts file given; using placeholder list: {contacts}")
     grammar = build_grammar(contacts)
     print(f"grammar covers {grammar.count(',') + 1} phrases across {len(contacts)} contacts\n")
