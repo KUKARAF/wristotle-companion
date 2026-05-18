@@ -60,6 +60,13 @@ class WhisperRecognitionService : RecognitionService() {
             callback.safeError(SpeechRecognizer.ERROR_RECOGNIZER_BUSY)
             return
         }
+        val sinceEmpty = System.currentTimeMillis() - lastEmptySessionEndMs
+        if (sinceEmpty < RAPID_RETRY_WINDOW_MS) {
+            Log.w(TAG, "rapid retry ${sinceEmpty}ms after a zero-audio session → BUSY " +
+                "(upstream pipe-race suspected — see VoiceSessionManager.collectLatest in microPebble/libpebble3)")
+            callback.safeError(SpeechRecognizer.ERROR_RECOGNIZER_BUSY)
+            return
+        }
         if (!hasRecordAudioPermission()) {
             Log.w(TAG, "RECORD_AUDIO not granted")
             callback.safeError(SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS)
@@ -114,11 +121,15 @@ class WhisperRecognitionService : RecognitionService() {
     }
 
     private suspend fun runSession(source: AudioSource, recog: Recognizer, callback: Callback) {
+        var sawSpeechStarted = false
         try {
             recog.transcribe(source).collect { event ->
                 Log.d(TAG, "event: $event")
                 when (event) {
-                    TranscriptionEvent.SpeechStarted -> callback.safeBeginning()
+                    TranscriptionEvent.SpeechStarted -> {
+                        sawSpeechStarted = true
+                        callback.safeBeginning()
+                    }
                     is TranscriptionEvent.Partial -> callback.safePartial(event.text)
                     TranscriptionEvent.SpeechEnded -> callback.safeEndOfSpeech()
                     is TranscriptionEvent.Final -> callback.safeResults(event.text)
@@ -133,6 +144,13 @@ class WhisperRecognitionService : RecognitionService() {
             Log.e(TAG, "session failed", t)
             callback.safeError(SpeechRecognizer.ERROR_CLIENT)
         } finally {
+            // Zero-audio outcome — pipe was empty before any frame
+            // reached us. Arm the rapid-retry suppression so the
+            // upstream cancellation cycle doesn't drag us through 3+
+            // more failed sessions in the next 100 ms.
+            if (!sawSpeechStarted) {
+                lastEmptySessionEndMs = System.currentTimeMillis()
+            }
             sessionJob = null
             sessionSource = null
         }
@@ -186,5 +204,30 @@ class WhisperRecognitionService : RecognitionService() {
         const val EXTRA_AUDIO_SOURCE_ENCODING = "android.speech.extra.AUDIO_SOURCE_ENCODING"
         const val EXTRA_AUDIO_SOURCE_CHANNEL_COUNT =
             "android.speech.extra.AUDIO_SOURCE_CHANNEL_COUNT"
+
+        /**
+         * Wall-clock when the most recent session ended *without* ever
+         * emitting `SpeechStarted` — i.e. the pipe yielded zero bytes.
+         * Used to suppress rapid-fire `onStartListening` retries that
+         * upstream callers like microPebble's `TranscriptionProviderImpl`
+         * generate when their `VoiceSessionManager.collectLatest` cancels
+         * a setup mid-flight and re-issues it: the EBADF + retry storm
+         * has no chance of producing audio (the pipe FDs were already
+         * yanked by the upstream cancellation), and accepting it just
+         * pollutes logs + wastes a recognizer launch.
+         *
+         * MUST be in the companion (process-level) — Android destroys
+         * + recreates the Service instance between sessions, so an
+         * instance field would reset to 0 on every retry, defeating
+         * the cooldown.
+         */
+        @Volatile var lastEmptySessionEndMs: Long = 0L
+
+        /** See [lastEmptySessionEndMs]. 500 ms comfortably covers
+         *  microPebble's collectLatest cancel→reschedule window
+         *  (~100 ms observed) without blocking legitimate quick
+         *  back-to-back dictations (a human can't realistically press
+         *  select twice within 500 ms). */
+        const val RAPID_RETRY_WINDOW_MS = 500L
     }
 }
