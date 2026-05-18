@@ -50,7 +50,9 @@ Every interaction — calls, texts, reminders, locally-handled commands like "wh
 
 ### Install
 
-Grab the latest APK from [Releases](https://codeberg.org/kchinnasamy/wristotle-companion/releases) and sideload it, or build from source — see [For developers](#for-developers).
+Grab the latest APK from [Releases](https://codeberg.org/kchinnasamy/wristotle-companion/releases) and sideload it. New releases are built and signed automatically on every `vX.Y.Z` tag push, so the topmost release is the current main branch.
+
+Or build from source — see [For developers](#for-developers).
 
 ### First-time setup
 
