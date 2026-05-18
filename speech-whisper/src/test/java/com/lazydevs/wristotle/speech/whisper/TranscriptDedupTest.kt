@@ -90,4 +90,54 @@ class TranscriptDedupTest {
         // only affects MATCH eligibility, not what's emitted.
         assertEquals("text dad,", dedupeRepeatedPhrases("text dad, text dad."))
     }
+
+    // --- stripAnnotationOnly ---------------------------------------------
+
+    @Test fun `asterisk-wrapped annotation collapses to empty`() {
+        assertEquals("", stripAnnotationOnly("*Door opens*"))
+        assertEquals("", stripAnnotationOnly("*sigh*"))
+        assertEquals("", stripAnnotationOnly("*DING*"))
+        assertEquals("", stripAnnotationOnly("*DAMN*"))
+    }
+
+    @Test fun `bracket-wrapped annotation collapses to empty`() {
+        assertEquals("", stripAnnotationOnly("[laughter]"))
+        assertEquals("", stripAnnotationOnly("[Music playing]"))
+    }
+
+    @Test fun `paren-wrapped annotation collapses to empty`() {
+        assertEquals("", stripAnnotationOnly("(silence)"))
+        assertEquals("", stripAnnotationOnly("(coughs)"))
+    }
+
+    @Test fun `chained annotations of mixed flavours collapse to empty`() {
+        // Whisper occasionally chains multiple sound-effect annotations
+        // when given a quiet-but-noisy clip.
+        assertEquals("", stripAnnotationOnly("*sigh* [cough] (silence)"))
+        assertEquals("", stripAnnotationOnly("*DING* *DING*"))
+    }
+
+    @Test fun `annotation with surrounding whitespace and punctuation collapses`() {
+        assertEquals("", stripAnnotationOnly("  *Door opens*  "))
+        assertEquals("", stripAnnotationOnly("*sigh*."))
+        assertEquals("", stripAnnotationOnly("- *cough* —"))
+    }
+
+    @Test fun `mixed annotation plus real speech returns original unchanged`() {
+        // Conservative: don't damage real queries that happen to contain
+        // an annotation token. Better to leak one stray "*sigh*" than to
+        // silently drop "call mom" from "*sigh* call mom".
+        assertEquals("*sigh* call mom", stripAnnotationOnly("*sigh* call mom"))
+        assertEquals("call mom *please*", stripAnnotationOnly("call mom *please*"))
+    }
+
+    @Test fun `plain transcript without annotations passes through`() {
+        assertEquals("call mom", stripAnnotationOnly("call mom"))
+        assertEquals("Door opens", stripAnnotationOnly("Door opens"))
+    }
+
+    @Test fun `empty input returns empty`() {
+        assertEquals("", stripAnnotationOnly(""))
+        assertEquals("", stripAnnotationOnly("   "))
+    }
 }

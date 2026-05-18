@@ -100,3 +100,37 @@ internal fun dedupeRepeatedPhrases(text: String): String {
     if (keptIndices.size == raw.size) return text   // nothing collapsed
     return keptIndices.joinToString(" ") { raw[it] }
 }
+
+/**
+ * Returns "" when [text] is **entirely** a Whisper subtitle-annotation
+ * hallucination (`*Door opens*`, `[laughter]`, `(silence)`, or several
+ * such blocks chained), otherwise returns [text] unchanged.
+ *
+ * Whisper's training set includes large amounts of subtitle data where
+ * sound effects are written as inline annotations wrapped in `*…*`,
+ * `[…]`, or `(…)`. When given silence or near-silent audio it tends to
+ * emit one of those annotations as the whole transcript — `*sigh*` for
+ * a quick mic blip, `*DING*` for a noisy environment, etc. Forwarding
+ * those to the NLU layer produces "Unknown command" noise in the chat;
+ * dropping them lets the recognizer emit `ERROR_NO_MATCH` instead and
+ * the watch shows nothing.
+ *
+ * Conservative on mixed content: if the transcript has any non-
+ * annotation text after stripping the blocks (e.g. `*sigh* call mom`),
+ * we return the ORIGINAL unchanged — better to leak one stray
+ * annotation than to silently corrupt a real query.
+ */
+internal fun stripAnnotationOnly(text: String): String {
+    val withoutAnnotations = text
+        .replace(ANNOTATION_BLOCK, "")
+        .trim()
+        .trim('.', ',', '!', '?', ';', ':', '-', '—')
+        .trim()
+    return if (withoutAnnotations.isEmpty()) "" else text
+}
+
+// Three bracket flavours Whisper uses for inline sound annotations.
+// `[^X]+` keeps the matches tight (no greedy run past the closing
+// bracket) and the per-flavour alternatives let us catch chains like
+// `*sigh* [cough] (silence)` in a single sweep.
+private val ANNOTATION_BLOCK = Regex("""\*[^*]+\*|\[[^\]]+\]|\([^)]+\)""")

@@ -176,8 +176,18 @@ class WhisperRecognizer(
         // short or trailing-silence audio. Collapse them before downstream
         // consumers (NLU classifier, slot extractors, watch chat) see the
         // duplicated mess. No-op when the transcript is already clean.
-        val text = dedupeRepeatedPhrases(rawText).also {
+        val deduped = dedupeRepeatedPhrases(rawText).also {
             if (it != rawText) Log.d(TAG, "deduped: '$it'")
+        }
+        // Drop subtitle-annotation-only outputs (`*Door opens*`,
+        // `[laughter]`, `(silence)`) — Whisper emits these on silence
+        // because its training data includes subtitle files. Letting
+        // them through would surface in the watch chat as "Unknown
+        // command: *DING*".
+        val text = stripAnnotationOnly(deduped).also {
+            if (it.isEmpty() && deduped.isNotEmpty()) {
+                Log.d(TAG, "annotation-only transcript dropped: '$deduped'")
+            }
         }
 
         if (text.isEmpty()) {
