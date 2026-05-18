@@ -35,12 +35,18 @@ Dictate from your watch; the command runs on your phone. Supported phrases:
 | "Text [name] [message]"          | Sends an SMS to that contact     |
 | "Remind me to [thing] at [time]" | Creates a watch-side reminder    |
 | "Cancel reminder"                | Cancels the most recent reminder |
+| "Open [app]" / "Launch [app]"    | Launches the named app           |
+| "Play [app]" / "Pause [app]"     | Plays / pauses media in that app |
+| "Play" / "Pause" / "Next" / "Previous" | Acts on the currently playing app |
+| "Rewind 10 seconds" / "Skip ahead 30 seconds" | Seek within current track |
 
 Beyond watch dictation, Wristotle Companion can also register as Android's *system-wide* voice input provider, so any app on the device — keyboards, search bars, third-party apps — transcribes through the same on-device Whisper engine.
 
 Phrasings beyond the canonical verbs work too — once you download the optional **Intent Model** (a small on-device sentence encoder), Wristotle understands natural variants like "ring Mom", "tell Dad I'm running late", or "buzz me at 3" by routing them to the right intent. Without the model, the existing prefix matching is used and the canonical phrasings above still work.
 
-Every interaction — calls, texts, reminders, locally-handled commands like "what time is it" — is saved to a local **Conversation** history on the phone. The Conversation tab is the app's landing screen; long-press any message bubble to copy text. The **Settings** tab lets you choose how long to keep history (1 / 10 / 20 / 30 days, default 30), wipe it on demand, and optionally **save the audio** of your last few dictations (capped at 5, off by default) so you can replay any command from the chat. The third tab, **Permissions**, consolidates the watch-bridge perms (Contacts / Phone / SMS) and the voice perms (Record Audio, battery exemption, default-voice-provider activation) in one place.
+App-name commands (`open …`, `play …`, `pause …`) need a one-time **Scan installed apps** tap in *Settings → Installed apps* so the companion knows what's on the device; re-scan after installing or uninstalling apps. Cross-app media control also needs **Notification Access** — Wristotle requests it as part of the first-run permission flow, but you can grant or revoke it later via the *Media Control* card on the Permissions tab.
+
+Every interaction — calls, texts, reminders, media commands, locally-handled commands like "what time is it" — is saved to a local **Conversation** history on the phone. The Conversation tab is the app's landing screen; long-press any message bubble to copy text. The **Settings** tab is grouped into three sections — **Models** (Speech / Intent downloads), **Learning** (Installed apps index + intent learning), and **Conversation** (history retention 1 / 10 / 20 / 30 days, default 10 + optional audio capture of the last 5 dictations, off by default for privacy). Each card title shows an "ⓘ" icon — tap it to expand a detailed description in place. The third tab, **Permissions**, consolidates the watch-bridge perms (Contacts / Phone / SMS), the voice perms (Record Audio, battery exemption, default-voice-provider activation), and Notification Access for media control.
 
 ### What you need
 
@@ -57,10 +63,11 @@ Or build from source — see [For developers](#for-developers).
 ### First-time setup
 
 1. **Open Wristotle Companion.**
-2. **Grant permissions.** Tap *Grant Permissions* and accept Contacts, Phone, SMS, Microphone, and Notifications.
-3. **Download a Whisper model.** Open the *Whisper Models* card and tap *Download* on a model. `Tiny (English, quantized)` (~32 MB) is the recommended starting point — fastest, smallest, accurate enough for short watch commands. The first model you download is set active automatically.
-4. **Pair the watch.** Make sure your watch is paired and the [Wristotle](../Wristotle) watch app is installed.
-5. **Try it.** Open Wristotle on the watch, press *Select*, and dictate one of the commands from the table above.
+2. **Grant permissions.** Tap *Grant Permissions* and walk through the chain — runtime perms (Contacts / Phone / SMS / Notifications) → battery-optimisation exemption → Notification Access (the last one is what unlocks cross-app media control).
+3. **Download a Whisper model.** Open *Settings → Models → Speech* and tap *Download* on a model. `Tiny (English, quantized)` (~32 MB) is the recommended starting point — fastest, smallest, accurate enough for short watch commands. The first model you download is set active automatically.
+4. **(Optional) Scan installed apps.** Open *Settings → Installed apps* and tap *Scan installed apps* if you want `open <app>` / `play <app>` style commands to work. Re-scan after installing or uninstalling apps.
+5. **Pair the watch.** Make sure your watch is paired and the [Wristotle](../Wristotle) watch app is installed.
+6. **Try it.** Open Wristotle on the watch, press *Select*, and dictate one of the commands from the table above.
 
 While the bridge is active the phone displays a persistent low-priority notification — that's the foreground service keeping the connection alive.
 
@@ -198,10 +205,10 @@ Build just the speech-recognition library:
 
 | Module            | Role                                                                                   |
 |-------------------|----------------------------------------------------------------------------------------|
-| `:app`            | The companion app — services, handlers, slot extractors, UI, `WristotleApplication`    |
-| `:speech`         | System-wide `android.speech.RecognitionService` + audio sources + Recognizer interface |
-| `:speech-whisper` | whisper.cpp JNI backend, model catalog / storage / downloader, `WhisperRecognizer`     |
-| `:speech-nlu`     | Intent classifier interface + ONNX-MiniLM embedding implementation + per-intent slot extractors + learnable example bank |
+| `:app`            | The companion app — services, handlers (incl. cross-app media + open-app), slot extractors, AppIndex, ActiveMediaSession, UI, `WristotleApplication` |
+| `:speech`         | System-wide `android.speech.RecognitionService` + audio sources + Recognizer interface + shared model plumbing (`ResumableDownloader`, `ModelFileStorage`) |
+| `:speech-whisper` | whisper.cpp JNI backend, model catalog, `WhisperRecognizer`; storage is a thin `ModelFileStorage` subclass |
+| `:speech-nlu`     | Intent classifier interface + ONNX-MiniLM embedding implementation + learnable example bank; storage is a thin `ModelFileStorage` subclass |
 
 Both the recognition backend and the intent classifier are swappable via
 single-line provider hooks in `WristotleApplication.onCreate`:
@@ -220,35 +227,62 @@ a concrete classifier.
 ```
 app/src/main/java/com/lazydevs/wristotle/
   AppConstants.kt               # PEBBLE_UUID, notification constants
-  MainActivity.kt               # Starts foreground service, requests permissions
+  MainActivity.kt               # Starts foreground service; chains runtime perms →
+                                #   battery exemption → notification listener page
   WristotleApplication.kt       # Owns shared PebbleTransport, recognizer + classifier
-                                #   providers, slot extractor registry, conversation
-                                #   audio store. Skips NLU on isLowRamDevice().
+                                #   providers, slot extractor registry, AppIndex,
+                                #   ActiveMediaSession, conversation audio store.
+                                #   Skips NLU on isLowRamDevice().
   handlers/
     ActionHandler.kt            # Interface: tag + intent + handle(IntentResult)
     HandlerRegistry.kt          # 1:1 intent → handler map; returns (response, handler, success)
     CallHandler.kt, SmsHandler.kt, ReminderHandler.kt,
     CancelReminderHandler.kt, FindPhoneHandler.kt
+    OpenAppHandler.kt           # "open <app>" — pure launch via AppIndex
+    MediaHandlers.kt            # MediaPlay/Pause/PlayPause/Next/Previous/Seek handlers
+    AppTarget.kt                # Sealed type + IntentResult.resolveAppTarget extension
+                                #   (collapses AppLookup + "no slot" → Specific/Fallback/NotFound)
     TimeParser.kt               # prettytime-nlp + word-number normalisation (called from ReminderSlots)
     PinStore.kt                 # SharedPreferences ring buffer of recent pin IDs
   nlu/
     NluSettings.kt              # Learning toggle + ROUTE_THRESHOLD/ROUTE_MARGIN constants
     LearningCollector.kt        # Dedupe-insert + debounced classifier rebuild on success
-    PrefixHints.kt              # Opening-verb tie-breaker for ambiguous classifier output
+    PrefixHints.kt              # Opening-verb tie-breaker (call/text/play/pause/open/…)
     slots/
       CallSlots.kt, SmsSlots.kt, ReminderSlots.kt,
-      CancelSlots.kt, FindPhoneSlots.kt
-      SlotUtils.kt              # stripTrailingEmphasis() + cleanNameToken() helpers
+      CancelSlots.kt, FindPhoneSlots.kt,
+      MediaPlaySlots.kt         # {app} from "play <X>"; empty for "play"
+      MediaTargetSlots.kt       # {app} for pause/next/previous body
+      MediaSeekSlots.kt         # {seconds} digit + word-form number parser
+      OpenAppSlots.kt           # {app} for "open/launch/fire up/switch to <X>"
+      SlotUtils.kt              # stripVerbBody, stripTrailingEmphasis, cleanNameToken
+  apps/
+    InstalledApp.kt, InstalledAppDao.kt,
+    AppIndexDatabase.kt         # Separate Room DB (wristotle-app-index.db)
+    AppIndexer.kt               # Scans launcher apps on user trigger
+    AppIndex.kt                 # 3-way AppLookup (Match/Generic/NotFound),
+                                #   tiered match: exact → prefix → contains → reverse-contains
+    AppLabel.kt                 # normalizeForIndex shared by writer + reader
+    AppLauncher.kt              # launchApp + packageLabel shared helpers
+  media/
+    ActiveMediaSession.kt       # MediaSessionManager facade: active-session ops +
+                                #   per-package targeted ops (3-tier: controller →
+                                #   targeted MEDIA_BUTTON broadcast → system key event) +
+                                #   pauseOthers() to prevent dual playback on launch
+    MediaSessionsListener.kt    # Empty NotificationListenerService — presence + Notification
+                                #   Access grant unlocks MediaSessionManager.getActiveSessions
   history/
     ConversationEntry.kt        # Room @Entity (audio + NLU fields included)
     ConversationDao.kt          # insert / observe-newest-first / prune / count-older-than / delete-all
-    ConversationDatabase.kt     # Room @Database with v1→v2→v3 migrations
+    ConversationDatabase.kt     # Room @Database, single-baseline schema
     ConversationRepository.kt   # Retention wrapper; wipes audio dir on clearAll
-    ConversationSettings.kt     # SharedPreferences-backed retention window (1/10/20/30 days)
-    ConversationAudioSettings.kt # SharedPreferences-backed capture toggle (default off)
-    ConversationAudioStore.kt   # filesDir/conversation-audio/, FIFO eviction at MAX_FILES=5
+    ConversationSettings.kt     # SharedPreferences retention window (1/10/20/30 days, default 10)
+    ConversationAudioSettings.kt # SharedPreferences capture toggle (default off, privacy)
+    ConversationAudioStore.kt   # filesDir/conversation-audio/, FIFO at MAX_FILES=5
   phone/
     ContactsRepository.kt       # Contact lookup on Dispatchers.IO
+  util/
+    Permissions.kt              # Context.hasPermission extension shared by handlers + VMs
   service/
     WatchMessageService.kt      # Foreground LifecycleService — keep-alive + COMPANION_READY
     PebbleListenerService.kt    # Bound by Pebble companion; resolveIntent + dispatch + log
@@ -257,14 +291,17 @@ app/src/main/java/com/lazydevs/wristotle/
     PebbleTransport.kt          # PebbleKit2 DefaultPebbleSender wrapper + NACK retry
   ui/
     MainScreen.kt               # Bottom-nav shell with three tabs (Chat / Permissions / Settings)
-    MainViewModel.kt            # Permission state + default-voice-provider state
+    MainViewModel.kt            # Permission state (incl. Notification Access) + default-voice-provider
     ConversationScreen.kt       # Default tab — chat-style history, inline play button per row
     ConversationViewModel.kt    # Wraps repository + audio settings + retention setter
-    PermissionsScreen.kt        # Tab 2 — Watch Bridge card + Voice Input card stacked
-    SettingsScreen.kt           # Tab 3 — sectioned cards (Speech / Intent / Storage)
-    WhisperModelsCard.kt        # One-line-per-model compact list, tap-to-activate
-    WhisperModelsViewModel.kt   # Model catalog + download / activate state
-    NluModelsCard.kt, NluModelsViewModel.kt        # Twin of Whisper card for the NLU model
+    PermissionsScreen.kt        # Tab 2 — Watch Bridge / Voice Input / Media Control cards
+    SettingsScreen.kt           # Tab 3 — Models / Learning / Conversation sections (nested)
+    CardTitleWithInfo.kt        # Title row with collapsible "ⓘ" description
+    ModelCardCommon.kt          # Shared ActiveModelPill + approxSizeMb across model cards
+    ModelsViewModel.kt          # Generic abstract base for Whisper + NLU model picker VMs
+    WhisperModelsCard.kt, WhisperModelsViewModel.kt
+    NluModelsCard.kt, NluModelsViewModel.kt
+    AppIndexCard.kt, AppIndexViewModel.kt
 
 speech/src/main/java/com/lazydevs/wristotle/speech/
   Recognizers.kt                # Service-locator: @Volatile var provider
@@ -272,6 +309,10 @@ speech/src/main/java/com/lazydevs/wristotle/speech/
   recognizer/                   # Recognizer interface + TranscriptionEvent + StubRecognizer
   service/
     WhisperRecognitionService.kt # extends android.speech.RecognitionService
+  model/                        # Shared by :speech-whisper + :speech-nlu
+    DownloadStreamEvent.kt      # sealed Progress / Complete / Failed
+    ResumableDownloader.kt      # HTTP + Range, manual redirects, throttled progress
+    ModelFileStorage.kt         # Open base — per-family subclasses pass dir/prefs/filename
 
 speech-whisper/
   build.gradle.kts              # NDK + CMake, arm64-v8a only, NDK 30.0 pinned
@@ -284,12 +325,11 @@ speech-whisper/
     WhisperRecognizer.kt        # Recognizer impl — buffers to EOF, runs whisper_full
     TranscriptDedup.kt          # Collapses repeated phrases from Whisper hallucinations
     ModelCatalog.kt             # Known Whisper models + HuggingFace URLs (incl. q5_1 quants)
-    ModelStorage.kt             # filesDir/whisper-models/ + active model id
-    ModelDownloader.kt          # Flow<DownloadEvent>, resumable HTTP, throttled progress
+    ModelStorage.kt             # 10-line ModelFileStorage subclass — whisper-models/, ggml-*.bin
 
 speech-nlu/
   src/main/java/com/lazydevs/wristotle/speech/nlu/
-    Intent.kt, IntentResult.kt
+    Intent.kt, IntentResult.kt                     # enum includes Media{Play,Pause,…} + OpenApp
     IntentClassifier.kt, IntentClassifiers.kt      # Interface + service-locator
     StubIntentClassifier.kt                        # Always-Unknown fallback
     slot/SlotExtractor.kt, SlotExtractorRegistry.kt
@@ -298,8 +338,8 @@ speech-nlu/
     bank/ExampleEntry.kt, ExampleDao.kt,
          NluDatabase.kt, ExampleBank.kt
     seed/SeedExamples.kt                           # Bundled phrasings per intent
-    model/NluModelCatalog.kt, NluModelStorage.kt,
-          NluModelDownloader.kt                    # Mirrors :speech-whisper's pattern
+    model/NluModelCatalog.kt
+          NluModelStorage.kt                       # 10-line ModelFileStorage subclass
   src/main/res/raw/minilm_vocab                    # WordPiece vocab for the embedder
 ```
 
@@ -350,10 +390,12 @@ Watch app needs no changes — natural-language queries arrive over
 | `CALL_PHONE`                   | Place calls                                            |
 | `SEND_SMS`                     | Send text messages                                     |
 | `RECORD_AUDIO`                 | Recognition service capture (mic mode + pipe fallback) |
-| `INTERNET`                     | Downloading Whisper model files from HuggingFace       |
+| `INTERNET`                     | Downloading Whisper / MiniLM model files from HuggingFace |
 | `POST_NOTIFICATIONS`           | Foreground service notification (Android 13+)          |
 | `FOREGROUND_SERVICE`           | Long-running watch bridge                              |
 | `FOREGROUND_SERVICE_CONNECTED_DEVICE` | FGS type for the wearable bridge (Android 14+)         |
+| `QUERY_ALL_PACKAGES`           | AppIndex scan — `open <app>` / `play <app>` resolve to a launcher package |
+| `BIND_NOTIFICATION_LISTENER_SERVICE` *(via system Settings, not runtime)* | Cross-app media control — unlocks `MediaSessionManager.getActiveSessions` |
 
 > **GrapheneOS / privacy-ROM note:** `INTERNET` is auto-granted on stock Android but may be denied by default on GrapheneOS and similar ROMs that surface it as a runtime permission. If model downloads fail with *"unable to resolve host"*, grant it via *Settings → Apps → Wristotle Companion → Permissions → Network*, or from ADB:
 >
