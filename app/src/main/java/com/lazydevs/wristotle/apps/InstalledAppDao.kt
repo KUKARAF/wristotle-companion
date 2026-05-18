@@ -39,6 +39,18 @@ interface InstalledAppDao {
     @Query("SELECT * FROM installed_apps WHERE normalizedLabel LIKE '%' || :needle || '%' ORDER BY LENGTH(normalizedLabel) ASC LIMIT 1")
     suspend fun findByContains(needle: String): InstalledApp?
 
+    /**
+     * Reverse substring match — the spoken needle CONTAINS a label.
+     * Catches Whisper mishearings that bolt extra characters onto an
+     * app name ("Absorbed" → "Absorb", "Spotify Music" → "Spotify").
+     * Restricted to labels ≥4 chars so a hypothetical 2-letter app
+     * doesn't get picked for arbitrary needles. Longest label wins so
+     * "youtube music" prefers "YouTube Music" over "YouTube" when
+     * both are installed.
+     */
+    @Query("SELECT * FROM installed_apps WHERE :needle LIKE '%' || normalizedLabel || '%' AND LENGTH(normalizedLabel) >= 4 ORDER BY LENGTH(normalizedLabel) DESC LIMIT 1")
+    suspend fun findByReverseContains(needle: String): InstalledApp?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(apps: List<InstalledApp>)
 

@@ -201,6 +201,63 @@ class ActiveMediaSession(private val context: Context) {
         return true
     }
 
+    /**
+     * Pause / next / previous targeted at a specific [packageId].
+     * Uses the same two-tier fallback as [playForPackage]:
+     *   1. If we can see the app's MediaController in
+     *      `getActiveSessions`, call transportControls directly.
+     *   2. Otherwise (common for Flutter audio_service apps that
+     *      register a session but keep `active=false`), send a
+     *      targeted MEDIA_BUTTON broadcast directly to the package's
+     *      receiver — the receiver activates the session and applies
+     *      the command.
+     * Skips the system-wide key event last-resort that [playForPackage]
+     * uses, because dispatching a global KEYCODE_MEDIA_PAUSE / NEXT /
+     * PREVIOUS would land on the wrong app (the previously-active
+     * session, which is exactly the bug this whole branch fixes).
+     * Returns false when neither path is available.
+     */
+    fun pausePackage(packageId: String): Boolean =
+        commandPackage(packageId, KeyEvent.KEYCODE_MEDIA_PAUSE) {
+            it.transportControls.pause()
+        }
+
+    fun nextPackage(packageId: String): Boolean =
+        commandPackage(packageId, KeyEvent.KEYCODE_MEDIA_NEXT) {
+            it.transportControls.skipToNext()
+        }
+
+    fun previousPackage(packageId: String): Boolean =
+        commandPackage(packageId, KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
+            it.transportControls.skipToPrevious()
+        }
+
+    private inline fun commandPackage(
+        packageId: String,
+        broadcastKeyCode: Int,
+        sessionAction: (MediaController) -> Unit,
+    ): Boolean {
+        findControllerFor(packageId)?.let {
+            sessionAction(it)
+            Log.d(TAG, "session command $broadcastKeyCode on $packageId")
+            return true
+        }
+        if (sendTargetedMediaButton(packageId, broadcastKeyCode)) {
+            Log.d(TAG, "targeted MEDIA_BUTTON $broadcastKeyCode on $packageId")
+            return true
+        }
+        Log.w(TAG, "no session and no media button receiver for $packageId")
+        return false
+    }
+
+    /** Resolved app label for [packageId], for the response string. */
+    fun appLabel(packageId: String): String = try {
+        val pm = context.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(packageId, 0)).toString()
+    } catch (t: Throwable) {
+        packageId
+    }
+
     fun playPause(): Boolean {
         val controller = targetSession() ?: return play()
         val isPlaying = controller.playbackState?.state == PlaybackState.STATE_PLAYING

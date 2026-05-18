@@ -20,6 +20,7 @@ import com.lazydevs.wristotle.nlu.slots.CancelSlots
 import com.lazydevs.wristotle.nlu.slots.FindPhoneSlots
 import com.lazydevs.wristotle.nlu.slots.MediaPlaySlots
 import com.lazydevs.wristotle.nlu.slots.MediaSeekSlots
+import com.lazydevs.wristotle.nlu.slots.MediaTargetSlots
 import com.lazydevs.wristotle.nlu.slots.OpenAppSlots
 import com.lazydevs.wristotle.nlu.slots.ReminderSlots
 import com.lazydevs.wristotle.nlu.slots.SmsSlots
@@ -185,6 +186,7 @@ class WristotleApplication : Application() {
         // the slot.
         val contacts = ContactsRepository(this)
         val mediaSeekSlots = MediaSeekSlots()
+        val mediaTargetSlots = MediaTargetSlots()
         slotExtractors = SlotExtractorRegistry(mapOf(
             Intent.Call to CallSlots(),
             Intent.Sms to SmsSlots(contacts),
@@ -192,6 +194,9 @@ class WristotleApplication : Application() {
             Intent.Cancel to CancelSlots(),
             Intent.FindPhone to FindPhoneSlots(),
             Intent.MediaPlay to MediaPlaySlots(),
+            Intent.MediaPause to mediaTargetSlots,
+            Intent.MediaNext to mediaTargetSlots,
+            Intent.MediaPrevious to mediaTargetSlots,
             Intent.MediaSeekForward to mediaSeekSlots,
             Intent.MediaSeekBackward to mediaSeekSlots,
             Intent.OpenApp to OpenAppSlots(),

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent as AndroidIntent
 import android.util.Log
 import com.lazydevs.wristotle.apps.AppIndex
+import com.lazydevs.wristotle.apps.AppLookup
 import com.lazydevs.wristotle.media.ActiveMediaSession
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -56,14 +57,18 @@ class MediaPlayHandler(
         if (!media.hasNotificationAccess()) return NEEDS_PERMISSION
         val appQuery = (result.slots["app"] as? String)?.trim()
         if (!appQuery.isNullOrEmpty()) {
-            val pkg = appIndex.find(appQuery)
-            if (pkg != null) {
-                return launchAndPlay(pkg, appQuery)
+            when (val lookup = appIndex.lookup(appQuery)) {
+                is AppLookup.Match -> return launchAndPlay(lookup.packageId, appQuery)
+                // "play the song" / "play music" / "play that podcast"
+                // — generic phrasings. Fall through to the active
+                // session, today's behaviour.
+                AppLookup.Generic -> Unit
+                // User clearly named something specific that we don't
+                // recognise. Refuse to silently substitute the active
+                // session (e.g. YouTube) for what they actually asked
+                // for — that's worse than admitting we couldn't match.
+                is AppLookup.NotFound -> return "Couldn't find an app called ${lookup.spoken}"
             }
-            // Body present but didn't resolve — fall through to active
-            // session rather than erroring out. The user might have
-            // said "play that podcast" / "play my favourites" — those
-            // shouldn't fail just because we can't launch an app.
         }
         return if (media.play()) "Playing ${media.targetLabel()}" else NOTHING_PLAYING
     }
@@ -102,11 +107,23 @@ class MediaPlayHandler(
     }
 }
 
-class MediaPauseHandler(private val media: ActiveMediaSession) : ActionHandler {
+class MediaPauseHandler(
+    private val media: ActiveMediaSession,
+    private val appIndex: AppIndex,
+) : ActionHandler {
     override val tag = "media.pause"
     override val intent = Intent.MediaPause
     override suspend fun handle(result: IntentResult): String {
         if (!media.hasNotificationAccess()) return NEEDS_PERMISSION
+        val appQuery = (result.slots["app"] as? String)?.trim()
+        if (!appQuery.isNullOrEmpty()) {
+            when (val lookup = appIndex.lookup(appQuery)) {
+                is AppLookup.Match ->
+                    return if (media.pausePackage(lookup.packageId)) "Paused ${media.appLabel(lookup.packageId)}" else NOTHING_PLAYING
+                AppLookup.Generic -> Unit  // fall through
+                is AppLookup.NotFound -> return "Couldn't find an app called ${lookup.spoken}"
+            }
+        }
         return if (media.pause()) "Paused ${media.targetLabel()}" else NOTHING_PLAYING
     }
 }
@@ -120,20 +137,44 @@ class MediaPlayPauseHandler(private val media: ActiveMediaSession) : ActionHandl
     }
 }
 
-class MediaNextHandler(private val media: ActiveMediaSession) : ActionHandler {
+class MediaNextHandler(
+    private val media: ActiveMediaSession,
+    private val appIndex: AppIndex,
+) : ActionHandler {
     override val tag = "media.next"
     override val intent = Intent.MediaNext
     override suspend fun handle(result: IntentResult): String {
         if (!media.hasNotificationAccess()) return NEEDS_PERMISSION
+        val appQuery = (result.slots["app"] as? String)?.trim()
+        if (!appQuery.isNullOrEmpty()) {
+            when (val lookup = appIndex.lookup(appQuery)) {
+                is AppLookup.Match ->
+                    return if (media.nextPackage(lookup.packageId)) "Skipped to next in ${media.appLabel(lookup.packageId)}" else NOTHING_PLAYING
+                AppLookup.Generic -> Unit
+                is AppLookup.NotFound -> return "Couldn't find an app called ${lookup.spoken}"
+            }
+        }
         return if (media.next()) "Skipped to next" else NOTHING_PLAYING
     }
 }
 
-class MediaPreviousHandler(private val media: ActiveMediaSession) : ActionHandler {
+class MediaPreviousHandler(
+    private val media: ActiveMediaSession,
+    private val appIndex: AppIndex,
+) : ActionHandler {
     override val tag = "media.previous"
     override val intent = Intent.MediaPrevious
     override suspend fun handle(result: IntentResult): String {
         if (!media.hasNotificationAccess()) return NEEDS_PERMISSION
+        val appQuery = (result.slots["app"] as? String)?.trim()
+        if (!appQuery.isNullOrEmpty()) {
+            when (val lookup = appIndex.lookup(appQuery)) {
+                is AppLookup.Match ->
+                    return if (media.previousPackage(lookup.packageId)) "Back one track in ${media.appLabel(lookup.packageId)}" else NOTHING_PLAYING
+                AppLookup.Generic -> Unit
+                is AppLookup.NotFound -> return "Couldn't find an app called ${lookup.spoken}"
+            }
+        }
         return if (media.previous()) "Back one track" else NOTHING_PLAYING
     }
 }
