@@ -19,6 +19,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":speech"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.onnxruntime.android)

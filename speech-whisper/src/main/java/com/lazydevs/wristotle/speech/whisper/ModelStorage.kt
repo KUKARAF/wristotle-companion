@@ -1,69 +1,20 @@
 package com.lazydevs.wristotle.speech.whisper
 
 import android.content.Context
-import java.io.File
+import com.lazydevs.wristotle.speech.model.ModelFileStorage
 
 /**
- * Local storage for downloaded Whisper models and the user's active selection.
+ * Whisper model storage — files under `filesDir/whisper-models/` named
+ * `ggml-{id}.bin` (matching ggerganov/whisper.cpp's conventions so the
+ * file can be passed straight to the native loader).
  *
- * Models live under `context.filesDir/whisper-models/` as `ggml-{id}.bin` files.
- * The currently active model's id is persisted in a private SharedPreferences
- * so a fresh `WhisperRecognizer` can resolve it at startup.
- *
- * All operations are synchronous and cheap (file metadata + prefs); no need
- * to hop dispatchers in callers.
+ * Thin wrapper over [ModelFileStorage]; the shared base owns the I/O
+ * and prefs plumbing.
  */
-class ModelStorage(context: Context) {
-
-    private val modelsDir: File = File(context.filesDir, MODELS_DIR).apply { mkdirs() }
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
-    /** Resolves a model id to its target file on disk (may or may not exist). */
-    fun modelFile(modelId: String): File = File(modelsDir, "ggml-$modelId.bin")
-
-    /** True iff the model has been downloaded (file exists and is non-empty). */
-    fun isDownloaded(modelId: String): Boolean =
-        modelFile(modelId).let { it.exists() && it.length() > 0 }
-
-    /** Ids of all currently-downloaded models, in arbitrary order. */
-    fun downloadedIds(): List<String> = modelsDir
-        .listFiles { _, name -> name.startsWith("ggml-") && name.endsWith(".bin") }
-        ?.map { it.nameWithoutExtension.removePrefix("ggml-") }
-        ?: emptyList()
-
-    /**
-     * Ensures the model file is absent. If it was the active model, [activeModelId]
-     * is cleared. Returns true if the postcondition holds — either the file was
-     * just removed *or* it didn't exist to begin with.
-     */
-    fun delete(modelId: String): Boolean {
-        val file = modelFile(modelId)
-        val absent = !file.exists() || file.delete()
-        if (absent && activeModelId == modelId) activeModelId = null
-        return absent
-    }
-
-    /** Id of the currently active model, or null if none is set. */
-    var activeModelId: String?
-        get() = prefs.getString(KEY_ACTIVE, null)
-        set(value) {
-            prefs.edit().also {
-                if (value == null) it.remove(KEY_ACTIVE) else it.putString(KEY_ACTIVE, value)
-            }.apply()
-        }
-
-    /**
-     * Absolute path of the active model file, or null if no model is active or
-     * the active model's file has been deleted out from under us.
-     */
-    fun activeModelPath(): String? = activeModelId
-        ?.let(::modelFile)
-        ?.takeIf { it.exists() && it.length() > 0 }
-        ?.absolutePath
-
-    private companion object {
-        const val MODELS_DIR = "whisper-models"
-        const val PREFS_NAME = "whisper_models"
-        const val KEY_ACTIVE = "active_model_id"
-    }
-}
+class ModelStorage(context: Context) : ModelFileStorage(
+    context = context,
+    dirName = "whisper-models",
+    prefsName = "whisper_models",
+    filenamePrefix = "ggml-",
+    filenameExtension = ".bin",
+)

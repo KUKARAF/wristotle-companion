@@ -5,9 +5,9 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.speech.whisper.DownloadEvent
+import com.lazydevs.wristotle.speech.model.DownloadStreamEvent
+import com.lazydevs.wristotle.speech.model.ResumableDownloader
 import com.lazydevs.wristotle.speech.whisper.ModelCatalog
-import com.lazydevs.wristotle.speech.whisper.ModelDownloader
 import com.lazydevs.wristotle.speech.whisper.ModelInfo
 import com.lazydevs.wristotle.speech.whisper.ModelStorage
 import kotlinx.coroutines.Job
@@ -39,7 +39,7 @@ data class ModelUiState(
 class WhisperModelsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val storage = ModelStorage(app)
-    private val downloader = ModelDownloader(storage)
+    private val downloader = ResumableDownloader()
 
     private val _models = MutableStateFlow(snapshot())
     val models: StateFlow<List<ModelUiState>> = _models
@@ -63,15 +63,15 @@ class WhisperModelsViewModel(app: Application) : AndroidViewModel(app) {
 
         updateModel(modelId) { it.copy(progress = 0f, errorMessage = null) }
         val job = viewModelScope.launch {
-            downloader.download(info).collect { event ->
+            downloader.download(info.url, storage.modelFile(info.id)).collect { event ->
                 when (event) {
-                    is DownloadEvent.Progress -> {
+                    is DownloadStreamEvent.Progress -> {
                         val pct = event.totalBytes
                             ?.takeIf { it > 0L }
                             ?.let { event.bytesDownloaded.toFloat() / it.toFloat() }
                         updateModel(modelId) { it.copy(progress = pct) }
                     }
-                    DownloadEvent.Complete -> {
+                    DownloadStreamEvent.Complete -> {
                         Log.d(TAG, "download complete: $modelId")
                         val firstDownload = storage.activeModelId == null
                         if (firstDownload) storage.activeModelId = modelId
@@ -83,7 +83,7 @@ class WhisperModelsViewModel(app: Application) : AndroidViewModel(app) {
                             )
                         }
                     }
-                    is DownloadEvent.Failed -> {
+                    is DownloadStreamEvent.Failed -> {
                         Log.w(TAG, "download failed: $modelId — ${event.message}", event.cause)
                         updateModel(modelId) {
                             it.copy(progress = null, errorMessage = event.message)

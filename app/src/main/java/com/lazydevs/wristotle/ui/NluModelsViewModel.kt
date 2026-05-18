@@ -4,9 +4,9 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.lazydevs.wristotle.speech.nlu.model.NluDownloadEvent
+import com.lazydevs.wristotle.speech.model.DownloadStreamEvent
+import com.lazydevs.wristotle.speech.model.ResumableDownloader
 import com.lazydevs.wristotle.speech.nlu.model.NluModelCatalog
-import com.lazydevs.wristotle.speech.nlu.model.NluModelDownloader
 import com.lazydevs.wristotle.speech.nlu.model.NluModelInfo
 import com.lazydevs.wristotle.speech.nlu.model.NluModelStorage
 import kotlinx.coroutines.Job
@@ -39,7 +39,7 @@ data class NluModelUiState(
 class NluModelsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val storage = NluModelStorage(app)
-    private val downloader = NluModelDownloader(storage)
+    private val downloader = ResumableDownloader()
 
     private val _models = MutableStateFlow(snapshot())
     val models: StateFlow<List<NluModelUiState>> = _models
@@ -56,15 +56,15 @@ class NluModelsViewModel(app: Application) : AndroidViewModel(app) {
 
         updateModel(modelId) { it.copy(progress = 0f, errorMessage = null) }
         val job = viewModelScope.launch {
-            downloader.download(info).collect { event ->
+            downloader.download(info.url, storage.modelFile(info.id)).collect { event ->
                 when (event) {
-                    is NluDownloadEvent.Progress -> {
+                    is DownloadStreamEvent.Progress -> {
                         val pct = event.totalBytes
                             ?.takeIf { it > 0L }
                             ?.let { event.bytesDownloaded.toFloat() / it.toFloat() }
                         updateModel(modelId) { it.copy(progress = pct) }
                     }
-                    NluDownloadEvent.Complete -> {
+                    DownloadStreamEvent.Complete -> {
                         Log.d(TAG, "download complete: $modelId")
                         val firstDownload = storage.activeModelId == null
                         if (firstDownload) storage.activeModelId = modelId
@@ -76,7 +76,7 @@ class NluModelsViewModel(app: Application) : AndroidViewModel(app) {
                             )
                         }
                     }
-                    is NluDownloadEvent.Failed -> {
+                    is DownloadStreamEvent.Failed -> {
                         Log.w(TAG, "download failed: $modelId — ${event.message}", event.cause)
                         updateModel(modelId) {
                             it.copy(progress = null, errorMessage = event.message)
