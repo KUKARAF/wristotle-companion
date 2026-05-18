@@ -1,50 +1,35 @@
 package com.lazydevs.wristotle.handlers
 
 import android.content.Context
-import android.content.Intent as AndroidIntent
-import android.util.Log
 import com.lazydevs.wristotle.apps.AppIndex
-import com.lazydevs.wristotle.apps.AppLookup
+import com.lazydevs.wristotle.apps.launchApp
+import com.lazydevs.wristotle.apps.packageLabel
 import com.lazydevs.wristotle.media.ActiveMediaSession
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 
 /**
- * Handlers for the seven `Intent.Media*` variants, all backed by a
- * single shared [ActiveMediaSession]. Grouped in one file because each
- * is ~10 lines and they share the same prologue (check the permission
- * gate, look up the active app for the response string).
+ * Handlers for the `Intent.Media*` variants, grouped in one file
+ * because each is short and they share a common shape:
+ *   1. permission gate (Notification Access)
+ *   2. resolve target app from the `app` slot (via [AppTarget])
+ *      — Specific package → targeted command on that package
+ *      — Fallback         → command on whichever session is active
+ *      — NotFound         → refuse to silently substitute
  *
- * The user-facing response string always mentions the app being
- * controlled when one is identifiable, so the watch chat reads
- * something useful like "Paused Spotify" instead of just "Paused".
- *
- * No-op semantics when nothing is playing:
- *   • Play: falls through to the system MEDIA_PLAY key event in
- *     [ActiveMediaSession.play] so paused-but-loaded apps still resume.
- *   • Everything else: returns "Nothing is playing" so the user knows
- *     why the watch didn't do anything.
+ * MediaPlay is the only handler that *launches* an app (the others
+ * only command apps that are already running).
  */
 
 private const val NEEDS_PERMISSION =
     "Notification Access not granted — enable it in the Permissions tab so I can control media."
 private const val NOTHING_PLAYING = "Nothing is playing"
+private const val notFoundPrefix = "Couldn't find an app called"
 
 private fun ActiveMediaSession.targetLabel(): String = activeAppName() ?: "media"
 
-/**
- * MediaPlay is body-aware: when the user said "play <app>" and that
- * name resolves through [AppIndex], we launch that app and then poke
- * the system MEDIA_PLAY key event after a short settle delay so the
- * just-launched app receives focus and resumes. The handler also
- * still works for the bare "play" / "resume" case by falling through
- * to [ActiveMediaSession.play] — that delegates to whichever session
- * is most recently active.
- *
- * The launch-app branch needs `Context` (to call
- * `startActivity`/`packageManager`) and `AppIndex` (to resolve the
- * spoken name). Both are Application-scoped so this is cheap.
- */
+private fun notFound(spoken: String): String = "$notFoundPrefix $spoken"
+
 class MediaPlayHandler(
     private val context: Context,
     private val media: ActiveMediaSession,
@@ -55,59 +40,28 @@ class MediaPlayHandler(
 
     override suspend fun handle(result: IntentResult): String {
         if (!media.hasNotificationAccess()) return NEEDS_PERMISSION
-        val appQuery = (result.slots["app"] as? String)?.trim()
-        if (!appQuery.isNullOrEmpty()) {
-            when (val lookup = appIndex.lookup(appQuery)) {
-                is AppLookup.Match -> return launchAndPlay(lookup.packageId, appQuery)
-                // "play the song" / "play music" / "play that podcast"
-                // — generic phrasings. Fall through to the active
-                // session, today's behaviour.
-                AppLookup.Generic -> Unit
-                // User clearly named something specific that we don't
-                // recognise. Refuse to silently substitute the active
-                // session (e.g. YouTube) for what they actually asked
-                // for — that's worse than admitting we couldn't match.
-                is AppLookup.NotFound -> return "Couldn't find an app called ${lookup.spoken}"
-            }
+        return when (val target = result.resolveAppTarget(appIndex)) {
+            is AppTarget.Specific -> launchAndPlay(target.packageId)
+            is AppTarget.NotFound -> notFound(target.spoken)
+            AppTarget.Fallback ->
+                if (media.play()) "Playing ${media.targetLabel()}" else NOTHING_PLAYING
         }
-        return if (media.play()) "Playing ${media.targetLabel()}" else NOTHING_PLAYING
     }
 
-    private suspend fun launchAndPlay(packageId: String, spokenName: String): String {
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(packageId)
-        if (launchIntent == null) {
-            Log.w("MediaPlayHandler", "no launch intent for $packageId — falling back to transport-play")
-            return if (media.play()) "Playing ${media.targetLabel()}" else NOTHING_PLAYING
-        }
-        launchIntent.addFlags(AndroidIntent.FLAG_ACTIVITY_NEW_TASK)
-        // Pause whatever is currently playing BEFORE launching the new
-        // target. With the phone locked / screen off, Android's audio
-        // focus negotiation won't reliably tell the previous app to
-        // back off when the new activity launches without visible
-        // foreground, so we ask the previous app to pause explicitly.
+    private suspend fun launchAndPlay(packageId: String): String {
+        // Pause whatever is currently playing BEFORE launching — with the
+        // screen off, Android's audio focus alone won't reliably tell
+        // the previous app to back off (the new activity launches
+        // without visible foreground).
         media.pauseOthers(keepPackage = packageId)
-        try {
-            context.startActivity(launchIntent)
-        } catch (t: Throwable) {
-            Log.w("MediaPlayHandler", "startActivity($packageId) failed", t)
-            return "Couldn't launch $spokenName"
-        }
-        // Target the just-launched app's MediaController directly
-        // instead of broadcasting a system key event. The previous
-        // approach routed MEDIA_PLAY to whichever app was "most
-        // recently active" in the audio system — usually the *previous*
-        // app, not the one we just launched. playForPackage polls for
-        // the new session to register (Flutter audio_service apps like
-        // Absorb publish lazily, ~500–1500 ms after launch) and then
-        // calls transportControls.play on it directly.
+        if (!launchApp(context, packageId)) return "Couldn't launch ${packageLabel(context, packageId)}"
         media.playForPackage(packageId)
-        // Don't echo the package id back to the user; the spoken name
-        // is what they said and what they expect to hear.
-        return "Playing $spokenName"
+        return "Playing ${packageLabel(context, packageId)}"
     }
 }
 
 class MediaPauseHandler(
+    private val context: Context,
     private val media: ActiveMediaSession,
     private val appIndex: AppIndex,
 ) : ActionHandler {
@@ -115,16 +69,14 @@ class MediaPauseHandler(
     override val intent = Intent.MediaPause
     override suspend fun handle(result: IntentResult): String {
         if (!media.hasNotificationAccess()) return NEEDS_PERMISSION
-        val appQuery = (result.slots["app"] as? String)?.trim()
-        if (!appQuery.isNullOrEmpty()) {
-            when (val lookup = appIndex.lookup(appQuery)) {
-                is AppLookup.Match ->
-                    return if (media.pausePackage(lookup.packageId)) "Paused ${media.appLabel(lookup.packageId)}" else NOTHING_PLAYING
-                AppLookup.Generic -> Unit  // fall through
-                is AppLookup.NotFound -> return "Couldn't find an app called ${lookup.spoken}"
-            }
+        return when (val target = result.resolveAppTarget(appIndex)) {
+            is AppTarget.Specific ->
+                if (media.pauseForPackage(target.packageId)) "Paused ${packageLabel(context, target.packageId)}"
+                else NOTHING_PLAYING
+            is AppTarget.NotFound -> notFound(target.spoken)
+            AppTarget.Fallback ->
+                if (media.pause()) "Paused ${media.targetLabel()}" else NOTHING_PLAYING
         }
-        return if (media.pause()) "Paused ${media.targetLabel()}" else NOTHING_PLAYING
     }
 }
 
@@ -138,6 +90,7 @@ class MediaPlayPauseHandler(private val media: ActiveMediaSession) : ActionHandl
 }
 
 class MediaNextHandler(
+    private val context: Context,
     private val media: ActiveMediaSession,
     private val appIndex: AppIndex,
 ) : ActionHandler {
@@ -145,20 +98,19 @@ class MediaNextHandler(
     override val intent = Intent.MediaNext
     override suspend fun handle(result: IntentResult): String {
         if (!media.hasNotificationAccess()) return NEEDS_PERMISSION
-        val appQuery = (result.slots["app"] as? String)?.trim()
-        if (!appQuery.isNullOrEmpty()) {
-            when (val lookup = appIndex.lookup(appQuery)) {
-                is AppLookup.Match ->
-                    return if (media.nextPackage(lookup.packageId)) "Skipped to next in ${media.appLabel(lookup.packageId)}" else NOTHING_PLAYING
-                AppLookup.Generic -> Unit
-                is AppLookup.NotFound -> return "Couldn't find an app called ${lookup.spoken}"
-            }
+        return when (val target = result.resolveAppTarget(appIndex)) {
+            is AppTarget.Specific ->
+                if (media.nextForPackage(target.packageId)) "Skipped to next in ${packageLabel(context, target.packageId)}"
+                else NOTHING_PLAYING
+            is AppTarget.NotFound -> notFound(target.spoken)
+            AppTarget.Fallback ->
+                if (media.next()) "Skipped to next" else NOTHING_PLAYING
         }
-        return if (media.next()) "Skipped to next" else NOTHING_PLAYING
     }
 }
 
 class MediaPreviousHandler(
+    private val context: Context,
     private val media: ActiveMediaSession,
     private val appIndex: AppIndex,
 ) : ActionHandler {
@@ -166,24 +118,21 @@ class MediaPreviousHandler(
     override val intent = Intent.MediaPrevious
     override suspend fun handle(result: IntentResult): String {
         if (!media.hasNotificationAccess()) return NEEDS_PERMISSION
-        val appQuery = (result.slots["app"] as? String)?.trim()
-        if (!appQuery.isNullOrEmpty()) {
-            when (val lookup = appIndex.lookup(appQuery)) {
-                is AppLookup.Match ->
-                    return if (media.previousPackage(lookup.packageId)) "Back one track in ${media.appLabel(lookup.packageId)}" else NOTHING_PLAYING
-                AppLookup.Generic -> Unit
-                is AppLookup.NotFound -> return "Couldn't find an app called ${lookup.spoken}"
-            }
+        return when (val target = result.resolveAppTarget(appIndex)) {
+            is AppTarget.Specific ->
+                if (media.previousForPackage(target.packageId)) "Back one track in ${packageLabel(context, target.packageId)}"
+                else NOTHING_PLAYING
+            is AppTarget.NotFound -> notFound(target.spoken)
+            AppTarget.Fallback ->
+                if (media.previous()) "Back one track" else NOTHING_PLAYING
         }
-        return if (media.previous()) "Back one track" else NOTHING_PLAYING
     }
 }
 
 /**
  * Both `Intent.MediaSeekForward` and `Intent.MediaSeekBackward` use this
- * handler. Direction comes from the intent (forward = +, backward = -);
- * magnitude is the optional `seconds` slot (`MediaSeekSlots`), defaulting
- * to 30 forward / 10 back when the user didn't say a number.
+ * handler — direction comes from the intent, magnitude from the optional
+ * `seconds` slot ([com.lazydevs.wristotle.nlu.slots.MediaSeekSlots]).
  */
 class MediaSeekHandler(
     private val media: ActiveMediaSession,

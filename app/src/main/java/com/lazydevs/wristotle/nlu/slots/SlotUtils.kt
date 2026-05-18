@@ -35,3 +35,24 @@ internal fun stripTrailingEmphasis(text: String): String {
  */
 internal fun cleanNameToken(token: String): String =
     token.trim().trim('.', ',', '!', '?', ';', ':', '"', '\'').trim()
+
+/**
+ * Shared body-extraction pipeline for "<verb> <target>" slot extractors
+ * (CallSlots-style: strip the leading verbs and a small filler set,
+ * collapse whitespace, drop trailing punctuation). Whatever remains is
+ * the user's named target — contact, app, whatever the caller is
+ * looking for. Empty when stripping leaves nothing.
+ *
+ * Centralised so MediaPlay / MediaTarget / OpenApp all normalise the
+ * same way; an edit to the trailing-punctuation list (say) only has
+ * to happen once.
+ */
+internal fun stripVerbBody(query: String, verbs: Regex, fillers: Regex): String =
+    query.lowercase()
+        .replace(verbs, " ")
+        .replace(fillers, " ")
+        .replace(MULTI_WHITESPACE, " ")
+        .trim()
+        .trimEnd('.', ',', '!', '?')
+
+private val MULTI_WHITESPACE = Regex("\\s+")

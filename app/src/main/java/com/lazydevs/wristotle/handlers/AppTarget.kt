@@ -1,0 +1,34 @@
+package com.lazydevs.wristotle.handlers
+
+import com.lazydevs.wristotle.apps.AppIndex
+import com.lazydevs.wristotle.apps.AppLookup
+import com.lazydevs.wristotle.speech.nlu.IntentResult
+
+/**
+ * Handler-side resolution of the `app` slot: collapses [AppLookup] +
+ * "no slot at all" into the three actions a handler actually needs:
+ *
+ *   - [Specific] — user named an app we found; act on that package.
+ *   - [Fallback] — no body OR a generic media noun ("pause the song");
+ *                  act on the currently-active session.
+ *   - [NotFound] — user named something we don't recognise; refuse to
+ *                  silently substitute the active session.
+ *
+ * Shared by MediaPlay / MediaPause / MediaNext / MediaPrevious so the
+ * three-way `when` branch lives in one place.
+ */
+internal sealed interface AppTarget {
+    data class Specific(val packageId: String) : AppTarget
+    data object Fallback : AppTarget
+    data class NotFound(val spoken: String) : AppTarget
+}
+
+internal suspend fun IntentResult.resolveAppTarget(appIndex: AppIndex): AppTarget {
+    val appQuery = (slots["app"] as? String)?.trim()
+    if (appQuery.isNullOrEmpty()) return AppTarget.Fallback
+    return when (val lookup = appIndex.lookup(appQuery)) {
+        is AppLookup.Match -> AppTarget.Specific(lookup.packageId)
+        AppLookup.Generic -> AppTarget.Fallback
+        is AppLookup.NotFound -> AppTarget.NotFound(lookup.spoken)
+    }
+}
