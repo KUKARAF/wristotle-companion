@@ -14,6 +14,7 @@ import androidx.activity.viewModels
 import com.lazydevs.wristotle.service.WatchMessageService
 import com.lazydevs.wristotle.ui.AppIndexViewModel
 import com.lazydevs.wristotle.ui.ConversationViewModel
+import com.lazydevs.wristotle.ui.DiagnosticsViewModel
 import com.lazydevs.wristotle.ui.MainScreen
 import com.lazydevs.wristotle.ui.MainViewModel
 import com.lazydevs.wristotle.ui.NluModelsViewModel
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
     private val nluSettingsVm: NluSettingsViewModel by viewModels()
     private val conversationVm: ConversationViewModel by viewModels()
     private val appIndexVm: AppIndexViewModel by viewModels()
+    private val diagnosticsVm: DiagnosticsViewModel by viewModels()
 
     // Registered once; result arrives asynchronously and triggers a permission refresh.
     // After the runtime perms dialog resolves, chain into the battery-optimization
@@ -76,6 +78,7 @@ class MainActivity : ComponentActivity() {
                     nluSettingsVm = nluSettingsVm,
                     conversationVm = conversationVm,
                     appIndexVm = appIndexVm,
+                    diagnosticsVm = diagnosticsVm,
                     onRequestWatchPermissions = ::requestWatchPermissions,
                     onRequestVoicePermissions = ::requestVoicePermissions,
                 )

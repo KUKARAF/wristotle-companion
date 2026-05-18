@@ -48,6 +48,7 @@ fun MainScreen(
     nluSettingsVm: NluSettingsViewModel,
     conversationVm: ConversationViewModel,
     appIndexVm: AppIndexViewModel,
+    diagnosticsVm: DiagnosticsViewModel,
     onRequestWatchPermissions: () -> Unit,
     onRequestVoicePermissions: () -> Unit,
 ) {
@@ -144,6 +145,7 @@ fun MainScreen(
                         nluSettingsVm = nluSettingsVm,
                         conversationVm = conversationVm,
                         appIndexVm = appIndexVm,
+                        diagnosticsVm = diagnosticsVm,
                     )
                 }
             }

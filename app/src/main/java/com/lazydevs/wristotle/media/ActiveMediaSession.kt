@@ -7,10 +7,10 @@ import android.media.AudioManager
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
-import android.util.Log
 import android.view.KeyEvent
 import androidx.core.app.NotificationManagerCompat
 import com.lazydevs.wristotle.apps.packageLabel
+import com.lazydevs.wristotle.logging.WristotleLog as Log
 import kotlinx.coroutines.delay
 
 private const val TAG = "ActiveMediaSession"

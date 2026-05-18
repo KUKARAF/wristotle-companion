@@ -1,6 +1,6 @@
 package com.lazydevs.wristotle.apps
 
-import android.util.Log
+import com.lazydevs.wristotle.logging.WristotleLog as Log
 
 private const val TAG = "AppIndex"
 

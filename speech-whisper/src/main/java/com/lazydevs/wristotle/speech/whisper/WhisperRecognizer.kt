@@ -1,7 +1,7 @@
 package com.lazydevs.wristotle.speech.whisper
 
 import android.speech.SpeechRecognizer
-import android.util.Log
+import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.speech.audio.AudioSource
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.TranscriptionEvent

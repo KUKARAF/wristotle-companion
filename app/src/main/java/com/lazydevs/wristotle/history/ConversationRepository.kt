@@ -29,6 +29,10 @@ class ConversationRepository(
 
     fun observeAll(): Flow<List<ConversationEntry>> = dao.observeAllNewestFirst()
 
+    /** One-shot snapshot of the [limit] most recent entries — used by
+     *  the diagnostics exporter, which wants a bounded list. */
+    suspend fun recent(limit: Int): List<ConversationEntry> = dao.recent(limit)
+
     suspend fun add(entry: ConversationEntry) {
         dao.insert(entry)
         prune()

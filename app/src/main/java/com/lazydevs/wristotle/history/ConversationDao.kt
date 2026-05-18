@@ -28,4 +28,10 @@ interface ConversationDao {
 
     @Query("SELECT COUNT(*) FROM conversation_entries")
     suspend fun count(): Int
+
+    /** One-shot snapshot of the [limit] most recent entries. Used by
+     *  the diagnostics exporter, which wants a bounded list without
+     *  collecting the full observeAll Flow. */
+    @Query("SELECT * FROM conversation_entries ORDER BY timestampEpochMs DESC LIMIT :limit")
+    suspend fun recent(limit: Int): List<ConversationEntry>
 }

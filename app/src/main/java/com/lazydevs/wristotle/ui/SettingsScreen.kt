@@ -51,6 +51,7 @@ fun SettingsScreen(
     nluSettingsVm: NluSettingsViewModel,
     conversationVm: ConversationViewModel,
     appIndexVm: AppIndexViewModel,
+    diagnosticsVm: DiagnosticsViewModel,
 ) {
     val retentionDays by conversationVm.retentionDays.collectAsState()
     val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
@@ -85,6 +86,10 @@ fun SettingsScreen(
                 onToggle = nluSettingsVm::setLearningEnabled,
                 onClearLearned = { showClearLearnedConfirm = true },
             )
+        }
+
+        SettingsSection(stringResource(R.string.settings_section_diagnostics)) {
+            DiagnosticsCard(vm = diagnosticsVm)
         }
 
         // Two sub-sections grouped under one "Conversation" header —

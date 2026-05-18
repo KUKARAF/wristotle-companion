@@ -2,7 +2,7 @@ package com.lazydevs.wristotle.apps
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import com.lazydevs.wristotle.logging.WristotleLog as Log
 
 private const val TAG = "AppLauncher"
 

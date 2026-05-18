@@ -99,8 +99,13 @@ class WristotleApplication : Application() {
      */
     @Volatile var lastCapturedAudioPath: String? = null
 
-    private lateinit var modelStorage: ModelStorage
-    private lateinit var nluModelStorage: NluModelStorage
+    /** Whisper model storage — visible to the diagnostics exporter. */
+    lateinit var modelStorage: ModelStorage
+        private set
+
+    /** NLU model storage — visible to the diagnostics exporter. */
+    lateinit var nluModelStorage: NluModelStorage
+        private set
 
     /** Example bank backing the NLU classifier. Exposed for the Settings "clear learned" action. */
     lateinit var nluBank: ExampleBank
@@ -131,6 +136,10 @@ class WristotleApplication : Application() {
     lateinit var appIndex: AppIndex
         private set
     lateinit var appIndexer: AppIndexer
+        private set
+
+    /** Diagnostics-export preferences (redact PII, include audio). */
+    lateinit var diagnosticsSettings: com.lazydevs.wristotle.diagnostics.DiagnosticsSettings
         private set
 
     /**
@@ -178,6 +187,8 @@ class WristotleApplication : Application() {
         val appIndexDao = AppIndexDatabase.build(this).installedAppDao()
         appIndex = AppIndex(appIndexDao)
         appIndexer = AppIndexer(this, appIndexDao)
+
+        diagnosticsSettings = com.lazydevs.wristotle.diagnostics.DiagnosticsSettings(this)
 
         // Slot extractors are stateless aside from the contacts dep shared with
         // SmsHandler, so building them once at startup is fine. The single

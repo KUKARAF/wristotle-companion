@@ -104,6 +104,11 @@ android {
     }
     buildFeatures {
         compose = true
+        // BuildConfig surfaces VERSION_NAME / VERSION_CODE / BUILD_TYPE
+        // into Kotlin source — DiagnosticsBuilder reads them when
+        // assembling the bug-report bundle. AGP 8+ no longer enables
+        // BuildConfig generation by default.
+        buildConfig = true
     }
     testOptions {
         // Make `android.util.Log` calls no-op rather than throw the

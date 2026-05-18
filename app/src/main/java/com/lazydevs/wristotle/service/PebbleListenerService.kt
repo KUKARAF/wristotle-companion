@@ -1,6 +1,6 @@
 package com.lazydevs.wristotle.service
 
-import android.util.Log
+import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.handlers.CallHandler

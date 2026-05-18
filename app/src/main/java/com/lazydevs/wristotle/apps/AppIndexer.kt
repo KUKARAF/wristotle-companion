@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.util.Log
+import com.lazydevs.wristotle.logging.WristotleLog as Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

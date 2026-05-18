@@ -101,6 +101,18 @@
     <string name="settings_section_models">Models</string>
     <string name="settings_section_learning">Learning</string>
     <string name="settings_section_conversation">Conversation</string>
+    <string name="settings_section_diagnostics">Diagnostics</string>
+
+    <!-- Diagnostics export card -->
+    <string name="diagnostics_header">Report an issue</string>
+    <string name="diagnostics_desc">Bundles app version, device info, granted permissions, active models, the installed-app index summary, recent conversation rows, and the last ~200 lines of in-app logs into a markdown report you can paste into a Codeberg issue. Stays entirely on this phone until you submit it. Redact contact names + phone numbers by default; flip the toggle off only if you understand what you\'re sharing.</string>
+    <string name="diagnostics_redact_toggle">Redact contact names + numbers + message bodies</string>
+    <string name="diagnostics_redact_caveat">Conversation rows are fully blanked; log lines only strip phone-digit runs — contact names and spoken text inside log routing decisions may still appear. Review the clipboard before submitting.</string>
+    <string name="diagnostics_include_audio_toggle">Include last 3 dictation audio files (attach manually)</string>
+    <string name="diagnostics_open_issue_button">Copy diagnostics + open Codeberg issue</string>
+    <string name="diagnostics_building">Building diagnostics…</string>
+    <string name="diagnostics_copied_toast">Diagnostics copied to clipboard — paste into the issue body.</string>
+    <string name="diagnostics_failed_toast">Diagnostics export failed: %1$s</string>
 
     <!-- Installed apps index -->
     <string name="app_index_header">Installed apps</string>
