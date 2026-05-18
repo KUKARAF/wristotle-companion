@@ -80,7 +80,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 + resource shrinking. AGP's bundled
+            // proguard-android-optimize.txt + Compose/Room/Kotlin's per-
+            // library consumer rules cover the bulk of what we need; our
+            // own proguard-rules.pro holds the project-specific keep rules
+            // (JNI bridges, PebbleKit2 reflection paths, etc).
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
