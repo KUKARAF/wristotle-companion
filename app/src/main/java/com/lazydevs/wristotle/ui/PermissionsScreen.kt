@@ -53,6 +53,7 @@ fun PermissionsScreen(
 ) {
     val perms by vm.permissions.collectAsState()
     val isDefaultProvider by vm.isDefaultVoiceProvider.collectAsState()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -74,11 +75,30 @@ fun PermissionsScreen(
             adbCommand = vm.adbActivationCommand,
             onRequest = onRequestVoicePermissions,
         )
+        MediaControlCard(
+            granted = perms.mediaControl,
+            onOpenSettings = { openNotificationListenerSettings(context) },
+        )
         Text(
             stringResource(R.string.usage_instructions),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+private fun openNotificationListenerSettings(context: Context) {
+    try {
+        context.startActivity(
+            Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(
+            context,
+            context.getString(R.string.media_control_no_settings_toast),
+            Toast.LENGTH_LONG,
+        ).show()
     }
 }
 
@@ -290,5 +310,50 @@ private fun openVoiceInputSettings(context: Context) {
         context.startActivity(intent)
     } catch (_: ActivityNotFoundException) {
         Toast.makeText(context, R.string.voice_input_settings_unavailable_toast, Toast.LENGTH_LONG).show()
+    }
+}
+
+// ── Media Control card ─────────────────────────────────────────────────────
+
+/**
+ * Compact card that surfaces the Notification Access state and offers a
+ * "Open Settings" button to grant it. Notification Access is the gate
+ * Android puts in front of `MediaSessionManager.getActiveSessions()`,
+ * which the `MediaXxxHandler`s need to control whatever app is currently
+ * playing audio.
+ */
+@Composable
+private fun MediaControlCard(
+    granted: Boolean,
+    onOpenSettings: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.media_control_header),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                if (granted) stringResource(R.string.media_control_active)
+                else stringResource(R.string.media_control_inactive),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (granted) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error,
+            )
+            Text(
+                stringResource(R.string.media_control_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(
+                onClick = onOpenSettings,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.media_control_open_settings))
+            }
+        }
     }
 }

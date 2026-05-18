@@ -19,6 +19,22 @@ enum class Intent {
     Steps,
     Vibrate,
 
+    /** Resume / start playback on the active media app (Spotify, YouTube, …). */
+    MediaPlay,
+    /** Pause the active media app. */
+    MediaPause,
+    /** Toggle play / pause — the handler reads current state to decide.
+     *  Useful when the classifier is uncertain between play and pause. */
+    MediaPlayPause,
+    /** Skip to the next track / episode. */
+    MediaNext,
+    /** Skip to the previous track / episode. */
+    MediaPrevious,
+    /** Seek forward within the current track. Slot: `seconds: Int` (default 30). */
+    MediaSeekForward,
+    /** Seek backward within the current track. Slot: `seconds: Int` (default 10). */
+    MediaSeekBackward,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,6 +28,13 @@ data class PermissionState(
      * service's kill priority under memory pressure.
      */
     val ignoringBatteryOptimizations: Boolean = false,
+    /**
+     * True when the user has granted Notification Access (a.k.a.
+     * `BIND_NOTIFICATION_LISTENER_SERVICE`) — required for the
+     * media-control intents to enumerate active media sessions via
+     * `MediaSessionManager.getActiveSessions(...)`.
+     */
+    val mediaControl: Boolean = false,
 )
 
 /**
@@ -67,6 +75,7 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
                     sendSms                      = app.hasPermission(Manifest.permission.SEND_SMS),
                     recordAudio                  = app.hasPermission(Manifest.permission.RECORD_AUDIO),
                     ignoringBatteryOptimizations = isIgnoringBatteryOptimizations(),
+                    mediaControl                 = hasNotificationAccess(),
                 )
             }
             _isDefaultVoiceProvider.update { isThisAppTheDefaultVoiceProvider() }
@@ -83,6 +92,15 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
         val pm = app.getSystemService(PowerManager::class.java) ?: return false
         return pm.isIgnoringBatteryOptimizations(app.packageName)
     }
+
+    /**
+     * True iff the user has granted Notification Access — the system
+     * gate that unlocks `MediaSessionManager.getActiveSessions(...)`.
+     * Flipped via the system Settings page `ACTION_NOTIFICATION_LISTENER_SETTINGS`;
+     * MainActivity launches that intent from the Permissions card.
+     */
+    fun hasNotificationAccess(): Boolean =
+        NotificationManagerCompat.getEnabledListenerPackages(app).contains(app.packageName)
 
     private fun isThisAppTheDefaultVoiceProvider(): Boolean {
         val current = Settings.Secure

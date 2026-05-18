@@ -62,6 +62,22 @@
             </intent-filter>
         </service>
 
+        <!-- Empty NotificationListenerService whose only role is to exist
+             — its presence + Notification Access grant unlocks
+             MediaSessionManager.getActiveSessions() for our process. See
+             media/MediaSessionsListener.kt. The android:permission
+             attribute is required by the platform for any service
+             declaring this intent-filter; without it the service won't
+             bind. -->
+        <service
+            android:name=".media.MediaSessionsListener"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>

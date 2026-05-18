@@ -158,6 +158,86 @@ object SeedExamples {
             "make the watch vibrate",
             "vibrate now",
         ))
+        // ── MediaPlay ───────────────────────────────────────────────────
+        addAll(Intent.MediaPlay, listOf(
+            "play",
+            "play music",
+            "play the music",
+            "resume",
+            "resume playback",
+            "start playing",
+            "play the song",
+            "play it",
+            "start the music",
+            "keep playing",
+        ))
+        // ── MediaPause ──────────────────────────────────────────────────
+        addAll(Intent.MediaPause, listOf(
+            "pause",
+            "pause music",
+            "pause the music",
+            "pause playback",
+            "pause the song",
+            "hold the music",
+            "halt the music",
+            "stop the music",
+            "stop playing",
+        ))
+        // ── MediaPlayPause ──────────────────────────────────────────────
+        addAll(Intent.MediaPlayPause, listOf(
+            "play pause",
+            "toggle playback",
+            "toggle the music",
+            "toggle music",
+        ))
+        // ── MediaNext ───────────────────────────────────────────────────
+        addAll(Intent.MediaNext, listOf(
+            "next",
+            "next song",
+            "next track",
+            "skip",
+            "skip this",
+            "skip the song",
+            "skip to next",
+            "play next",
+            "next episode",
+        ))
+        // ── MediaPrevious ───────────────────────────────────────────────
+        addAll(Intent.MediaPrevious, listOf(
+            "previous",
+            "previous song",
+            "previous track",
+            "back",
+            "go back",
+            "last song",
+            "last track",
+            "play previous",
+            "previous episode",
+        ))
+        // ── MediaSeekForward ────────────────────────────────────────────
+        addAll(Intent.MediaSeekForward, listOf(
+            "skip ahead",
+            "skip ahead thirty seconds",
+            "skip forward",
+            "skip forward fifteen seconds",
+            "fast forward",
+            "fast forward ten seconds",
+            "jump forward",
+            "jump ahead",
+            "forward thirty seconds",
+        ))
+        // ── MediaSeekBackward ───────────────────────────────────────────
+        addAll(Intent.MediaSeekBackward, listOf(
+            "rewind",
+            "rewind ten seconds",
+            "rewind fifteen seconds",
+            "skip back",
+            "skip backward",
+            "go back ten seconds",
+            "back ten seconds",
+            "back thirty seconds",
+            "play that again",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }

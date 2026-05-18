@@ -9,11 +9,13 @@ import com.lazydevs.wristotle.history.ConversationAudioStore
 import com.lazydevs.wristotle.history.ConversationDatabase
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.history.ConversationSettings
+import com.lazydevs.wristotle.media.ActiveMediaSession
 import com.lazydevs.wristotle.nlu.LearningCollector
 import com.lazydevs.wristotle.nlu.NluSettings
 import com.lazydevs.wristotle.nlu.slots.CallSlots
 import com.lazydevs.wristotle.nlu.slots.CancelSlots
 import com.lazydevs.wristotle.nlu.slots.FindPhoneSlots
+import com.lazydevs.wristotle.nlu.slots.MediaSeekSlots
 import com.lazydevs.wristotle.nlu.slots.ReminderSlots
 import com.lazydevs.wristotle.nlu.slots.SmsSlots
 import com.lazydevs.wristotle.phone.ContactsRepository
@@ -110,6 +112,13 @@ class WristotleApplication : Application() {
     lateinit var slotExtractors: SlotExtractorRegistry
         private set
 
+    /** Active-media-session controller. Shared by every MediaXxxHandler.
+     *  Cheap to construct (just system-service handles) so we own it
+     *  Application-scoped. Methods inside no-op when Notification
+     *  Access isn't granted yet — handlers report that to the user. */
+    lateinit var activeMediaSession: ActiveMediaSession
+        private set
+
     /**
      * Application-scoped scope for fire-and-forget housekeeping (DB pruning, etc).
      * SupervisorJob so one failure doesn't cancel siblings.
@@ -150,15 +159,23 @@ class WristotleApplication : Application() {
         nluBank = ExampleBank(NluDatabase.build(this).exampleDao())
         nluSettings = NluSettings(this)
 
+        activeMediaSession = ActiveMediaSession(this)
+
         // Slot extractors are stateless aside from the contacts dep shared with
-        // SmsHandler, so building them once at startup is fine.
+        // SmsHandler, so building them once at startup is fine. The single
+        // MediaSeekSlots instance handles BOTH MediaSeekForward and
+        // MediaSeekBackward — direction lives on the intent, magnitude in
+        // the slot.
         val contacts = ContactsRepository(this)
+        val mediaSeekSlots = MediaSeekSlots()
         slotExtractors = SlotExtractorRegistry(mapOf(
             Intent.Call to CallSlots(),
             Intent.Sms to SmsSlots(contacts),
             Intent.Reminder to ReminderSlots(),
             Intent.Cancel to CancelSlots(),
             Intent.FindPhone to FindPhoneSlots(),
+            Intent.MediaSeekForward to mediaSeekSlots,
+            Intent.MediaSeekBackward to mediaSeekSlots,
         ))
 
         learningCollector = LearningCollector(
