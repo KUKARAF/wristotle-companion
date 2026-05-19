@@ -44,7 +44,7 @@ Dictate from your watch; the command runs on your phone. Supported phrases:
 
 Beyond watch dictation, Wristotle Companion can also register as Android's *system-wide* voice input provider, so any app on the device — keyboards, search bars, third-party apps — transcribes through the same on-device Whisper engine.
 
-Phrasings beyond the canonical verbs work too — once you download the optional **Intent Model** (a small on-device sentence encoder), Wristotle understands natural variants like "ring Mom", "tell Dad I'm running late", or "buzz me at 3" by routing them to the right intent. Without the model, the existing prefix matching is used and the canonical phrasings above still work.
+The canonical phrasings above (verb-first: `call`, `text`, `remind`, `cancel`, `play`, `pause`, `next`, `previous`, `open`, `launch`) work on a fresh install with no extra downloads — they route through a built-in prefix table. The optional **Intent Model** (a small on-device sentence encoder, ~23 MB) is a *polish layer* that adds tolerance for natural paraphrases ("ring Mom" instead of "call Mom", "tell Dad I'm running late" instead of "text Dad …", "buzz me at 3" instead of "remind me at 3"). It doesn't unlock new actions — only new ways to phrase the same ones.
 
 App-name commands (`open …`, `play …`, `pause …`) need a one-time **Scan installed apps** tap in *Settings → Installed apps* so the companion knows what's on the device; re-scan after installing or uninstalling apps. Cross-app media control also needs **Notification Access** — Wristotle requests it as part of the first-run permission flow, but you can grant or revoke it later via the *Media Control* card on the Permissions tab.
 
