@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,11 +40,18 @@ import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 
 /**
- * Single tab for everything permission-related: the watch-bridge runtime
- * permissions (Contacts / Phone / SMS) and the voice-input perms (Record
- * Audio, battery optimization exemption) plus the system voice-provider
- * activation picker. Two stacked cards in one scroll envelope so users
- * see all the permission state in one place.
+ * Single tab for everything permission-related. Three stacked cards in
+ * one scroll envelope:
+ *
+ *   - **Watch Bridge** — Contacts / Phone / SMS + the battery-
+ *     optimization exemption (the FGS keeping the bridge alive needs
+ *     all four; one Grant button chains through them).
+ *   - **Voice Input (Whisper)** — Record Audio + activation picker for
+ *     making Wristotle the system voice provider. Mostly relevant for
+ *     system-wide voice input outside the watch; hidden when the
+ *     active BLE companion bypasses Android SpeechRecognizer anyway.
+ *   - **Media Control** — the Notification Access toggle gating
+ *     cross-app media playback control.
  */
 @Composable
 fun PermissionsScreen(
@@ -54,6 +62,7 @@ fun PermissionsScreen(
     val perms by vm.permissions.collectAsState()
     val isDefaultProvider by vm.isDefaultVoiceProvider.collectAsState()
     val companion by vm.pebbleCompanion.collectAsState()
+    val voiceInputScopeNoteDismissed by vm.voiceInputScopeNoteDismissed.collectAsState()
     val context = LocalContext.current
 
     Column(
@@ -67,24 +76,28 @@ fun PermissionsScreen(
             contactsGranted = perms.contacts,
             callPhoneGranted = perms.callPhone,
             sendSmsGranted = perms.sendSms,
+            batteryOptimizationGranted = perms.ignoringBatteryOptimizations,
             onRequest = onRequestWatchPermissions,
         )
         VoiceInputCard(
             recordAudioGranted = perms.recordAudio,
-            batteryOptimizationGranted = perms.ignoringBatteryOptimizations,
             isDefaultVoiceProvider = isDefaultProvider,
             adbCommand = vm.adbActivationCommand,
             onRequest = onRequestVoicePermissions,
-            whisperBypassedForWatch = !companion.whisperAppliesToWatchDictation,
+            // The scope note only renders when also not-yet-dismissed.
+            showScopeNote = !companion.whisperAppliesToWatchDictation
+                && !voiceInputScopeNoteDismissed,
+            // Voice-input rows (Record Audio, default-provider status,
+            // ADB picker) hide entirely when the user is on a cloud-
+            // dictation companion — independent of whether the scope
+            // note has been dismissed. Dismissing the note just means
+            // "I've read this," not "show me the irrelevant rows again."
+            voiceInputAppliesToWatch = companion.whisperAppliesToWatchDictation,
+            onDismissScopeNote = vm::dismissVoiceInputScopeNote,
         )
         MediaControlCard(
             granted = perms.mediaControl,
             onOpenSettings = { openNotificationListenerSettings(context) },
-        )
-        Text(
-            stringResource(R.string.usage_instructions),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -111,9 +124,15 @@ private fun WatchBridgeCard(
     contactsGranted: Boolean,
     callPhoneGranted: Boolean,
     sendSmsGranted: Boolean,
+    batteryOptimizationGranted: Boolean,
     onRequest: () -> Unit,
 ) {
-    val allGranted = contactsGranted && callPhoneGranted && sendSmsGranted
+    // Battery exemption belongs here even though it isn't a runtime
+    // permission per se — the watch-bridge foreground service can't
+    // stay alive without it. The watch-perms grant flow already chains
+    // through the battery-optimization-exemption system dialog, so a
+    // single tap of Grant Permissions covers all four.
+    val allGranted = contactsGranted && callPhoneGranted && sendSmsGranted && batteryOptimizationGranted
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -149,6 +168,11 @@ private fun WatchBridgeCard(
                 stringResource(R.string.perm_sms_desc),
                 sendSmsGranted,
             )
+            PermissionRow(
+                stringResource(R.string.perm_battery_label),
+                stringResource(R.string.perm_battery_desc),
+                batteryOptimizationGranted,
+            )
             if (!allGranted) {
                 Button(
                     onClick = onRequest,
@@ -166,13 +190,17 @@ private fun WatchBridgeCard(
 @Composable
 private fun VoiceInputCard(
     recordAudioGranted: Boolean,
-    batteryOptimizationGranted: Boolean,
     isDefaultVoiceProvider: Boolean,
     adbCommand: String,
     onRequest: () -> Unit,
-    whisperBypassedForWatch: Boolean,
+    showScopeNote: Boolean,
+    voiceInputAppliesToWatch: Boolean,
+    onDismissScopeNote: () -> Unit,
 ) {
-    val voicePermsGranted = recordAudioGranted && batteryOptimizationGranted
+    // Battery-optimization exemption moved out to the WatchBridgeCard
+    // — it isn't really a voice-input concern (the FGS needs it
+    // regardless of dictation path). What's left here is the genuine
+    // voice-input permission gate: Record Audio + activation picker.
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -183,51 +211,81 @@ private fun VoiceInputCard(
                 title = stringResource(R.string.voice_input_header),
                 description = stringResource(R.string.voice_input_desc),
             )
-            if (whisperBypassedForWatch) {
-                // Doesn't affect watch dictation under rePebble (rePebble
-                // routes through its own cloud, not Android's
-                // SpeechRecognizer). Surface this here so the user
-                // understands what activating Wristotle as the system
-                // voice provider actually buys them — keyboards, search
-                // bars, other apps — not the watch.
-                Text(
-                    stringResource(R.string.voice_input_repebble_scope_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                if (isDefaultVoiceProvider) stringResource(R.string.voice_input_default_active)
-                else stringResource(R.string.voice_input_default_inactive),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isDefaultVoiceProvider) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.error,
-            )
-
-            Spacer(Modifier.height(4.dp))
-
-            PermissionRow(
-                stringResource(R.string.perm_record_audio_label),
-                stringResource(R.string.perm_record_audio_desc),
-                recordAudioGranted,
-            )
-            PermissionRow(
-                stringResource(R.string.perm_battery_label),
-                stringResource(R.string.perm_battery_desc),
-                batteryOptimizationGranted,
-            )
-            if (!voicePermsGranted) {
-                Button(
-                    onClick = onRequest,
+            if (showScopeNote) {
+                // Doesn't affect watch dictation under rePebble or Core
+                // Devices (both route through their own cloud, not
+                // Android's SpeechRecognizer). Wrap the note in a
+                // tertiaryContainer card so it stands out clearly from
+                // the parent VoiceInputCard's surface — surfaceVariant
+                // blended into surface in dark mode. Dismissable.
+                androidx.compose.material3.Card(
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(R.string.grant_permissions_button))
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.voice_input_repebble_scope_note),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            androidx.compose.material3.Button(
+                                onClick = onDismissScopeNote,
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.inverseSurface,
+                                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                                ),
+                            ) {
+                                Text(stringResource(R.string.conversation_repebble_notice_dismiss))
+                            }
+                        }
+                    }
                 }
             }
+            // Voice-input-specific rows (status, Record Audio, ADB
+            // picker) only render when voice input is actually relevant
+            // on this device. Under a cloud-dictation companion all of
+            // these are misleading. Battery row is kept always — the
+            // exemption is needed by WatchMessageService regardless of
+            // the voice path, so users still need a way to see/regrant
+            // it from this tab.
+            if (voiceInputAppliesToWatch) {
+                Text(
+                    if (isDefaultVoiceProvider) stringResource(R.string.voice_input_default_active)
+                    else stringResource(R.string.voice_input_default_inactive),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isDefaultVoiceProvider) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.error,
+                )
 
-            if (!isDefaultVoiceProvider) {
                 Spacer(Modifier.height(4.dp))
-                VoiceActivationMethodPicker(adbCommand = adbCommand)
+
+                PermissionRow(
+                    stringResource(R.string.perm_record_audio_label),
+                    stringResource(R.string.perm_record_audio_desc),
+                    recordAudioGranted,
+                )
+                if (!recordAudioGranted) {
+                    Button(
+                        onClick = onRequest,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.grant_permissions_button))
+                    }
+                }
+
+                if (!isDefaultVoiceProvider) {
+                    Spacer(Modifier.height(4.dp))
+                    VoiceActivationMethodPicker(adbCommand = adbCommand)
+                }
             }
         }
     }

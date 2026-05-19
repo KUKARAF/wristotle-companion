@@ -10,7 +10,18 @@ import kotlinx.coroutines.flow.asStateFlow
 private const val TAG = "PebbleCompanionDetector"
 private const val PREFS_NAME = "wristotle-companion-detector"
 private const val KEY_LAST_BINDER_PACKAGE = "last_binder_package"
-private const val KEY_REPEBBLE_NOTICE_DISMISSED = "repebble_notice_dismissed"
+// Three independent dismissal flags — one per location where the
+// cloud-dictation notice appears. Independent so dismissing in one
+// place doesn't silently affect the others; users may want to keep
+// the Permissions scope note visible (as a permanent disclaimer)
+// while dismissing the Conversation-tab nag, for example.
+private const val KEY_NOTICE_DISMISSED_CONVERSATION = "repebble_notice_dismissed_conversation"
+private const val KEY_NOTICE_DISMISSED_WHISPER_MODELS = "repebble_notice_dismissed_whisper_models"
+private const val KEY_NOTICE_DISMISSED_VOICE_INPUT = "repebble_notice_dismissed_voice_input"
+// Sticky reveal: when the user explicitly taps "Show models anyway"
+// on the Whisper Models card, remember it so the rows stay visible
+// across cold starts and aren't re-hidden by the dismiss flow.
+private const val KEY_WHISPER_MODELS_REVEALED = "whisper_models_revealed_under_repebble"
 
 /**
  * Which BLE companion is in front of Wristotle — used by the UI to
@@ -39,18 +50,61 @@ class PebbleCompanionDetector(private val context: Context) {
     private val _state = MutableStateFlow(initialState())
     val state: StateFlow<State> = _state.asStateFlow()
 
-    /**
-     * Has the user dismissed the first-run "you're on rePebble, so
-     * watch dictation can't go through Whisper" notice? Sticky across
-     * uninstall via the same prefs file.
-     */
-    private val _firstRunNoticeDismissed =
-        MutableStateFlow(prefs.getBoolean(KEY_REPEBBLE_NOTICE_DISMISSED, false))
-    val firstRunNoticeDismissed: StateFlow<Boolean> = _firstRunNoticeDismissed.asStateFlow()
+    // Three independent dismissal flags. Each location reads its own
+    // flag and writes its own flag — they don't influence each other.
+    private val _conversationNoticeDismissed =
+        MutableStateFlow(prefs.getBoolean(KEY_NOTICE_DISMISSED_CONVERSATION, false))
+    val conversationNoticeDismissed: StateFlow<Boolean> =
+        _conversationNoticeDismissed.asStateFlow()
 
-    fun dismissFirstRunNotice() {
-        prefs.edit().putBoolean(KEY_REPEBBLE_NOTICE_DISMISSED, true).apply()
-        _firstRunNoticeDismissed.value = true
+    private val _whisperModelsNoticeDismissed =
+        MutableStateFlow(prefs.getBoolean(KEY_NOTICE_DISMISSED_WHISPER_MODELS, false))
+    val whisperModelsNoticeDismissed: StateFlow<Boolean> =
+        _whisperModelsNoticeDismissed.asStateFlow()
+
+    private val _voiceInputScopeNoteDismissed =
+        MutableStateFlow(prefs.getBoolean(KEY_NOTICE_DISMISSED_VOICE_INPUT, false))
+    val voiceInputScopeNoteDismissed: StateFlow<Boolean> =
+        _voiceInputScopeNoteDismissed.asStateFlow()
+
+    fun dismissConversationNotice() {
+        prefs.edit().putBoolean(KEY_NOTICE_DISMISSED_CONVERSATION, true).apply()
+        _conversationNoticeDismissed.value = true
+    }
+    fun dismissWhisperModelsNotice() {
+        prefs.edit().putBoolean(KEY_NOTICE_DISMISSED_WHISPER_MODELS, true).apply()
+        _whisperModelsNoticeDismissed.value = true
+    }
+    fun dismissVoiceInputScopeNote() {
+        prefs.edit().putBoolean(KEY_NOTICE_DISMISSED_VOICE_INPUT, true).apply()
+        _voiceInputScopeNoteDismissed.value = true
+    }
+
+    /**
+     * Sticky "the user explicitly opted in to seeing the Whisper model
+     * rows under a cloud-dictation companion." Survives dismissal of
+     * the notice — tapping "Got it" only hides the explainer text, the
+     * rows stay hidden until the user separately taps "Show models
+     * anyway". Once revealed, the choice persists across cold starts.
+     */
+    private val _whisperModelsRevealed =
+        MutableStateFlow(prefs.getBoolean(KEY_WHISPER_MODELS_REVEALED, false))
+    val whisperModelsRevealed: StateFlow<Boolean> = _whisperModelsRevealed.asStateFlow()
+
+    fun revealWhisperModelsUnderRePebble() {
+        prefs.edit().putBoolean(KEY_WHISPER_MODELS_REVEALED, true).apply()
+        _whisperModelsRevealed.value = true
+    }
+
+    /**
+     * Inverse of [revealWhisperModelsUnderRePebble] — lets the user
+     * collapse the model rows again after revealing them. Doesn't
+     * touch the notice-dismissed flag; the user already acknowledged
+     * the explainer when they tapped Got it.
+     */
+    fun hideWhisperModelsUnderRePebble() {
+        prefs.edit().putBoolean(KEY_WHISPER_MODELS_REVEALED, false).apply()
+        _whisperModelsRevealed.value = false
     }
 
     /**
@@ -145,17 +199,28 @@ class PebbleCompanionDetector(private val context: Context) {
     }
 
     /**
-     * Permissive substring match for the rePebble family. Real-world
-     * package ids include `io.rebble.cobble` (Cobble), `com.rebble.*`
-     * for other builds, etc. The `cobble` token catches the original
-     * Flutter-based rePebble; `rebble` catches the broader family.
+     * Permissive substring match for the cloud-dictation Pebble
+     * companion family — apps whose watch-dictation pipeline routes
+     * through Rebble's cloud (or the equivalent backend) and bypasses
+     * Android's `SpeechRecognizer`. Currently:
+     *
+     *   - **rePebble / Cobble** — `io.rebble.*`, `com.rebble.*`,
+     *     `io.rebble.cobble`, etc. Tokens: `rebble`, `cobble`.
+     *   - **Core Devices** — `coredevices.coreapp`, the official
+     *     companion from the team that revived Pebble. Same cloud
+     *     dictation behaviour as rePebble. Token: `coredevices`.
+     *
+     * The function name stays `matchesRePebble` for code-locality with
+     * the [Companion.RePebble] enum value, but the bucket means
+     * "cloud-dictation companion" — any matching package is treated
+     * identically for Whisper-applicability purposes.
      */
     private fun matchesRePebble(packageId: String): Boolean {
         val lower = packageId.lowercase()
         // Exclude Wristotle's own package + our IPC namespace.
         if (lower == context.packageName.lowercase()) return false
         if (lower.startsWith("io.rebble.pebblekit2")) return false
-        return "rebble" in lower || "cobble" in lower
+        return "rebble" in lower || "cobble" in lower || "coredevices" in lower
     }
 
     /**

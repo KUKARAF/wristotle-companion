@@ -83,64 +83,66 @@ fun ConversationScreen(vm: ConversationViewModel) {
         onDispose { stopPlayback() }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(
-            stringResource(R.string.conversation_header),
-            style = MaterialTheme.typography.titleLarge,
-        )
-        Spacer(Modifier.height(12.dp))
-
-        if (showRePebbleNotice) {
-            RePebbleFirstRunNotice(
-                installedMicroPebble = companion.installed.micropebble,
-                onDismiss = vm::dismissRePebbleNotice,
+    // Everything sits inside the LazyColumn so the header + rePebble
+    // notice scroll along with the entry list — otherwise a tall notice
+    // can push the chat entries off-screen with no way to reach them.
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(bottom = 16.dp),
+    ) {
+        item {
+            Text(
+                stringResource(R.string.conversation_header),
+                style = MaterialTheme.typography.titleLarge,
             )
-            Spacer(Modifier.height(12.dp))
         }
-
+        if (showRePebbleNotice) {
+            item {
+                RePebbleFirstRunNotice(
+                    installedMicroPebble = companion.installed.micropebble,
+                    onDismiss = vm::dismissRePebbleNotice,
+                )
+            }
+        }
         if (entries.isEmpty()) {
-            EmptyState()
+            item { EmptyState() }
         } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 16.dp),
-            ) {
-                items(entries, key = { it.id }) { entry ->
-                    // File may have been pruned by the 5-file cap even though
-                    // the row still references it — render the button only if
-                    // the file still exists on disk.
-                    val audioFile = entry.audioFilePath?.let(::File)?.takeIf { it.exists() }
-                    val isPlaying = playingId == entry.id
-                    EntryCard(
-                        entry = entry,
-                        canPlayAudio = audioFile != null,
-                        isPlaying = isPlaying,
-                        onTogglePlayback = onToggle@{
-                            if (isPlaying) {
-                                stopPlayback()
-                                return@onToggle
-                            }
+            items(entries, key = { it.id }) { entry ->
+                // File may have been pruned by the 5-file cap even though
+                // the row still references it — render the button only if
+                // the file still exists on disk.
+                val audioFile = entry.audioFilePath?.let(::File)?.takeIf { it.exists() }
+                val isPlaying = playingId == entry.id
+                EntryCard(
+                    entry = entry,
+                    canPlayAudio = audioFile != null,
+                    isPlaying = isPlaying,
+                    onTogglePlayback = onToggle@{
+                        if (isPlaying) {
                             stopPlayback()
-                            val file = audioFile ?: return@onToggle
-                            player = MediaPlayer().apply {
-                                runCatching {
-                                    setDataSource(file.absolutePath)
-                                    setOnCompletionListener { stopPlayback() }
-                                    setOnErrorListener { _, _, _ ->
-                                        stopPlayback(); true
-                                    }
-                                    prepare()
-                                    start()
-                                }.onFailure {
-                                    runCatching { release() }
-                                    player = null
-                                    playingId = null
+                            return@onToggle
+                        }
+                        stopPlayback()
+                        val file = audioFile ?: return@onToggle
+                        player = MediaPlayer().apply {
+                            runCatching {
+                                setDataSource(file.absolutePath)
+                                setOnCompletionListener { stopPlayback() }
+                                setOnErrorListener { _, _, _ ->
+                                    stopPlayback(); true
                                 }
+                                prepare()
+                                start()
+                            }.onFailure {
+                                runCatching { release() }
+                                player = null
+                                playingId = null
                             }
-                            if (player != null) playingId = entry.id
-                        },
-                    )
-                }
+                        }
+                        if (player != null) playingId = entry.id
+                    },
+                )
             }
         }
     }
@@ -333,7 +335,8 @@ private fun RePebbleFirstRunNotice(
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
         ),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -345,17 +348,21 @@ private fun RePebbleFirstRunNotice(
             Text(
                 stringResource(R.string.conversation_repebble_notice_body),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (!installedMicroPebble) {
                 Text(
                     stringResource(R.string.conversation_repebble_notice_switch_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                androidx.compose.material3.TextButton(onClick = onDismiss) {
+                androidx.compose.material3.Button(
+                    onClick = onDismiss,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.inverseSurface,
+                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    ),
+                ) {
                     Text(stringResource(R.string.conversation_repebble_notice_dismiss))
                 }
             }

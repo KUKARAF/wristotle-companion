@@ -60,8 +60,17 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
      * dictation under it. See [PebbleCompanionDetector] for the
      * detection model.
      */
+    private val companionDetector =
+        (app as com.lazydevs.wristotle.WristotleApplication).pebbleCompanionDetector
     val pebbleCompanion: StateFlow<com.lazydevs.wristotle.transport.PebbleCompanionDetector.State> =
-        (app as com.lazydevs.wristotle.WristotleApplication).pebbleCompanionDetector.state
+        companionDetector.state
+
+    /** Voice-Input-card-specific dismissal of the cloud-dictation scope
+     *  note. Independent of the same notice's state on the Conversation
+     *  tab and the Whisper Models card. */
+    val voiceInputScopeNoteDismissed: StateFlow<Boolean> =
+        companionDetector.voiceInputScopeNoteDismissed
+    fun dismissVoiceInputScopeNote() = companionDetector.dismissVoiceInputScopeNote()
 
     /**
      * The exact ADB invocation that flips this app on as the system voice input

@@ -15,13 +15,30 @@ class WhisperModelsViewModel(app: Application) : ModelsViewModel<ModelInfo>(app)
     override fun idOf(info: ModelInfo) = info.id
     override fun urlOf(info: ModelInfo) = info.url
 
+    private val detector = (app as WristotleApplication).pebbleCompanionDetector
+
     /**
      * BLE-companion classification, surfaced so the card can render the
      * "rePebble bypasses Whisper for watch dictation" explainer instead
      * of (or alongside) the model rows. See [PebbleCompanionDetector].
      */
-    val pebbleCompanion: StateFlow<PebbleCompanionDetector.State> =
-        (app as WristotleApplication).pebbleCompanionDetector.state
+    val pebbleCompanion: StateFlow<PebbleCompanionDetector.State> = detector.state
+
+    /** Whisper-Models-specific dismissal — hides the explainer banner
+     *  but does NOT reveal the model rows. The two are intentionally
+     *  separate: "Got it" = "I understand, hide the explainer";
+     *  "Show models anyway" = "I want to see the models anyway." */
+    val noticeDismissed: StateFlow<Boolean> = detector.whisperModelsNoticeDismissed
+    fun dismissNotice() = detector.dismissWhisperModelsNotice()
+
+    /** Sticky reveal — set when the user explicitly taps "Show models
+     *  anyway". Persists across cold starts so the user doesn't have
+     *  to opt-in repeatedly. */
+    val modelsRevealedAnyway: StateFlow<Boolean> = detector.whisperModelsRevealed
+    fun revealModelsAnyway() = detector.revealWhisperModelsUnderRePebble()
+    /** Inverse of [revealModelsAnyway] — collapses the model rows again
+     *  if the user changes their mind. */
+    fun hideModelsAnyway() = detector.hideWhisperModelsUnderRePebble()
 
     init { refresh() }
 

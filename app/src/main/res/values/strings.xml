@@ -12,7 +12,6 @@
     <string name="status_waiting">Waiting for permissions</string>
     <string name="permissions_header">Permissions</string>
     <string name="grant_permissions_button">Grant Permissions</string>
-    <string name="usage_instructions">Say \"call [name]\" or \"text [name] [message]\" on your Pebble.</string>
 
     <!-- Bottom navigation -->
     <string name="nav_conversation">Chat</string>
@@ -50,9 +49,9 @@
 
     <!-- Conversation screen -->
     <string name="conversation_header">Conversation</string>
-    <string name="conversation_repebble_notice_title">rePebble + Whisper: a note</string>
-    <string name="conversation_repebble_notice_body">You\'re using rePebble as your BLE companion. rePebble handles watch dictation through Rebble\'s cloud and bypasses Android\'s speech recognizer entirely — Wristotle\'s on-device Whisper isn\'t used for what you say into your watch. Other Wristotle features (Calls, SMS, Reminders, Open/Play app) still work normally.</string>
-    <string name="conversation_repebble_notice_switch_hint">For on-device transcription, switch your BLE companion to microPebble — it routes dictation through Android\'s speech recognizer, which Wristotle can intercept with Whisper.</string>
+    <string name="conversation_repebble_notice_title">Watch dictation + Whisper: a note</string>
+    <string name="conversation_repebble_notice_body">Core Devices (formerly rePebble) handles watch dictation itself via a configurable pipeline (local, cloud, or a mix; picker inside Core Devices\' settings). Wristotle\'s on-device Whisper isn\'t used for what you say into your watch. Other Wristotle features (Calls, SMS, Reminders, Open/Play app) still work normally.</string>
+    <string name="conversation_repebble_notice_switch_hint">If you want on-device transcription via Wristotle\'s Whisper, switch your BLE companion to microPebble — it routes dictation through Android\'s speech recognizer, which Wristotle can intercept with Whisper.</string>
     <string name="conversation_repebble_notice_dismiss">Got it</string>
     <string name="conversation_empty_title">No conversations yet</string>
     <string name="conversation_empty_subtitle">Talk to your watch and the history will show up here.</string>
@@ -84,8 +83,8 @@
 
     <!-- Voice Input section -->
     <string name="voice_input_header">Voice Input (Whisper)</string>
-    <string name="voice_input_desc">Provides system-wide speech recognition. Any app on this phone that calls Android\'s SpeechRecognizer — Wear OS, voice search, accessibility services, third-party apps — will transcribe through Wristotle\'s on-device Whisper instead of Google\'s cloud service. Enable as the default voice input via the picker below or via the ADB command.</string>
-    <string name="voice_input_repebble_scope_note">Scope note: with rePebble in front, this does NOT affect your watch — rePebble routes watch dictation through Rebble\'s cloud and never calls Android\'s SpeechRecognizer. Activating Wristotle here only changes how OTHER apps on your phone (keyboards, search bars, etc.) transcribe.</string>
+    <string name="voice_input_desc">Registers Wristotle\'s on-device Whisper as Android\'s default speech recognition service. In principle any app that calls `android.speech.SpeechRecognizer` would then transcribe through Wristotle — though we haven\'t verified which third-party apps actually use that API in practice (many bundle their own engine). Enable via the picker below or via the ADB command.</string>
+    <string name="voice_input_repebble_scope_note">Doesn\'t affect your watch — Core Devices (formerly rePebble) handles dictation itself with a configurable pipeline (local, cloud, or a mix; picker inside Core Devices\' settings). The setup below would register Wristotle as Android\'s default speech recognition service; in principle any app that calls Android\'s `SpeechRecognizer` API would transcribe through Wristotle\'s Whisper, but we haven\'t verified which third-party apps actually use that API.</string>
     <string name="voice_input_default_active">Active — Wristotle is the system voice input provider</string>
     <string name="voice_input_default_inactive">Not set as the default voice input</string>
     <string name="copy_adb_command_button">Copy ADB activation command</string>
@@ -102,9 +101,10 @@
     <string name="whisper_models_header">Speech</string>
     <string name="whisper_models_desc">Downloads a Whisper speech recognition model that runs entirely on this device — no audio is sent to the cloud. Larger models are more accurate but slower; tiny.en is the fastest for short watch commands while base.en handles longer dictation better. Tap any downloaded model to make it the active one.</string>
     <string name="whisper_models_repebble_notice_title">Not used for watch dictation</string>
-    <string name="whisper_models_repebble_notice_body">rePebble runs its own cloud dictation pipeline that bypasses Android\'s speech recognizer entirely, so a downloaded Whisper model has no effect on your watch. It would only be used for system-wide voice input — keyboards, search bars, and other apps that go through Android\'s speech API.</string>
-    <string name="whisper_models_repebble_notice_switch_hint">If you want on-device transcription for your watch, switch your BLE companion app to microPebble — it routes dictation through Android\'s speech recognizer, which Wristotle\'s Whisper can take over.</string>
+    <string name="whisper_models_repebble_notice_body">Core Devices (formerly rePebble) handles watch dictation itself via a configurable pipeline (local, cloud, or a mix; picker inside Core Devices\' settings), so a downloaded Whisper model here has no effect on your watch. It would only matter if you set Wristotle as Android\'s default speech recognition service and an app on your phone called the standard `SpeechRecognizer` API — a path we haven\'t verified end-to-end.</string>
+    <string name="whisper_models_repebble_notice_switch_hint">If you want on-device transcription for your watch via Wristotle\'s Whisper, switch your BLE companion app to microPebble — it routes dictation through Android\'s speech recognizer, which Wristotle\'s Whisper can take over.</string>
     <string name="whisper_models_show_anyway">Show models anyway</string>
+    <string name="whisper_models_hide_anyway">Hide models</string>
 
     <!-- Section headers grouping related Settings cards -->
     <string name="settings_section_models">Models</string>

@@ -13,8 +13,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +60,23 @@ fun WhisperModelsCard(
 ) {
     val models by vm.models.collectAsState()
     val companion by vm.pebbleCompanion.collectAsState()
+    val noticeDismissed by vm.noticeDismissed.collectAsState()
+    val modelsRevealed by vm.modelsRevealedAnyway.collectAsState()
+    // Three orthogonal states:
+    //   - hideEverything: rePebble is in front AND user hasn't yet
+    //     opted in to seeing the models. We render either the notice
+    //     (when not dismissed) or just the "Show models anyway" link.
+    //   - showNotice: the rePebble explainer banner is visible.
+    //     Independent of `revealed` — dismissing it doesn't unhide rows.
+    //   - showModels: the model rows are visible. True for microPebble
+    //     and Unknown unconditionally, and for rePebble only after the
+    //     user explicitly taps "Show models anyway".
+    val showModels =
+        companion.whisperAppliesToWatchDictation || modelsRevealed
+    val showNotice =
+        !companion.whisperAppliesToWatchDictation && !noticeDismissed && !modelsRevealed
+    val showRevealButton =
+        !companion.whisperAppliesToWatchDictation && !modelsRevealed
 
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -64,42 +84,59 @@ fun WhisperModelsCard(
                 title = stringResource(R.string.whisper_models_header),
                 description = stringResource(R.string.whisper_models_desc),
             )
-            // rePebble's dictation pipeline bypasses Android's
-            // SpeechRecognizer entirely, so on-device Whisper isn't
-            // actually used for watch dictation — only for system-wide
-            // voice input. Surface that up-front and collapse the model
-            // rows behind an opt-in so users don't download 30+MB of
-            // models that have no effect on their watch.
-            if (!companion.whisperAppliesToWatchDictation) {
-                RePebbleNotice(installed = companion.installed)
-                var revealModels by remember { mutableStateOf(false) }
-                if (!revealModels) {
-                    TextButton(onClick = { revealModels = true }) {
-                        Text(stringResource(R.string.whisper_models_show_anyway))
-                    }
-                    return@Column
+            if (showNotice) {
+                RePebbleNotice(
+                    installed = companion.installed,
+                    onDismiss = vm::dismissNotice,
+                )
+            }
+            if (showRevealButton) {
+                TextButton(onClick = vm::revealModelsAnyway) {
+                    Text(stringResource(R.string.whisper_models_show_anyway))
                 }
             }
-            models.forEachIndexed { i, state ->
-                if (i > 0) HorizontalDivider()
-                ModelRow(
-                    state = state,
-                    onDownload = { vm.download(state.info.id) },
-                    onCancel = { vm.cancelDownload(state.info.id) },
-                    onDelete = { vm.delete(state.info.id) },
-                    onSetActive = { vm.setActive(state.info.id) },
-                )
+            if (showModels) {
+                models.forEachIndexed { i, state ->
+                    if (i > 0) HorizontalDivider()
+                    ModelRow(
+                        state = state,
+                        onDownload = { vm.download(state.info.id) },
+                        onCancel = { vm.cancelDownload(state.info.id) },
+                        onDelete = { vm.delete(state.info.id) },
+                        onSetActive = { vm.setActive(state.info.id) },
+                    )
+                }
+                // Inverse affordance for the cloud-dictation case: once
+                // the user has revealed the models they may decide they
+                // didn't actually want them on screen. Only meaningful
+                // under cloud-dictation — for microPebble/Unknown the
+                // rows are the normal default and there's nothing to
+                // "hide back to."
+                if (!companion.whisperAppliesToWatchDictation && modelsRevealed) {
+                    TextButton(onClick = vm::hideModelsAnyway) {
+                        Text(stringResource(R.string.whisper_models_hide_anyway))
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun RePebbleNotice(installed: PebbleCompanionDetector.InstalledPackages) {
+private fun RePebbleNotice(
+    installed: PebbleCompanionDetector.InstalledPackages,
+    onDismiss: () -> Unit,
+) {
     Spacer(modifier = Modifier.height(4.dp))
+    // tertiaryContainer is the Material-3 surface for info/callouts —
+    // distinct from the parent card's `surface` background, paired with
+    // `onTertiaryContainer` for high-contrast body text in both light
+    // and dark themes. surfaceVariant earlier blended into surface in
+    // dark mode and made the notice hard to spot.
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
         ),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -111,14 +148,23 @@ private fun RePebbleNotice(installed: PebbleCompanionDetector.InstalledPackages)
             Text(
                 stringResource(R.string.whisper_models_repebble_notice_body),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (!installed.micropebble) {
                 Text(
                     stringResource(R.string.whisper_models_repebble_notice_switch_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.inverseSurface,
+                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    ),
+                ) {
+                    Text(stringResource(R.string.conversation_repebble_notice_dismiss))
+                }
             }
         }
     }

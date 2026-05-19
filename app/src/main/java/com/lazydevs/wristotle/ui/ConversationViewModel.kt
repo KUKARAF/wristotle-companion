@@ -30,10 +30,13 @@ class ConversationViewModel(app: Application) : AndroidViewModel(app) {
     val pebbleCompanion: StateFlow<com.lazydevs.wristotle.transport.PebbleCompanionDetector.State> =
         companionDetector.state
 
+    /** Conversation-tab specific dismissal flag. Independent of the
+     *  same notice's state in Settings → Models → Speech and in
+     *  Permissions → Voice Input. */
     val rePebbleNoticeDismissed: StateFlow<Boolean> =
-        companionDetector.firstRunNoticeDismissed
+        companionDetector.conversationNoticeDismissed
 
-    fun dismissRePebbleNotice() = companionDetector.dismissFirstRunNotice()
+    fun dismissRePebbleNotice() = companionDetector.dismissConversationNotice()
 
     val entries: StateFlow<List<ConversationEntry>> = repository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

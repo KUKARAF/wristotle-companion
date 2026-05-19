@@ -42,7 +42,7 @@ Dictate from your watch; the command runs on your phone. Supported phrases:
 | "Play" / "Pause" / "Next" / "Previous" | Acts on the currently playing app |
 | "Rewind 10 seconds" / "Skip ahead 30 seconds" | Seek within current track |
 
-Beyond watch dictation, Wristotle Companion can also register as Android's *system-wide* voice input provider, so any app on the device — keyboards, search bars, third-party apps — transcribes through the same on-device Whisper engine.
+Wristotle Companion ships an `android.speech.RecognitionService` backed by on-device Whisper, and can register itself as Android's default speech recognition service. In principle any app that calls `android.speech.SpeechRecognizer` would then transcribe through Wristotle. We haven't verified which third-party apps actually exercise that API in practice — many bundle their own engine — so treat the system-wide voice input feature as experimental.
 
 The canonical phrasings above (verb-first: `call`, `text`, `remind`, `cancel`, `play`, `pause`, `next`, `previous`, `open`, `launch`) work on a fresh install with no extra downloads — they route through a built-in prefix table. The optional **Intent Model** (a small on-device sentence encoder, ~23 MB) is a *polish layer* that adds tolerance for natural paraphrases ("ring Mom" instead of "call Mom", "tell Dad I'm running late" instead of "text Dad …", "buzz me at 3" instead of "remind me at 3"). It doesn't unlock new actions — only new ways to phrase the same ones.
 
@@ -73,9 +73,9 @@ Or build from source — see [For developers](#for-developers).
 
 While the bridge is active the phone displays a persistent low-priority notification — that's the foreground service keeping the connection alive.
 
-### Use Wristotle as system-wide voice input *(optional)*
+### Use Wristotle as system-wide voice input *(optional, experimental)*
 
-Once enabled, anything on your phone that uses Android's `SpeechRecognizer` (keyboard mic buttons, voice search, etc.) will transcribe via Wristotle.
+Setting Wristotle as the device's default `voice_recognition_service` makes Android route any `SpeechRecognizer`-based call through Wristotle's on-device Whisper. We haven't verified which third-party apps actually use that API in practice (many bundle their own engine), so don't expect this to globally replace your keyboard's voice button — depends entirely on whether the keyboard goes through Android's standard speech API.
 
 The *Voice Input (Whisper)* card in the app offers two activation methods via a dropdown:
 
