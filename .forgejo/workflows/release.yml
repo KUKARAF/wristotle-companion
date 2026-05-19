@@ -135,10 +135,27 @@ jobs:
         run: |
           set -eu
 
+          # Auto-generate the change list from commit subjects since the
+          # previous tag. fetch-depth: 0 gives full history + tags. First
+          # release (no prior tag) falls back to the whole history.
+          PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            CHANGES=$(git log "${PREV_TAG}..${TAG}" --no-merges --pretty=format:'- %s')
+            SINCE="Changes since \`$PREV_TAG\`:"
+          else
+            CHANGES=$(git log "${TAG}" --no-merges --pretty=format:'- %s')
+            SINCE="Changes:"
+          fi
+          [ -n "$CHANGES" ] || CHANGES="- (no code changes)"
+
           BODY=$(cat <<EOF
           Built from \`$TAG\` ($(git rev-parse --short HEAD)).
 
-          See the commit log on the [Code tab](https://codeberg.org/${GITHUB_REPOSITORY}/commits/branch/main) for the full set of changes since the last release.
+          $SINCE
+
+          $CHANGES
+
+          Full commit log on the [Code tab](https://codeberg.org/${GITHUB_REPOSITORY}/commits/branch/main).
 
           Install: download the APK below, sideload onto an Android 7.0+ phone, then follow the first-time setup in the README.
           EOF
