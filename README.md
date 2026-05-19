@@ -260,11 +260,13 @@ app/src/main/java/com/lazydevs/wristotle/
       SlotUtils.kt              # stripVerbBody, stripTrailingEmphasis, cleanNameToken
   apps/
     InstalledApp.kt, InstalledAppDao.kt,
-    AppIndexDatabase.kt         # Separate Room DB (wristotle-app-index.db)
+    AppIndexDatabase.kt         # Separate Room DB (wristotle-app-index.db, v2)
     AppIndexer.kt               # Scans launcher apps on user trigger
     AppIndex.kt                 # 3-way AppLookup (Match/Generic/NotFound),
-                                #   tiered match: exact → prefix → contains → reverse-contains
-    AppLabel.kt                 # normalizeForIndex shared by writer + reader
+                                #   4-tier match: exact → prefix → contains → reverse-contains,
+                                #   each tier label-first then package-fallback
+    AppLabel.kt                 # normalizeForIndex (labels) + normalizeForPackageId
+                                #   (strip TLD/middle/suffix segments from package id)
     AppLauncher.kt              # launchApp + packageLabel shared helpers
   media/
     ActiveMediaSession.kt       # MediaSessionManager facade: active-session ops +
