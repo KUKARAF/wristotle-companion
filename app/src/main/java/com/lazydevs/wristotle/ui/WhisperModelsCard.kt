@@ -2,29 +2,39 @@ package com.lazydevs.wristotle.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.transport.PebbleCompanionDetector
 
 /**
  * Compact card listing available Whisper models. One row per model:
@@ -46,6 +56,7 @@ fun WhisperModelsCard(
     modifier: Modifier = Modifier,
 ) {
     val models by vm.models.collectAsState()
+    val companion by vm.pebbleCompanion.collectAsState()
 
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -53,6 +64,22 @@ fun WhisperModelsCard(
                 title = stringResource(R.string.whisper_models_header),
                 description = stringResource(R.string.whisper_models_desc),
             )
+            // rePebble's dictation pipeline bypasses Android's
+            // SpeechRecognizer entirely, so on-device Whisper isn't
+            // actually used for watch dictation — only for system-wide
+            // voice input. Surface that up-front and collapse the model
+            // rows behind an opt-in so users don't download 30+MB of
+            // models that have no effect on their watch.
+            if (!companion.whisperAppliesToWatchDictation) {
+                RePebbleNotice(installed = companion.installed)
+                var revealModels by remember { mutableStateOf(false) }
+                if (!revealModels) {
+                    TextButton(onClick = { revealModels = true }) {
+                        Text(stringResource(R.string.whisper_models_show_anyway))
+                    }
+                    return@Column
+                }
+            }
             models.forEachIndexed { i, state ->
                 if (i > 0) HorizontalDivider()
                 ModelRow(
@@ -61,6 +88,36 @@ fun WhisperModelsCard(
                     onCancel = { vm.cancelDownload(state.info.id) },
                     onDelete = { vm.delete(state.info.id) },
                     onSetActive = { vm.setActive(state.info.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RePebbleNotice(installed: PebbleCompanionDetector.InstalledPackages) {
+    Spacer(modifier = Modifier.height(4.dp))
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                stringResource(R.string.whisper_models_repebble_notice_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                stringResource(R.string.whisper_models_repebble_notice_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!installed.micropebble) {
+                Text(
+                    stringResource(R.string.whisper_models_repebble_notice_switch_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

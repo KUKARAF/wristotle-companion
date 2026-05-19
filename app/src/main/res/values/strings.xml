@@ -96,6 +96,10 @@
     <!-- Whisper Models section -->
     <string name="whisper_models_header">Speech</string>
     <string name="whisper_models_desc">Downloads a Whisper speech recognition model that runs entirely on this device — no audio is sent to the cloud. Larger models are more accurate but slower; tiny.en is the fastest for short watch commands while base.en handles longer dictation better. Tap any downloaded model to make it the active one.</string>
+    <string name="whisper_models_repebble_notice_title">Not used for watch dictation</string>
+    <string name="whisper_models_repebble_notice_body">rePebble runs its own cloud dictation pipeline that bypasses Android\'s speech recognizer entirely, so a downloaded Whisper model has no effect on your watch. It would only be used for system-wide voice input — keyboards, search bars, and other apps that go through Android\'s speech API.</string>
+    <string name="whisper_models_repebble_notice_switch_hint">If you want on-device transcription for your watch, switch your BLE companion app to microPebble — it routes dictation through Android\'s speech recognizer, which Wristotle\'s Whisper can take over.</string>
+    <string name="whisper_models_show_anyway">Show models anyway</string>
 
     <!-- Section headers grouping related Settings cards -->
     <string name="settings_section_models">Models</string>

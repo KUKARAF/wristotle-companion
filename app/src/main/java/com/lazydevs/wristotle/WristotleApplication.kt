@@ -142,6 +142,15 @@ class WristotleApplication : Application() {
     lateinit var diagnosticsSettings: com.lazydevs.wristotle.diagnostics.DiagnosticsSettings
         private set
 
+    /** Which BLE companion is paired (rePebble / microPebble / unknown).
+     *  Updated lazily in [PebbleListenerService.onBind] from
+     *  Binder.getCallingUid(); falls back to package-presence scan on
+     *  cold start. Lets the UI hide / downrank Whisper-related cards
+     *  when the active path doesn't go through Android SpeechRecognizer
+     *  (rePebble bypasses it; microPebble uses it). */
+    lateinit var pebbleCompanionDetector: com.lazydevs.wristotle.transport.PebbleCompanionDetector
+        private set
+
     /**
      * Application-scoped scope for fire-and-forget housekeeping (DB pruning, etc).
      * SupervisorJob so one failure doesn't cancel siblings.
@@ -189,6 +198,9 @@ class WristotleApplication : Application() {
         appIndexer = AppIndexer(this, appIndexDao)
 
         diagnosticsSettings = com.lazydevs.wristotle.diagnostics.DiagnosticsSettings(this)
+
+        pebbleCompanionDetector =
+            com.lazydevs.wristotle.transport.PebbleCompanionDetector(this)
 
         // Slot extractors are stateless aside from the contacts dep shared with
         // SmsHandler, so building them once at startup is fine. The single

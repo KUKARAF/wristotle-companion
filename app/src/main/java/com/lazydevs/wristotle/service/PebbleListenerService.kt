@@ -38,6 +38,9 @@ import io.rebble.pebblekit2.common.model.ReceiveResult
 import io.rebble.pebblekit2.common.model.WatchIdentifier
 import kotlinx.coroutines.launch
 import java.util.UUID
+import android.content.Intent as AndroidIntent
+import android.os.Binder
+import android.os.IBinder
 
 /**
  * Receives AppMessages from the Pebble watch via rePebble/microPebble.
@@ -63,7 +66,10 @@ class PebbleListenerService : BasePebbleListenerService() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "Service bound by rePebble")
+        // Note: the actual BLE companion (rePebble vs microPebble) is
+        // captured in onBind via Binder.getCallingUid; see the override
+        // below + PebbleCompanionDetector.
+        Log.d(TAG, "PebbleListenerService onCreate")
         val app = application as WristotleApplication
         transport = app.transport
         conversationRepository = app.conversationRepository
@@ -95,6 +101,22 @@ class PebbleListenerService : BasePebbleListenerService() {
     // Transport is Application-owned; no close in onDestroy. The base class cancels
     // its coroutineScope during onDestroy(), which terminates any in-flight handler
     // coroutines cleanly before super returns.
+
+    /**
+     * Capture the BLE companion's UID so the UI knows whether watch
+     * dictation goes through Android's SpeechRecognizer (microPebble →
+     * Whisper can take over) or through Rebble's cloud (rePebble → it
+     * can't). The bind callsite is the only place we have caller
+     * identity from a third-party process — `Binder.getCallingUid()`
+     * in `onMessageReceived` is too late (we're on a coroutine thread
+     * by then, calling identity cleared).
+     */
+    override fun onBind(intent: AndroidIntent?): IBinder? {
+        val callerUid = Binder.getCallingUid()
+        val app = application as? WristotleApplication
+        app?.pebbleCompanionDetector?.recordBinderUid(callerUid)
+        return super.onBind(intent)
+    }
 
     override suspend fun onMessageReceived(
         watchappUUID: UUID,
