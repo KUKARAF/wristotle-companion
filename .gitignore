@@ -33,3 +33,6 @@ google-services.json
 # Claude Code
 .claude/
 CLAUDE.md
+
+# Local feature-request tracker — not published
+FEATURE_REQUESTS.md
