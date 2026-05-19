@@ -10,13 +10,25 @@ import kotlinx.coroutines.flow.flow
 private const val TAG = "StubRecognizer"
 
 /**
- * Canned recognizer that returns a fixed transcript. Used in Phase 1 to verify
- * the SpeechRecognizer binding contract end-to-end before a real backend exists.
+ * Transcript returned when no real recognizer is available — i.e. no Whisper
+ * model is downloaded/active. Surfaced verbatim on the watch (and echoed by the
+ * companion), so it reads as a user-facing instruction rather than a
+ * placeholder. Kept to one line for the watch's narrow chat surface.
+ */
+private const val NO_MODEL_TRANSCRIPT = "No speech model installed — download one in Wristotle settings"
+
+/**
+ * Fallback recognizer used whenever no real backend is active. In production
+ * that means no Whisper model has been downloaded/activated, so
+ * [com.lazydevs.wristotle.speech.Recognizers] returns this stub instead of a
+ * model-backed recognizer; it surfaces [NO_MODEL_TRANSCRIPT] so the user learns
+ * why dictation isn't transcribing. (Originally written in Phase 1 to verify the
+ * SpeechRecognizer binding contract before any real backend existed.)
  *
  * Behaviour:
  * - 1st audio chunk: [TranscriptionEvent.SpeechStarted].
  * - Drains the entire audio source until it ends naturally (pipe EOF or external
- *   [AudioSource.stop]), then emits SpeechEnded + Final("hello world").
+ *   [AudioSource.stop]), then emits SpeechEnded + Final([NO_MODEL_TRANSCRIPT]).
  *
  * Why drain instead of cap at N chunks: rePebble's TranscriptionProviderImpl has a
  * "streaming → submitted → awaiting recognition" state machine. If the recognizer
@@ -68,7 +80,7 @@ class StubRecognizer : Recognizer {
 
         Log.d(TAG, "emit SpeechEnded + Final (chunks=$chunkCount)")
         emit(TranscriptionEvent.SpeechEnded)
-        emit(TranscriptionEvent.Final("hello world", confidence = 1.0f))
+        emit(TranscriptionEvent.Final(NO_MODEL_TRANSCRIPT, confidence = 1.0f))
     }
 
     override fun close() = Unit
