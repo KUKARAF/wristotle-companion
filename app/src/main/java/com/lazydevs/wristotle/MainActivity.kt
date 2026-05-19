@@ -19,6 +19,7 @@ import com.lazydevs.wristotle.ui.MainScreen
 import com.lazydevs.wristotle.ui.MainViewModel
 import com.lazydevs.wristotle.ui.NluModelsViewModel
 import com.lazydevs.wristotle.ui.NluSettingsViewModel
+import com.lazydevs.wristotle.ui.WatchSettingsViewModel
 import com.lazydevs.wristotle.ui.WhisperModelsViewModel
 import com.lazydevs.wristotle.ui.theme.WristotleTheme
 
@@ -39,6 +40,7 @@ class MainActivity : ComponentActivity() {
     private val conversationVm: ConversationViewModel by viewModels()
     private val appIndexVm: AppIndexViewModel by viewModels()
     private val diagnosticsVm: DiagnosticsViewModel by viewModels()
+    private val watchSettingsVm: WatchSettingsViewModel by viewModels()
 
     // Registered once; result arrives asynchronously and triggers a permission refresh.
     // After the runtime perms dialog resolves, chain into the battery-optimization
@@ -79,6 +81,7 @@ class MainActivity : ComponentActivity() {
                     conversationVm = conversationVm,
                     appIndexVm = appIndexVm,
                     diagnosticsVm = diagnosticsVm,
+                    watchSettingsVm = watchSettingsVm,
                     onRequestWatchPermissions = ::requestWatchPermissions,
                     onRequestVoicePermissions = ::requestVoicePermissions,
                 )

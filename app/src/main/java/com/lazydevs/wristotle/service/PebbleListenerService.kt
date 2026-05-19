@@ -23,6 +23,7 @@ import com.lazydevs.wristotle.nlu.LearningCollector
 import com.lazydevs.wristotle.nlu.NluSettings
 import com.lazydevs.wristotle.nlu.PrefixHints
 import com.lazydevs.wristotle.phone.ContactsRepository
+import com.lazydevs.wristotle.settings.WatchSettingsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
@@ -63,6 +64,7 @@ class PebbleListenerService : BasePebbleListenerService() {
     private lateinit var slotExtractors: SlotExtractorRegistry
     private lateinit var nluSettings: NluSettings
     private lateinit var learningCollector: LearningCollector
+    private lateinit var watchSettingsRepository: WatchSettingsRepository
 
     override fun onCreate() {
         super.onCreate()
@@ -77,6 +79,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         slotExtractors = app.slotExtractors
         nluSettings = app.nluSettings
         learningCollector = app.learningCollector
+        watchSettingsRepository = app.watchSettingsRepository
 
         val contacts = ContactsRepository(this)
         val media = app.activeMediaSession
@@ -139,6 +142,16 @@ class PebbleListenerService : BasePebbleListenerService() {
         if (data[MessageKeys.COMPANION_PING] != null) {
             Log.d(TAG, "Received COMPANION_PING, sending READY")
             transport.sendReady()
+            return ReceiveResult.Ack
+        }
+
+        // Settings snapshot from the watch — ingest then we're done.
+        // Any tuple keyed by one of the 10 setting keys signals "this is a
+        // settings update," no marker key needed (the response to our
+        // REQUEST_SETTINGS is the only realistic source of these, but the
+        // detection logic is intentionally source-agnostic).
+        if (watchSettingsRepository.isSettingsMessage(data)) {
+            watchSettingsRepository.ingest(data)
             return ReceiveResult.Ack
         }
 

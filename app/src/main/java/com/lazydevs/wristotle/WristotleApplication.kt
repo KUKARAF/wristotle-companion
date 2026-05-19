@@ -25,6 +25,7 @@ import com.lazydevs.wristotle.nlu.slots.OpenAppSlots
 import com.lazydevs.wristotle.nlu.slots.ReminderSlots
 import com.lazydevs.wristotle.nlu.slots.SmsSlots
 import com.lazydevs.wristotle.phone.ContactsRepository
+import com.lazydevs.wristotle.settings.WatchSettingsRepository
 import com.lazydevs.wristotle.speech.Recognizers
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
@@ -151,6 +152,12 @@ class WristotleApplication : Application() {
     lateinit var pebbleCompanionDetector: com.lazydevs.wristotle.transport.PebbleCompanionDetector
         private set
 
+    /** Mirror of the watch's persisted settings, populated lazily via
+     *  REQUEST_SETTINGS and updated when the watch sends a fresh snapshot.
+     *  Application-scoped so the cache survives a settings-tab close. */
+    lateinit var watchSettingsRepository: WatchSettingsRepository
+        private set
+
     /**
      * Application-scoped scope for fire-and-forget housekeeping (DB pruning, etc).
      * SupervisorJob so one failure doesn't cancel siblings.
@@ -201,6 +208,8 @@ class WristotleApplication : Application() {
 
         pebbleCompanionDetector =
             com.lazydevs.wristotle.transport.PebbleCompanionDetector(this)
+
+        watchSettingsRepository = WatchSettingsRepository(transport, appScope)
 
         // Slot extractors are stateless aside from the contacts dep shared with
         // SmsHandler, so building them once at startup is fine. The single

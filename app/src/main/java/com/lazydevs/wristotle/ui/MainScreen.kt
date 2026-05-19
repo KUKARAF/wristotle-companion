@@ -49,6 +49,7 @@ fun MainScreen(
     conversationVm: ConversationViewModel,
     appIndexVm: AppIndexViewModel,
     diagnosticsVm: DiagnosticsViewModel,
+    watchSettingsVm: WatchSettingsViewModel,
     onRequestWatchPermissions: () -> Unit,
     onRequestVoicePermissions: () -> Unit,
 ) {
@@ -146,6 +147,7 @@ fun MainScreen(
                         conversationVm = conversationVm,
                         appIndexVm = appIndexVm,
                         diagnosticsVm = diagnosticsVm,
+                        watchSettingsVm = watchSettingsVm,
                     )
                 }
             }

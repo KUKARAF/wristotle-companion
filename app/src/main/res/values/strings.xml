@@ -111,6 +111,33 @@
     <string name="settings_section_learning">Learning</string>
     <string name="settings_section_conversation">Conversation</string>
     <string name="settings_section_diagnostics">Diagnostics</string>
+    <string name="settings_section_watch">Watch</string>
+
+    <!-- Watch-settings mirror card -->
+    <string name="watch_settings_header">Watch app settings</string>
+    <string name="watch_settings_desc">Live mirror of the settings stored on the Pebble. Changes apply immediately when the watch is connected.</string>
+    <string name="watch_settings_refresh">Refresh</string>
+    <string name="watch_settings_loading">Reading from watch…</string>
+    <string name="watch_settings_unknown">Tap Refresh to load settings from the watch.</string>
+    <string name="watch_settings_disconnected">Couldn\'t reach the watch. Make sure it\'s connected and the Wristotle watch app is running.</string>
+    <string name="watch_settings_old_app">The Wristotle watch app needs an update to manage settings from here. Install the latest .pbw on the watch and tap Refresh.</string>
+    <string name="watch_settings_logging">Debug logging</string>
+    <string name="watch_settings_dictation_confirmation">Confirm before sending dictation</string>
+    <string name="watch_settings_skip_retry_dialog">Skip system retry dialog on dictation error</string>
+    <string name="watch_settings_quick_launch_auto_exit">Auto-exit after quick launch</string>
+    <string name="watch_settings_auto_exit_off">Off</string>
+    <string name="watch_settings_auto_exit_seconds">%1$d s</string>
+    <string name="watch_settings_vibrate_section">Vibration</string>
+    <string name="watch_settings_vibrate_on_launch">On normal launch</string>
+    <string name="watch_settings_vibrate_on_quick_launch">On quick launch</string>
+    <string name="watch_settings_vibrate_respect_quiet">Skip during quiet time</string>
+    <string name="watch_settings_routing_section">Routing</string>
+    <string name="watch_settings_target_find_phone">Find phone</string>
+    <string name="watch_settings_target_reminders">Reminders</string>
+    <string name="watch_settings_target_cancel">Cancel reminder</string>
+    <string name="watch_settings_target_auto">Auto</string>
+    <string name="watch_settings_target_companion">Companion</string>
+    <string name="watch_settings_target_pkjs">PKJS</string>
 
     <!-- Diagnostics export card -->
     <string name="diagnostics_header">Report an issue</string>

@@ -24,6 +24,45 @@ object MessageKeys {
     val LOG_RESPONSE: UInt       = 10024u
     val LOG_HANDLER: UInt        = 10025u
 
+    /** Settings sync — the 10 watch-persisted settings the companion mirrors.
+     *  Companion → watch: send one of these keys with a new value to update on
+     *  the watch (handled by the same C inbox handler PKJS already drives).
+     *  Watch → companion: arrives bundled in the response to [REQUEST_SETTINGS]
+     *  and parsed by [WatchSettingsRepository]. */
+    val SETTING_LOGGING: UInt                  = 10000u
+    val SETTING_DICTATION_CONFIRMATION: UInt   = 10008u
+    val SETTING_FIND_PHONE_TARGET: UInt        = 10015u
+    val SETTING_REMINDERS_TARGET: UInt         = 10016u
+    val SETTING_CANCEL_TARGET: UInt            = 10017u
+    val SETTING_QUICK_LAUNCH_AUTO_EXIT: UInt   = 10018u
+    val SETTING_VIBRATE_ON_LAUNCH: UInt        = 10019u
+    val SETTING_VIBRATE_ON_QUICK_LAUNCH: UInt  = 10020u
+    val SETTING_VIBRATE_RESPECT_QUIET: UInt    = 10021u
+    val SETTING_SKIP_RETRY_DIALOG: UInt        = 10022u
+
+    /** Companion → watch: presence-only ping that asks the watch to ship back a
+     *  snapshot containing every SETTING_* key + its current value. Added in
+     *  watch app v0.X.Y; older watch apps ACK but don't respond, which the
+     *  repository detects via a response timeout. */
+    val REQUEST_SETTINGS: UInt   = 10026u
+
+    /** All settings keys, grouped so [PebbleListenerService.onMessageReceived]
+     *  can detect "this incoming message carries settings tuples" without a
+     *  marker key. Any tuple of one of these keys is, by definition, a
+     *  settings update from the watch. */
+    val SETTING_KEYS: List<UInt> = listOf(
+        SETTING_LOGGING,
+        SETTING_DICTATION_CONFIRMATION,
+        SETTING_FIND_PHONE_TARGET,
+        SETTING_REMINDERS_TARGET,
+        SETTING_CANCEL_TARGET,
+        SETTING_QUICK_LAUNCH_AUTO_EXIT,
+        SETTING_VIBRATE_ON_LAUNCH,
+        SETTING_VIBRATE_ON_QUICK_LAUNCH,
+        SETTING_VIBRATE_RESPECT_QUIET,
+        SETTING_SKIP_RETRY_DIALOG,
+    )
+
     /** Value of MSG_TARGET that means "this message is for the Android companion". */
     const val TARGET_COMPANION: Int = 1
 }

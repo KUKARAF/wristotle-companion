@@ -37,6 +37,24 @@ class PebbleTransport(context: Context) : java.io.Closeable {
     suspend fun deleteReminder(pinId: String): TimelineResult =
         sender.deleteTimelinePin(AppConstants.PEBBLE_UUID, pinId)
 
+    /** Presence-only message — the watch responds by shipping all settings back. */
+    suspend fun sendSettingsRequest() = sendWithNackRetry(
+        mapOf(MessageKeys.REQUEST_SETTINGS to PebbleDictionaryItem.UInt8(1u))
+    )
+
+    /** Set a bool setting on the watch. Bools cross AppMessage as uint8 (0/1)
+     *  matching the watch's existing `dict_write_uint8` encoding. */
+    suspend fun sendBoolSetting(key: UInt, value: Boolean) = sendWithNackRetry(
+        mapOf(key to PebbleDictionaryItem.UInt8(if (value) 1u else 0u))
+    )
+
+    /** Set an int setting on the watch (target enums + quick-launch auto-exit
+     *  seconds). Watch reads these via `prv_tuple_as_int` which accepts both
+     *  int and uint, so int32 is the safe choice. */
+    suspend fun sendIntSetting(key: UInt, value: Int) = sendWithNackRetry(
+        mapOf(key to PebbleDictionaryItem.Int32(value))
+    )
+
     override fun close() {
         sender.close()
     }

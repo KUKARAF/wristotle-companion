@@ -52,6 +52,7 @@ fun SettingsScreen(
     conversationVm: ConversationViewModel,
     appIndexVm: AppIndexViewModel,
     diagnosticsVm: DiagnosticsViewModel,
+    watchSettingsVm: WatchSettingsViewModel,
 ) {
     val retentionDays by conversationVm.retentionDays.collectAsState()
     val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
@@ -69,6 +70,10 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
+        SettingsSection(stringResource(R.string.settings_section_watch)) {
+            WatchSettingsCard(vm = watchSettingsVm)
+        }
+
         SettingsSection(stringResource(R.string.settings_section_models)) {
             WhisperModelsCard(vm = modelsVm)
             NluModelsCard(vm = nluModelsVm)
