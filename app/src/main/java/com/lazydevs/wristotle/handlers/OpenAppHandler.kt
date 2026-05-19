@@ -31,7 +31,7 @@ class OpenAppHandler(
         val name = (result.slots["app"] as? String)?.trim().orEmpty()
         if (name.isEmpty()) return "No app specified"
         if (appIndex.count() == 0) {
-            return "App index is empty — open Settings and tap Scan installed apps."
+            return EMPTY_INDEX_HINT
         }
         val pkg = when (val lookup = appIndex.lookup(name)) {
             is AppLookup.Match -> lookup.packageId

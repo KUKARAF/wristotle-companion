@@ -6,26 +6,36 @@ import com.lazydevs.wristotle.speech.nlu.IntentResult
 
 /**
  * Handler-side resolution of the `app` slot: collapses [AppLookup] +
- * "no slot at all" into the three actions a handler actually needs:
+ * "no slot at all" into the four actions a handler actually needs:
  *
- *   - [Specific] — user named an app we found; act on that package.
- *   - [Fallback] — no body OR a generic media noun ("pause the song");
- *                  act on the currently-active session.
- *   - [NotFound] — user named something we don't recognise; refuse to
- *                  silently substitute the active session.
+ *   - [Specific]   — user named an app we found; act on that package.
+ *   - [Fallback]   — no body OR a generic media noun ("pause the song");
+ *                    act on the currently-active session.
+ *   - [NotFound]   — user named something we don't recognise; refuse to
+ *                    silently substitute the active session.
+ *   - [EmptyIndex] — user named something but the AppIndex hasn't been
+ *                    populated yet. Distinct from NotFound so handlers
+ *                    can prompt the user to run *Scan installed apps*
+ *                    instead of just saying "couldn't find."
  *
  * Shared by MediaPlay / MediaPause / MediaNext / MediaPrevious so the
- * three-way `when` branch lives in one place.
+ * `when` branch lives in one place.
  */
 internal sealed interface AppTarget {
     data class Specific(val packageId: String) : AppTarget
     data object Fallback : AppTarget
     data class NotFound(val spoken: String) : AppTarget
+    data object EmptyIndex : AppTarget
 }
+
+/** Shared user-facing hint for the [AppTarget.EmptyIndex] case. */
+internal const val EMPTY_INDEX_HINT =
+    "App index is empty — open Settings and tap Scan installed apps."
 
 internal suspend fun IntentResult.resolveAppTarget(appIndex: AppIndex): AppTarget {
     val appQuery = (slots["app"] as? String)?.trim()
     if (appQuery.isNullOrEmpty()) return AppTarget.Fallback
+    if (appIndex.count() == 0) return AppTarget.EmptyIndex
     return when (val lookup = appIndex.lookup(appQuery)) {
         is AppLookup.Match -> AppTarget.Specific(lookup.packageId)
         AppLookup.Generic -> AppTarget.Fallback

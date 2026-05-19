@@ -43,6 +43,7 @@ class MediaPlayHandler(
         return when (val target = result.resolveAppTarget(appIndex)) {
             is AppTarget.Specific -> launchAndPlay(target.packageId)
             is AppTarget.NotFound -> notFound(target.spoken)
+            AppTarget.EmptyIndex -> EMPTY_INDEX_HINT
             AppTarget.Fallback ->
                 if (media.play()) "Playing ${media.targetLabel()}" else NOTHING_PLAYING
         }
@@ -74,6 +75,7 @@ class MediaPauseHandler(
                 if (media.pauseForPackage(target.packageId)) "Paused ${packageLabel(context, target.packageId)}"
                 else NOTHING_PLAYING
             is AppTarget.NotFound -> notFound(target.spoken)
+            AppTarget.EmptyIndex -> EMPTY_INDEX_HINT
             AppTarget.Fallback ->
                 if (media.pause()) "Paused ${media.targetLabel()}" else NOTHING_PLAYING
         }
@@ -103,6 +105,7 @@ class MediaNextHandler(
                 if (media.nextForPackage(target.packageId)) "Skipped to next in ${packageLabel(context, target.packageId)}"
                 else NOTHING_PLAYING
             is AppTarget.NotFound -> notFound(target.spoken)
+            AppTarget.EmptyIndex -> EMPTY_INDEX_HINT
             AppTarget.Fallback ->
                 if (media.next()) "Skipped to next" else NOTHING_PLAYING
         }
@@ -123,6 +126,7 @@ class MediaPreviousHandler(
                 if (media.previousForPackage(target.packageId)) "Back one track in ${packageLabel(context, target.packageId)}"
                 else NOTHING_PLAYING
             is AppTarget.NotFound -> notFound(target.spoken)
+            AppTarget.EmptyIndex -> EMPTY_INDEX_HINT
             AppTarget.Fallback ->
                 if (media.previous()) "Back one track" else NOTHING_PLAYING
         }
