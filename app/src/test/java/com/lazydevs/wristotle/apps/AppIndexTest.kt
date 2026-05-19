@@ -11,6 +11,7 @@ class AppIndexTest {
         packageId = pkg,
         label = label,
         normalizedLabel = normalizeForIndex(label),
+        normalizedPackage = normalizeForPackageId(pkg),
         lastScannedAtMs = 0L,
     )
 
@@ -98,6 +99,55 @@ class AppIndexTest {
         )
         val r = lookup(idx, "youtube music collection") as AppLookup.Match
         assertEquals("com.google.android.apps.youtube.music", r.packageId)
+    }
+
+    // --- Package-id fallback ---------------------------------------
+
+    @Test fun `package-id contains match wins when label differs`() {
+        // The motivating real-world case: launcher label is "YT Music"
+        // but the package path contains "youtube.music". Spoken
+        // "youtube music" doesn't match any label tier, but contains-
+        // match against the normalized package "morphe youtube music"
+        // resolves correctly.
+        val idx = index(
+            app("app.morphe.android.youtube", "YouTube"),
+            app("app.morphe.android.apps.youtube.music", "YT Music"),
+        )
+        val r = lookup(idx, "youtube music") as AppLookup.Match
+        assertEquals("app.morphe.android.apps.youtube.music", r.packageId)
+    }
+
+    @Test fun `label match still wins over package match within same tier`() {
+        // If both the label and the package would match in the same
+        // tier, the label hit takes precedence — labels are what the
+        // user actually sees in their launcher.
+        val idx = index(
+            // Label "YT Music" doesn't match "youtube music" via any
+            // tier; package "morphe.youtube.music" does (contains).
+            app("app.morphe.android.apps.youtube.music", "YT Music"),
+            // Label "YouTube Music" exact-matches "youtube music".
+            app("com.example.fake", "YouTube Music"),
+        )
+        val r = lookup(idx, "youtube music") as AppLookup.Match
+        assertEquals("com.example.fake", r.packageId)
+    }
+
+    @Test fun `package suffix strip drops trailing build-variant markers`() {
+        // "com.spotify.music.release" → after stripping `com` (TLD) +
+        // `release` (variant) → package tokens "spotify music".
+        // Spoken "spotify music" should exact-match the package.
+        val idx = index(app("com.spotify.music.release", "Spotify"))
+        val r = lookup(idx, "spotify music") as AppLookup.Match
+        assertEquals("com.spotify.music.release", r.packageId)
+    }
+
+    @Test fun `vendor name in package is NOT stripped`() {
+        // "com.google.android.maps" → strip TLD `com` + middle `android`
+        // → "google maps". User dictates "google maps" → exact match
+        // via package. Keeping the vendor in is the safer default.
+        val idx = index(app("com.google.android.maps", "Maps"))
+        val r = lookup(idx, "google maps") as AppLookup.Match
+        assertEquals("com.google.android.maps", r.packageId)
     }
 
     // --- Not found -------------------------------------------------

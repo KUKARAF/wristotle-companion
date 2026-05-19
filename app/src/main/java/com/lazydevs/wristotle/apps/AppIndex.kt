@@ -28,12 +28,18 @@ sealed interface AppLookup {
  * spoken phrase ("audible", "youtube music", "spotify") to a
  * specific launcher package id.
  *
- * Matching tiers, in order — first hit wins:
- *   1. exact normalized equality
- *   2. label prefix-starts-with query  (shortest label wins)
- *   3. label substring contains query  (shortest label wins)
- *   4. reverse contains — query substring contains label
- *      (catches "absorbed" → "Absorb")
+ * Matching tiers, in order — first hit wins. Within each tier, the
+ * label column is tried first; only when it misses does the package
+ * column get a turn. Label hits are preferred because they reflect
+ * what the user actually sees in the launcher; the package column
+ * is the cleanup pass for cases where the launcher name and the
+ * common name differ ("YT Music" launcher label vs `youtube.music`
+ * in the package id).
+ *
+ *   1. exact normalized equality              (label, then package)
+ *   2. prefix-starts-with query               (label, then package)
+ *   3. substring contains query               (label, then package)
+ *   4. reverse contains — query contains key  (label, then package)
  *
  * Generic media nouns are filtered out before any lookup — without
  * the denylist, "play music" / "play that song" would pull in any
@@ -58,33 +64,32 @@ class AppIndex(private val dao: InstalledAppDao) {
         val trimmed = stripLeadingArticles(normalized)
         if (trimmed.isEmpty() || GENERIC_NOUNS.contains(trimmed)) return AppLookup.Generic
 
-        dao.findExact(trimmed)?.let {
-            Log.d(TAG, "exact match: '$query' → ${it.label} (${it.packageId})")
-            return AppLookup.Match(it.packageId)
-        }
-        dao.findByPrefix(trimmed)?.let {
-            Log.d(TAG, "prefix match: '$query' → ${it.label} (${it.packageId})")
-            return AppLookup.Match(it.packageId)
-        }
-        // Only fall to substring matches for queries ≥4 chars to avoid
-        // tiny needles (e.g. "do") matching half the launcher.
+        // Tier 1 — exact
+        dao.findExact(trimmed)?.let { return matched("exact label", query, it) }
+        dao.findExactByPackage(trimmed)?.let { return matched("exact package", query, it) }
+        // Tier 2 — prefix
+        dao.findByPrefix(trimmed)?.let { return matched("prefix label", query, it) }
+        dao.findByPrefixOfPackage(trimmed)?.let { return matched("prefix package", query, it) }
+        // Tier 3 + 4 are restricted to queries ≥4 chars to avoid tiny
+        // needles (e.g. "do") matching half the launcher.
         if (trimmed.length >= 4) {
-            dao.findByContains(trimmed)?.let {
-                Log.d(TAG, "contains match: '$query' → ${it.label} (${it.packageId})")
-                return AppLookup.Match(it.packageId)
-            }
+            dao.findByContains(trimmed)?.let { return matched("contains label", query, it) }
+            dao.findByContainsInPackage(trimmed)?.let { return matched("contains package", query, it) }
             // Reverse direction: spoken needle contains the label.
             // Catches "absorbed" → "Absorb", "spotify music app" →
             // "Spotify", etc. Runs after forward-contains so a label
             // that fully contains the needle (more specific) beats one
             // that's merely contained-in the needle (less specific).
-            dao.findByReverseContains(trimmed)?.let {
-                Log.d(TAG, "reverse-contains match: '$query' → ${it.label} (${it.packageId})")
-                return AppLookup.Match(it.packageId)
-            }
+            dao.findByReverseContains(trimmed)?.let { return matched("reverse-contains label", query, it) }
+            dao.findByReverseContainsOfPackage(trimmed)?.let { return matched("reverse-contains package", query, it) }
         }
         Log.d(TAG, "no match for '$query' (normalized='$trimmed')")
         return AppLookup.NotFound(query.trim())
+    }
+
+    private fun matched(tier: String, query: String, app: InstalledApp): AppLookup.Match {
+        Log.d(TAG, "$tier match: '$query' → ${app.label} (${app.packageId})")
+        return AppLookup.Match(app.packageId)
     }
 
     private fun stripLeadingArticles(normalized: String): String {

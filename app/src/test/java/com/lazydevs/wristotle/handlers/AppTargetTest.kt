@@ -4,6 +4,7 @@ import com.lazydevs.wristotle.apps.AppIndex
 import com.lazydevs.wristotle.apps.FakeInstalledAppDao
 import com.lazydevs.wristotle.apps.InstalledApp
 import com.lazydevs.wristotle.apps.normalizeForIndex
+import com.lazydevs.wristotle.apps.normalizeForPackageId
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import kotlinx.coroutines.runBlocking
@@ -27,6 +28,7 @@ class AppTargetTest {
             packageId = "com.spotify.music",
             label = "Spotify",
             normalizedLabel = normalizeForIndex("Spotify"),
+            normalizedPackage = normalizeForPackageId("com.spotify.music"),
             lastScannedAtMs = 0L,
         ),
     )))

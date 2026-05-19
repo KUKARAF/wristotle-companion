@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
  */
 @Database(
     entities = [InstalledApp::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class AppIndexDatabase : RoomDatabase() {
@@ -23,6 +23,12 @@ abstract class AppIndexDatabase : RoomDatabase() {
 
         fun build(context: Context): AppIndexDatabase =
             Room.databaseBuilder(context.applicationContext, AppIndexDatabase::class.java, DB_NAME)
+                // v1→v2 added the normalizedPackage column. The table is a
+                // regenerable cache populated by Settings → Scan installed
+                // apps, so a destructive drop is cheap — the user just
+                // re-taps Scan once and we repopulate with both columns.
+                // Same migration policy as the conversation-history DB.
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }
 }

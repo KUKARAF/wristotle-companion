@@ -58,6 +58,7 @@ class AppIndexer(
                 packageId = pkg,
                 label = label,
                 normalizedLabel = normalizeForIndex(label),
+                normalizedPackage = normalizeForPackageId(pkg),
                 lastScannedAtMs = now,
             )
         }

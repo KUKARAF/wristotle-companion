@@ -21,17 +21,32 @@ internal class FakeInstalledAppDao(initial: List<InstalledApp> = emptyList()) : 
     override suspend fun findExact(norm: String): InstalledApp? =
         apps.firstOrNull { it.normalizedLabel == norm }
 
+    override suspend fun findExactByPackage(norm: String): InstalledApp? =
+        apps.firstOrNull { it.normalizedPackage == norm }
+
     override suspend fun findByPrefix(prefix: String): InstalledApp? =
         apps.filter { it.normalizedLabel.startsWith(prefix) }
             .minByOrNull { it.normalizedLabel.length }
+
+    override suspend fun findByPrefixOfPackage(prefix: String): InstalledApp? =
+        apps.filter { it.normalizedPackage.startsWith(prefix) }
+            .minByOrNull { it.normalizedPackage.length }
 
     override suspend fun findByContains(needle: String): InstalledApp? =
         apps.filter { it.normalizedLabel.contains(needle) }
             .minByOrNull { it.normalizedLabel.length }
 
+    override suspend fun findByContainsInPackage(needle: String): InstalledApp? =
+        apps.filter { it.normalizedPackage.contains(needle) }
+            .minByOrNull { it.normalizedPackage.length }
+
     override suspend fun findByReverseContains(needle: String): InstalledApp? =
         apps.filter { needle.contains(it.normalizedLabel) && it.normalizedLabel.length >= 4 }
             .maxByOrNull { it.normalizedLabel.length }
+
+    override suspend fun findByReverseContainsOfPackage(needle: String): InstalledApp? =
+        apps.filter { needle.contains(it.normalizedPackage) && it.normalizedPackage.length >= 4 }
+            .maxByOrNull { it.normalizedPackage.length }
 
     override suspend fun upsertAll(apps: List<InstalledApp>) {
         for (app in apps) {
