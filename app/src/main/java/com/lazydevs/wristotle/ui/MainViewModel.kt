@@ -52,6 +52,18 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
     val isDefaultVoiceProvider: StateFlow<Boolean> = _isDefaultVoiceProvider
 
     /**
+     * Surfaces which BLE companion is in front of Wristotle, so the
+     * Permissions screen's Voice Input card can downrank the "set as
+     * default voice provider" UI when rePebble is active — rePebble
+     * bypasses Android's SpeechRecognizer entirely, so flipping
+     * Wristotle on as the system voice provider doesn't affect watch
+     * dictation under it. See [PebbleCompanionDetector] for the
+     * detection model.
+     */
+    val pebbleCompanion: StateFlow<com.lazydevs.wristotle.transport.PebbleCompanionDetector.State> =
+        (app as com.lazydevs.wristotle.WristotleApplication).pebbleCompanionDetector.state
+
+    /**
      * The exact ADB invocation that flips this app on as the system voice input
      * provider. Built from the live ComponentName so it stays correct if the
      * service is ever renamed or repackaged.

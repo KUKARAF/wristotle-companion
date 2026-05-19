@@ -23,6 +23,17 @@ class ConversationViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = application.conversationSettings
     private val audioSettings = application.conversationAudioSettings
     private val audioStore = application.conversationAudioStore
+    private val companionDetector = application.pebbleCompanionDetector
+
+    /** Companion state — drives the dismissable rePebble first-run notice
+     *  at the top of the conversation list. */
+    val pebbleCompanion: StateFlow<com.lazydevs.wristotle.transport.PebbleCompanionDetector.State> =
+        companionDetector.state
+
+    val rePebbleNoticeDismissed: StateFlow<Boolean> =
+        companionDetector.firstRunNoticeDismissed
+
+    fun dismissRePebbleNotice() = companionDetector.dismissFirstRunNotice()
 
     val entries: StateFlow<List<ConversationEntry>> = repository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

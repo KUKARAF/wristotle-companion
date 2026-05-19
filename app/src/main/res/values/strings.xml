@@ -50,6 +50,10 @@
 
     <!-- Conversation screen -->
     <string name="conversation_header">Conversation</string>
+    <string name="conversation_repebble_notice_title">rePebble + Whisper: a note</string>
+    <string name="conversation_repebble_notice_body">You\'re using rePebble as your BLE companion. rePebble handles watch dictation through Rebble\'s cloud and bypasses Android\'s speech recognizer entirely — Wristotle\'s on-device Whisper isn\'t used for what you say into your watch. Other Wristotle features (Calls, SMS, Reminders, Open/Play app) still work normally.</string>
+    <string name="conversation_repebble_notice_switch_hint">For on-device transcription, switch your BLE companion to microPebble — it routes dictation through Android\'s speech recognizer, which Wristotle can intercept with Whisper.</string>
+    <string name="conversation_repebble_notice_dismiss">Got it</string>
     <string name="conversation_empty_title">No conversations yet</string>
     <string name="conversation_empty_subtitle">Talk to your watch and the history will show up here.</string>
     <string name="conversation_clear_all">Clear all</string>
@@ -81,6 +85,7 @@
     <!-- Voice Input section -->
     <string name="voice_input_header">Voice Input (Whisper)</string>
     <string name="voice_input_desc">Provides system-wide speech recognition. Any app on this phone that calls Android\'s SpeechRecognizer — Wear OS, voice search, accessibility services, third-party apps — will transcribe through Wristotle\'s on-device Whisper instead of Google\'s cloud service. Enable as the default voice input via the picker below or via the ADB command.</string>
+    <string name="voice_input_repebble_scope_note">Scope note: with rePebble in front, this does NOT affect your watch — rePebble routes watch dictation through Rebble\'s cloud and never calls Android\'s SpeechRecognizer. Activating Wristotle here only changes how OTHER apps on your phone (keyboards, search bars, etc.) transcribe.</string>
     <string name="voice_input_default_active">Active — Wristotle is the system voice input provider</string>
     <string name="voice_input_default_inactive">Not set as the default voice input</string>
     <string name="copy_adb_command_button">Copy ADB activation command</string>

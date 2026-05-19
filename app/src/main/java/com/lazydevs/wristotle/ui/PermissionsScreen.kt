@@ -53,6 +53,7 @@ fun PermissionsScreen(
 ) {
     val perms by vm.permissions.collectAsState()
     val isDefaultProvider by vm.isDefaultVoiceProvider.collectAsState()
+    val companion by vm.pebbleCompanion.collectAsState()
     val context = LocalContext.current
 
     Column(
@@ -74,6 +75,7 @@ fun PermissionsScreen(
             isDefaultVoiceProvider = isDefaultProvider,
             adbCommand = vm.adbActivationCommand,
             onRequest = onRequestVoicePermissions,
+            whisperBypassedForWatch = !companion.whisperAppliesToWatchDictation,
         )
         MediaControlCard(
             granted = perms.mediaControl,
@@ -168,6 +170,7 @@ private fun VoiceInputCard(
     isDefaultVoiceProvider: Boolean,
     adbCommand: String,
     onRequest: () -> Unit,
+    whisperBypassedForWatch: Boolean,
 ) {
     val voicePermsGranted = recordAudioGranted && batteryOptimizationGranted
 
@@ -180,6 +183,19 @@ private fun VoiceInputCard(
                 title = stringResource(R.string.voice_input_header),
                 description = stringResource(R.string.voice_input_desc),
             )
+            if (whisperBypassedForWatch) {
+                // Doesn't affect watch dictation under rePebble (rePebble
+                // routes through its own cloud, not Android's
+                // SpeechRecognizer). Surface this here so the user
+                // understands what activating Wristotle as the system
+                // voice provider actually buys them — keyboards, search
+                // bars, other apps — not the watch.
+                Text(
+                    stringResource(R.string.voice_input_repebble_scope_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Text(
                 if (isDefaultVoiceProvider) stringResource(R.string.voice_input_default_active)
                 else stringResource(R.string.voice_input_default_inactive),

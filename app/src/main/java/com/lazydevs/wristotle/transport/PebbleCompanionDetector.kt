@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 private const val TAG = "PebbleCompanionDetector"
 private const val PREFS_NAME = "wristotle-companion-detector"
 private const val KEY_LAST_BINDER_PACKAGE = "last_binder_package"
+private const val KEY_REPEBBLE_NOTICE_DISMISSED = "repebble_notice_dismissed"
 
 /**
  * Which BLE companion is in front of Wristotle — used by the UI to
@@ -37,6 +38,20 @@ class PebbleCompanionDetector(private val context: Context) {
 
     private val _state = MutableStateFlow(initialState())
     val state: StateFlow<State> = _state.asStateFlow()
+
+    /**
+     * Has the user dismissed the first-run "you're on rePebble, so
+     * watch dictation can't go through Whisper" notice? Sticky across
+     * uninstall via the same prefs file.
+     */
+    private val _firstRunNoticeDismissed =
+        MutableStateFlow(prefs.getBoolean(KEY_REPEBBLE_NOTICE_DISMISSED, false))
+    val firstRunNoticeDismissed: StateFlow<Boolean> = _firstRunNoticeDismissed.asStateFlow()
+
+    fun dismissFirstRunNotice() {
+        prefs.edit().putBoolean(KEY_REPEBBLE_NOTICE_DISMISSED, true).apply()
+        _firstRunNoticeDismissed.value = true
+    }
 
     /**
      * Called from `PebbleListenerService.onBind` with the UID of the

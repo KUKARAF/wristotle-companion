@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import android.media.MediaPlayer
@@ -59,6 +60,10 @@ import java.util.Date
 @Composable
 fun ConversationScreen(vm: ConversationViewModel) {
     val entries by vm.entries.collectAsState()
+    val companion by vm.pebbleCompanion.collectAsState()
+    val rePebbleNoticeDismissed by vm.rePebbleNoticeDismissed.collectAsState()
+    val showRePebbleNotice =
+        !companion.whisperAppliesToWatchDictation && !rePebbleNoticeDismissed
 
     // Single MediaPlayer instance shared across rows — starting playback on
     // one row stops playback on whichever row was previously playing. Held
@@ -84,6 +89,14 @@ fun ConversationScreen(vm: ConversationViewModel) {
             style = MaterialTheme.typography.titleLarge,
         )
         Spacer(Modifier.height(12.dp))
+
+        if (showRePebbleNotice) {
+            RePebbleFirstRunNotice(
+                installedMicroPebble = companion.installed.micropebble,
+                onDismiss = vm::dismissRePebbleNotice,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
 
         if (entries.isEmpty()) {
             EmptyState()
@@ -306,3 +319,46 @@ private fun MessageBubble(
  */
 private fun formatTimestamp(epochMs: Long): String =
     DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(epochMs))
+
+/**
+ * One-time notice surfaced at the top of the conversation tab when
+ * the detected BLE companion is rePebble — explains the on-device
+ * Whisper tradeoff once, then dismisses permanently. Sticky across
+ * cold starts via [PebbleCompanionDetector.firstRunNoticeDismissed].
+ */
+@Composable
+private fun RePebbleFirstRunNotice(
+    installedMicroPebble: Boolean,
+    onDismiss: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                stringResource(R.string.conversation_repebble_notice_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                stringResource(R.string.conversation_repebble_notice_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!installedMicroPebble) {
+                Text(
+                    stringResource(R.string.conversation_repebble_notice_switch_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                androidx.compose.material3.TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.conversation_repebble_notice_dismiss))
+                }
+            }
+        }
+    }
+}
