@@ -289,10 +289,16 @@ app/src/main/java/com/lazydevs/wristotle/
     Permissions.kt              # Context.hasPermission extension shared by handlers + VMs
   service/
     WatchMessageService.kt      # Foreground LifecycleService — keep-alive + COMPANION_READY
-    PebbleListenerService.kt    # Bound by Pebble companion; resolveIntent + dispatch + log
+    PebbleListenerService.kt    # Bound by Pebble companion; resolveIntent + dispatch + log;
+                                #   onBind captures the binder's UID for companion-detection
   transport/
     MessageKeys.kt              # AppMessage key indices (sync with watch package.json)
     PebbleTransport.kt          # PebbleKit2 DefaultPebbleSender wrapper + NACK retry
+    PebbleCompanionDetector.kt  # Classifies the active BLE companion (microPebble vs
+                                #   Core Devices / legacy rePebble) — drives the dismissable
+                                #   "Wristotle's Whisper isn't used for watch dictation under
+                                #   Core Devices" banners across the UI. Three independent
+                                #   dismiss flags + a sticky "show models anyway" flag.
   ui/
     MainScreen.kt               # Bottom-nav shell with three tabs (Chat / Permissions / Settings)
     MainViewModel.kt            # Permission state (incl. Notification Access) + default-voice-provider
