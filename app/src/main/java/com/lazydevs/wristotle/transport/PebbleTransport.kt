@@ -38,20 +38,23 @@ class PebbleTransport(context: Context) : java.io.Closeable {
         sender.deleteTimelinePin(AppConstants.PEBBLE_UUID, pinId)
 
     /** Presence-only message — the watch responds by shipping all settings back. */
-    suspend fun sendSettingsRequest() = sendWithNackRetry(
+    suspend fun sendSettingsRequest(): Boolean = sendWithNackRetry(
         mapOf(MessageKeys.REQUEST_SETTINGS to PebbleDictionaryItem.UInt8(1u))
     )
 
-    /** Set a bool setting on the watch. Bools cross AppMessage as uint8 (0/1)
-     *  matching the watch's existing `dict_write_uint8` encoding. */
-    suspend fun sendBoolSetting(key: UInt, value: Boolean) = sendWithNackRetry(
-        mapOf(key to PebbleDictionaryItem.UInt8(if (value) 1u else 0u))
+    /** Set a bool setting on the watch as a 4-byte int (0/1). The watch reads
+     *  every settings tuple via `prv_tuple_as_int` → `t->value->int32`, i.e. it
+     *  always reads 4 bytes; sending a 1-byte `UInt8` makes it read 3 bytes of
+     *  adjacent dict memory and mis-store the value. Int32 matches both the
+     *  reader and the PKJS/Clay convention. Returns true if the watch ACKed. */
+    suspend fun sendBoolSetting(key: UInt, value: Boolean): Boolean = sendWithNackRetry(
+        mapOf(key to PebbleDictionaryItem.Int32(if (value) 1 else 0))
     )
 
     /** Set an int setting on the watch (target enums + quick-launch auto-exit
      *  seconds). Watch reads these via `prv_tuple_as_int` which accepts both
-     *  int and uint, so int32 is the safe choice. */
-    suspend fun sendIntSetting(key: UInt, value: Int) = sendWithNackRetry(
+     *  int and uint, so int32 is the safe choice. Returns true if ACKed. */
+    suspend fun sendIntSetting(key: UInt, value: Int): Boolean = sendWithNackRetry(
         mapOf(key to PebbleDictionaryItem.Int32(value))
     )
 
@@ -62,16 +65,20 @@ class PebbleTransport(context: Context) : java.io.Closeable {
     // Defensive single-retry on watch NACK. With the watch's AppMessage inbox
     // sized at app_message_inbox_size_maximum(), NACKs shouldn't happen in
     // steady state — but transient BLE/AppMessage-state hiccups occasionally
-    // bounce a send, and one retry after a short pause clears them.
-    private suspend fun sendWithNackRetry(data: PebbleDictionary) {
+    // bounce a send, and one retry after a short pause clears them. Returns
+    // true when the watch ACKed (a NACK means the Wristotle watch app wasn't
+    // running to receive it, or the BLE link dropped).
+    private suspend fun sendWithNackRetry(data: PebbleDictionary): Boolean {
         val first = sender.sendDataToPebble(AppConstants.PEBBLE_UUID, data)
-        if (first?.values?.any { it is TransmissionResult.FailedWatchNacked } != true) return
+        if (first?.values?.any { it is TransmissionResult.FailedWatchNacked } != true) return true
         Log.w(TAG, "Watch NACKed send; retrying after ${NACK_RETRY_DELAY_MS}ms")
         delay(NACK_RETRY_DELAY_MS)
         val second = sender.sendDataToPebble(AppConstants.PEBBLE_UUID, data)
         if (second?.values?.any { it is TransmissionResult.FailedWatchNacked } == true) {
             Log.e(TAG, "Watch NACKed retry too — giving up")
+            return false
         }
+        return true
     }
 
     companion object {

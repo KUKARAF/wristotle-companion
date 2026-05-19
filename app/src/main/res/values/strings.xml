@@ -115,8 +115,10 @@
 
     <!-- Watch-settings mirror card -->
     <string name="watch_settings_header">Watch app settings</string>
-    <string name="watch_settings_desc">Live mirror of the settings stored on the Pebble. Changes apply immediately when the watch is connected.</string>
+    <string name="watch_settings_desc">Live mirror of the settings stored on the Pebble. Changes are sent to the watch when you tap Save.</string>
+    <string name="watch_settings_open_note">Keep the Wristotle app open on your watch while loading or saving — Pebble only syncs with the app that\'s currently running.</string>
     <string name="watch_settings_refresh">Refresh</string>
+    <string name="watch_settings_save">Save to watch</string>
     <string name="watch_settings_loading">Reading from watch…</string>
     <string name="watch_settings_unknown">Tap Refresh to load settings from the watch.</string>
     <string name="watch_settings_disconnected">Couldn\'t reach the watch. Make sure it\'s connected and the Wristotle watch app is running.</string>

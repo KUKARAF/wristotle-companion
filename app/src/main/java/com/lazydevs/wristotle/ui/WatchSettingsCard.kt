@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -19,6 +20,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,18 +36,25 @@ import com.lazydevs.wristotle.settings.WatchSettings
 import com.lazydevs.wristotle.settings.WatchSettingsState
 
 /**
- * Watch-settings mirror card. Shows a spinner while loading, the 10 controls
- * once a snapshot is available, and a hint + retry button when the most
- * recent refresh failed.
+ * Watch-settings mirror card.
  *
- * State machine drives the body — when [WatchSettingsState.Stale] still
- * carries a previous snapshot we keep the controls visible (read-only)
- * with a banner on top, so the user isn't kicked back to "tap refresh"
- * just because the watch briefly disconnected.
+ * Edits are staged in a local draft and only written to the watch when the
+ * user taps **Save** — no auto-save on each toggle. When the Settings page is
+ * left the section resets to [WatchSettingsState.Unknown] (via the
+ * [DisposableEffect] below), so it always re-fetches a fresh snapshot on the
+ * next visit rather than showing possibly-stale values.
  */
 @Composable
 fun WatchSettingsCard(vm: WatchSettingsViewModel) {
     val state by vm.state.collectAsState()
+
+    // Hide + drop the cached snapshot when this card leaves composition
+    // (i.e. the user switches away from the Settings tab). Forces a fresh
+    // Refresh next visit.
+    DisposableEffect(Unit) {
+        onDispose { vm.reset() }
+    }
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -54,6 +63,11 @@ fun WatchSettingsCard(vm: WatchSettingsViewModel) {
             CardTitleWithInfo(
                 title = stringResource(R.string.watch_settings_header),
                 description = stringResource(R.string.watch_settings_desc),
+            )
+            Text(
+                stringResource(R.string.watch_settings_open_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -66,7 +80,7 @@ fun WatchSettingsCard(vm: WatchSettingsViewModel) {
             when (val s = state) {
                 WatchSettingsState.Unknown -> Hint(stringResource(R.string.watch_settings_unknown))
                 WatchSettingsState.Loading -> LoadingRow()
-                is WatchSettingsState.Loaded -> SettingsBody(s.settings, vm)
+                is WatchSettingsState.Loaded -> EditableBody(s.settings, vm::save)
                 is WatchSettingsState.Stale -> {
                     Hint(
                         when (s.reason) {
@@ -74,7 +88,7 @@ fun WatchSettingsCard(vm: WatchSettingsViewModel) {
                             StaleReason.OldWatchApp -> stringResource(R.string.watch_settings_old_app)
                         }
                     )
-                    s.last?.let { SettingsBody(it, vm) }
+                    s.last?.let { EditableBody(it, vm::save) }
                 }
             }
         }
@@ -105,64 +119,80 @@ private fun LoadingRow() {
     }
 }
 
+/**
+ * Renders the 10 controls bound to a local [draft], seeded from [baseline].
+ * Save is enabled only while the draft differs from the baseline; tapping it
+ * commits via [onSave]. The draft re-seeds whenever [baseline] changes (a new
+ * Refresh snapshot, or the optimistic post-save update).
+ */
 @Composable
-private fun SettingsBody(settings: WatchSettings, vm: WatchSettingsViewModel) {
+private fun EditableBody(baseline: WatchSettings, onSave: (WatchSettings) -> Unit) {
+    var draft by remember(baseline) { mutableStateOf(baseline) }
+
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SwitchRow(
             label = stringResource(R.string.watch_settings_dictation_confirmation),
-            checked = settings.dictationConfirmation,
-            onChange = vm::setDictationConfirmation,
+            checked = draft.dictationConfirmation,
+            onChange = { draft = draft.copy(dictationConfirmation = it) },
         )
         SwitchRow(
             label = stringResource(R.string.watch_settings_skip_retry_dialog),
-            checked = settings.skipRetryDialog,
-            onChange = vm::setSkipRetryDialog,
+            checked = draft.skipRetryDialog,
+            onChange = { draft = draft.copy(skipRetryDialog = it) },
         )
         AutoExitDropdown(
-            seconds = settings.quickLaunchAutoExitSeconds,
-            onChange = vm::setQuickLaunchAutoExitSeconds,
+            seconds = draft.quickLaunchAutoExitSeconds,
+            onChange = { draft = draft.copy(quickLaunchAutoExitSeconds = it) },
         )
 
         SectionDivider(stringResource(R.string.watch_settings_vibrate_section))
         SwitchRow(
             label = stringResource(R.string.watch_settings_vibrate_on_launch),
-            checked = settings.vibrateOnLaunch,
-            onChange = vm::setVibrateOnLaunch,
+            checked = draft.vibrateOnLaunch,
+            onChange = { draft = draft.copy(vibrateOnLaunch = it) },
         )
         SwitchRow(
             label = stringResource(R.string.watch_settings_vibrate_on_quick_launch),
-            checked = settings.vibrateOnQuickLaunch,
-            onChange = vm::setVibrateOnQuickLaunch,
+            checked = draft.vibrateOnQuickLaunch,
+            onChange = { draft = draft.copy(vibrateOnQuickLaunch = it) },
         )
         SwitchRow(
             label = stringResource(R.string.watch_settings_vibrate_respect_quiet),
-            checked = settings.vibrateRespectQuiet,
-            onChange = vm::setVibrateRespectQuiet,
+            checked = draft.vibrateRespectQuiet,
+            onChange = { draft = draft.copy(vibrateRespectQuiet = it) },
         )
 
         SectionDivider(stringResource(R.string.watch_settings_routing_section))
         TargetDropdown(
             label = stringResource(R.string.watch_settings_target_find_phone),
-            value = settings.findPhoneTarget,
-            onChange = vm::setFindPhoneTarget,
+            value = draft.findPhoneTarget,
+            onChange = { draft = draft.copy(findPhoneTarget = it) },
         )
         TargetDropdown(
             label = stringResource(R.string.watch_settings_target_reminders),
-            value = settings.remindersTarget,
-            onChange = vm::setRemindersTarget,
+            value = draft.remindersTarget,
+            onChange = { draft = draft.copy(remindersTarget = it) },
         )
         TargetDropdown(
             label = stringResource(R.string.watch_settings_target_cancel),
-            value = settings.cancelTarget,
-            onChange = vm::setCancelTarget,
+            value = draft.cancelTarget,
+            onChange = { draft = draft.copy(cancelTarget = it) },
         )
 
         SectionDivider("")
         SwitchRow(
             label = stringResource(R.string.watch_settings_logging),
-            checked = settings.loggingEnabled,
-            onChange = vm::setLoggingEnabled,
+            checked = draft.loggingEnabled,
+            onChange = { draft = draft.copy(loggingEnabled = it) },
         )
+
+        Button(
+            onClick = { onSave(draft) },
+            enabled = draft != baseline,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        ) {
+            Text(stringResource(R.string.watch_settings_save))
+        }
     }
 }
 

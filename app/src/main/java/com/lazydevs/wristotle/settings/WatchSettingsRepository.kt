@@ -133,32 +133,53 @@ class WatchSettingsRepository(
         _state.value = WatchSettingsState.Loaded(merged)
     }
 
-    fun applyBool(key: UInt, value: Boolean, mutate: (WatchSettings) -> WatchSettings) {
-        optimistic(mutate)
-        scope.launch(Dispatchers.IO) {
-            runCatching { transport.sendBoolSetting(key, value) }
-                .onFailure { Log.w(TAG, "sendBoolSetting($key) failed", it) }
-        }
+    /** Clears the cached snapshot back to [WatchSettingsState.Unknown]. Called
+     *  when the Settings page is left so the section re-fetches fresh on the
+     *  next visit instead of showing a possibly-stale snapshot. */
+    fun reset() {
+        timeoutJob?.cancel()
+        timeoutJob = null
+        _state.value = WatchSettingsState.Unknown
     }
 
-    fun applyInt(key: UInt, value: Int, mutate: (WatchSettings) -> WatchSettings) {
-        optimistic(mutate)
+    /**
+     * Writes [updated] to the watch. Diffs against the currently-cached
+     * snapshot and only sends the keys that actually changed (the user
+     * typically edits one or two). Optimistically promotes the cache to
+     * [updated] so the UI reflects the saved values immediately; the watch's
+     * next snapshot reconciles if a send was dropped.
+     */
+    fun save(updated: WatchSettings) {
+        val baseline: WatchSettings? = when (val s = _state.value) {
+            is WatchSettingsState.Loaded -> s.settings
+            is WatchSettingsState.Stale -> s.last
+            else -> null
+        }
+        _state.value = WatchSettingsState.Loaded(updated)
         scope.launch(Dispatchers.IO) {
-            runCatching { transport.sendIntSetting(key, value) }
-                .onFailure { Log.w(TAG, "sendIntSetting($key) failed", it) }
+            suspend fun bool(key: UInt, old: Boolean?, new: Boolean) {
+                if (old == new) return
+                val ok = runCatching { transport.sendBoolSetting(key, new) }
+                    .getOrElse { Log.w(TAG, "send bool $key threw", it); false }
+                Log.d(TAG, "wrote bool key=$key value=$new acked=$ok")
+            }
+            suspend fun int(key: UInt, old: Int?, new: Int) {
+                if (old == new) return
+                val ok = runCatching { transport.sendIntSetting(key, new) }
+                    .getOrElse { Log.w(TAG, "send int $key threw", it); false }
+                Log.d(TAG, "wrote int key=$key value=$new acked=$ok")
+            }
+            bool(MessageKeys.SETTING_LOGGING, baseline?.loggingEnabled, updated.loggingEnabled)
+            bool(MessageKeys.SETTING_DICTATION_CONFIRMATION, baseline?.dictationConfirmation, updated.dictationConfirmation)
+            int(MessageKeys.SETTING_FIND_PHONE_TARGET, baseline?.findPhoneTarget, updated.findPhoneTarget)
+            int(MessageKeys.SETTING_REMINDERS_TARGET, baseline?.remindersTarget, updated.remindersTarget)
+            int(MessageKeys.SETTING_CANCEL_TARGET, baseline?.cancelTarget, updated.cancelTarget)
+            int(MessageKeys.SETTING_QUICK_LAUNCH_AUTO_EXIT, baseline?.quickLaunchAutoExitSeconds, updated.quickLaunchAutoExitSeconds)
+            bool(MessageKeys.SETTING_VIBRATE_ON_LAUNCH, baseline?.vibrateOnLaunch, updated.vibrateOnLaunch)
+            bool(MessageKeys.SETTING_VIBRATE_ON_QUICK_LAUNCH, baseline?.vibrateOnQuickLaunch, updated.vibrateOnQuickLaunch)
+            bool(MessageKeys.SETTING_VIBRATE_RESPECT_QUIET, baseline?.vibrateRespectQuiet, updated.vibrateRespectQuiet)
+            bool(MessageKeys.SETTING_SKIP_RETRY_DIALOG, baseline?.skipRetryDialog, updated.skipRetryDialog)
         }
-    }
-
-    private fun optimistic(mutate: (WatchSettings) -> WatchSettings) {
-        val current = _state.value
-        val updated: WatchSettingsState = when (current) {
-            is WatchSettingsState.Loaded -> WatchSettingsState.Loaded(mutate(current.settings))
-            is WatchSettingsState.Stale -> current.last?.let {
-                WatchSettingsState.Stale(mutate(it), current.reason)
-            } ?: current
-            else -> current
-        }
-        _state.value = updated
     }
 
     companion object {
