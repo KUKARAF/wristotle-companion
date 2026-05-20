@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 /** Snapshot of the runtime permissions + system-setting state the companion app uses. */
 data class PermissionState(
     val contacts: Boolean = false,
+    val calendar: Boolean = false,
     val callPhone: Boolean = false,
     val sendSms: Boolean = false,
     val recordAudio: Boolean = false,
@@ -91,6 +92,7 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
             _permissions.update {
                 PermissionState(
                     contacts                     = app.hasPermission(Manifest.permission.READ_CONTACTS),
+                    calendar                     = app.hasPermission(Manifest.permission.READ_CALENDAR),
                     callPhone                    = app.hasPermission(Manifest.permission.CALL_PHONE),
                     sendSms                      = app.hasPermission(Manifest.permission.SEND_SMS),
                     recordAudio                  = app.hasPermission(Manifest.permission.RECORD_AUDIO),

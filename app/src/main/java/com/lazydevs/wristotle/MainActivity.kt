@@ -110,6 +110,7 @@ class MainActivity : ComponentActivity() {
     private fun requestWatchPermissions() {
         val permissions = buildList {
             add(Manifest.permission.READ_CONTACTS)
+            add(Manifest.permission.READ_CALENDAR)
             add(Manifest.permission.CALL_PHONE)
             add(Manifest.permission.SEND_SMS)
             // POST_NOTIFICATIONS is only a runtime permission on Android 13+.

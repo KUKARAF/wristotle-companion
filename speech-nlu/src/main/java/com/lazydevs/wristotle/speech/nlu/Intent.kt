@@ -40,6 +40,12 @@ enum class Intent {
      *  the handler resolves it to a package id via the AppIndex. */
     OpenApp,
 
+    /** Read-only calendar queries — "when is my next meeting", "next 3
+     *  meetings", "do I have anything on May 25". Slots: `count` (Int,
+     *  default 1) and `date` (java.util.Date?, set when the query names a
+     *  day). Handled by CalendarHandler reading CalendarContract. */
+    Calendar,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

@@ -258,6 +258,29 @@ object SeedExamples {
             "switch to messages",
             "go to the play store",
         ))
+        // ── Calendar ────────────────────────────────────────────────────
+        // Read-only calendar lookups. Open-vocabulary dates/counts are
+        // handled by CalendarSlots at dispatch time; seeds teach the
+        // classifier the question shapes (next meeting / count / specific
+        // day / general "what's on…").
+        addAll(Intent.Calendar, listOf(
+            "when is my next meeting",
+            "what's my next meeting",
+            "when's my next appointment",
+            "what are my next three meetings",
+            "what are my next two meetings",
+            "show me my next meetings",
+            "do I have any meetings today",
+            "what's on my calendar today",
+            "what's on my calendar tomorrow",
+            "do I have a meeting on may twenty fifth",
+            "do I have anything on friday",
+            "what meetings do I have tomorrow",
+            "am I free this afternoon",
+            "what's on my schedule",
+            "do I have any appointments next monday",
+            "when is my next event",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }

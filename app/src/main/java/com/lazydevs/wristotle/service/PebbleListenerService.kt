@@ -3,6 +3,7 @@ package com.lazydevs.wristotle.service
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.WristotleApplication
+import com.lazydevs.wristotle.handlers.CalendarHandler
 import com.lazydevs.wristotle.handlers.CallHandler
 import com.lazydevs.wristotle.handlers.CancelReminderHandler
 import com.lazydevs.wristotle.handlers.FindPhoneHandler
@@ -22,6 +23,7 @@ import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.nlu.LearningCollector
 import com.lazydevs.wristotle.nlu.NluSettings
 import com.lazydevs.wristotle.nlu.PrefixHints
+import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.settings.WatchSettingsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
@@ -98,6 +100,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             MediaSeekHandler(media, intent = com.lazydevs.wristotle.speech.nlu.Intent.MediaSeekForward),
             MediaSeekHandler(media, intent = com.lazydevs.wristotle.speech.nlu.Intent.MediaSeekBackward),
             OpenAppHandler(this, appIndex),
+            CalendarHandler(CalendarRepository(this)),
         ))
     }
 

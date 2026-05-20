@@ -74,6 +74,7 @@ fun PermissionsScreen(
     ) {
         WatchBridgeCard(
             contactsGranted = perms.contacts,
+            calendarGranted = perms.calendar,
             callPhoneGranted = perms.callPhone,
             sendSmsGranted = perms.sendSms,
             batteryOptimizationGranted = perms.ignoringBatteryOptimizations,
@@ -122,6 +123,7 @@ private fun openNotificationListenerSettings(context: Context) {
 @Composable
 private fun WatchBridgeCard(
     contactsGranted: Boolean,
+    calendarGranted: Boolean,
     callPhoneGranted: Boolean,
     sendSmsGranted: Boolean,
     batteryOptimizationGranted: Boolean,
@@ -131,8 +133,9 @@ private fun WatchBridgeCard(
     // permission per se — the watch-bridge foreground service can't
     // stay alive without it. The watch-perms grant flow already chains
     // through the battery-optimization-exemption system dialog, so a
-    // single tap of Grant Permissions covers all four.
-    val allGranted = contactsGranted && callPhoneGranted && sendSmsGranted && batteryOptimizationGranted
+    // single tap of Grant Permissions covers them all.
+    val allGranted = contactsGranted && calendarGranted && callPhoneGranted &&
+        sendSmsGranted && batteryOptimizationGranted
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -157,6 +160,11 @@ private fun WatchBridgeCard(
                 stringResource(R.string.perm_contacts_label),
                 stringResource(R.string.perm_contacts_desc),
                 contactsGranted,
+            )
+            PermissionRow(
+                stringResource(R.string.perm_calendar_label),
+                stringResource(R.string.perm_calendar_desc),
+                calendarGranted,
             )
             PermissionRow(
                 stringResource(R.string.perm_calls_label),
