@@ -22,9 +22,12 @@ class ContactsRepository(private val context: Context) {
     /**
      * Returns the best-matching contact for [query], or null if none is found.
      *
-     * The lookup uses a LIKE %query% filter so partial names work ("mom", "john").
-     * Among multiple matches, a contact whose display name starts with [query]
-     * (case-insensitive) is preferred over one that merely contains it.
+     * The lookup uses a LIKE %query% filter so partial names work ("mom",
+     * "john"), then scores every candidate with [contactMatchScore] and takes
+     * the highest — but only if it clears [CONTACT_MATCH_FLOOR]. This rejects
+     * the case where a garbled query is only a mid-word substring of an
+     * unrelated name (e.g. "al" → "Michael"): rather than silently call/text
+     * the wrong person, return null so the handler reports "Contact not found".
      * The first phone number on record is used when a contact has several.
      *
      * Runs on [Dispatchers.IO] — ContentResolver queries are blocking.
@@ -38,24 +41,26 @@ class ContactsRepository(private val context: Context) {
             "${ContactsContract.Contacts.DISPLAY_NAME_PRIMARY} ASC"
         ) ?: return@withContext null
 
-        var contactId: String? = null
-        var contactName: String? = null
+        var bestId: String? = null
+        var bestName: String? = null
+        var bestScore = 0f
 
         nameCursor.use { cursor ->
             while (cursor.moveToNext()) {
                 val id   = cursor.getString(0)
                 val name = cursor.getString(1) ?: continue
-                // Prefer a prefix match ("mom" → "Mom") over a substring match ("Tommy").
-                if (contactId == null || name.lowercase().startsWith(query.lowercase())) {
-                    contactId   = id
-                    contactName = name
-                    if (name.lowercase().startsWith(query.lowercase())) break
+                val score = contactMatchScore(query, name)
+                if (score > bestScore) {
+                    bestScore = score
+                    bestId    = id
+                    bestName  = name
                 }
             }
         }
 
-        val id   = contactId   ?: return@withContext null
-        val name = contactName ?: return@withContext null
+        if (bestScore < CONTACT_MATCH_FLOOR) return@withContext null
+        val id   = bestId   ?: return@withContext null
+        val name = bestName ?: return@withContext null
 
         val phoneCursor = context.contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
