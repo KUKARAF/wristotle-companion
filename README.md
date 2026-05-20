@@ -41,6 +41,14 @@ Dictate from your watch; the command runs on your phone. Supported phrases:
 | "Play [app]" / "Pause [app]"     | Plays / pauses media in that app |
 | "Play" / "Pause" / "Next" / "Previous" | Acts on the currently playing app |
 | "Rewind 10 seconds" / "Skip ahead 30 seconds" | Seek within current track |
+| "When is my next meeting" / "What's on my calendar [day]" | Reads your phone calendar back |
+| "Schedule a meeting [day] at [time]" | Creates an event on your phone calendar |
+
+Calendar phrases ("when is my next meeting", "schedule a meeting tomorrow at
+3pm") are natural-language rather than verb-first, so they route through the
+**Intent Model** (below) rather than the built-in prefix table. They read and
+write the **phone** calendar via `CalendarContract` (Calendar permission), not
+the watch timeline.
 
 Wristotle Companion ships an `android.speech.RecognitionService` backed by on-device Whisper, and can register itself as Android's default speech recognition service. In principle any app that calls `android.speech.SpeechRecognizer` would then transcribe through Wristotle. We haven't verified which third-party apps actually exercise that API in practice — many bundle their own engine — so treat the system-wide voice input feature as experimental.
 
