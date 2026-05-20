@@ -2,7 +2,7 @@
 
 Android companion app for the [Wristotle](../Wristotle) Pebble watch app. Bridges your watch to phone capabilities — calls, SMS, contacts, reminders — and ships a system-wide, on-device speech recognition provider you can plug into.
 
-**User docs:** <https://kchinnasamy.codeberg.page/> — install guide, voice commands, troubleshooting, privacy details. The sections below are the developer reference.
+**User docs:** <https://wristotle.codeberg.page/> — install guide, voice commands, troubleshooting, privacy details. The sections below are the developer reference.
 
 ---
 
