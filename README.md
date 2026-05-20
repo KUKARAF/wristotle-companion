@@ -58,7 +58,7 @@ Every interaction — calls, texts, reminders, media commands, locally-handled c
 
 ### Install
 
-Grab the latest APK from [Releases](https://codeberg.org/kchinnasamy/wristotle-companion/releases) and sideload it. New releases are built and signed automatically on every `vX.Y.Z` tag push, so the topmost release is the current main branch.
+Grab the latest APK from [Releases](https://codeberg.org/wristotle/wristotle-companion/releases) and sideload it. New releases are built and signed automatically on every `vX.Y.Z` tag push, so the topmost release is the current main branch.
 
 Or build from source — see [For developers](#for-developers).
 
@@ -180,7 +180,7 @@ adb shell settings delete secure voice_recognition_service
 Clone with submodules — `:speech-whisper` depends on [whisper.cpp](https://github.com/ggerganov/whisper.cpp) at a pinned tag:
 
 ```bash
-git clone --recursive https://codeberg.org/kchinnasamy/wristotle-companion.git
+git clone --recursive https://codeberg.org/wristotle/wristotle-companion.git
 cd wristotle-companion
 ./gradlew :app:assembleDebug
 ```

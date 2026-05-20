@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "DiagnosticsViewModel"
 private const val CODEBERG_NEW_ISSUE_URL =
-    "https://codeberg.org/kchinnasamy/wristotle-companion/issues/new"
+    "https://codeberg.org/wristotle/wristotle-companion/issues/new"
 
 /**
  * UX for the diagnostics card. Owns the two toggles + a one-shot
