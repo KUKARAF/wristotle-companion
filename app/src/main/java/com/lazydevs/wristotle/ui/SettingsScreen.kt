@@ -57,6 +57,10 @@ fun SettingsScreen(
     val retentionDays by conversationVm.retentionDays.collectAsState()
     val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
     val learningEnabled by nluSettingsVm.learningEnabled.collectAsState()
+    // Audio capture only works when Wristotle's Whisper recognizer is in the
+    // dictation path (microPebble). Under Core Devices the audio never reaches
+    // us, so the toggle would be a no-op — hide it.
+    val companion by conversationVm.pebbleCompanion.collectAsState()
     val scope = rememberCoroutineScope()
     // State for the "you're about to shrink the window and lose N entries" confirm dialog.
     var pendingShrink by remember { mutableStateOf<PendingShrink?>(null) }
@@ -122,11 +126,13 @@ fun SettingsScreen(
                 },
                 onClear = conversationVm::clearAll,
             )
-            AudioCaptureCard(
-                enabled = audioCaptureEnabled,
-                onToggle = conversationVm::setAudioCaptureEnabled,
-                onClearAudio = { showClearAudioConfirm = true },
-            )
+            if (companion.whisperAppliesToWatchDictation) {
+                AudioCaptureCard(
+                    enabled = audioCaptureEnabled,
+                    onToggle = conversationVm::setAudioCaptureEnabled,
+                    onClearAudio = { showClearAudioConfirm = true },
+                )
+            }
         }
     }
 
