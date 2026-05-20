@@ -46,6 +46,13 @@ enum class Intent {
      *  day). Handled by CalendarHandler reading CalendarContract. */
     Calendar,
 
+    /** Create a calendar event — "schedule a meeting tomorrow at 3pm",
+     *  "add a meeting with Alex Friday at noon called standup". Slots:
+     *  `time` (java.util.Date, required), `title` (String?), `attendee`
+     *  (String?), `durationMinutes` (Int, default 60). Handled by
+     *  CreateEventHandler writing to CalendarContract (WRITE_CALENDAR). */
+    CreateEvent,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

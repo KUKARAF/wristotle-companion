@@ -6,6 +6,7 @@ import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.handlers.CalendarHandler
 import com.lazydevs.wristotle.handlers.CallHandler
 import com.lazydevs.wristotle.handlers.CancelReminderHandler
+import com.lazydevs.wristotle.handlers.CreateEventHandler
 import com.lazydevs.wristotle.handlers.FindPhoneHandler
 import com.lazydevs.wristotle.handlers.HandlerRegistry
 import com.lazydevs.wristotle.handlers.HandlerRegistry.Companion.isSuccessResponse
@@ -86,6 +87,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         val contacts = ContactsRepository(this)
         val media = app.activeMediaSession
         val appIndex = app.appIndex
+        val calendarRepo = CalendarRepository(this)
         registry = HandlerRegistry(listOf(
             CallHandler(this, contacts),
             SmsHandler(this, contacts),
@@ -100,7 +102,8 @@ class PebbleListenerService : BasePebbleListenerService() {
             MediaSeekHandler(media, intent = com.lazydevs.wristotle.speech.nlu.Intent.MediaSeekForward),
             MediaSeekHandler(media, intent = com.lazydevs.wristotle.speech.nlu.Intent.MediaSeekBackward),
             OpenAppHandler(this, appIndex),
-            CalendarHandler(CalendarRepository(this)),
+            CalendarHandler(calendarRepo),
+            CreateEventHandler(calendarRepo),
         ))
     }
 

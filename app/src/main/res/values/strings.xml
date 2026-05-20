@@ -64,8 +64,8 @@
 
     <string name="perm_contacts_label">Read Contacts</string>
     <string name="perm_contacts_desc">Required to look up contacts by name</string>
-    <string name="perm_calendar_label">Read Calendar</string>
-    <string name="perm_calendar_desc">Required to answer calendar questions ("when is my next meeting")</string>
+    <string name="perm_calendar_label">Calendar</string>
+    <string name="perm_calendar_desc">Required to answer calendar questions and create events ("when is my next meeting", "schedule a meeting tomorrow at 3pm")</string>
     <string name="perm_calls_label">Make Calls</string>
     <string name="perm_calls_desc">Required to dial from the watch</string>
     <string name="perm_sms_label">Send SMS</string>

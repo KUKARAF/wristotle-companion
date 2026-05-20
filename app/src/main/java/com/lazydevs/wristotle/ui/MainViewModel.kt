@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 /** Snapshot of the runtime permissions + system-setting state the companion app uses. */
 data class PermissionState(
     val contacts: Boolean = false,
+    /** True only when BOTH read and write calendar grants are held — read
+     *  powers the query feature, write powers event creation. */
     val calendar: Boolean = false,
     val callPhone: Boolean = false,
     val sendSms: Boolean = false,
@@ -92,7 +94,8 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
             _permissions.update {
                 PermissionState(
                     contacts                     = app.hasPermission(Manifest.permission.READ_CONTACTS),
-                    calendar                     = app.hasPermission(Manifest.permission.READ_CALENDAR),
+                    calendar                     = app.hasPermission(Manifest.permission.READ_CALENDAR) &&
+                                                       app.hasPermission(Manifest.permission.WRITE_CALENDAR),
                     callPhone                    = app.hasPermission(Manifest.permission.CALL_PHONE),
                     sendSms                      = app.hasPermission(Manifest.permission.SEND_SMS),
                     recordAudio                  = app.hasPermission(Manifest.permission.RECORD_AUDIO),

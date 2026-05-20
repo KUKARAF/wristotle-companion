@@ -18,6 +18,7 @@ import com.lazydevs.wristotle.nlu.NluSettings
 import com.lazydevs.wristotle.nlu.slots.CalendarSlots
 import com.lazydevs.wristotle.nlu.slots.CallSlots
 import com.lazydevs.wristotle.nlu.slots.CancelSlots
+import com.lazydevs.wristotle.nlu.slots.CreateEventSlots
 import com.lazydevs.wristotle.nlu.slots.FindPhoneSlots
 import com.lazydevs.wristotle.nlu.slots.MediaPlaySlots
 import com.lazydevs.wristotle.nlu.slots.MediaSeekSlots
@@ -234,6 +235,7 @@ class WristotleApplication : Application() {
             Intent.MediaSeekBackward to mediaSeekSlots,
             Intent.OpenApp to OpenAppSlots(),
             Intent.Calendar to CalendarSlots(),
+            Intent.CreateEvent to CreateEventSlots(),
         ))
 
         learningCollector = LearningCollector(

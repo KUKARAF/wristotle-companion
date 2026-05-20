@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.phone
 
 import android.Manifest
 import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.CalendarContract
@@ -9,8 +10,9 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
+import java.util.TimeZone
 
-/** Read-only access to the device calendar via CalendarContract. */
+/** Read + create access to the device calendar via CalendarContract. */
 class CalendarRepository(private val context: Context) {
 
     /** A single calendar event/instance. [begin]/[end] are epoch millis. */
@@ -22,9 +24,23 @@ class CalendarRepository(private val context: Context) {
         val allDay: Boolean,
     )
 
+    /** Outcome of [createEvent]. */
+    sealed interface CreateResult {
+        data class Success(val title: String, val begin: Long, val end: Long) : CreateResult
+        /** No writable calendar found on the device. */
+        data object NoCalendar : CreateResult
+        /** The insert returned no row / threw. */
+        data object Failed : CreateResult
+    }
+
     /** Returns true if READ_CALENDAR permission has been granted. */
     fun hasPermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) ==
+            PackageManager.PERMISSION_GRANTED
+
+    /** Returns true if WRITE_CALENDAR permission has been granted. */
+    fun hasWritePermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR) ==
             PackageManager.PERMISSION_GRANTED
 
     /**
@@ -96,6 +112,64 @@ class CalendarRepository(private val context: Context) {
             }
             events
         }
+
+    /**
+     * Inserts a timed event starting at [begin] (epoch millis) lasting
+     * [durationMinutes], on the device's primary (or first writable)
+     * calendar. Runs on IO; ContentResolver is blocking.
+     */
+    suspend fun createEvent(
+        title: String,
+        begin: Long,
+        durationMinutes: Int,
+    ): CreateResult = withContext(Dispatchers.IO) {
+        if (!hasWritePermission()) return@withContext CreateResult.Failed
+        val calendarId = writableCalendarId() ?: return@withContext CreateResult.NoCalendar
+        val end = begin + durationMinutes * 60_000L
+
+        val values = ContentValues().apply {
+            put(CalendarContract.Events.CALENDAR_ID, calendarId)
+            put(CalendarContract.Events.TITLE, title)
+            put(CalendarContract.Events.DTSTART, begin)
+            put(CalendarContract.Events.DTEND, end)
+            put(CalendarContract.Events.EVENT_TIMEZONE, TimeZone.getDefault().id)
+        }
+        val uri = runCatching {
+            context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
+        }.getOrNull() ?: return@withContext CreateResult.Failed
+        if (ContentUris.parseId(uri) <= 0) return@withContext CreateResult.Failed
+        CreateResult.Success(title, begin, end)
+    }
+
+    /**
+     * Picks a calendar to write to: the primary one if present, else the
+     * first calendar the account owner can contribute to. Null when no
+     * writable calendar exists.
+     */
+    private fun writableCalendarId(): Long? {
+        val projection = arrayOf(
+            CalendarContract.Calendars._ID,
+            CalendarContract.Calendars.IS_PRIMARY,
+            CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
+        )
+        val cursor = context.contentResolver.query(
+            CalendarContract.Calendars.CONTENT_URI, projection, null, null, null,
+        ) ?: return null
+        var primary: Long? = null
+        var firstWritable: Long? = null
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                val id = c.getLong(0)
+                val isPrimary = c.getInt(1) != 0
+                val canWrite = c.getInt(2) >=
+                    CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR
+                if (!canWrite) continue
+                if (isPrimary) { primary = id; break }
+                if (firstWritable == null) firstWritable = id
+            }
+        }
+        return primary ?: firstWritable
+    }
 
     private companion object {
         const val DAY_MS = 24L * 60 * 60 * 1000

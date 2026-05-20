@@ -281,6 +281,27 @@ object SeedExamples {
             "do I have any appointments next monday",
             "when is my next event",
         ))
+        // ── CreateEvent ─────────────────────────────────────────────────
+        // Write side of the calendar — lean on action verbs (schedule /
+        // create / add / book / set up) + a calendar noun so it stays
+        // distinct from the read-only Calendar queries above and from
+        // Reminder ("set a reminder for the meeting").
+        addAll(Intent.CreateEvent, listOf(
+            "schedule a meeting tomorrow at three pm",
+            "create a meeting with Alex on friday at noon",
+            "add a meeting on may twenty fifth at ten am",
+            "set up a meeting monday at nine",
+            "book an appointment tomorrow afternoon",
+            "new event friday at two pm called standup",
+            "put a meeting on my calendar tomorrow at four",
+            "add a one hour meeting tomorrow at eleven",
+            "schedule a call with the team next monday at ten",
+            "create an appointment with the dentist on thursday at three",
+            "make a meeting for tomorrow morning",
+            "add an event saturday at six pm",
+            "schedule a one on one with Sam tomorrow at one",
+            "book a meeting room friday at noon",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }

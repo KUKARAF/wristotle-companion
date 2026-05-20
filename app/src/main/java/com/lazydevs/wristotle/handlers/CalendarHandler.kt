@@ -5,9 +5,7 @@ import com.lazydevs.wristotle.nlu.slots.calendarDate
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 /**
  * Handles [Intent.Calendar] — read-only calendar lookups.
@@ -35,7 +33,7 @@ class CalendarHandler(private val calendar: CalendarRepository) : ActionHandler 
 
     private suspend fun describeDay(date: Date): String {
         val events = calendar.onDay(date.time)
-        val dayLabel = DAY_FMT.format(date)
+        val dayLabel = EventTimeFormat.day(date)
         if (events.isEmpty()) return "Nothing on $dayLabel."
         val header = "${events.size} on $dayLabel:"
         return header + "\n" + events.take(MAX_LIST).joinToString("\n") { line(it, withDay = false) } +
@@ -57,22 +55,19 @@ class CalendarHandler(private val calendar: CalendarRepository) : ActionHandler 
 
     /** "Buy milk at 3:00 PM" — or with the weekday when [withDay]. */
     private fun line(e: CalendarRepository.Event, withDay: Boolean): String {
-        val time = if (e.allDay) "all day" else TIME_FMT.format(Date(e.begin))
-        val day = if (withDay) DAY_FMT.format(Date(e.begin)) + " " else ""
+        val time = if (e.allDay) "all day" else EventTimeFormat.time(Date(e.begin))
+        val day = if (withDay) EventTimeFormat.day(Date(e.begin)) + " " else ""
         return "• ${e.title} — $day$time"
     }
 
     /** Day + time for an upcoming event, e.g. "Wed May 21 at 3:00 PM". */
     private fun whenLabel(e: CalendarRepository.Event): String =
-        if (e.allDay) "${DAY_FMT.format(Date(e.begin))} (all day)"
-        else "${DAY_FMT.format(Date(e.begin))} at ${TIME_FMT.format(Date(e.begin))}"
+        EventTimeFormat.whenLabel(e.begin, e.allDay)
 
     private fun overflowSuffix(total: Int): String =
         if (total > MAX_LIST) "\n…and ${total - MAX_LIST} more" else ""
 
     private companion object {
         const val MAX_LIST = 5
-        val TIME_FMT = SimpleDateFormat("h:mm a", Locale.getDefault())
-        val DAY_FMT = SimpleDateFormat("EEE MMM d", Locale.getDefault())
     }
 }
