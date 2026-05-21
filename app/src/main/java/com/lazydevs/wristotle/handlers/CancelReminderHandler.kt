@@ -10,9 +10,14 @@ import io.rebble.pebblekit2.common.model.TimelineResult
 private const val TAG = "CancelReminderHandler"
 
 /**
- * Handles [Intent.Cancel] — deletes the most-recent timeline pin. Today
- * the transcription itself is ignored; future work could honor a
- * `slots["target"]` slot for "cancel my 5 pm reminder" style queries.
+ * Handles [Intent.Cancel].
+ *
+ *  - **Bare cancel** ("cancel that", "cancel my last reminder") has no `target`
+ *    slot → cancels the most-recent reminder (original behaviour).
+ *  - **Targeted cancel** ("cancel the gym one", "cancel my 5pm") carries a
+ *    `target` → cancels the best-matching reminder via [ReminderMatching]. A
+ *    target that matches nothing reports not-found rather than falling back to
+ *    the latest, so we never delete the wrong reminder on a misheard target.
  */
 class CancelReminderHandler(context: Context, private val transport: PebbleTransport) : ActionHandler {
 
@@ -22,17 +27,23 @@ class CancelReminderHandler(context: Context, private val transport: PebbleTrans
     override val intent: Intent = Intent.Cancel
 
     override suspend fun handle(result: IntentResult): String {
-        Log.d(TAG, "cancel: ${result.rawQuery}")
+        val target = (result.slots["target"] as? String)?.trim().orEmpty()
+        Log.d(TAG, "cancel: ${result.rawQuery} (target='$target')")
 
-        val target = pinStore.latest()
-            ?: return "No reminders to cancel"
+        val record = if (target.isEmpty()) {
+            pinStore.latest() ?: return "No reminders to cancel"
+        } else {
+            ReminderMatching.bestMatch(target, pinStore.all(), System.currentTimeMillis())
+                ?: return "No reminder matching \"$target\""
+        }
 
-        val cancelResult = transport.deleteReminder(target.id)
+        val cancelResult = transport.deleteReminder(record.id)
         Log.d(TAG, "deleteTimelinePin result: $cancelResult")
 
         return if (cancelResult is TimelineResult.Success) {
-            pinStore.remove(target.id)
-            "Reminder cancelled"
+            pinStore.remove(record.id)
+            if (target.isEmpty() || record.title.isBlank()) "Reminder cancelled"
+            else "Cancelled: ${record.title}"
         } else {
             "Failed to cancel reminder ($cancelResult)"
         }

@@ -91,6 +91,11 @@ object SeedExamples {
             "drop the reminder",
             "undo that reminder",
             "scrap the last reminder",
+            "cancel my gym reminder",
+            "cancel the dentist reminder",
+            "delete my reminder about the meeting",
+            "cancel my five pm reminder",
+            "remove the reminder to call mom",
         ))
         // ── ListReminders ───────────────────────────────────────────────
         addAll(Intent.ListReminders, listOf(
