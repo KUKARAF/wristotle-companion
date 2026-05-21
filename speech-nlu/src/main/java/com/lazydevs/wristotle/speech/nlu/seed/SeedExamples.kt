@@ -92,6 +92,21 @@ object SeedExamples {
             "undo that reminder",
             "scrap the last reminder",
         ))
+        // ── ListReminders ───────────────────────────────────────────────
+        addAll(Intent.ListReminders, listOf(
+            "what are my reminders",
+            "list my reminders",
+            "show my reminders",
+            "what reminders do I have",
+            "do I have any reminders",
+            "read my reminders",
+            "what have I set",
+            "what's on my reminder list",
+            "tell me my reminders",
+            "any reminders",
+            "show me what I need to do",
+            "what am I supposed to remember",
+        ))
         // ── FindPhone ───────────────────────────────────────────────────
         addAll(Intent.FindPhone, listOf(
             "find my phone",

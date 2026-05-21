@@ -13,6 +13,12 @@ enum class Intent {
     Sms,
     Reminder,
     Cancel,
+
+    /** Read-only: list the pending reminders the user has set ("what are my
+     *  reminders", "list my reminders"). No slots. Handled by
+     *  ListRemindersHandler reading the local PinStore. */
+    ListReminders,
+
     FindPhone,
     Time,
     Battery,

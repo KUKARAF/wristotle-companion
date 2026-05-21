@@ -20,6 +20,7 @@ import com.lazydevs.wristotle.nlu.slots.CallSlots
 import com.lazydevs.wristotle.nlu.slots.CancelSlots
 import com.lazydevs.wristotle.nlu.slots.CreateEventSlots
 import com.lazydevs.wristotle.nlu.slots.FindPhoneSlots
+import com.lazydevs.wristotle.nlu.slots.ListRemindersSlots
 import com.lazydevs.wristotle.nlu.slots.MediaPlaySlots
 import com.lazydevs.wristotle.nlu.slots.MediaSeekSlots
 import com.lazydevs.wristotle.nlu.slots.MediaTargetSlots
@@ -226,6 +227,7 @@ class WristotleApplication : Application() {
             Intent.Sms to SmsSlots(contacts),
             Intent.Reminder to ReminderSlots(),
             Intent.Cancel to CancelSlots(),
+            Intent.ListReminders to ListRemindersSlots(),
             Intent.FindPhone to FindPhoneSlots(),
             Intent.MediaPlay to MediaPlaySlots(),
             Intent.MediaPause to mediaTargetSlots,

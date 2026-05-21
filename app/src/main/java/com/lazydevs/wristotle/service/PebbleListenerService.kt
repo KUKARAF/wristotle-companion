@@ -10,6 +10,7 @@ import com.lazydevs.wristotle.handlers.CreateEventHandler
 import com.lazydevs.wristotle.handlers.FindPhoneHandler
 import com.lazydevs.wristotle.handlers.HandlerRegistry
 import com.lazydevs.wristotle.handlers.HandlerRegistry.Companion.isSuccessResponse
+import com.lazydevs.wristotle.handlers.ListRemindersHandler
 import com.lazydevs.wristotle.handlers.MediaNextHandler
 import com.lazydevs.wristotle.handlers.MediaPauseHandler
 import com.lazydevs.wristotle.handlers.MediaPlayHandler
@@ -93,6 +94,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             SmsHandler(this, contacts),
             ReminderHandler(this, transport),
             CancelReminderHandler(this, transport),
+            ListRemindersHandler(this),
             FindPhoneHandler(),
             MediaPlayHandler(this, media, appIndex),
             MediaPauseHandler(this, media, appIndex),
