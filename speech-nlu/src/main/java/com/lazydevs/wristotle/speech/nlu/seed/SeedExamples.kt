@@ -112,6 +112,21 @@ object SeedExamples {
             "show me what I need to do",
             "what am I supposed to remember",
         ))
+        // ── Reschedule ──────────────────────────────────────────────────
+        addAll(Intent.Reschedule, listOf(
+            "snooze my reminder for ten minutes",
+            "snooze for five minutes",
+            "reschedule my reminder to six pm",
+            "push my reminder to seven",
+            "move my gym reminder to noon",
+            "postpone the dentist reminder to tomorrow",
+            "delay my reminder by an hour",
+            "push it back to eight pm",
+            "move my reminder to later",
+            "reschedule the meeting reminder for three",
+            "bump my reminder to nine",
+            "shift my reminder to the morning",
+        ))
         // ── FindPhone ───────────────────────────────────────────────────
         addAll(Intent.FindPhone, listOf(
             "find my phone",

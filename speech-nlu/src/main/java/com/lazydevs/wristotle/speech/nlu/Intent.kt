@@ -19,6 +19,12 @@ enum class Intent {
      *  ListRemindersHandler reading the local PinStore. */
     ListReminders,
 
+    /** Move an existing reminder to a new time ("snooze", "push it to 6pm",
+     *  "reschedule my gym reminder to noon"). Slots: `time` (java.util.Date,
+     *  required) and `target` (String?, which reminder). Handled by
+     *  RescheduleHandler: delete the old pin, re-insert at the new time. */
+    Reschedule,
+
     FindPhone,
     Time,
     Battery,
