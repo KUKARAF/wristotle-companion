@@ -24,14 +24,14 @@ class CancelReminderHandler(context: Context, private val transport: PebbleTrans
     override suspend fun handle(result: IntentResult): String {
         Log.d(TAG, "cancel: ${result.rawQuery}")
 
-        val pinId = pinStore.latest()
+        val target = pinStore.latest()
             ?: return "No reminders to cancel"
 
-        val cancelResult = transport.deleteReminder(pinId)
+        val cancelResult = transport.deleteReminder(target.id)
         Log.d(TAG, "deleteTimelinePin result: $cancelResult")
 
         return if (cancelResult is TimelineResult.Success) {
-            pinStore.remove(pinId)
+            pinStore.remove(target.id)
             "Reminder cancelled"
         } else {
             "Failed to cancel reminder ($cancelResult)"

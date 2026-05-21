@@ -3,41 +3,52 @@ package com.lazydevs.wristotle.handlers
 import android.content.Context
 
 /**
- * SharedPreferences-backed ring buffer of recent reminder pin IDs.
+ * SharedPreferences-backed ring buffer of recent reminders, newest-first.
+ *
+ * Stores [ReminderRecord]s (id + title + time), not just pin ids, so callers
+ * can list pending reminders and target a specific one for cancel / reschedule
+ * — the watch timeline API offers no "list pins" query, so this is the only
+ * place that knows *what* each pending reminder is.
  *
  * All mutating operations are guarded by an intrinsic lock so concurrent
  * reminders dispatched from different coroutines can't race on the underlying
- * read-modify-write of the prefs string. [latest] is also locked so callers see
- * a value consistent with the most recent write.
+ * read-modify-write of the prefs string. Reads are also locked so callers see
+ * a value consistent with the most recent write. Serialization (and migration
+ * from the old id-only format) lives in [PinStoreCodec].
  */
 class PinStore(context: Context) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val lock = Any()
 
-    fun save(pinId: String) = synchronized(lock) {
-        val ids = load().toMutableList()
-        ids.add(0, pinId)
-        if (ids.size > MAX_PINS) ids.subList(MAX_PINS, ids.size).clear()
-        prefs.edit().putString(KEY_IDS, ids.joinToString(SEPARATOR)).apply()
+    fun save(record: ReminderRecord) = synchronized(lock) {
+        val records = load().toMutableList()
+        records.removeAll { it.id == record.id }
+        records.add(0, record)
+        if (records.size > MAX_PINS) records.subList(MAX_PINS, records.size).clear()
+        persist(records)
     }
 
     fun remove(pinId: String) = synchronized(lock) {
-        val ids = load().toMutableList()
-        ids.remove(pinId)
-        prefs.edit().putString(KEY_IDS, ids.joinToString(SEPARATOR)).apply()
+        val records = load().toMutableList()
+        if (records.removeAll { it.id == pinId }) persist(records)
     }
 
-    fun latest(): String? = synchronized(lock) { load().firstOrNull() }
+    /** All pending reminders, newest-first. */
+    fun all(): List<ReminderRecord> = synchronized(lock) { load() }
 
-    private fun load(): List<String> {
-        val raw = prefs.getString(KEY_IDS, "") ?: ""
-        return if (raw.isEmpty()) emptyList() else raw.split(SEPARATOR)
+    /** The most-recently-added reminder, or null if none. */
+    fun latest(): ReminderRecord? = synchronized(lock) { load().firstOrNull() }
+
+    private fun load(): List<ReminderRecord> =
+        PinStoreCodec.decode(prefs.getString(KEY_IDS, "") ?: "")
+
+    private fun persist(records: List<ReminderRecord>) {
+        prefs.edit().putString(KEY_IDS, PinStoreCodec.encode(records)).apply()
     }
 
     private companion object {
         const val PREFS_NAME = "reminder_pins"
         const val KEY_IDS = "pin_ids"
         const val MAX_PINS = 10
-        const val SEPARATOR = ","
     }
 }
