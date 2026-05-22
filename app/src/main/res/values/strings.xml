@@ -120,6 +120,8 @@
     <string name="app_aliases_add">Add alias</string>
     <string name="app_aliases_delete">Delete alias</string>
     <string name="app_aliases_not_installed">%1$s (not installed)</string>
+    <string name="app_aliases_show">Saved aliases (%1$d)</string>
+    <string name="app_aliases_done">Done</string>
 
     <!-- Section headers grouping related Settings cards -->
     <string name="settings_section_models">Models</string>
