@@ -26,7 +26,7 @@ object ReminderMatching {
     fun bestMatch(target: String, records: List<ReminderRecord>, now: Long): ReminderRecord? {
         val t = normalize(target)
         if (t.isEmpty()) return null
-        val pending = records.filter { it.timeMs == null || it.timeMs >= now }
+        val pending = records.filter { PinStoreCodec.isActive(it.timeMs, now) }
         val best = pending.maxByOrNull { score(t, it) } ?: return null
         return if (score(t, best) >= MATCH_FLOOR) best else null
     }

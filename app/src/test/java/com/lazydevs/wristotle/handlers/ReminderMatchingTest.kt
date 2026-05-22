@@ -52,10 +52,16 @@ class ReminderMatchingTest {
         assertEquals("a", ReminderMatching.bestMatch("5 pm", records, fivePm - hour)?.id)
     }
 
-    // --- past-due excluded ---
+    // --- retention window: recently fired matchable, old not ---
 
-    @Test fun pastDueReminderNotMatched() {
+    @Test fun recentlyFiredReminderStillMatched() {
+        // Fired 2h ago — still within the 24h retention window, so targetable.
         val records = listOf(rec("a", "Gym", offsetHours = -2))
+        assertEquals("a", ReminderMatching.bestMatch("gym", records, now)?.id)
+    }
+
+    @Test fun reminderBeyondRetentionNotMatched() {
+        val records = listOf(rec("a", "Gym", offsetHours = -26))
         assertNull(ReminderMatching.bestMatch("gym", records, now))
     }
 

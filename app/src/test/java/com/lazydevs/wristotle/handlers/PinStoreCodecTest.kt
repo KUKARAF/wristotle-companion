@@ -59,6 +59,21 @@ class PinStoreCodecTest {
         assertEquals(listOf("id1", "id2"), decoded.map { it.id })
     }
 
+    // --- prunePastDue ---
+
+    @Test fun prunePastDueDropsOnlyBeyondRetentionWindow() {
+        val now = 100_000_000L
+        val day = 24L * 60 * 60 * 1000
+        val records = listOf(
+            ReminderRecord("old", "fired yesterday", now - day - 1),  // beyond window → dropped
+            ReminderRecord("recent", "fired 1s ago", now - 1000),     // within window → kept
+            ReminderRecord("future", "later", now + 1000),            // future → kept
+            ReminderRecord("notime", "legacy", null),                 // unknown → kept
+        )
+        val pruned = PinStoreCodec.prunePastDue(records, now)
+        assertEquals(listOf("recent", "future", "notime"), pruned.map { it.id })
+    }
+
     @Test fun framedRecordWithEmptyIdIsSkipped() {
         // A framed record whose id field is empty must not produce a ghost entry.
         // encode() inserts the record separator so the framing stays valid.

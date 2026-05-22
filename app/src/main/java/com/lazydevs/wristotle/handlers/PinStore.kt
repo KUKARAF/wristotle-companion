@@ -39,8 +39,18 @@ class PinStore(context: Context) {
     /** The most-recently-added reminder, or null if none. */
     fun latest(): ReminderRecord? = synchronized(lock) { load().firstOrNull() }
 
-    private fun load(): List<ReminderRecord> =
-        PinStoreCodec.decode(prefs.getString(KEY_IDS, "") ?: "")
+    /**
+     * Decodes the stored records and prunes any that have already fired,
+     * persisting the trimmed list so past-due reminders don't accumulate. All
+     * public accessors go through here, so a fired reminder is dropped on the
+     * next touch of the store.
+     */
+    private fun load(): List<ReminderRecord> {
+        val stored = PinStoreCodec.decode(prefs.getString(KEY_IDS, "") ?: "")
+        val pending = PinStoreCodec.prunePastDue(stored, System.currentTimeMillis())
+        if (pending.size != stored.size) persist(pending)
+        return pending
+    }
 
     private fun persist(records: List<ReminderRecord>) {
         prefs.edit().putString(KEY_IDS, PinStoreCodec.encode(records)).apply()

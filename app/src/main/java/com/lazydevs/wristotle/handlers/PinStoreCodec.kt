@@ -68,5 +68,31 @@ internal object PinStoreCodec {
         }
     }
 
+    /**
+     * How long a fired reminder stays "active" — listed, matchable, and kept in
+     * the store — after its scheduled time. A reminder you set for 2pm is still
+     * answerable ("is there a reminder at 2pm") later that day; only after a
+     * full day does it get pruned. Keeps the store from accumulating stale rows
+     * without yanking just-fired reminders out from under the user.
+     */
+    const val RETENTION_WINDOW_MS = 24L * 60 * 60 * 1000
+
+    /**
+     * A reminder is active if its time hasn't passed by more than
+     * [RETENTION_WINDOW_MS]. Unknown-time records ([timeMs] null, e.g. legacy
+     * migrations) are always active — we can't prove they're old. Single source
+     * of truth for the pending/active filter used by the store, the list
+     * formatter, and the matcher.
+     */
+    fun isActive(timeMs: Long?, now: Long): Boolean =
+        timeMs == null || timeMs >= now - RETENTION_WINDOW_MS
+
+    /**
+     * Drops records that have been past-due for more than [RETENTION_WINDOW_MS].
+     * Pure; the store calls this on every load so old reminders don't accumulate.
+     */
+    fun prunePastDue(records: List<ReminderRecord>, now: Long): List<ReminderRecord> =
+        records.filter { isActive(it.timeMs, now) }
+
     const val LEGACY_TITLE = "Reminder"
 }

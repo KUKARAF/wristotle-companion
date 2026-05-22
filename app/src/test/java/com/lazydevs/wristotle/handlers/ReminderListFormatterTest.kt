@@ -9,14 +9,21 @@ class ReminderListFormatterTest {
 
     private val now = 1_000_000_000_000L
     private val hour = 3_600_000L
+    private val day = 24 * hour
 
     @Test fun emptyListReportsNone() {
         assertEquals("You have no reminders", ReminderListFormatter.format(emptyList(), now))
     }
 
-    @Test fun pastDueRemindersAreDropped() {
-        val records = listOf(ReminderRecord("a", "Old", now - hour))
+    @Test fun remindersOlderThanRetentionAreDropped() {
+        val records = listOf(ReminderRecord("a", "Old", now - day - hour))
         assertEquals("You have no reminders", ReminderListFormatter.format(records, now))
+    }
+
+    @Test fun recentlyFiredReminderWithinRetentionIsKept() {
+        // Fired 2h ago — still listed (retention window is 24h).
+        val records = listOf(ReminderRecord("a", "Gym", now - 2 * hour))
+        assertTrue(ReminderListFormatter.format(records, now).contains("• Gym — "))
     }
 
     @Test fun singularHeaderForOne() {
@@ -49,5 +56,51 @@ class ReminderListFormatterTest {
         // Only the first 5 rows are shown.
         assertTrue(out.contains("• R5 — "))
         assertFalse(out.contains("• R6 — "))
+    }
+
+    // --- formatAtTime: answer for a specific clock hour ---
+
+    private fun atHour(dayOffset: Int, hourOfDay: Int): Long =
+        java.util.Calendar.getInstance().apply {
+            add(java.util.Calendar.DAY_OF_YEAR, dayOffset)
+            set(java.util.Calendar.HOUR_OF_DAY, hourOfDay)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+    @Test fun atTimeMatchesSameHour() {
+        val twoPmToday = atHour(0, 14)
+        val records = listOf(
+            ReminderRecord("a", "Gym", twoPmToday),
+            ReminderRecord("b", "Dentist", atHour(0, 15)),
+        )
+        val out = ReminderListFormatter.formatAtTime(records, twoPmToday, now = twoPmToday - hour)
+        assertTrue(out.contains("• Gym — "))
+        assertFalse(out.contains("Dentist"))
+        assertTrue(out.startsWith("1 reminder around"))
+    }
+
+    @Test fun atTimeNoMatchReportsNone() {
+        val records = listOf(ReminderRecord("a", "Gym", atHour(0, 15)))
+        val out = ReminderListFormatter.formatAtTime(records, atHour(0, 14), now = atHour(0, 13))
+        assertTrue(out.startsWith("No reminder around"))
+    }
+
+    @Test fun atTimeIncludesRecentlyFired() {
+        // A 2pm reminder asked about at 4pm same day is still reported (within
+        // the 24h retention window) — the fix for "no reminder at 2pm" at 5pm.
+        val twoPm = atHour(0, 14)
+        val records = listOf(ReminderRecord("a", "Gym", twoPm))
+        val out = ReminderListFormatter.formatAtTime(records, twoPm, now = twoPm + 2 * hour)
+        assertTrue(out.contains("• Gym — "))
+    }
+
+    @Test fun atTimeExcludesBeyondRetention() {
+        // More than a day past → no longer reported.
+        val twoPm = atHour(0, 14)
+        val records = listOf(ReminderRecord("a", "Gym", twoPm))
+        val out = ReminderListFormatter.formatAtTime(records, twoPm, now = twoPm + day + hour)
+        assertTrue(out.startsWith("No reminder around"))
     }
 }
