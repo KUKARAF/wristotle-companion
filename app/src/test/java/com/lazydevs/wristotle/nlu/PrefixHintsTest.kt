@@ -76,6 +76,23 @@ class PrefixHintsTest {
         assertEquals(null, PrefixHints.hintFor("schedule a reminder for 5pm"))
     }
 
+    // --- Reschedule openers beat the Reminder create rule ---
+
+    @Test fun `push my reminder maps to Reschedule`() {
+        assertEquals(Intent.Reschedule, PrefixHints.hintFor("push my reminder to 8pm"))
+    }
+
+    @Test fun `snooze and reschedule and move map to Reschedule`() {
+        assertEquals(Intent.Reschedule, PrefixHints.hintFor("snooze my reminder for 10 minutes"))
+        assertEquals(Intent.Reschedule, PrefixHints.hintFor("reschedule my dentist reminder to noon"))
+        assertEquals(Intent.Reschedule, PrefixHints.hintFor("move my gym reminder to 6"))
+    }
+
+    @Test fun `remind me does not map to Reschedule`() {
+        // Create still wins for a remind opener (no push/snooze/etc).
+        assertEquals(Intent.Reminder, PrefixHints.hintFor("remind me to push the cart at 5pm"))
+    }
+
     @Test fun `cancel prefix maps to Cancel`() {
         assertEquals(Intent.Cancel, PrefixHints.hintFor("cancel reminder"))
     }

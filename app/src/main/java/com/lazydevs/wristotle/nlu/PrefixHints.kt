@@ -72,6 +72,13 @@ internal object PrefixHints {
         // "remind me at X" — the time dominates the cosine — so this is the
         // deterministic guard. Matches the common "remainder" mishearing too.
         Regex("(?i)^\\s*(what|which|when|is|are|was|were|do|does|did|have|has|had|any|list|show|read|tell)\\b.*\\b(reminders?|remainders?)\\b") to Intent.ListReminders,
+        // Reschedule — "snooze / push / move / reschedule … <reminder> to <time>".
+        // The opening verb is the reliable signal; the embedding tends to read
+        // "push my reminder to X" as a CREATE (it contains "reminder to …"), so
+        // this deterministic rule routes it. In the reminder family, so the
+        // watch's blanket Reminder hint can be refined to Reschedule. Sits above
+        // the Reminder rule (which only matches a remind/reminder opener anyway).
+        Regex("(?i)^\\s*(snooze|reschedule|postpone|delay|push|move|bump|shift)\\b") to Intent.Reschedule,
         Regex("(?i)^\\s*(remind|set (a )?reminder|reminder)\\b") to Intent.Reminder,
         Regex("(?i)^\\s*(cancel|delete|remove|clear)\\b") to Intent.Cancel,
         Regex("(?i)^\\s*(find|locate|where('?s| is)) (my )?phone\\b") to Intent.FindPhone,
