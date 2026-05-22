@@ -90,4 +90,37 @@ class SlotUtilsTest {
     @Test fun `stripVerbBody returns empty when verb plus only fillers`() {
         assertEquals("", stripVerbBody("play the some please", verbs, fillers))
     }
+
+    // --- trailingTimeClauseRegex --------------------------------------------
+
+    private val reminderStrip = trailingTimeClauseRegex(setOf("at", "in", "by", "on", "next", "this"))
+
+    @Test fun `trailing time clause is stripped`() {
+        assertEquals("call mom", "call mom at 5pm".replace(reminderStrip, ""))
+    }
+
+    @Test fun `lead-in inside a word is not matched`() {
+        // the "at" in "chat" must not trigger a strip (the title-truncation bug).
+        assertEquals("chat with bob", "chat with bob".replace(reminderStrip, ""))
+    }
+
+    @Test fun `lead-in not in the set is left alone`() {
+        // "to" isn't a reminder lead-in — "remind me to call" keeps its task.
+        assertEquals("call mom to confirm", "call mom to confirm".replace(reminderStrip, ""))
+    }
+
+    @Test fun `reschedule lead-in set strips a to-clause`() {
+        val strip = trailingTimeClauseRegex(setOf("to", "until", "at"))
+        assertEquals("gym", "gym to 6pm".replace(strip, ""))
+    }
+
+    // --- WORD_NUMBERS -------------------------------------------------------
+
+    @Test fun `word numbers cover counts and durations`() {
+        assertEquals(3, WORD_NUMBERS["three"])
+        assertEquals(10, WORD_NUMBERS["ten"])
+        assertEquals(45, WORD_NUMBERS["forty five"])
+        assertEquals(45, WORD_NUMBERS["forty-five"])
+        assertEquals(60, WORD_NUMBERS["sixty"])
+    }
 }

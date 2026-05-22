@@ -33,17 +33,13 @@ class CalendarSlots : SlotExtractor {
     /** "next 3 meetings" / "my next five appointments" → 3 / 5. */
     private fun extractCount(lower: String): Int? {
         COUNT_DIGIT.find(lower)?.groupValues?.getOrNull(1)?.toIntOrNull()?.let { return it }
-        COUNT_WORD.find(lower)?.groupValues?.getOrNull(1)?.let { return WORD_NUMS[it] }
+        COUNT_WORD.find(lower)?.groupValues?.getOrNull(1)?.let { return WORD_NUMBERS[it] }
         return null
     }
 
     private companion object {
         val COUNT_DIGIT = Regex("""(?i)\bnext\s+(\d{1,2})\s+(?:meeting|appointment|event)""")
         val COUNT_WORD = Regex("""(?i)\bnext\s+(two|three|four|five|six|seven|eight|nine|ten)\s+(?:meeting|appointment|event)""")
-        val WORD_NUMS = mapOf(
-            "two" to 2, "three" to 3, "four" to 4, "five" to 5, "six" to 6,
-            "seven" to 7, "eight" to 8, "nine" to 9, "ten" to 10,
-        )
         // Day tokens that justify parsing a concrete date. Deliberately
         // excludes bare "on"/"next" so counts and generic "what's on my
         // calendar" don't trigger a spurious date parse.

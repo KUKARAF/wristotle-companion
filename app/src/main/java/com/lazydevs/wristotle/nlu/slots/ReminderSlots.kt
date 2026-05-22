@@ -35,11 +35,11 @@ class ReminderSlots : SlotExtractor {
         val STRIP_PREFIXES = Regex(
             """(?i)^(remind me (to|about|that)?|reminder (to|about)?|set a reminder (to|for)?|set an? alarm (for|to)?|schedule a reminder (for|to)?|wake me up|tell me when|ping me|buzz me)\s*""",
         )
-        // Require whitespace + word boundary before the time preposition so the
-        // "at" inside "chat"/"that" isn't stripped (which truncated titles like
-        // "remind me to chat with bob" → "remind me to ch").
-        val STRIP_TIME_PHRASES = Regex(
-            """(?i)\s+\b(at|in|by|on|next|this|every)\b\s+[\w\s:.,]+${'$'}""",
+        // Note: "to" is intentionally NOT a lead-in — "remind me TO call" uses
+        // "to" to introduce the task, not a time. The shared builder handles the
+        // word-boundary safety (the "at" in "chat" isn't stripped mid-word).
+        val STRIP_TIME_PHRASES = trailingTimeClauseRegex(
+            setOf("at", "in", "by", "on", "next", "this", "every"),
         )
     }
 }
