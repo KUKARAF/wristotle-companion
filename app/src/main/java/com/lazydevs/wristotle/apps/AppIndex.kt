@@ -48,7 +48,13 @@ sealed interface AppLookup {
  * the active session". The denylist makes [MediaPlayHandler]'s
  * fallback-to-active-session path keep working for those phrasings.
  */
-class AppIndex(private val dao: InstalledAppDao) {
+class AppIndex(
+    private val dao: InstalledAppDao,
+    /** User-defined `normalized phrase → packageId` overrides (see AliasStore).
+     *  Resolved before everything else. Default = no aliases (keeps tests +
+     *  callers that don't care simple). */
+    private val aliasResolver: (String) -> String? = { null },
+) {
 
     suspend fun count(): Int = dao.count()
     suspend fun latestScanAt(): Long? = dao.latestScanAt()
@@ -57,11 +63,17 @@ class AppIndex(private val dao: InstalledAppDao) {
     suspend fun lookup(query: String): AppLookup {
         val normalized = normalizeForIndex(query)
         if (normalized.isEmpty()) return AppLookup.Generic
-        if (GENERIC_NOUNS.contains(normalized)) return AppLookup.Generic
-        // Strip leading generic articles / determiners that show up in
-        // dictation but never appear in app labels: "the youtube" →
-        // "youtube", "my spotify" → "spotify".
+
+        // Alias overrides win over EVERYTHING — the generic-noun denylist and
+        // all fuzzy tiers — because an alias is an explicit user choice (even
+        // "music" → Spotify if they set it). Try the full phrase, then the
+        // article-stripped form ("the podcasts" → "podcasts"). Honor it only
+        // when the target is still installed; otherwise fall through to fuzzy.
         val trimmed = stripLeadingArticles(normalized)
+        resolveAlias(normalized)?.let { return it }
+        if (trimmed != normalized) resolveAlias(trimmed)?.let { return it }
+
+        if (GENERIC_NOUNS.contains(normalized)) return AppLookup.Generic
         if (trimmed.isEmpty() || GENERIC_NOUNS.contains(trimmed)) return AppLookup.Generic
 
         // Tier 1 — exact
@@ -85,6 +97,19 @@ class AppIndex(private val dao: InstalledAppDao) {
         }
         Log.d(TAG, "no match for '$query' (normalized='$trimmed')")
         return AppLookup.NotFound(query.trim())
+    }
+
+    /** Resolve an alias for [phrase] to an installed package, or null if there's
+     *  no alias OR the aliased app is no longer installed (so the caller falls
+     *  through to the fuzzy tiers). */
+    private suspend fun resolveAlias(phrase: String): AppLookup.Match? {
+        val pkg = aliasResolver(phrase) ?: return null
+        if (dao.findByPackageId(pkg) == null) {
+            Log.d(TAG, "alias '$phrase' → $pkg but not installed; ignoring")
+            return null
+        }
+        Log.d(TAG, "alias match: '$phrase' → $pkg")
+        return AppLookup.Match(pkg)
     }
 
     private fun matched(tier: String, query: String, app: InstalledApp): AppLookup.Match {

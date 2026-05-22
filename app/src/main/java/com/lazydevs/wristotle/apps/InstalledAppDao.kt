@@ -18,6 +18,11 @@ interface InstalledAppDao {
     @Query("SELECT MAX(lastScannedAtMs) FROM installed_apps")
     suspend fun latestScanAt(): Long?
 
+    /** Exact match on the real package id — used to confirm an aliased target
+     *  is still installed before honoring the alias. */
+    @Query("SELECT * FROM installed_apps WHERE packageId = :packageId LIMIT 1")
+    suspend fun findByPackageId(packageId: String): InstalledApp?
+
     /** Exact normalized-label match. */
     @Query("SELECT * FROM installed_apps WHERE normalizedLabel = :norm LIMIT 1")
     suspend fun findExact(norm: String): InstalledApp?

@@ -140,6 +140,8 @@ class WristotleApplication : Application() {
      *  "Scan installed apps" card; empty until the user first taps it. */
     lateinit var appIndex: AppIndex
         private set
+    lateinit var aliasStore: com.lazydevs.wristotle.apps.AliasStore
+        private set
     lateinit var appIndexer: AppIndexer
         private set
 
@@ -205,7 +207,8 @@ class WristotleApplication : Application() {
         activeMediaSession = ActiveMediaSession(this)
 
         val appIndexDao = AppIndexDatabase.build(this).installedAppDao()
-        appIndex = AppIndex(appIndexDao)
+        aliasStore = com.lazydevs.wristotle.apps.AliasStore(this)
+        appIndex = AppIndex(appIndexDao, aliasResolver = aliasStore::resolve)
         appIndexer = AppIndexer(this, appIndexDao)
 
         diagnosticsSettings = com.lazydevs.wristotle.diagnostics.DiagnosticsSettings(this)

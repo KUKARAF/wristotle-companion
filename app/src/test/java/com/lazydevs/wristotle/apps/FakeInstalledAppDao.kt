@@ -18,6 +18,9 @@ internal class FakeInstalledAppDao(initial: List<InstalledApp> = emptyList()) : 
     override suspend fun latestScanAt(): Long? =
         apps.maxOfOrNull { it.lastScannedAtMs }
 
+    override suspend fun findByPackageId(packageId: String): InstalledApp? =
+        apps.firstOrNull { it.packageId == packageId }
+
     override suspend fun findExact(norm: String): InstalledApp? =
         apps.firstOrNull { it.normalizedLabel == norm }
 
