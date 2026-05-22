@@ -4,8 +4,12 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.WristotleApplication
+import com.lazydevs.wristotle.apps.InstalledApp
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.history.ConversationSettings
+import com.lazydevs.wristotle.nlu.slots.MediaPlaySlots
+import com.lazydevs.wristotle.nlu.slots.OpenAppSlots
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -24,6 +28,10 @@ class ConversationViewModel(app: Application) : AndroidViewModel(app) {
     private val audioSettings = application.conversationAudioSettings
     private val audioStore = application.conversationAudioStore
     private val companionDetector = application.pebbleCompanionDetector
+    private val aliasStore = application.aliasStore
+    private val appIndex = application.appIndex
+    private val openAppSlots = OpenAppSlots()
+    private val mediaPlaySlots = MediaPlaySlots()
 
     /** Companion state — drives the dismissable rePebble first-run notice
      *  at the top of the conversation list. */
@@ -83,4 +91,36 @@ class ConversationViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun countOlderThan(days: Int): Int = repository.countOlderThan(days)
 
     fun clearAll() = viewModelScope.launch { repository.clearAll() }
+
+    /**
+     * In-flight quick-add-alias draft, or null when the dialog is closed.
+     * Seeded from a misheard "open X" row: [suggestedPhrase] is the spoken
+     * app token (the same string [AppIndex] failed to resolve), [apps] backs
+     * the target picker. The user confirms which app the phrase should open.
+     */
+    data class AliasDraft(val suggestedPhrase: String, val apps: List<InstalledApp>)
+
+    private val _aliasDraft = MutableStateFlow<AliasDraft?>(null)
+    val aliasDraft: StateFlow<AliasDraft?> = _aliasDraft
+
+    /**
+     * Open the quick-add-alias dialog seeded from an app-launching row.
+     * "play X" and "open X" both resolve the spoken name through the same
+     * alias-aware [AppIndex] lookup, so each can be pinned — extract the
+     * `app` token with the matching slot extractor to seed the phrase.
+     */
+    fun beginAlias(entry: ConversationEntry) {
+        viewModelScope.launch {
+            val extractor = if (entry.handler == "media.play") mediaPlaySlots else openAppSlots
+            val phrase = (extractor.extract(entry.userQuery)["app"] as? String).orEmpty()
+            _aliasDraft.value = AliasDraft(phrase, appIndex.installedApps())
+        }
+    }
+
+    fun cancelAlias() { _aliasDraft.value = null }
+
+    fun addAlias(phrase: String, packageId: String) {
+        aliasStore.put(phrase, packageId)
+        _aliasDraft.value = null
+    }
 }

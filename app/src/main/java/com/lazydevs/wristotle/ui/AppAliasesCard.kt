@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +53,11 @@ fun AppAliasesCard(
     val aliases by vm.aliases.collectAsState()
     val apps by vm.installedApps.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
+
+    // Re-read on (re)entry so an alias added from the Conversation tab's
+    // quick-add popup shows up here — the prefs-backed store isn't observable,
+    // so the VM snapshot would otherwise stay stale until the next onResume.
+    LaunchedEffect(Unit) { vm.refresh() }
 
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -145,11 +151,12 @@ private fun AppAliasesDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddAliasForm(
+internal fun AddAliasForm(
     apps: List<com.lazydevs.wristotle.apps.InstalledApp>,
     onAdd: (phrase: String, packageId: String) -> Unit,
+    initialPhrase: String = "",
 ) {
-    var phrase by rememberSaveable { mutableStateOf("") }
+    var phrase by rememberSaveable { mutableStateOf(initialPhrase) }
     var appQuery by rememberSaveable { mutableStateOf("") }
     var selectedPkg by rememberSaveable { mutableStateOf<String?>(null) }
     var expanded by remember { mutableStateOf(false) }

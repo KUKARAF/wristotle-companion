@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Watch
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -62,6 +63,7 @@ fun ConversationScreen(vm: ConversationViewModel) {
     val entries by vm.entries.collectAsState()
     val companion by vm.pebbleCompanion.collectAsState()
     val rePebbleNoticeDismissed by vm.rePebbleNoticeDismissed.collectAsState()
+    val aliasDraft by vm.aliasDraft.collectAsState()
     val showRePebbleNotice =
         !companion.whisperAppliesToWatchDictation && !rePebbleNoticeDismissed
 
@@ -118,6 +120,7 @@ fun ConversationScreen(vm: ConversationViewModel) {
                     entry = entry,
                     canPlayAudio = audioFile != null,
                     isPlaying = isPlaying,
+                    onAddAlias = { vm.beginAlias(entry) },
                     onTogglePlayback = onToggle@{
                         if (isPlaying) {
                             stopPlayback()
@@ -146,6 +149,39 @@ fun ConversationScreen(vm: ConversationViewModel) {
             }
         }
     }
+
+    aliasDraft?.let { draft ->
+        AddAliasDialog(
+            apps = draft.apps,
+            initialPhrase = draft.suggestedPhrase,
+            onAdd = vm::addAlias,
+            onDismiss = vm::cancelAlias,
+        )
+    }
+}
+
+@Composable
+private fun AddAliasDialog(
+    apps: List<com.lazydevs.wristotle.apps.InstalledApp>,
+    initialPhrase: String,
+    onAdd: (phrase: String, packageId: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    // The form carries its own "Add alias" button (commits + dismisses via
+    // onAdd → cancelAlias); a separate "Done"/confirm button would be
+    // redundant. Tapping outside or back dismisses without saving.
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        title = { Text(stringResource(R.string.app_aliases_header)) },
+        text = {
+            AddAliasForm(
+                apps = apps,
+                onAdd = onAdd,
+                initialPhrase = initialPhrase,
+            )
+        },
+    )
 }
 
 @Composable
@@ -174,6 +210,7 @@ private fun EntryCard(
     entry: ConversationEntry,
     canPlayAudio: Boolean,
     isPlaying: Boolean,
+    onAddAlias: () -> Unit,
     onTogglePlayback: () -> Unit,
 ) {
     Card(elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
@@ -248,6 +285,17 @@ private fun EntryCard(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
+                }
+                // App-launching rows ("open X" / "play X") get a quick "Add
+                // alias" shortcut: a mishear that opened the wrong app (or
+                // none) can be pinned to the right one without leaving for
+                // the Settings tab. Both resolve the spoken name through the
+                // alias-aware AppIndex lookup.
+                if (entry.handler == "open_app" || entry.handler == "media.play") {
+                    AssistChip(
+                        onClick = onAddAlias,
+                        label = { Text(stringResource(R.string.app_aliases_add)) },
+                    )
                 }
                 // Push timestamp to the far right when it shares a row with the chips,
                 // or let it wrap onto its own line otherwise.
