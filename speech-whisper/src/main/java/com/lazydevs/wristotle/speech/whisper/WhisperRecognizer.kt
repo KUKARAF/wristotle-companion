@@ -89,6 +89,11 @@ class WhisperRecognizer(
      */
     private var releaseDeferred: Boolean = false
 
+    /** Set once the terminal teardown (free model handle if any + abort token)
+     *  has run, so it happens exactly once regardless of which path triggers
+     *  it. Guarded by [nativeLock]. */
+    private var freed: Boolean = false
+
     /** True once [warmUp] has primed the compute graph (idempotency guard). */
     @Volatile
     private var warmed: Boolean = false
@@ -113,104 +118,111 @@ class WhisperRecognizer(
             return@flow
         }
 
-        val chunks = ArrayList<ShortArray>()
-        var totalSamples = 0
-        var emittedStart = false
-
+        // inFlight is set the moment acquireHandle() returns. Wrap the whole
+        // body so finishInFlight() runs on EVERY exit — cancellation, audio
+        // failure, zero-audio, inference error, or success. Otherwise an early
+        // return left inFlight stuck true, and a later release() would defer
+        // forever and leak the loaded model (32-487 MB) + abort token.
         try {
-            source.samples().collect { chunk ->
-                if (!emittedStart) {
-                    Log.d(TAG, "emit SpeechStarted")
-                    emit(TranscriptionEvent.SpeechStarted)
-                    emittedStart = true
+            val chunks = ArrayList<ShortArray>()
+            var totalSamples = 0
+            var emittedStart = false
+
+            try {
+                source.samples().collect { chunk ->
+                    if (!emittedStart) {
+                        Log.d(TAG, "emit SpeechStarted")
+                        emit(TranscriptionEvent.SpeechStarted)
+                        emittedStart = true
+                    }
+                    chunks.add(chunk)
+                    totalSamples += chunk.size
                 }
-                chunks.add(chunk)
-                totalSamples += chunk.size
+            } catch (e: CancellationException) {
+                Log.d(TAG, "cancelled after $totalSamples samples")
+                throw e
+            } catch (t: Throwable) {
+                Log.w(TAG, "audio source failed after $totalSamples samples", t)
+                emit(TranscriptionEvent.Error(
+                    SpeechRecognizer.ERROR_AUDIO,
+                    "audio source failed: ${t.message}",
+                ))
+                return@flow
             }
-        } catch (e: CancellationException) {
-            Log.d(TAG, "cancelled after $totalSamples samples")
-            throw e
-        } catch (t: Throwable) {
-            Log.w(TAG, "audio source failed after $totalSamples samples", t)
-            emit(TranscriptionEvent.Error(
-                SpeechRecognizer.ERROR_AUDIO,
-                "audio source failed: ${t.message}",
-            ))
-            return@flow
-        }
 
-        if (totalSamples == 0) {
-            Log.w(TAG, "no audio received")
-            emit(TranscriptionEvent.Error(
-                SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
-                "no audio received",
-            ))
-            return@flow
-        }
-
-        emit(TranscriptionEvent.SpeechEnded)
-
-        // Flatten the chunk list into a single ShortArray for the JNI call.
-        val flat = ShortArray(totalSamples)
-        var offset = 0
-        for (c in chunks) {
-            c.copyInto(flat, offset)
-            offset += c.size
-        }
-
-        // Hand the PCM buffer to the optional sink. Wrapped in runCatching so
-        // a misbehaving sink can't break the recognition path.
-        audioSink?.let { sink ->
-            runCatching { sink(flat) }
-                .onFailure { Log.w(TAG, "audioSink threw — ignoring", it) }
-        }
-
-        val rawText = try {
-            val threads = WhisperNative.defaultThreadCount()
-            Log.d(TAG, "inference start: $totalSamples samples (~${totalSamples / 16_000.0}s), threads=$threads")
-            transcribeMutex.withLock {
-                WhisperNative.transcribe(activeHandle, flat, language, threads, abortToken)
+            if (totalSamples == 0) {
+                Log.w(TAG, "no audio received")
+                emit(TranscriptionEvent.Error(
+                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
+                    "no audio received",
+                ))
+                return@flow
             }
-                .trim()
-                .also { Log.d(TAG, "inference done: '$it'") }
-        } catch (t: Throwable) {
-            Log.e(TAG, "whisper_full failed", t)
-            emit(TranscriptionEvent.Error(
-                SpeechRecognizer.ERROR_CLIENT,
-                "whisper inference failed: ${t.message}",
-            ))
-            return@flow
+
+            emit(TranscriptionEvent.SpeechEnded)
+
+            // Flatten the chunk list into a single ShortArray for the JNI call.
+            val flat = ShortArray(totalSamples)
+            var offset = 0
+            for (c in chunks) {
+                c.copyInto(flat, offset)
+                offset += c.size
+            }
+
+            // Hand the PCM buffer to the optional sink. Wrapped in runCatching so
+            // a misbehaving sink can't break the recognition path.
+            audioSink?.let { sink ->
+                runCatching { sink(flat) }
+                    .onFailure { Log.w(TAG, "audioSink threw — ignoring", it) }
+            }
+
+            val rawText = try {
+                val threads = WhisperNative.defaultThreadCount()
+                Log.d(TAG, "inference start: $totalSamples samples (~${totalSamples / 16_000.0}s), threads=$threads")
+                transcribeMutex.withLock {
+                    WhisperNative.transcribe(activeHandle, flat, language, threads, abortToken)
+                }
+                    .trim()
+                    .also { Log.d(TAG, "inference done: '$it'") }
+            } catch (t: Throwable) {
+                Log.e(TAG, "whisper_full failed", t)
+                emit(TranscriptionEvent.Error(
+                    SpeechRecognizer.ERROR_CLIENT,
+                    "whisper inference failed: ${t.message}",
+                ))
+                return@flow
+            }
+
+            // Whisper greedy + single_segment hallucinates phrase loops on
+            // short or trailing-silence audio. Collapse them before downstream
+            // consumers (NLU classifier, slot extractors, watch chat) see the
+            // duplicated mess. No-op when the transcript is already clean.
+            val deduped = dedupeRepeatedPhrases(rawText).also {
+                if (it != rawText) Log.d(TAG, "deduped: '$it'")
+            }
+            // Drop subtitle-annotation-only outputs (`*Door opens*`,
+            // `[laughter]`, `(silence)`) — Whisper emits these on silence
+            // because its training data includes subtitle files. Letting
+            // them through would surface in the watch chat as "Unknown
+            // command: *DING*".
+            val text = stripAnnotationOnly(deduped).also {
+                if (it.isEmpty() && deduped.isNotEmpty()) {
+                    Log.d(TAG, "annotation-only transcript dropped: '$deduped'")
+                }
+            }
+
+            if (text.isEmpty()) {
+                emit(TranscriptionEvent.Error(
+                    SpeechRecognizer.ERROR_NO_MATCH,
+                    "whisper returned empty transcript",
+                ))
+                return@flow
+            }
+
+            emit(TranscriptionEvent.Final(text))
         } finally {
             finishInFlight()
         }
-
-        // Whisper greedy + single_segment hallucinates phrase loops on
-        // short or trailing-silence audio. Collapse them before downstream
-        // consumers (NLU classifier, slot extractors, watch chat) see the
-        // duplicated mess. No-op when the transcript is already clean.
-        val deduped = dedupeRepeatedPhrases(rawText).also {
-            if (it != rawText) Log.d(TAG, "deduped: '$it'")
-        }
-        // Drop subtitle-annotation-only outputs (`*Door opens*`,
-        // `[laughter]`, `(silence)`) — Whisper emits these on silence
-        // because its training data includes subtitle files. Letting
-        // them through would surface in the watch chat as "Unknown
-        // command: *DING*".
-        val text = stripAnnotationOnly(deduped).also {
-            if (it.isEmpty() && deduped.isNotEmpty()) {
-                Log.d(TAG, "annotation-only transcript dropped: '$deduped'")
-            }
-        }
-
-        if (text.isEmpty()) {
-            emit(TranscriptionEvent.Error(
-                SpeechRecognizer.ERROR_NO_MATCH,
-                "whisper returned empty transcript",
-            ))
-            return@flow
-        }
-
-        emit(TranscriptionEvent.Final(text))
     }
 
     /**
@@ -269,26 +281,30 @@ class WhisperRecognizer(
     override fun close() = Unit
 
     /**
-     * Frees the native model handle. If a transcribe is still mid-flight (rare
-     * but possible during a model switch), the free is deferred to the
-     * transcribe's `finally` to prevent a use-after-free. Idempotent.
+     * Frees the native model handle (if loaded) and the abort token. If a
+     * transcribe is still mid-flight (rare, e.g. during a model switch), the
+     * free is deferred to [finishInFlight] to prevent a use-after-free. The
+     * abort token is freed even when the model was never loaded, and the
+     * [freed] guard makes the whole teardown idempotent (no double-free).
      */
     fun release() {
-        val toFree = synchronized(nativeLock) {
+        val toFreeHandle = synchronized(nativeLock) {
             if (inFlight) {
                 releaseDeferred = true
                 Log.d(TAG, "release deferred — transcribe in flight on handle $handle")
-                return@synchronized 0L
+                return  // finishInFlight() performs the terminal free
             }
+            if (freed) return // already torn down
+            freed = true
             val h = handle
             handle = 0L
             h
         }
-        if (toFree != 0L) {
-            Log.d(TAG, "releasing model handle $toFree")
-            WhisperNative.freeModel(toFree)
-            WhisperNative.freeAbortToken(abortToken)
+        if (toFreeHandle != 0L) {
+            Log.d(TAG, "releasing model handle $toFreeHandle")
+            WhisperNative.freeModel(toFreeHandle)
         }
+        WhisperNative.freeAbortToken(abortToken)
     }
 
     /**
@@ -314,18 +330,18 @@ class WhisperRecognizer(
      * called during the native call, performs the deferred free now.
      */
     private fun finishInFlight() {
-        val toFree = synchronized(nativeLock) {
+        val toFreeHandle = synchronized(nativeLock) {
             inFlight = false
-            if (releaseDeferred && handle != 0L) {
-                val h = handle
-                handle = 0L
-                h
-            } else 0L
+            if (!releaseDeferred || freed) return // recognizer still alive, or already torn down
+            freed = true
+            val h = handle
+            handle = 0L
+            h
         }
-        if (toFree != 0L) {
-            Log.d(TAG, "performing deferred release of handle $toFree")
-            WhisperNative.freeModel(toFree)
-            WhisperNative.freeAbortToken(abortToken)
+        if (toFreeHandle != 0L) {
+            Log.d(TAG, "performing deferred release of handle $toFreeHandle")
+            WhisperNative.freeModel(toFreeHandle)
         }
+        WhisperNative.freeAbortToken(abortToken)
     }
 }

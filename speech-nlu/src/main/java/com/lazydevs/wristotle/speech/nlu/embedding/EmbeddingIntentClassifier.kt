@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.Closeable
 
 private const val TAG = "EmbeddingIntentClassifier"
 
@@ -38,7 +39,7 @@ class EmbeddingIntentClassifier(
     private val embedder: MiniLmEmbedder,
     private val tokenizer: Tokenizer,
     private val bank: ExampleBank,
-) : IntentClassifier {
+) : IntentClassifier, Closeable {
 
     override val tag: String = "embedding"
 
@@ -47,6 +48,11 @@ class EmbeddingIntentClassifier(
 
     private val mutex = Mutex()
     private var examples: List<Embedded> = emptyList()
+
+    /** Releases the underlying ONNX session. Call when evicting this classifier
+     *  (e.g. on NLU model switch) so the native session memory (~80–100 MB) is
+     *  freed promptly instead of lingering until GC. */
+    override fun close() = embedder.close()
 
     /** Warm-up: embed seeds + any already-learned rows. Idempotent. */
     suspend fun warmUp() {

@@ -366,12 +366,13 @@ class WristotleApplication : Application() {
             val cached = cachedClassifier
             if (cached != null && cached.first == path) return@synchronized cached.second
 
-            // Stale (active model switched) — close the old session before building anew.
+            // Stale (active model switched) — close the old ONNX session before
+            // building anew, so its ~80–100 MB native memory is freed promptly
+            // rather than lingering until GC.
             cached?.second?.also {
                 Log.d(TAG, "releasing intent classifier for inactive model: ${cached.first}")
-                // EmbeddingIntentClassifier doesn't own anything closeable directly;
-                // the embedder it holds does. For now, leave embedder lifecycle to
-                // GC since model-switch is rare and the runtime is process-scoped.
+                runCatching { it.close() }
+                    .onFailure { e -> Log.w(TAG, "closing stale classifier failed", e) }
             }
 
             Log.d(TAG, "creating intent classifier for active model: $path")
