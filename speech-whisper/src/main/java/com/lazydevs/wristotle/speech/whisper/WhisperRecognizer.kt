@@ -93,6 +93,14 @@ class WhisperRecognizer(
     @Volatile
     private var warmed: Boolean = false
 
+    /**
+     * Native cancel flag passed into every [WhisperNative.transcribe]. [requestAbort]
+     * flips it so a cancelled session's blocking inference bails immediately and
+     * frees [transcribeMutex] for the next dictation, instead of running to
+     * completion (see #93). Freed alongside the model handle.
+     */
+    private val abortToken: Long = WhisperNative.newAbortToken()
+
     override fun transcribe(source: AudioSource): Flow<TranscriptionEvent> = flow {
         val activeHandle = try {
             acquireHandle()
@@ -161,7 +169,7 @@ class WhisperRecognizer(
             val threads = WhisperNative.defaultThreadCount()
             Log.d(TAG, "inference start: $totalSamples samples (~${totalSamples / 16_000.0}s), threads=$threads")
             transcribeMutex.withLock {
-                WhisperNative.transcribe(activeHandle, flat, language, threads)
+                WhisperNative.transcribe(activeHandle, flat, language, threads, abortToken)
             }
                 .trim()
                 .also { Log.d(TAG, "inference done: '$it'") }
@@ -229,7 +237,7 @@ class WhisperRecognizer(
         try {
             val silence = ShortArray(16_000) // 1s @ 16 kHz mono
             transcribeMutex.withLock {
-                WhisperNative.transcribe(activeHandle, silence, language, WhisperNative.defaultThreadCount())
+                WhisperNative.transcribe(activeHandle, silence, language, WhisperNative.defaultThreadCount(), abortToken)
             }
             warmed = true
             Log.d(TAG, "warm-up complete — first dictation will be warm")
@@ -238,6 +246,16 @@ class WhisperRecognizer(
         } finally {
             finishInFlight()
         }
+    }
+
+    /**
+     * Signals the native abort flag so an in-flight [transcribe] (or [warmUp])
+     * bails at the next whisper.cpp abort-callback poll, releasing the mutex
+     * for the next session. Safe to call from any thread / when idle (the flag
+     * is reset at the start of each transcribe).
+     */
+    override fun requestAbort() {
+        WhisperNative.signalAbort(abortToken)
     }
 
     /**
@@ -269,6 +287,7 @@ class WhisperRecognizer(
         if (toFree != 0L) {
             Log.d(TAG, "releasing model handle $toFree")
             WhisperNative.freeModel(toFree)
+            WhisperNative.freeAbortToken(abortToken)
         }
     }
 
@@ -306,6 +325,7 @@ class WhisperRecognizer(
         if (toFree != 0L) {
             Log.d(TAG, "performing deferred release of handle $toFree")
             WhisperNative.freeModel(toFree)
+            WhisperNative.freeAbortToken(abortToken)
         }
     }
 }

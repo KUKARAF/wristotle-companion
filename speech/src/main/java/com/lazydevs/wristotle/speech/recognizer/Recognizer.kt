@@ -17,4 +17,12 @@ import kotlinx.coroutines.flow.Flow
 interface Recognizer {
     fun transcribe(source: AudioSource): Flow<TranscriptionEvent>
     fun close()
+
+    /**
+     * Requests that an in-flight [transcribe] abort as soon as possible. Called
+     * when the session is cancelled, so a blocking backend (e.g. whisper.cpp)
+     * can bail mid-inference instead of running to completion. No-op by default
+     * (the stub, or a backend that can't be interrupted, simply ignores it).
+     */
+    fun requestAbort() {}
 }

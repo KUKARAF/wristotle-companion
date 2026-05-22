@@ -11,6 +11,7 @@
 
 #include <jni.h>
 #include <android/log.h>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -30,6 +31,15 @@ void throw_runtime(JNIEnv* env, const char* msg) {
     jclass cls = env->FindClass("java/lang/RuntimeException");
     env->ThrowNew(cls, msg);
     env->DeleteLocalRef(cls);
+}
+
+// whisper.cpp abort hook: return true to abort the in-flight whisper_full.
+// `data` points to the per-recognizer std::atomic<bool> cancel flag (created
+// by newAbortToken). Lets a cancelled dictation bail mid-inference instead of
+// running to completion and holding the transcribe mutex (see #93).
+bool abort_cb(void* data) {
+    auto* flag = reinterpret_cast<std::atomic<bool>*>(data);
+    return flag != nullptr && flag->load(std::memory_order_relaxed);
 }
 
 // Energy-based silence trim. Watch dictations routinely include a beat of
@@ -156,7 +166,7 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_loadModel(
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
     JNIEnv* env, jobject /*this*/,
-    jlong handle, jshortArray jsamples, jstring jlang, jint nThreads) {
+    jlong handle, jshortArray jsamples, jstring jlang, jint nThreads, jlong abortToken) {
 
     whisper_context* ctx = reinterpret_cast<whisper_context*>(handle);
     if (ctx == nullptr) {
@@ -238,6 +248,15 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
     else                              audio_ctx = 0;     // full 1500, ~30 s
     wparams.audio_ctx        = audio_ctx;
 
+    // Cancellation: reset the per-recognizer flag for THIS run (a stale signal
+    // from a prior cancelled session must not abort us), then install the hook.
+    // Serialization on the Kotlin transcribeMutex guarantees the reset lands
+    // before any concurrent signalAbort for the next session.
+    auto* abort_flag = reinterpret_cast<std::atomic<bool>*>(abortToken);
+    if (abort_flag != nullptr) abort_flag->store(false, std::memory_order_relaxed);
+    wparams.abort_callback           = abort_cb;
+    wparams.abort_callback_user_data = abort_flag;
+
     LOGI("transcribe: %d samples, lang=%s, threads=%d, audio_ctx=%d",
          pcm_n, lang.c_str(), wparams.n_threads, wparams.audio_ctx);
 
@@ -249,6 +268,13 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
     const int rc = whisper_full(ctx, wparams, pcm_ptr, pcm_n);
     const auto t_full_end = std::chrono::steady_clock::now();
     if (rc != 0) {
+        // A non-zero rc with the abort flag set is an intentional cancel, not a
+        // failure — return empty so the (cancelling) caller discards it quietly
+        // instead of surfacing a scary error.
+        if (abort_flag != nullptr && abort_flag->load(std::memory_order_relaxed)) {
+            LOGI("transcribe aborted by request");
+            return env->NewStringUTF("");
+        }
         throw_runtime(env, "whisper_full returned non-zero");
         return nullptr;
     }
@@ -290,4 +316,27 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_freeModel(
         LOGI("freeModel(%p)", ctx);
         whisper_free(ctx);
     }
+}
+
+// --- Abort token: a heap std::atomic<bool> shared between Kotlin (signalAbort,
+// from the recognition service's onCancel thread) and the abort_callback that
+// whisper_full polls on the inference thread. One per WhisperRecognizer. ---
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_newAbortToken(
+    JNIEnv* /*env*/, jobject /*this*/) {
+    return reinterpret_cast<jlong>(new std::atomic<bool>(false));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_signalAbort(
+    JNIEnv* /*env*/, jobject /*this*/, jlong token) {
+    auto* flag = reinterpret_cast<std::atomic<bool>*>(token);
+    if (flag != nullptr) flag->store(true, std::memory_order_relaxed);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_freeAbortToken(
+    JNIEnv* /*env*/, jobject /*this*/, jlong token) {
+    delete reinterpret_cast<std::atomic<bool>*>(token);
 }

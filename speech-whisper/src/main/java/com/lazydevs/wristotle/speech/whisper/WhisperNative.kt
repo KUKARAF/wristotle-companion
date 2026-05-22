@@ -50,7 +50,22 @@ internal object WhisperNative {
         samples: ShortArray,
         langCode: String?,
         nThreads: Int,
+        abortToken: Long,
     ): String
+
+    /**
+     * Allocates a cancel flag (native `std::atomic<bool>`, initially false) for
+     * one recognizer. Pass the returned handle to [transcribe]; flip it with
+     * [signalAbort] to abort an in-flight inference; release with [freeAbortToken].
+     */
+    external fun newAbortToken(): Long
+
+    /** Requests abort of the inference currently using [token]. Thread-safe —
+     *  called from a different thread than the running [transcribe]. */
+    external fun signalAbort(token: Long)
+
+    /** Frees an abort token. Must not race a [transcribe] using it. */
+    external fun freeAbortToken(token: Long)
 
     /**
      * Picks an inference thread count appropriate for the current device.

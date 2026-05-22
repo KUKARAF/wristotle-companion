@@ -88,6 +88,11 @@ class WhisperRecognitionService : RecognitionService() {
 
     override fun onCancel(callback: Callback) {
         Log.d(TAG, "onCancel")
+        // Signal the (uninterruptible) native inference to bail FIRST, so it
+        // stops grinding and frees the transcribe mutex for the next session;
+        // cancelling the coroutine alone wouldn't interrupt the blocking JNI
+        // call. See #93 (inference-queue contention).
+        recognizer?.requestAbort()
         sessionJob?.cancel()
         sessionJob = null
         sessionSource?.stop()
