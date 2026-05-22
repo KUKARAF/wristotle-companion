@@ -58,6 +58,14 @@ internal object PrefixHints {
         // Existing non-media intents
         Regex("(?i)^\\s*(text|sms|message|send (a |an )?(text|message|sms))\\b") to Intent.Sms,
         Regex("(?i)^\\s*(call|dial|phone|ring)\\b") to Intent.Call,
+        // ListReminders — a leading interrogative / "list" / "show" together
+        // with a reminder noun is a QUERY ("is there a reminder at 2pm", "do I
+        // have a reminder at 5"), NOT a create. MUST sit above the Reminder
+        // rule so these don't fall through to creating a junk reminder. The
+        // embedding can't reliably separate "is there a reminder at X" from
+        // "remind me at X" — the time dominates the cosine — so this is the
+        // deterministic guard. Matches the common "remainder" mishearing too.
+        Regex("(?i)^\\s*(what|which|when|is|are|was|were|do|does|did|have|has|had|any|list|show|read|tell)\\b.*\\b(reminders?|remainders?)\\b") to Intent.ListReminders,
         Regex("(?i)^\\s*(remind|set (a )?reminder|reminder)\\b") to Intent.Reminder,
         Regex("(?i)^\\s*(cancel|delete|remove|clear)\\b") to Intent.Cancel,
         Regex("(?i)^\\s*(find|locate|where('?s| is)) (my )?phone\\b") to Intent.FindPhone,

@@ -240,8 +240,9 @@ class PebbleListenerService : BasePebbleListenerService() {
     }
 
     /**
-     * Pick the intent to actually dispatch on. Watch-hinted queries always
-     * win (preserves today's behaviour even if the classifier disagrees).
+     * Pick the intent to actually dispatch on. Watch-hinted queries win
+     * (preserves today's behaviour even if the classifier disagrees) — except
+     * a `Reminder` hint may be refined *within the reminder family* (see below).
      * For unhinted queries, apply the confidence + margin thresholds — sub-
      * threshold predictions become [Intent.Unknown]. Always populates slots
      * for the chosen intent via [slotExtractors].
@@ -252,10 +253,33 @@ class PebbleListenerService : BasePebbleListenerService() {
         query: String,
     ): IntentResult {
         if (watchHint != null) {
-            val slots = slotExtractors.extract(watchHint, query)
-            return classified?.copy(intent = watchHint, slots = slots)
+            // The watch routes anything containing "remind(er)" to REMINDER_QUERY,
+            // so a Reminder hint can actually be a list ("is there a reminder at
+            // 2pm") or reschedule ("push my reminder to 6") query. Refine the hint
+            // WITHIN the reminder family — it can't escape to Call/Sms/Media/etc,
+            // so the hint's guard holds. Two refiners, in order:
+            //   1. A deterministic prefix hint (e.g. interrogative + reminder →
+            //      ListReminders). The embedding can't separate "is there a
+            //      reminder at X" from "remind me at X" because the time dominates
+            //      the cosine, so the opening words are the reliable signal.
+            //   2. Otherwise a confident classifier pick (catches Reschedule).
+            val prefixHint = if (watchHint == Intent.Reminder) PrefixHints.hintFor(query) else null
+            val refined = when {
+                prefixHint != null && prefixHint in REMINDER_FAMILY -> prefixHint
+                watchHint == Intent.Reminder &&
+                    classified != null &&
+                    classified.intent in REMINDER_FAMILY &&
+                    classified.confidence >= NluSettings.ROUTE_THRESHOLD -> classified.intent
+                else -> watchHint
+            }
+            if (refined != watchHint) {
+                Log.d(TAG, "watch hinted $watchHint; refined to $refined " +
+                    "(prefix=$prefixHint classifier=${classified?.intent}@${classified?.confidence})")
+            }
+            val slots = slotExtractors.extract(refined, query)
+            return classified?.copy(intent = refined, slots = slots)
                 ?: IntentResult(
-                    intent = watchHint,
+                    intent = refined,
                     slots = slots,
                     confidence = 1f,
                     alternates = emptyList(),
@@ -341,5 +365,12 @@ class PebbleListenerService : BasePebbleListenerService() {
 
     companion object {
         private const val TAG = "PebbleListenerService"
+
+        /** Intents the watch's "remind(er)" keyword routing lumps into
+         *  REMINDER_QUERY. A Reminder watch-hint may be refined into any of
+         *  these by a confident classifier, but no further. */
+        private val REMINDER_FAMILY = setOf(
+            Intent.Reminder, Intent.ListReminders, Intent.Reschedule,
+        )
     }
 }

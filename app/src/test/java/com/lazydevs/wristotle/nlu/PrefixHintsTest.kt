@@ -31,6 +31,34 @@ class PrefixHintsTest {
         assertEquals(Intent.Reminder, PrefixHints.hintFor("remind me at 5pm"))
     }
 
+    // --- ListReminders query forms must beat the Reminder create rule ---
+
+    @Test fun `is there a reminder at a time maps to ListReminders`() {
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("is there a reminder at 2pm"))
+    }
+
+    @Test fun `is that a reminder mishearing still maps to ListReminders`() {
+        // Whisper often hears "is there" as "is that".
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("is that a reminder at 2 p.m."))
+    }
+
+    @Test fun `do I have a reminder maps to ListReminders`() {
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("do I have a reminder at five"))
+    }
+
+    @Test fun `remainder mishearing maps to ListReminders`() {
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("do I have a remainder at 10 pm"))
+    }
+
+    @Test fun `what are my reminders maps to ListReminders`() {
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("what are my reminders"))
+    }
+
+    @Test fun `create reminder still maps to Reminder not List`() {
+        assertEquals(Intent.Reminder, PrefixHints.hintFor("remind me to call mom at 2pm"))
+        assertEquals(Intent.Reminder, PrefixHints.hintFor("set a reminder for 2pm"))
+    }
+
     @Test fun `cancel prefix maps to Cancel`() {
         assertEquals(Intent.Cancel, PrefixHints.hintFor("cancel reminder"))
     }

@@ -111,6 +111,16 @@ object SeedExamples {
             "any reminders",
             "show me what I need to do",
             "what am I supposed to remember",
+            // Query forms that name a time — must NOT be heard as "create a
+            // reminder at <time>". The leading "is there / do I have / any"
+            // is the signal; the time is incidental.
+            "is there a reminder at two pm",
+            "do I have a reminder at five",
+            "is there anything at three pm",
+            "any reminders at noon",
+            "do I have a reminder for two pm",
+            "have I got a reminder at four",
+            "is there a reminder later today",
         ))
         // ── Reschedule ──────────────────────────────────────────────────
         addAll(Intent.Reschedule, listOf(
