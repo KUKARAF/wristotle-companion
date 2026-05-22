@@ -26,8 +26,10 @@ class RescheduleSlots : SlotExtractor {
 
     private companion object {
         // Chop the trailing "to 6pm" / "in 10 minutes" / "until noon" clause so
-        // it doesn't leak into the target descriptor.
-        val STRIP_TIME_CLAUSE = Regex("""(?i)\s*(to|until|till|at|in|by|for|on|next|this)\s+[\w\s:.,]+$""")
+        // it doesn't leak into the target descriptor. Whitespace + word boundary
+        // before the preposition so the "to" inside "auto" / "in" inside "din"
+        // isn't matched mid-word.
+        val STRIP_TIME_CLAUSE = Regex("""(?i)\s+\b(to|until|till|at|in|by|for|on|next|this)\b\s+[\w\s:.,]+$""")
         val VERBS = Regex(
             "(?i)\\b(snooze|reschedule|postpone|delay|push|move|bump|shift|remind me again|again)\\b",
         )
