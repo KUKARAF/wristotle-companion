@@ -271,9 +271,17 @@ class WristotleApplication : Application() {
             }
             // Whisper: prime the active model's compute graph so the first
             // dictation doesn't blow the watch's dictation timeout (see #93).
+            // Skip under Core Devices — its own engine transcribes watch
+            // dictation, so our Whisper is never in the path and loading it
+            // would just burn CPU + hold the model resident for nothing.
+            // (Initial signal is the synchronous package scan; refined later
+            // by binder UID. Unknown → warm, the safe default.) A no-op too
+            // when no model is active (activeModelPath() is null).
             appScope.launch {
-                modelStorage.activeModelPath()?.let { path ->
-                    (getOrCreateRecognizer(path) as? WhisperRecognizer)?.warmUp()
+                if (pebbleCompanionDetector.state.value.whisperAppliesToWatchDictation) {
+                    modelStorage.activeModelPath()?.let { path ->
+                        (getOrCreateRecognizer(path) as? WhisperRecognizer)?.warmUp()
+                    }
                 }
             }
         }
