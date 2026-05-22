@@ -24,6 +24,7 @@ private const val TAG = "AppIndexer"
 class AppIndexer(
     private val context: Context,
     private val dao: InstalledAppDao,
+    private val aliasStore: AliasStore,
 ) {
 
     /**
@@ -63,6 +64,9 @@ class AppIndexer(
             )
         }
         dao.replaceAll(rows)
+        // Drop aliases pointing at apps that are no longer installed, so the
+        // store doesn't accumulate dangling entries across uninstalls.
+        aliasStore.retainInstalled(rows.map { it.packageId }.toSet())
         Log.d(TAG, "indexed ${rows.size} launcher apps")
         rows.size
     }

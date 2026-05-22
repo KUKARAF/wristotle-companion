@@ -209,7 +209,7 @@ class WristotleApplication : Application() {
         val appIndexDao = AppIndexDatabase.build(this).installedAppDao()
         aliasStore = com.lazydevs.wristotle.apps.AliasStore(this)
         appIndex = AppIndex(appIndexDao, aliasResolver = aliasStore::resolve)
-        appIndexer = AppIndexer(this, appIndexDao)
+        appIndexer = AppIndexer(this, appIndexDao, aliasStore)
 
         diagnosticsSettings = com.lazydevs.wristotle.diagnostics.DiagnosticsSettings(this)
 
