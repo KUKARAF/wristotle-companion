@@ -58,6 +58,12 @@ internal object PrefixHints {
         // Existing non-media intents
         Regex("(?i)^\\s*(text|sms|message|send (a |an )?(text|message|sms))\\b") to Intent.Sms,
         Regex("(?i)^\\s*(call|dial|phone|ring)\\b") to Intent.Call,
+        // CreateEvent — "schedule/set up/create/add/book … meeting/event/…".
+        // Requires an event noun, so "schedule a reminder" does NOT match here
+        // (it has no event noun) and stays with the reminder path. Rescues the
+        // classifier, which scores "schedule a meeting with X at Y for Z" as
+        // ambiguous (event vs reminder) and otherwise drops it to Unknown.
+        Regex("(?i)^\\s*(schedule|set up|create|add|book|put)\\b.*\\b(meeting|appointment|event|call)\\b") to Intent.CreateEvent,
         // ListReminders — a leading interrogative / "list" / "show" together
         // with a reminder noun is a QUERY ("is there a reminder at 2pm", "do I
         // have a reminder at 5"), NOT a create. MUST sit above the Reminder

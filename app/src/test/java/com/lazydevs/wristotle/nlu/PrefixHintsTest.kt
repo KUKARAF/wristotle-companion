@@ -59,6 +59,23 @@ class PrefixHintsTest {
         assertEquals(Intent.Reminder, PrefixHints.hintFor("set a reminder for 2pm"))
     }
 
+    // --- CreateEvent: schedule/create + event noun ---
+
+    @Test fun `schedule a meeting maps to CreateEvent`() {
+        assertEquals(Intent.CreateEvent, PrefixHints.hintFor("schedule a meeting with bob at 3pm for 1 hour"))
+    }
+
+    @Test fun `set up and create event variants map to CreateEvent`() {
+        assertEquals(Intent.CreateEvent, PrefixHints.hintFor("set up a meeting tomorrow"))
+        assertEquals(Intent.CreateEvent, PrefixHints.hintFor("create an event for friday"))
+        assertEquals(Intent.CreateEvent, PrefixHints.hintFor("book an appointment at noon"))
+    }
+
+    @Test fun `schedule a reminder does not map to CreateEvent`() {
+        // No event noun → not CreateEvent; left to the reminder path.
+        assertEquals(null, PrefixHints.hintFor("schedule a reminder for 5pm"))
+    }
+
     @Test fun `cancel prefix maps to Cancel`() {
         assertEquals(Intent.Cancel, PrefixHints.hintFor("cancel reminder"))
     }
