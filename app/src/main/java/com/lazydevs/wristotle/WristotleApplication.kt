@@ -258,14 +258,23 @@ class WristotleApplication : Application() {
         IntentClassifiers.provider = { _ -> getOrCreateClassifier() }
 
         // Pre-warm only on devices Android doesn't flag as low-RAM. On
-        // capable hardware the ~500 ms tokenizer + seed-embedding burst is
-        // worth absorbing now so the first user query feels instant. On
-        // low-RAM 2019-era hardware that same burst competes with other
-        // apps initialising during cold-boot and risks an OOM kill; let
-        // the first query pay the cost lazily instead.
+        // capable hardware the ~500 ms tokenizer + seed-embedding burst (NLU)
+        // and the Whisper cold-start inference are worth absorbing now so the
+        // first user query / dictation feels instant. On low-RAM 2019-era
+        // hardware that same burst competes with other apps initialising
+        // during cold-boot and risks an OOM kill — and the heavier Whisper
+        // model would sit resident for nothing if the user never dictates —
+        // so let the first use pay the cost lazily instead.
         if (!isLowRamDevice()) {
             appScope.launch {
                 (getOrCreateClassifier() as? EmbeddingIntentClassifier)?.warmUp()
+            }
+            // Whisper: prime the active model's compute graph so the first
+            // dictation doesn't blow the watch's dictation timeout (see #93).
+            appScope.launch {
+                modelStorage.activeModelPath()?.let { path ->
+                    (getOrCreateRecognizer(path) as? WhisperRecognizer)?.warmUp()
+                }
             }
         }
     }

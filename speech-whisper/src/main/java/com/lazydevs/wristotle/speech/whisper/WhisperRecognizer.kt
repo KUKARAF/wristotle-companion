@@ -89,6 +89,10 @@ class WhisperRecognizer(
      */
     private var releaseDeferred: Boolean = false
 
+    /** True once [warmUp] has primed the compute graph (idempotency guard). */
+    @Volatile
+    private var warmed: Boolean = false
+
     override fun transcribe(source: AudioSource): Flow<TranscriptionEvent> = flow {
         val activeHandle = try {
             acquireHandle()
@@ -199,6 +203,41 @@ class WhisperRecognizer(
         }
 
         emit(TranscriptionEvent.Final(text))
+    }
+
+    /**
+     * Loads the model and runs one throwaway inference on a second of silence,
+     * so the first *real* dictation doesn't pay whisper.cpp's cold-start cost.
+     * That cost is the first `whisper_full` call — compute-graph allocation +
+     * paging in the mmap'd weights — not the model load itself (observed ~20s+
+     * on a large model, which blows the watch's dictation timeout). Priming it
+     * ahead of time makes the first dictation as fast as a warm one.
+     *
+     * Idempotent. Bypasses [audioSink] (no spurious capture). Holds
+     * [transcribeMutex] for the priming call, so if a real dictation lands
+     * mid-warm-up it simply queues — fine, since warm-up runs at startup well
+     * before any dictation. Call off the main thread.
+     */
+    suspend fun warmUp() {
+        if (warmed) return
+        val activeHandle = try {
+            acquireHandle()
+        } catch (t: Throwable) {
+            Log.w(TAG, "warm-up: model load failed", t)
+            return
+        }
+        try {
+            val silence = ShortArray(16_000) // 1s @ 16 kHz mono
+            transcribeMutex.withLock {
+                WhisperNative.transcribe(activeHandle, silence, language, WhisperNative.defaultThreadCount())
+            }
+            warmed = true
+            Log.d(TAG, "warm-up complete — first dictation will be warm")
+        } catch (t: Throwable) {
+            Log.w(TAG, "warm-up inference failed", t)
+        } finally {
+            finishInFlight()
+        }
     }
 
     /**
