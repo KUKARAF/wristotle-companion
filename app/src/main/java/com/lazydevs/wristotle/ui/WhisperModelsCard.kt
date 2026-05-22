@@ -18,7 +18,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -37,6 +36,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.speech.whisper.ModelInfo
+import com.lazydevs.wristotle.speech.whisper.ModelTier
 import com.lazydevs.wristotle.transport.PebbleCompanionDetector
 
 /**
@@ -96,16 +97,41 @@ fun WhisperModelsCard(
                 }
             }
             if (showModels) {
-                models.forEachIndexed { i, state ->
-                    if (i > 0) HorizontalDivider()
-                    ModelRow(
-                        state = state,
-                        onDownload = { vm.download(state.info.id) },
-                        onCancel = { vm.cancelDownload(state.info.id) },
-                        onDelete = { vm.delete(state.info.id) },
-                        onSetActive = { vm.setActive(state.info.id) },
-                    )
+                val recommended = models.filter { it.info.recommended }
+                val advanced = models.filterNot { it.info.recommended }
+                var showAll by remember { mutableStateOf(false) }
+
+                // Default view: recommended models grouped by tier. The tier
+                // blurb explains each choice, so the user picks Fast/Balanced/
+                // Accurate without seeing the raw variant + quantization zoo.
+                ModelTier.entries.forEach { tier ->
+                    val inTier = recommended.filter { it.info.tier == tier }
+                    if (inTier.isNotEmpty()) {
+                        TierHeader(label = tier.label, blurb = tier.blurb)
+                        inTier.forEach { state -> ModelRowFor(vm, state) }
+                    }
                 }
+
+                // Everything else (full / multilingual / exploratory variants)
+                // behind an expander — adding new models to try never grows the
+                // default list.
+                if (advanced.isNotEmpty()) {
+                    TextButton(onClick = { showAll = !showAll }) {
+                        Text(
+                            if (showAll) stringResource(R.string.whisper_models_show_fewer)
+                            else stringResource(R.string.whisper_models_show_all, advanced.size),
+                        )
+                    }
+                    if (showAll) {
+                        Text(
+                            stringResource(R.string.whisper_models_all_header),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        advanced.forEach { state -> ModelRowFor(vm, state) }
+                    }
+                }
+
                 // Inverse affordance for the cloud-dictation case: once
                 // the user has revealed the models they may decide they
                 // didn't actually want them on screen. Only meaningful
@@ -120,6 +146,28 @@ fun WhisperModelsCard(
             }
         }
     }
+}
+
+@Composable
+private fun TierHeader(label: String, blurb: String) {
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(label, style = MaterialTheme.typography.titleSmall)
+    Text(
+        blurb,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun ModelRowFor(vm: WhisperModelsViewModel, state: ModelUiState<ModelInfo>) {
+    ModelRow(
+        state = state,
+        onDownload = { vm.download(state.info.id) },
+        onCancel = { vm.cancelDownload(state.info.id) },
+        onDelete = { vm.delete(state.info.id) },
+        onSetActive = { vm.setActive(state.info.id) },
+    )
 }
 
 @Composable

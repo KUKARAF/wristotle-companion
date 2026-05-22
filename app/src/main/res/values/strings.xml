@@ -107,6 +107,9 @@
     <string name="whisper_models_repebble_notice_switch_hint">If you want on-device transcription for your watch via Wristotle\'s Whisper, switch your BLE companion app to microPebble — it routes dictation through Android\'s speech recognizer, which Wristotle\'s Whisper can take over.</string>
     <string name="whisper_models_show_anyway">Show models anyway</string>
     <string name="whisper_models_hide_anyway">Hide models</string>
+    <string name="whisper_models_show_all">Show all models (%1$d more)</string>
+    <string name="whisper_models_show_fewer">Show fewer</string>
+    <string name="whisper_models_all_header">All models</string>
 
     <!-- Section headers grouping related Settings cards -->
     <string name="settings_section_models">Models</string>
