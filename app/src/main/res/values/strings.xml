@@ -111,6 +111,16 @@
     <string name="whisper_models_show_fewer">Show fewer</string>
     <string name="whisper_models_all_header">All models</string>
 
+    <!-- App aliases (Settings → Learning → Installed apps) -->
+    <string name="app_aliases_header">App aliases</string>
+    <string name="app_aliases_desc">Pin a spoken phrase to a specific app, for when dictation mishears an app name (\"adobe\" for Audible) or you use a nickname (\"podcasts\" for Pocket Casts). Aliases win over the normal name matching.</string>
+    <string name="app_aliases_empty">No aliases yet. Add one below to fix a misheard or nicknamed app.</string>
+    <string name="app_aliases_phrase_label">When I say…</string>
+    <string name="app_aliases_app_label">Open this app</string>
+    <string name="app_aliases_add">Add alias</string>
+    <string name="app_aliases_delete">Delete alias</string>
+    <string name="app_aliases_not_installed">%1$s (not installed)</string>
+
     <!-- Section headers grouping related Settings cards -->
     <string name="settings_section_models">Models</string>
     <string name="settings_section_learning">Learning</string>

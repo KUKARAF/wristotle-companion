@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
     private val nluSettingsVm: NluSettingsViewModel by viewModels()
     private val conversationVm: ConversationViewModel by viewModels()
     private val appIndexVm: AppIndexViewModel by viewModels()
+    private val appAliasesVm: com.lazydevs.wristotle.ui.AppAliasesViewModel by viewModels()
     private val diagnosticsVm: DiagnosticsViewModel by viewModels()
     private val watchSettingsVm: WatchSettingsViewModel by viewModels()
 
@@ -80,6 +81,7 @@ class MainActivity : ComponentActivity() {
                     nluSettingsVm = nluSettingsVm,
                     conversationVm = conversationVm,
                     appIndexVm = appIndexVm,
+                    appAliasesVm = appAliasesVm,
                     diagnosticsVm = diagnosticsVm,
                     watchSettingsVm = watchSettingsVm,
                     onRequestWatchPermissions = ::requestWatchPermissions,
@@ -104,6 +106,7 @@ class MainActivity : ComponentActivity() {
         vm.refreshPermissions()
         modelsVm.refresh()
         appIndexVm.refresh()
+        appAliasesVm.refresh()
     }
 
     /** Runtime perms the watch-bridge handlers need (Watch tab Grant button). */

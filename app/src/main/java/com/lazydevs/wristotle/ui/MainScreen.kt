@@ -48,6 +48,7 @@ fun MainScreen(
     nluSettingsVm: NluSettingsViewModel,
     conversationVm: ConversationViewModel,
     appIndexVm: AppIndexViewModel,
+    appAliasesVm: AppAliasesViewModel,
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
     onRequestWatchPermissions: () -> Unit,
@@ -146,6 +147,7 @@ fun MainScreen(
                         nluSettingsVm = nluSettingsVm,
                         conversationVm = conversationVm,
                         appIndexVm = appIndexVm,
+                        appAliasesVm = appAliasesVm,
                         diagnosticsVm = diagnosticsVm,
                         watchSettingsVm = watchSettingsVm,
                     )

@@ -59,6 +59,9 @@ class AppIndex(
     suspend fun count(): Int = dao.count()
     suspend fun latestScanAt(): Long? = dao.latestScanAt()
 
+    /** All indexed apps (label + packageId), for the alias-picker UI. */
+    suspend fun installedApps(): List<InstalledApp> = dao.all()
+
     /** See the [AppLookup] doc for what each return value means. */
     suspend fun lookup(query: String): AppLookup {
         val normalized = normalizeForIndex(query)

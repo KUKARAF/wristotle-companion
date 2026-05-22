@@ -51,6 +51,7 @@ fun SettingsScreen(
     nluSettingsVm: NluSettingsViewModel,
     conversationVm: ConversationViewModel,
     appIndexVm: AppIndexViewModel,
+    appAliasesVm: AppAliasesViewModel,
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
 ) {
@@ -90,6 +91,7 @@ fun SettingsScreen(
         // doubles as the sub-section label.
         SettingsSection(stringResource(R.string.settings_section_learning)) {
             AppIndexCard(vm = appIndexVm)
+            AppAliasesCard(vm = appAliasesVm)
             IntentLearningCard(
                 learningEnabled = learningEnabled,
                 onToggle = nluSettingsVm::setLearningEnabled,
