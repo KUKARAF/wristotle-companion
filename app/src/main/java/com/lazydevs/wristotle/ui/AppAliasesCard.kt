@@ -161,9 +161,13 @@ internal fun AddAliasForm(
     var selectedPkg by rememberSaveable { mutableStateOf<String?>(null) }
     var expanded by remember { mutableStateOf(false) }
 
+    // Show every match (the dropdown scrolls), alphabetized so the full
+    // app list is browsable when the field is empty — capping the list hid
+    // most installed apps behind a query the user had to guess.
     val filtered = remember(appQuery, apps) {
-        if (appQuery.isBlank()) apps.take(MAX_SUGGESTIONS)
-        else apps.filter { it.label.contains(appQuery, ignoreCase = true) }.take(MAX_SUGGESTIONS)
+        val matches = if (appQuery.isBlank()) apps
+            else apps.filter { it.label.contains(appQuery, ignoreCase = true) }
+        matches.sortedBy { it.label.lowercase() }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -190,6 +194,11 @@ internal fun AddAliasForm(
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
                     .fillMaxWidth(),
             )
+            // Eager items, not a LazyColumn: ExposedDropdownMenu sizes itself
+            // via intrinsic measurement of its content, which a LazyColumn
+            // (SubcomposeLayout) can't answer — it crashes. The menu scrolls
+            // on its own, and the launcher-app list is small enough that
+            // composing the rows up front is fine.
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 filtered.forEach { app ->
                     DropdownMenuItem(
@@ -218,5 +227,3 @@ internal fun AddAliasForm(
         }
     }
 }
-
-private const val MAX_SUGGESTIONS = 12

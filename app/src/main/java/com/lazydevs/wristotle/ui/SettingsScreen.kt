@@ -22,6 +22,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,12 @@ fun SettingsScreen(
     // us, so the toggle would be a no-op — hide it.
     val companion by conversationVm.pebbleCompanion.collectAsState()
     val scope = rememberCoroutineScope()
+
+    // A rescan can prune aliases whose target was uninstalled; the alias card's
+    // VM is independent, so reload it whenever a scan finishes (lastScannedAtMs
+    // changes) to keep the list in sync.
+    val appIndexState by appIndexVm.state.collectAsState()
+    LaunchedEffect(appIndexState.lastScannedAtMs) { appAliasesVm.refresh() }
     // State for the "you're about to shrink the window and lose N entries" confirm dialog.
     var pendingShrink by remember { mutableStateOf<PendingShrink?>(null) }
     var showClearLearnedConfirm by remember { mutableStateOf(false) }

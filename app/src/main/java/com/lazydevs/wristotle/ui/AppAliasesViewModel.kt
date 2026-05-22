@@ -1,6 +1,7 @@
 package com.lazydevs.wristotle.ui
 
 import android.app.Application
+import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.WristotleApplication
@@ -39,21 +40,35 @@ class AppAliasesViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refresh() {
         viewModelScope.launch {
+            // Prune aliases whose target is no longer installed using a live
+            // PackageManager check — so an uninstall takes effect the next time
+            // this screen loads (onResume), without waiting for a manual app
+            // rescan. The index-based prune in AppIndexer only fires on rescan
+            // and reads a possibly-stale index, which left dangling aliases.
+            val installedPackages = store.all().values.filter(::isInstalled).toSet()
+            store.retainInstalled(installedPackages)
+
             val apps = appIndex.installedApps()
             _installedApps.value = apps
             val byPkg = apps.associateBy { it.packageId }
             _aliases.value = store.all().entries
                 .sortedBy { it.key }
                 .map { (phrase, pkg) ->
-                    val app = byPkg[pkg]
                     AliasRow(
                         phrase = phrase,
                         packageId = pkg,
-                        appLabel = app?.label ?: pkg,
-                        installed = app != null,
+                        appLabel = byPkg[pkg]?.label ?: pkg,
+                        installed = isInstalled(pkg),
                     )
                 }
         }
+    }
+
+    private fun isInstalled(packageId: String): Boolean = try {
+        getApplication<Application>().packageManager.getApplicationInfo(packageId, 0)
+        true
+    } catch (_: PackageManager.NameNotFoundException) {
+        false
     }
 
     fun add(phrase: String, packageId: String) {
