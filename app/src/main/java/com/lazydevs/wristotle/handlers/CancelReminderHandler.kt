@@ -34,7 +34,11 @@ class CancelReminderHandler(context: Context, private val transport: PebbleTrans
             pinStore.latest() ?: return "No reminders to cancel"
         } else {
             ReminderMatching.bestMatch(target, pinStore.all(), System.currentTimeMillis())
-                ?: return "No reminder matching \"$target\""
+                ?: return if (mentionsCalendarEvent(target)) {
+                    "I can only cancel reminders, not meetings"
+                } else {
+                    "No reminder matching \"$target\""
+                }
         }
 
         val cancelResult = transport.deleteReminder(record.id)

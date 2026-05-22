@@ -1,7 +1,9 @@
 package com.lazydevs.wristotle.handlers
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -71,6 +73,21 @@ class ReminderMatchingTest {
         val records = listOf(rec("a", "Gym"))
         assertNull(ReminderMatching.bestMatch("", records, now))
         assertNull(ReminderMatching.bestMatch("   ", records, now))
+    }
+
+    // --- mentionsCalendarEvent (guard for "push my meeting") ---
+
+    @Test fun calendarEventNounsDetected() {
+        assertTrue(mentionsCalendarEvent("meeting"))
+        assertTrue(mentionsCalendarEvent("my 3pm meeting"))
+        assertTrue(mentionsCalendarEvent("the standup appointment"))
+        assertTrue(mentionsCalendarEvent("dentist event"))
+    }
+
+    @Test fun reminderTargetsNotFlaggedAsCalendar() {
+        assertFalse(mentionsCalendarEvent("gym"))
+        assertFalse(mentionsCalendarEvent("call mom"))
+        assertFalse(mentionsCalendarEvent("5pm"))
     }
 
     private fun dateAt(s: String): Long =

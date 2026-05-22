@@ -63,3 +63,17 @@ object ReminderMatching {
     private val MULTI_WS = Regex("\\s+")
     private fun normalize(s: String): String = s.trim().lowercase().replace(MULTI_WS, " ")
 }
+
+/** Nouns that name a calendar event, not a reminder. Reminders (PinStore pins)
+ *  and calendar events (CalendarContract) are separate stores; reschedule/cancel
+ *  only act on reminders. */
+private val CALENDAR_EVENT_NOUNS = listOf("meeting", "appointment", "event")
+
+/**
+ * True when [target] names a calendar event ("my 3pm meeting", "the standup
+ * appointment") rather than a reminder. Lets cancel/reschedule give a clear
+ * "I can only … reminders, not meetings" instead of a confusing
+ * "No reminder matching meeting" when the user means a calendar event.
+ */
+internal fun mentionsCalendarEvent(target: String): Boolean =
+    CALENDAR_EVENT_NOUNS.any { target.contains(it, ignoreCase = true) }
