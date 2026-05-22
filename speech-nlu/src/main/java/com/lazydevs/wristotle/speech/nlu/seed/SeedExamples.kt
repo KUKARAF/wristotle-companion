@@ -91,6 +91,51 @@ object SeedExamples {
             "drop the reminder",
             "undo that reminder",
             "scrap the last reminder",
+            "cancel my gym reminder",
+            "cancel the dentist reminder",
+            "delete my reminder about the meeting",
+            "cancel my five pm reminder",
+            "remove the reminder to call mom",
+        ))
+        // ── ListReminders ───────────────────────────────────────────────
+        addAll(Intent.ListReminders, listOf(
+            "what are my reminders",
+            "list my reminders",
+            "show my reminders",
+            "what reminders do I have",
+            "do I have any reminders",
+            "read my reminders",
+            "what have I set",
+            "what's on my reminder list",
+            "tell me my reminders",
+            "any reminders",
+            "show me what I need to do",
+            "what am I supposed to remember",
+            // Query forms that name a time — must NOT be heard as "create a
+            // reminder at <time>". The leading "is there / do I have / any"
+            // is the signal; the time is incidental.
+            "is there a reminder at two pm",
+            "do I have a reminder at five",
+            "is there anything at three pm",
+            "any reminders at noon",
+            "do I have a reminder for two pm",
+            "have I got a reminder at four",
+            "is there a reminder later today",
+        ))
+        // ── Reschedule ──────────────────────────────────────────────────
+        addAll(Intent.Reschedule, listOf(
+            "snooze my reminder for ten minutes",
+            "snooze for five minutes",
+            "reschedule my reminder to six pm",
+            "push my reminder to seven",
+            "move my gym reminder to noon",
+            "postpone the dentist reminder to tomorrow",
+            "delay my reminder by an hour",
+            "push it back to eight pm",
+            "move my reminder to later",
+            "reschedule the meeting reminder for three",
+            "bump my reminder to nine",
+            "shift my reminder to the morning",
         ))
         // ── FindPhone ───────────────────────────────────────────────────
         addAll(Intent.FindPhone, listOf(

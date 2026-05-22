@@ -58,6 +58,20 @@ internal object PrefixHints {
         // Existing non-media intents
         Regex("(?i)^\\s*(text|sms|message|send (a |an )?(text|message|sms))\\b") to Intent.Sms,
         Regex("(?i)^\\s*(call|dial|phone|ring)\\b") to Intent.Call,
+        // CreateEvent — "schedule/set up/create/add/book … meeting/event/…".
+        // Requires an event noun, so "schedule a reminder" does NOT match here
+        // (it has no event noun) and stays with the reminder path. Rescues the
+        // classifier, which scores "schedule a meeting with X at Y for Z" as
+        // ambiguous (event vs reminder) and otherwise drops it to Unknown.
+        Regex("(?i)^\\s*(schedule|set up|create|add|book|put)\\b.*\\b(meeting|appointment|event|call)\\b") to Intent.CreateEvent,
+        // ListReminders — a leading interrogative / "list" / "show" together
+        // with a reminder noun is a QUERY ("is there a reminder at 2pm", "do I
+        // have a reminder at 5"), NOT a create. MUST sit above the Reminder
+        // rule so these don't fall through to creating a junk reminder. The
+        // embedding can't reliably separate "is there a reminder at X" from
+        // "remind me at X" — the time dominates the cosine — so this is the
+        // deterministic guard. Matches the common "remainder" mishearing too.
+        Regex("(?i)^\\s*(what|which|when|is|are|was|were|do|does|did|have|has|had|any|list|show|read|tell)\\b.*\\b(reminders?|remainders?)\\b") to Intent.ListReminders,
         Regex("(?i)^\\s*(remind|set (a )?reminder|reminder)\\b") to Intent.Reminder,
         Regex("(?i)^\\s*(cancel|delete|remove|clear)\\b") to Intent.Cancel,
         Regex("(?i)^\\s*(find|locate|where('?s| is)) (my )?phone\\b") to Intent.FindPhone,

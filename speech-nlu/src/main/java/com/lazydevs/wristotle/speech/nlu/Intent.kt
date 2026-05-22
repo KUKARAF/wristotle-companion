@@ -13,6 +13,18 @@ enum class Intent {
     Sms,
     Reminder,
     Cancel,
+
+    /** Read-only: list the pending reminders the user has set ("what are my
+     *  reminders", "list my reminders"). No slots. Handled by
+     *  ListRemindersHandler reading the local PinStore. */
+    ListReminders,
+
+    /** Move an existing reminder to a new time ("snooze", "push it to 6pm",
+     *  "reschedule my gym reminder to noon"). Slots: `time` (java.util.Date,
+     *  required) and `target` (String?, which reminder). Handled by
+     *  RescheduleHandler: delete the old pin, re-insert at the new time. */
+    Reschedule,
+
     FindPhone,
     Time,
     Battery,

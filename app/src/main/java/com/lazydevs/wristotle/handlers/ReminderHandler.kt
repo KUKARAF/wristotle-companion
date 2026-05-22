@@ -56,7 +56,7 @@ class ReminderHandler(context: Context, private val transport: PebbleTransport) 
         Log.d(TAG, "insertTimelinePin: $pinResult")
 
         return if (pinResult == TimelineResult.Success) {
-            pinStore.save(pinId)
+            pinStore.save(ReminderRecord(id = pinId, title = title, timeMs = time.time))
             val formatted = android.text.format.DateFormat.format("MMM d 'at' h:mm a", time).toString()
             "Reminder set:\n$title\n$formatted"
         } else {

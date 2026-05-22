@@ -54,11 +54,11 @@ class CreateEventSlots : SlotExtractor {
     private fun extractDuration(lower: String): Int? {
         if (HALF_HOUR.containsMatchIn(lower)) return 30
         HOURS.find(lower)?.let { m ->
-            val n = m.groupValues[1].toIntOrNull() ?: WORD_NUMS[m.groupValues[1]] ?: return@let
+            val n = m.groupValues[1].toIntOrNull() ?: WORD_NUMBERS[m.groupValues[1]] ?: return@let
             return n * 60
         }
         MINUTES.find(lower)?.let { m ->
-            val n = m.groupValues[1].toIntOrNull() ?: WORD_NUMS[m.groupValues[1]] ?: return@let
+            val n = m.groupValues[1].toIntOrNull() ?: WORD_NUMBERS[m.groupValues[1]] ?: return@let
             return n
         }
         return null
@@ -86,11 +86,6 @@ class CreateEventSlots : SlotExtractor {
         val HALF_HOUR = Regex("""(?i)\bhalf (?:an )?hour\b""")
         val HOURS = Regex("""(?i)\b(\d{1,2}|one|two|three|four|five|six)\s*(?:hour|hr)s?\b""")
         val MINUTES = Regex("""(?i)\b(\d{1,3}|fifteen|thirty|forty five|forty-five|sixty)\s*(?:minute|min)s?\b""")
-        val WORD_NUMS = mapOf(
-            "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5,
-            "six" to 6, "fifteen" to 15, "thirty" to 30,
-            "forty five" to 45, "forty-five" to 45, "sixty" to 60,
-        )
     }
 }
 

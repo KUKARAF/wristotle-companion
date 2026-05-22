@@ -31,6 +31,51 @@ class PrefixHintsTest {
         assertEquals(Intent.Reminder, PrefixHints.hintFor("remind me at 5pm"))
     }
 
+    // --- ListReminders query forms must beat the Reminder create rule ---
+
+    @Test fun `is there a reminder at a time maps to ListReminders`() {
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("is there a reminder at 2pm"))
+    }
+
+    @Test fun `is that a reminder mishearing still maps to ListReminders`() {
+        // Whisper often hears "is there" as "is that".
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("is that a reminder at 2 p.m."))
+    }
+
+    @Test fun `do I have a reminder maps to ListReminders`() {
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("do I have a reminder at five"))
+    }
+
+    @Test fun `remainder mishearing maps to ListReminders`() {
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("do I have a remainder at 10 pm"))
+    }
+
+    @Test fun `what are my reminders maps to ListReminders`() {
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("what are my reminders"))
+    }
+
+    @Test fun `create reminder still maps to Reminder not List`() {
+        assertEquals(Intent.Reminder, PrefixHints.hintFor("remind me to call mom at 2pm"))
+        assertEquals(Intent.Reminder, PrefixHints.hintFor("set a reminder for 2pm"))
+    }
+
+    // --- CreateEvent: schedule/create + event noun ---
+
+    @Test fun `schedule a meeting maps to CreateEvent`() {
+        assertEquals(Intent.CreateEvent, PrefixHints.hintFor("schedule a meeting with bob at 3pm for 1 hour"))
+    }
+
+    @Test fun `set up and create event variants map to CreateEvent`() {
+        assertEquals(Intent.CreateEvent, PrefixHints.hintFor("set up a meeting tomorrow"))
+        assertEquals(Intent.CreateEvent, PrefixHints.hintFor("create an event for friday"))
+        assertEquals(Intent.CreateEvent, PrefixHints.hintFor("book an appointment at noon"))
+    }
+
+    @Test fun `schedule a reminder does not map to CreateEvent`() {
+        // No event noun → not CreateEvent; left to the reminder path.
+        assertEquals(null, PrefixHints.hintFor("schedule a reminder for 5pm"))
+    }
+
     @Test fun `cancel prefix maps to Cancel`() {
         assertEquals(Intent.Cancel, PrefixHints.hintFor("cancel reminder"))
     }
