@@ -28,4 +28,12 @@ data class WatchSettings(
      *  (call, sms, reminder, etc.) round-trip through a watch confirm prompt
      *  before the companion runs them. Default false on a fresh install. */
     val confirmBeforeSend: Boolean,
+    /** Auto-resolve timeout for the on-watch confirm prompt, in seconds.
+     *  0 = "never time out". Default 15. Only meaningful when
+     *  [confirmBeforeSend] is on. */
+    val confirmTimeoutSeconds: Int,
+    /** When true, the confirm prompt timing out auto-dispatches the action;
+     *  when false (default) it cancels. Only meaningful when
+     *  [confirmBeforeSend] is on. */
+    val confirmDefaultSend: Boolean,
 )

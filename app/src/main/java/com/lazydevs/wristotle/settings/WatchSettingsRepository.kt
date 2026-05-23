@@ -131,6 +131,8 @@ class WatchSettingsRepository(
             skipRetryDialog           = data.boolSetting(MessageKeys.SETTING_SKIP_RETRY_DIALOG)       ?: previous?.skipRetryDialog           ?: true,
             quickLaunchAction         = data.intSetting (MessageKeys.SETTING_QUICK_LAUNCH_ACTION)     ?: previous?.quickLaunchAction         ?: MessageKeys.QUICK_LAUNCH_ACTION_DICTATE,
             confirmBeforeSend         = data.boolSetting(MessageKeys.SETTING_CONFIRM_BEFORE_SEND)    ?: previous?.confirmBeforeSend         ?: false,
+            confirmTimeoutSeconds     = data.intSetting (MessageKeys.SETTING_CONFIRM_TIMEOUT_SECONDS)?: previous?.confirmTimeoutSeconds     ?: 15,
+            confirmDefaultSend        = data.boolSetting(MessageKeys.SETTING_CONFIRM_DEFAULT_SEND)   ?: previous?.confirmDefaultSend        ?: false,
         )
         _state.value = WatchSettingsState.Loaded(merged)
     }
@@ -183,6 +185,8 @@ class WatchSettingsRepository(
             bool(MessageKeys.SETTING_SKIP_RETRY_DIALOG, baseline?.skipRetryDialog, updated.skipRetryDialog)
             int(MessageKeys.SETTING_QUICK_LAUNCH_ACTION, baseline?.quickLaunchAction, updated.quickLaunchAction)
             bool(MessageKeys.SETTING_CONFIRM_BEFORE_SEND, baseline?.confirmBeforeSend, updated.confirmBeforeSend)
+            int(MessageKeys.SETTING_CONFIRM_TIMEOUT_SECONDS, baseline?.confirmTimeoutSeconds, updated.confirmTimeoutSeconds)
+            bool(MessageKeys.SETTING_CONFIRM_DEFAULT_SEND, baseline?.confirmDefaultSend, updated.confirmDefaultSend)
         }
     }
 

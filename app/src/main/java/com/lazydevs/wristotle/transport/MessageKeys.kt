@@ -103,6 +103,16 @@ object MessageKeys {
      */
     val CONFIRM_RESPONSE: UInt = 10034u
 
+    /** Auto-resolve timeout for the on-watch confirm prompt, in seconds.
+     *  Int32. 0 = "never time out". Whitelisted values: 0 / 5 / 10 / 15 /
+     *  30 / 60. Default 15. Lives in the settings snapshot. */
+    val SETTING_CONFIRM_TIMEOUT_SECONDS: UInt = 10035u
+
+    /** Bool: when true, the confirm prompt timing out auto-dispatches the
+     *  stashed action; when false (default) it cancels. Only meaningful
+     *  when [SETTING_CONFIRM_BEFORE_SEND] is on. Lives in the snapshot. */
+    val SETTING_CONFIRM_DEFAULT_SEND: UInt = 10036u
+
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE].
      *  Stays under Pebble's AppMessage outbox budget (~636 bytes) minus
      *  tuple framing. */
@@ -129,6 +139,8 @@ object MessageKeys {
         SETTING_VIBRATE_RESPECT_QUIET,
         SETTING_SKIP_RETRY_DIALOG,
         SETTING_QUICK_LAUNCH_ACTION,
+        SETTING_CONFIRM_TIMEOUT_SECONDS,
+        SETTING_CONFIRM_DEFAULT_SEND,
     )
 
     /** Value of MSG_TARGET that means "this message is for the Android companion". */

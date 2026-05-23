@@ -140,6 +140,23 @@ private fun EditableBody(baseline: WatchSettings, onSave: (WatchSettings) -> Uni
             checked = draft.confirmBeforeSend,
             onChange = { draft = draft.copy(confirmBeforeSend = it) },
         )
+        // The two sub-settings only matter when the main toggle is on —
+        // hide them otherwise to keep the card focused. Cheap reactive
+        // hide via `if (draft.confirmBeforeSend)`; the draft re-seeds on
+        // each Refresh so flipping the parent toggle off → on → off
+        // doesn't lose the sub-values (they live in the WatchSettings
+        // record either way).
+        if (draft.confirmBeforeSend) {
+            ConfirmTimeoutDropdown(
+                seconds = draft.confirmTimeoutSeconds,
+                onChange = { draft = draft.copy(confirmTimeoutSeconds = it) },
+            )
+            SwitchRow(
+                label = stringResource(R.string.watch_settings_confirm_default_send),
+                checked = draft.confirmDefaultSend,
+                onChange = { draft = draft.copy(confirmDefaultSend = it) },
+            )
+        }
         SwitchRow(
             label = stringResource(R.string.watch_settings_skip_retry_dialog),
             checked = draft.skipRetryDialog,
@@ -235,6 +252,47 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
 }
 
 private val AUTO_EXIT_CHOICES = listOf(0, 3, 5, 10)
+
+// Mirrors the Clay options exactly so the picker round-trips with the
+// watch's whitelist. 0 maps to "Never" (no timer armed).
+private val CONFIRM_TIMEOUT_CHOICES = listOf(5, 10, 15, 30, 60, 0)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ConfirmTimeoutDropdown(seconds: Int, onChange: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val display = confirmTimeoutLabel(seconds)
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = display,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.watch_settings_confirm_timeout)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            CONFIRM_TIMEOUT_CHOICES.forEach { s ->
+                DropdownMenuItem(
+                    text = { Text(confirmTimeoutLabel(s)) },
+                    onClick = { onChange(s); expanded = false },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun confirmTimeoutLabel(seconds: Int): String = when (seconds) {
+    0 -> stringResource(R.string.watch_settings_confirm_timeout_never)
+    60 -> stringResource(R.string.watch_settings_confirm_timeout_minute)
+    else -> stringResource(R.string.watch_settings_confirm_timeout_seconds, seconds)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

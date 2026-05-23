@@ -219,6 +219,11 @@
     <string name="watch_settings_logging">Debug logging</string>
     <string name="watch_settings_dictation_confirmation">Confirm transcription before sending</string>
     <string name="watch_settings_confirm_before_send">Confirm action before running it</string>
+    <string name="watch_settings_confirm_timeout">Confirm timeout</string>
+    <string name="watch_settings_confirm_timeout_seconds">%1$d seconds</string>
+    <string name="watch_settings_confirm_timeout_minute">1 minute</string>
+    <string name="watch_settings_confirm_timeout_never">Never</string>
+    <string name="watch_settings_confirm_default_send">Auto-send if no response</string>
     <!-- Reply sent back to the watch when the user BACK-cancels (or
          times out on) a confirm-before-dispatch prompt. Renders in the
          watch chat as the response for the cancelled action. -->
