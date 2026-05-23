@@ -31,6 +31,17 @@ class PebbleTransport(context: Context) : java.io.Closeable {
         mapOf(MessageKeys.CANCEL_RESULT to PebbleDictionaryItem.Text(text))
     )
 
+    /** Notes-on-watch (Phase C): ship the joined notes payload back to the
+     *  watch in response to a NOTES_REQUEST. */
+    suspend fun sendNotesResponse(text: String) = sendWithNackRetry(
+        mapOf(MessageKeys.NOTES_RESPONSE to PebbleDictionaryItem.Text(text))
+    )
+
+    /** Ship a single note's full body in response to NOTE_DETAIL_REQUEST. */
+    suspend fun sendNoteDetailResponse(text: String) = sendWithNackRetry(
+        mapOf(MessageKeys.NOTE_DETAIL_RESPONSE to PebbleDictionaryItem.Text(text))
+    )
+
     suspend fun insertReminder(pin: TimelinePin): TimelineResult =
         sender.insertTimelinePin(AppConstants.PEBBLE_UUID, pin)
 

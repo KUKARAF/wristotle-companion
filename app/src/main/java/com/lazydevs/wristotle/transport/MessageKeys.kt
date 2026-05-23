@@ -46,6 +46,30 @@ object MessageKeys {
      *  repository detects via a response timeout. */
     val REQUEST_SETTINGS: UInt   = 10026u
 
+    /** Notes-on-watch (Phase C). Watch → companion: presence-only request that
+     *  asks for the most recent notes. Companion → watch: a single CSTRING
+     *  containing notes joined by [NOTES_SEPARATOR] (record separator); each
+     *  note is the body, truncated to fit. */
+    val NOTES_REQUEST: UInt      = 10027u
+    val NOTES_RESPONSE: UInt     = 10028u
+
+    /** Per-note detail fetch. Watch → companion: an Int32 with the note's
+     *  index in the most-recent NOTES_RESPONSE (0..N-1). Companion → watch:
+     *  the FULL body of that note, capped at [NOTE_DETAIL_MAX_CHARS] to fit
+     *  one AppMessage. Used when the user drills into a row on the watch. */
+    val NOTE_DETAIL_REQUEST: UInt  = 10029u
+    val NOTE_DETAIL_RESPONSE: UInt = 10030u
+
+    /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE].
+     *  Stays under Pebble's AppMessage outbox budget (~636 bytes) minus
+     *  tuple framing. */
+    const val NOTE_DETAIL_MAX_CHARS: Int = 540
+
+    /** Record-separator char (US-ASCII 0x1E) used to delimit notes inside a
+     *  single NOTES_RESPONSE payload. Never appears in printable text so
+     *  splitting is unambiguous. */
+    const val NOTES_SEPARATOR: Char = ''
+
     /** All settings keys, grouped so [PebbleListenerService.onMessageReceived]
      *  can detect "this incoming message carries settings tuples" without a
      *  marker key. Any tuple of one of these keys is, by definition, a

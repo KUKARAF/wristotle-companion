@@ -23,6 +23,11 @@ class NoteRepository(
 
     suspend fun count(): Int = dao.count()
 
+    /** One-shot snapshot of the [limit] newest notes — used by callers that
+     *  don't want to subscribe to a Flow (e.g. the on-watch list responder). */
+    suspend fun mostRecent(limit: Int): List<Note> =
+        dao.notesBeyond(offset = 0, limit = limit)
+
     /**
      * Insert a new note. Returns the auto-generated id (later used to
      * name the per-note `.wav`). Caller is responsible for invoking

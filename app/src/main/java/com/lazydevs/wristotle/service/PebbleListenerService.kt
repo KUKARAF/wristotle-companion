@@ -73,6 +73,13 @@ class PebbleListenerService : BasePebbleListenerService() {
     private lateinit var learningCollector: LearningCollector
     private lateinit var watchSettingsRepository: WatchSettingsRepository
 
+    /** Last batch of notes shipped to the watch via NOTES_RESPONSE. The watch
+     *  refers back by zero-based index when it wants a single note's full body
+     *  via NOTE_DETAIL_REQUEST — short-lived: each NOTES_REQUEST replaces it.
+     *  @Volatile so the IO write from one onMessageReceived is visible to
+     *  any subsequent dispatch on a different thread. */
+    @Volatile private var lastNotesSnapshot: List<com.lazydevs.wristotle.notes.Note> = emptyList()
+
     override fun onCreate() {
         super.onCreate()
         // Note: the actual BLE companion (rePebble vs microPebble) is
@@ -156,6 +163,45 @@ class PebbleListenerService : BasePebbleListenerService() {
         if (data[MessageKeys.COMPANION_PING] != null) {
             Log.d(TAG, "Received COMPANION_PING, sending READY")
             transport.sendReady()
+            return ReceiveResult.Ack
+        }
+
+        // Notes-on-watch request: presence-only key. Ship a snapshot of the
+        // most recent notes back over NOTES_RESPONSE, and remember the
+        // ordering so a follow-up NOTE_DETAIL_REQUEST(index) resolves to
+        // the matching note id.
+        if (data[MessageKeys.NOTES_REQUEST] != null) {
+            val notesApp = application as WristotleApplication
+            val notes = notesApp.noteRepository.mostRecent(
+                com.lazydevs.wristotle.notes.NotesResponseFormatter.MAX_NOTES,
+            )
+            lastNotesSnapshot = notes
+            val payload = com.lazydevs.wristotle.notes.NotesResponseFormatter.format(notes)
+            Log.d(TAG, "NOTES_REQUEST → sending ${notes.size} notes (${payload.length} chars)")
+            transport.sendNotesResponse(payload)
+            return ReceiveResult.Ack
+        }
+
+        // Per-note detail fetch: int32 index into the most-recent snapshot.
+        // Watch shows the full body in its detail window, with a short
+        // timestamp header prepended for context.
+        val detailIndex = data.int32(MessageKeys.NOTE_DETAIL_REQUEST)
+        if (detailIndex != null) {
+            val snapshot = lastNotesSnapshot
+            val note = snapshot.getOrNull(detailIndex)
+            val payload = if (note == null) "" else {
+                val header = android.text.format.DateFormat
+                    .format("MMM d, h:mm a", note.createdAtEpochMs).toString()
+                // Reserve header + 2 newlines + ellipsis from the budget so the
+                // truncation happens on the body, not on the timestamp.
+                val budgetForBody = MessageKeys.NOTE_DETAIL_MAX_CHARS - header.length - 2
+                val body = if (note.body.length > budgetForBody) {
+                    note.body.substring(0, budgetForBody - 1) + "…"
+                } else note.body
+                "$header\n\n$body"
+            }
+            Log.d(TAG, "NOTE_DETAIL_REQUEST idx=$detailIndex → ${payload.length} chars")
+            transport.sendNoteDetailResponse(payload)
             return ReceiveResult.Ack
         }
 
