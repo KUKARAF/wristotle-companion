@@ -20,8 +20,25 @@ class CancelSlots : SlotExtractor {
     }
 
     private companion object {
+        // Past-tense forms listed explicitly. Watch-dictation often arrives
+        // in past tense from Whisper ("Cancelled reminder.") and the bare
+        // \bcancel\b form wouldn't otherwise strip "cancelled" — leaving it
+        // as the target descriptor and causing the handler to search for a
+        // reminder named "cancelled" (always a miss).
         val CANCEL_VERBS = Regex(
-            "(?i)\\b(cancel|remove|delete|scratch|forget|kill|drop|undo|scrap|clear|never\\s*mind)\\b",
+            "(?i)\\b(" +
+                "cancell?ed|cancel|" +
+                "removed|remove|" +
+                "deleted|delete|" +
+                "scratched|scratch|" +
+                "forgotten|forgot|forget|" +
+                "killed|kill|" +
+                "dropped|drop|" +
+                "undone|undo|" +
+                "scrapped|scrap|" +
+                "cleared|clear|" +
+                "never\\s*mind" +
+                ")\\b",
         )
         // Words that are never part of the reminder descriptor. "last/latest/
         // recent/it/that" reduce a bare cancel to empty → cancel the latest.

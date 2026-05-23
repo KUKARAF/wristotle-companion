@@ -252,6 +252,12 @@ class PebbleListenerService : BasePebbleListenerService() {
 
         val routed = resolveIntent(classified, watchHint, query)
         Log.d(TAG, "Routed to intent=${routed.intent} confidence=${routed.confidence}")
+        // Phase A1.5 of confirm-before-dispatch: log the parsed action + slots
+        // for every query so we can verify what the eventual confirm prompt
+        // would say before any wire protocol is in place. No behaviour change
+        // — pure observability. Will be reused as the confirm prompt body in
+        // Phase A3.
+        Log.d(TAG, "Confirm preview:\n${com.lazydevs.wristotle.handlers.ConfirmSummaryBuilder.summary(routed)}")
 
         // Claim the recognizer's published .wav path now (before dispatch) so
         // the NoteHandler can copy it into permanent notes-audio/. The same
