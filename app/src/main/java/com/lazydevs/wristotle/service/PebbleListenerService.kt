@@ -38,6 +38,7 @@ import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
 import com.lazydevs.wristotle.transport.MessageKeys
 import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.transport.boolFlag
 import com.lazydevs.wristotle.transport.int32
 import com.lazydevs.wristotle.transport.text
 import io.rebble.pebblekit2.client.BasePebbleListenerService
@@ -245,7 +246,11 @@ class PebbleListenerService : BasePebbleListenerService() {
         }
         val query = reminderText ?: cancelText ?: companionText ?: return ReceiveResult.Ack
 
-        Log.d(TAG, "Classifying query: $query (watchHint=$watchHint)")
+        // Phase A2 of confirm-before-dispatch: the watch attaches this flag
+        // when the user has the Confirm-action toggle on. Just observed here;
+        // Phase A3 will actually intercept destructive intents on a true flag.
+        val confirmRequested = data.boolFlag(MessageKeys.SETTING_CONFIRM_BEFORE_SEND)
+        Log.d(TAG, "Classifying query: $query (watchHint=$watchHint confirmRequested=$confirmRequested)")
         val classified = runCatching { intentClassifier.classify(query) }
             .onFailure { Log.w(TAG, "classify failed", it) }
             .getOrNull()

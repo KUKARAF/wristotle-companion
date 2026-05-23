@@ -23,3 +23,20 @@ internal fun PebbleDictionary.int32(key: UInt): Int? =
 
 internal fun PebbleDictionary.uint32(key: UInt): UInt? =
     (this[key] as? PebbleDictionaryItem.UInt32)?.value
+
+/**
+ * Reads a boolean-shaped flag tolerantly. The watch may write the same logical
+ * "0/1" tuple as UInt8, UInt32, or Int32 depending on the call site
+ * (`dict_write_uint8` vs `dict_write_int32`), and PebbleKit2 doesn't normalise
+ * them. Returns null when the key is absent or carries a non-numeric type.
+ */
+internal fun PebbleDictionary.boolFlag(key: UInt): Boolean? {
+    val item = this[key] ?: return null
+    return when (item) {
+        is PebbleDictionaryItem.UInt8  -> item.value.toInt() != 0
+        is PebbleDictionaryItem.UInt32 -> item.value != 0u
+        is PebbleDictionaryItem.Int32  -> item.value != 0
+        is PebbleDictionaryItem.Int8   -> item.value.toInt() != 0
+        else -> null
+    }
+}

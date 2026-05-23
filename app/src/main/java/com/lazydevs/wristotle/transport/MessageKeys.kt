@@ -70,19 +70,38 @@ object MessageKeys {
     val NOTE_DETAIL_RESPONSE: UInt = 10030u
 
     /**
-     * Confirm-before-dispatch toggle (Phase A1).
+     * Confirm-before-dispatch toggle.
      *
-     * Lives in the settings snapshot like any other watch-persisted setting,
-     * but is deliberately NOT in [SETTING_KEYS] because in later phases this
-     * same key rides per-query inside [COMPANION_QUERY] as a flag indicating
-     * the watch wants a confirm prompt. Putting it in [SETTING_KEYS] would
-     * make `PebbleListenerService.isSettingsMessage()` misclassify confirm-
-     * enabled queries as settings batches.
+     * Dual-use key. As a SETTING (Phase A1), it appears in the snapshot
+     * alongside the other watch-persisted settings. As a PER-QUERY FLAG
+     * (Phase A2+), the watch includes the same key inside the COMPANION_QUERY
+     * dictionary to signal "I want a confirm prompt for this query if its
+     * resolved intent is destructive".
      *
-     * The snapshot still ingests correctly because it carries 10+ other
-     * SETTING_* keys; one missing entry doesn't change the detection.
+     * Deliberately NOT added to [SETTING_KEYS] because the per-query usage
+     * would make `PebbleListenerService.isSettingsMessage()` misclassify
+     * confirm-enabled queries as settings batches. The snapshot still
+     * ingests correctly because it carries 10+ other SETTING_* keys; one
+     * missing entry doesn't change the batch detection.
      */
     val SETTING_CONFIRM_BEFORE_SEND: UInt = 10032u
+
+    /**
+     * Companion → watch: the rendered confirm prompt text the user sees
+     * before SELECT-ing to dispatch (or BACK-ing to cancel). Sent only when
+     * the watch's per-query CONFIRM_BEFORE_SEND flag was set AND the
+     * routed intent is in the destructive set (see IntentDestructiveness).
+     */
+    val CONFIRM_PROMPT: UInt   = 10033u
+
+    /**
+     * Watch → companion: the user's decision on a pending confirm prompt.
+     * Int32 0/1 (0 = cancel, 1 = dispatch). Consumed by PebbleListenerService
+     * to either run the stashed IntentResult or log a cancelled entry.
+     * Phase A2 stub on the watch always sends 1 (auto-confirm) until the
+     * real UI lands in Phase B.
+     */
+    val CONFIRM_RESPONSE: UInt = 10034u
 
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE].
      *  Stays under Pebble's AppMessage outbox budget (~636 bytes) minus
