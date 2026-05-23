@@ -35,6 +35,16 @@ class AliasStore(context: Context) {
     /** All aliases, `normalized phrase → packageId`. */
     fun all(): Map<String, String> = synchronized(lock) { load() }
 
+    /**
+     * Bulk replace — used by the backup importer to commit a merged map in
+     * one shot. Keys are not re-normalised here; the importer is responsible
+     * for providing already-normalised phrases (the manifest stores them
+     * normalised because [put] normalised on the way out).
+     */
+    fun replaceAll(map: Map<String, String>) = synchronized(lock) {
+        persist(map)
+    }
+
     /** Resolve an already-normalized phrase to a packageId, or null. */
     fun resolve(normalizedPhrase: String): String? = synchronized(lock) { load()[normalizedPhrase] }
 

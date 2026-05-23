@@ -138,11 +138,12 @@
     <string name="settings_backup_desc">Export your notes, conversations, reminders, aliases, and settings to a ZIP file. You can restore it later or on a new device.</string>
     <string name="settings_backup_export_button">Export…</string>
     <string name="settings_backup_restore_button">Restore…</string>
-    <string name="settings_backup_restore_coming_soon">Restore is coming in the next update.</string>
     <string name="settings_backup_exporting">Exporting…</string>
-    <string name="settings_backup_export_success">Backup saved: %1$d notes, %2$d conversations, %3$d audio files (%4$d KB)</string>
-    <string name="settings_backup_export_success_encrypted">Backup saved (encrypted): %1$d notes, %2$d conversations, %3$d audio files (%4$d KB)</string>
-    <string name="settings_backup_export_failed">Backup failed: %1$s</string>
+    <string name="settings_backup_export_success_title">Backup saved</string>
+    <string name="settings_backup_export_success_title_encrypted">Backup saved (encrypted)</string>
+    <string name="settings_backup_export_success_body">The ZIP contains:\n• %1$d notes\n• %2$d conversation entries\n• %3$d learned phrases\n• %4$d audio files\n• %5$d reminders\n• %6$d aliases\n\nFile size: %7$d KB.</string>
+    <string name="settings_backup_export_failed_title">Backup failed</string>
+    <string name="settings_backup_export_failed_body">The backup could not be saved.\n\nReason: %1$s</string>
     <string name="settings_backup_dialog_title">Export backup</string>
     <string name="settings_backup_include_audio">Include audio recordings</string>
     <string name="settings_backup_audio_summary">%1$d files · %2$.1f MB</string>
@@ -152,6 +153,28 @@
     <string name="settings_backup_password_show">Show password</string>
     <string name="settings_backup_password_hide">Hide password</string>
     <string name="settings_backup_dialog_confirm">Export</string>
+    <string name="settings_backup_import_success_title">Restore complete</string>
+    <string name="settings_backup_import_table_header">Total · Imported · Duplicates · Failed</string>
+    <string name="settings_backup_import_row_notes">Notes</string>
+    <string name="settings_backup_import_row_conversations">Conversations</string>
+    <string name="settings_backup_import_row_nlu">Learned phrases</string>
+    <string name="settings_backup_import_row_audio">Audio files</string>
+    <string name="settings_backup_import_row_pins">Reminders</string>
+    <string name="settings_backup_import_row_aliases">Aliases</string>
+    <string name="settings_backup_import_row_counts">%1$d · %2$d · %3$d · %4$d</string>
+    <string name="settings_backup_import_settings_note">Settings were overwritten with the values from the backup.</string>
+    <string name="settings_backup_import_schema_skipped">Skipped (backup is newer than this app): %1$s. Update Wristotle Companion to import them.</string>
+    <string name="settings_backup_import_failed_title">Restore failed</string>
+    <string name="settings_backup_import_failed_body">The backup could not be restored.\n\nReason: %1$s</string>
+    <string name="dialog_ok">OK</string>
+    <string name="settings_backup_restore_password_title">Encrypted backup</string>
+    <string name="settings_backup_restore_password_desc">This backup is password-protected. Enter the password you used when it was exported.</string>
+    <string name="settings_backup_restore_password_wrong">Wrong password — please try again.</string>
+    <string name="settings_backup_restore_password_unlock">Unlock</string>
+    <string name="settings_backup_restore_preview_title">Restore backup</string>
+    <string name="settings_backup_restore_preview_stats">This backup contains:\n• %1$d notes\n• %2$d conversation entries\n• %3$d learned phrases\n• %4$d reminders\n• %5$d aliases</string>
+    <string name="settings_backup_restore_preview_explainer">Existing data on this device is kept. New rows from the backup are merged in; duplicates are skipped. Settings are overwritten with the backup\'s values.</string>
+    <string name="settings_backup_restore_preview_confirm">Restore</string>
 
     <!-- Notes feature -->
     <string name="notes_header">Notes</string>

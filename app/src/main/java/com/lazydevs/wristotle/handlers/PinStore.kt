@@ -36,6 +36,16 @@ class PinStore(context: Context) {
     /** All pending reminders, newest-first. */
     fun all(): List<ReminderRecord> = synchronized(lock) { load() }
 
+    /**
+     * Bulk replace — used by the backup importer to commit a merged list in
+     * one shot. Trims to [MAX_PINS] (FIFO) and persists. Order is preserved
+     * (caller's responsibility — typically newest-first).
+     */
+    fun replaceAll(records: List<ReminderRecord>) = synchronized(lock) {
+        val trimmed = if (records.size > MAX_PINS) records.subList(0, MAX_PINS) else records
+        persist(trimmed.toList())
+    }
+
     /** The most-recently-added reminder, or null if none. */
     fun latest(): ReminderRecord? = synchronized(lock) { load().firstOrNull() }
 

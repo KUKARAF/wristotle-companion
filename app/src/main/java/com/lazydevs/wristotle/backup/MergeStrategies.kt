@@ -1,0 +1,103 @@
+package com.lazydevs.wristotle.backup
+
+import com.lazydevs.wristotle.handlers.ReminderRecord
+import com.lazydevs.wristotle.history.ConversationEntry
+import com.lazydevs.wristotle.notes.Note
+import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
+
+/**
+ * Pure per-domain merge functions used by [BackupImporter]. Each takes the
+ * existing local rows + the rows decoded from the backup and returns the
+ * derived "what to actually insert / update / persist" set, with the
+ * dedupe rule per [the backup plan].
+ *
+ * Pure on purpose: no Android Context, no Room, no IO. Easiest place to
+ * unit-test the import edge cases (Phase D tests).
+ */
+object MergeStrategies {
+
+    /** Notes to insert into the live DB. Skip when the incoming row matches an
+     *  existing one on the dedupe key. Re-assign id-via-Room-autogen by
+     *  zeroing the incoming row's id (Room's @Insert(autoGenerate) does the rest). */
+    fun mergeNotes(existing: List<Note>, incoming: List<Note>): List<Note> {
+        val seen = existing.map { noteKey(it.createdAtEpochMs, it.body) }.toMutableSet()
+        return incoming.mapNotNull { row ->
+            val key = noteKey(row.createdAtEpochMs, row.body)
+            if (seen.add(key)) row.copy(id = 0) else null
+        }
+    }
+
+    /** Conversation entries to insert. Dedupe by (timestamp, query, response). */
+    fun mergeConversations(
+        existing: List<ConversationEntry>,
+        incoming: List<ConversationEntry>,
+    ): List<ConversationEntry> {
+        val seen = existing
+            .map { conversationKey(it.timestampEpochMs, it.userQuery, it.responseText) }
+            .toMutableSet()
+        return incoming.mapNotNull { row ->
+            val key = conversationKey(row.timestampEpochMs, row.userQuery, row.responseText)
+            if (seen.add(key)) row.copy(id = 0) else null
+        }
+    }
+
+    /**
+     * NLU learned examples — the `normalizedText` column has a UNIQUE INDEX.
+     * Skip on collision: a backup phrase that already exists locally leaves
+     * the local row (and its usageCount) untouched. This keeps re-import
+     * idempotent — restoring the same backup twice doesn't double-count any
+     * usageCount — and matches the dedupe behaviour for notes / conversations.
+     *
+     * The trade-off: cross-device merges don't accumulate use across devices.
+     * For a recogniser-tuning hint that's fine: each device's local usage is
+     * what actually trained that device's model. A future "import overrides
+     * local usage" toggle could revisit this.
+     */
+    fun mergeNluExamples(
+        existing: List<ExampleEntry>,
+        incoming: List<ExampleEntry>,
+    ): List<ExampleEntry> {
+        val seen = existing.map { it.normalizedText }.toMutableSet()
+        return incoming.mapNotNull { row ->
+            if (seen.add(row.normalizedText)) row.copy(id = 0) else null
+        }
+    }
+
+    /** App aliases. Backup wins on key collision — restore intent overrides
+     *  any local alias the user happened to set after the export. */
+    fun mergeAliases(
+        existing: Map<String, String>,
+        incoming: Map<String, String>,
+    ): Map<String, String> = existing + incoming
+
+    /**
+     * Reminder pins. Dedupe by (title, timeMs). Keep newest-first ordering of
+     * existing first, then append unseen incoming. PinStore enforces a hard
+     * cap of 10 — caller is responsible for the FIFO trim after the merge.
+     */
+    fun mergePins(
+        existing: List<ReminderRecord>,
+        incoming: List<ReminderRecord>,
+    ): List<ReminderRecord> {
+        val seen = existing.map { pinKey(it.title, it.timeMs) }.toMutableSet()
+        val merged = existing.toMutableList()
+        for (row in incoming) {
+            if (seen.add(pinKey(row.title, row.timeMs))) merged += row
+        }
+        return merged
+    }
+
+    // ── Keys ──────────────────────────────────────────────────────────────
+    // String triplets, not hashes — collisions would skip a legitimate row
+    // silently. Use the natural identity directly; size is fine in practice
+    // (a few hundred rows at import time).
+
+    internal fun noteKey(createdAtEpochMs: Long, body: String): String =
+        "$createdAtEpochMs$body"
+
+    internal fun conversationKey(timestampMs: Long, query: String, response: String): String =
+        "$timestampMs$query$response"
+
+    internal fun pinKey(title: String, timeMs: Long?): String =
+        "$title${timeMs ?: ""}"
+}
