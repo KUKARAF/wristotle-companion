@@ -8,8 +8,10 @@ import com.lazydevs.wristotle.handlers.CallHandler
 import com.lazydevs.wristotle.handlers.CancelReminderHandler
 import com.lazydevs.wristotle.handlers.CreateEventHandler
 import com.lazydevs.wristotle.handlers.FindPhoneHandler
+import com.lazydevs.wristotle.handlers.ConfirmSummaryBuilder
 import com.lazydevs.wristotle.handlers.HandlerRegistry
 import com.lazydevs.wristotle.handlers.HandlerRegistry.Companion.isSuccessResponse
+import com.lazydevs.wristotle.handlers.requiresConfirm
 import com.lazydevs.wristotle.handlers.ListRemindersHandler
 import com.lazydevs.wristotle.handlers.MediaNextHandler
 import com.lazydevs.wristotle.handlers.MediaPauseHandler
@@ -80,6 +82,22 @@ class PebbleListenerService : BasePebbleListenerService() {
      *  @Volatile so the IO write from one onMessageReceived is visible to
      *  any subsequent dispatch on a different thread. */
     @Volatile private var lastNotesSnapshot: List<com.lazydevs.wristotle.notes.Note> = emptyList()
+
+    /** A query the watch requested a confirm prompt for, stashed between
+     *  the outbound CONFIRM_PROMPT and the inbound CONFIRM_RESPONSE. Single
+     *  in-flight by design — watch dictation is sequential, the user can't
+     *  start a new one while the confirm window is up. A second confirm-
+     *  eligible query arriving while one's pending overwrites the stash;
+     *  the stale CONFIRM_RESPONSE then no-ops because the routed intent it
+     *  was going to dispatch is gone. */
+    private data class PendingConfirm(
+        val routed: com.lazydevs.wristotle.speech.nlu.IntentResult,
+        val query: String,
+        val watchHint: Intent?,
+        val audioPath: String?,
+        val classified: com.lazydevs.wristotle.speech.nlu.IntentResult?,
+    )
+    @Volatile private var pendingConfirm: PendingConfirm? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -206,6 +224,17 @@ class PebbleListenerService : BasePebbleListenerService() {
             return ReceiveResult.Ack
         }
 
+        // Confirm-before-dispatch reply from the watch. Placed before the
+        // settings/log/query branches because CONFIRM_RESPONSE carries no
+        // query text — it would silently fall through to "no query → Ack"
+        // otherwise. Consume the stash and either dispatch (decision == 1)
+        // or surface a "Cancelled." response back to the watch.
+        val confirmDecision = data.int32(MessageKeys.CONFIRM_RESPONSE)
+        if (confirmDecision != null) {
+            handleConfirmResponse(confirmed = confirmDecision == 1)
+            return ReceiveResult.Ack
+        }
+
         // Settings snapshot from the watch — ingest then we're done.
         // Any tuple keyed by one of the 10 setting keys signals "this is a
         // settings update," no marker key needed (the response to our
@@ -262,13 +291,15 @@ class PebbleListenerService : BasePebbleListenerService() {
         // would say before any wire protocol is in place. No behaviour change
         // — pure observability. Will be reused as the confirm prompt body in
         // Phase A3.
-        Log.d(TAG, "Confirm preview:\n${com.lazydevs.wristotle.handlers.ConfirmSummaryBuilder.summary(routed)}")
+        Log.d(TAG, "Confirm preview:\n${ConfirmSummaryBuilder.summary(routed)}")
 
-        // Claim the recognizer's published .wav path now (before dispatch) so
-        // the NoteHandler can copy it into permanent notes-audio/. The same
-        // path is still recorded on the ConversationEntry below — claiming
-        // once and reusing keeps watch-dictation audio attached to BOTH the
-        // history row and (when the intent is Note) the saved note row.
+        // Claim the recognizer's published .wav path now (before dispatch /
+        // confirm-gate) so the NoteHandler can copy it into permanent notes-
+        // audio/. The same path is still recorded on the ConversationEntry —
+        // claiming once and reusing keeps watch-dictation audio attached to
+        // BOTH the history row and (when the intent is Note) the saved note
+        // row. When confirm-gated, the path travels with the PendingConfirm
+        // stash so it survives the prompt round-trip.
         val app2 = application as WristotleApplication
         val audioPath = app2.lastCapturedAudioPath
         app2.lastCapturedAudioPath = null
@@ -279,7 +310,48 @@ class PebbleListenerService : BasePebbleListenerService() {
             routed.copy(slots = routed.slots + (NoteHandler.SLOT_AUDIO_PATH to audioPath))
         } else routed
 
-        val dispatchResult = registry.dispatch(routedWithAudio)
+        // Confirm gate: when the user has the Watch toggle on AND the routed
+        // intent is destructive, stash the dispatch state + ship a confirm
+        // prompt back. The actual dispatch runs when CONFIRM_RESPONSE arrives
+        // (see the branch added above onMessageReceived).
+        if (confirmRequested == true && routedWithAudio.intent.requiresConfirm()) {
+            val summary = ConfirmSummaryBuilder.summary(routedWithAudio)
+            pendingConfirm = PendingConfirm(
+                routed = routedWithAudio,
+                query = query,
+                watchHint = watchHint,
+                audioPath = audioPath,
+                classified = classified,
+            )
+            Log.d(TAG, "Confirm gating: stash intent=${routedWithAudio.intent}, send prompt:\n$summary")
+            transport.sendConfirmPrompt(summary)
+            return ReceiveResult.Ack
+        }
+
+        dispatchAndReport(
+            routed = routedWithAudio,
+            query = query,
+            watchHint = watchHint,
+            audioPath = audioPath,
+            classified = classified,
+        )
+        return ReceiveResult.Ack
+    }
+
+    /**
+     * Runs an already-resolved [routed] action and reports the result back to
+     * the watch + persists a [ConversationEntry]. Extracted out of the
+     * COMPANION_QUERY branch so both the immediate path and the post-confirm
+     * path call the same code.
+     */
+    private suspend fun dispatchAndReport(
+        routed: com.lazydevs.wristotle.speech.nlu.IntentResult,
+        query: String,
+        watchHint: Intent?,
+        audioPath: String?,
+        classified: com.lazydevs.wristotle.speech.nlu.IntentResult?,
+    ) {
+        val dispatchResult = registry.dispatch(routed)
         Log.d(TAG, "Sending response: ${dispatchResult.response}")
 
         // Reply over the matching legacy channel so old watch firmware that
@@ -306,8 +378,51 @@ class PebbleListenerService : BasePebbleListenerService() {
             nluConfidence = classified?.confidence,
             audioFilePath = audioPath,
         )
+    }
 
-        return ReceiveResult.Ack
+    /**
+     * Consumes a [PendingConfirm] stash on inbound CONFIRM_RESPONSE. When
+     * the user confirmed (1), runs the stashed dispatch via the shared
+     * [dispatchAndReport] helper. When they cancelled (0 — or BACK / timeout
+     * on the watch UI in Phase B), sends a "Cancelled." reply back over the
+     * matching channel and logs a `cancelled` ConversationEntry so the
+     * action appears in history (success=false, learning skipped).
+     */
+    private suspend fun handleConfirmResponse(confirmed: Boolean) {
+        val pending = pendingConfirm
+        pendingConfirm = null
+        if (pending == null) {
+            Log.w(TAG, "CONFIRM_RESPONSE arrived with no pending confirm — ignoring")
+            return
+        }
+        if (confirmed) {
+            Log.d(TAG, "Confirm: dispatching stashed intent=${pending.routed.intent}")
+            dispatchAndReport(
+                routed = pending.routed,
+                query = pending.query,
+                watchHint = pending.watchHint,
+                audioPath = pending.audioPath,
+                classified = pending.classified,
+            )
+        } else {
+            Log.d(TAG, "Confirm: user cancelled intent=${pending.routed.intent}")
+            val cancelMsg = "Cancelled."
+            when (pending.watchHint) {
+                Intent.Reminder -> transport.sendReminderResult(cancelMsg)
+                Intent.Cancel -> transport.sendCancelResult(cancelMsg)
+                else -> transport.sendResponse(cancelMsg)
+            }
+            logInteraction(
+                query = pending.query,
+                response = cancelMsg,
+                handler = "cancelled",
+                requiresCompanion = true,
+                success = false,
+                nluIntent = pending.classified?.intent?.name,
+                nluConfidence = pending.classified?.confidence,
+                audioFilePath = pending.audioPath,
+            )
+        }
     }
 
     /**

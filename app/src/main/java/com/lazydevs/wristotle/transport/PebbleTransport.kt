@@ -42,6 +42,14 @@ class PebbleTransport(context: Context) : java.io.Closeable {
         mapOf(MessageKeys.NOTE_DETAIL_RESPONSE to PebbleDictionaryItem.Text(text))
     )
 
+    /** Ship the confirm-prompt summary to the watch (Phase A3+). The watch
+     *  displays it under the existing chat surface and waits for SELECT/BACK;
+     *  the response arrives back via [MessageKeys.CONFIRM_RESPONSE] which the
+     *  listener service consumes to dispatch the stashed [IntentResult]. */
+    suspend fun sendConfirmPrompt(text: String) = sendWithNackRetry(
+        mapOf(MessageKeys.CONFIRM_PROMPT to PebbleDictionaryItem.Text(text))
+    )
+
     suspend fun insertReminder(pin: TimelinePin): TimelineResult =
         sender.insertTimelinePin(AppConstants.PEBBLE_UUID, pin)
 

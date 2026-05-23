@@ -35,9 +35,17 @@ class SmsSlots(
     override suspend fun extract(query: String): Map<String, Any> {
         val lower = query.lowercase().trim()
 
+        // Whisper occasionally adds a comma after the leading verb
+        // ("text, mom hi"), which prevents the prefix-strip below from firing
+        // — "text " doesn't match "text,". Normalise it back to a single space
+        // so the rest of the pipeline doesn't have to special-case punctuation
+        // anchored to the verb. Surfaced when confirm-before-dispatch (phase
+        // A1.5) showed "Text text,?" prompts in testing.
+        val normalised = lower.replaceFirst(Regex("^([a-z]+)\\s*,\\s*"), "$1 ")
+
         // 1. Strip prefix verb.
-        val prefix = PREFIXES.firstOrNull { lower.startsWith(it) }
-        val rest = (if (prefix != null) lower.substring(prefix.length) else lower).trim()
+        val prefix = PREFIXES.firstOrNull { normalised.startsWith(it) }
+        val rest = (if (prefix != null) normalised.substring(prefix.length) else normalised).trim()
         if (rest.isEmpty()) return emptyMap()
 
         // 2. Conjunction split.
