@@ -84,17 +84,27 @@ object ConfirmSummaryBuilder {
      */
     private fun titleWithTime(r: IntentResult, defaultTitle: String): String {
         val title = (r.slots["title"] as? String)?.takeIf { it.isNotEmpty() } ?: defaultTitle
-        val time = (r.slots["time"] as? Date)?.let { TIME_FMT.format(it) }
+        val time = (r.slots["time"] as? Date)?.let { TIME_FMT.get()!!.format(it) }
         return if (time != null) "$title @ $time" else title
     }
 
     private fun timeOrDash(r: IntentResult): String =
-        (r.slots["time"] as? Date)?.let { TIME_FMT.format(it) } ?: "-"
+        (r.slots["time"] as? Date)?.let { TIME_FMT.get()!!.format(it) } ?: "-"
 
     /**
      * Short, watch-friendly time format. Example: "Fri 3:00 PM" or
      * "May 25 3:00 PM" if a date >7 days out — adequate granularity for the
      * user to spot a misheard time without burning chat lines.
+     *
+     * Wrapped in [ThreadLocal] because [SimpleDateFormat] is not thread-safe;
+     * the call site is single-threaded today (PebbleListenerService dispatch
+     * coroutine) but if classify/dispatch ever moves off-thread the shared-
+     * SDF latent bug would silently corrupt date strings.
+     * `DateTimeFormatter` would also work but requires core-library
+     * desugaring below API 26 (project minSdk = 24); ThreadLocal SDF is the
+     * zero-config option.
      */
-    private val TIME_FMT = SimpleDateFormat("EEE h:mm a", Locale.getDefault())
+    private val TIME_FMT: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue() = SimpleDateFormat("EEE h:mm a", Locale.getDefault())
+    }
 }

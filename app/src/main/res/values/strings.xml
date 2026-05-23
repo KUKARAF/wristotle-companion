@@ -219,6 +219,10 @@
     <string name="watch_settings_logging">Debug logging</string>
     <string name="watch_settings_dictation_confirmation">Confirm transcription before sending</string>
     <string name="watch_settings_confirm_before_send">Confirm action before running it</string>
+    <!-- Reply sent back to the watch when the user BACK-cancels (or
+         times out on) a confirm-before-dispatch prompt. Renders in the
+         watch chat as the response for the cancelled action. -->
+    <string name="confirm_cancelled_reply">Cancelled.</string>
     <string name="watch_settings_skip_retry_dialog">Skip system retry dialog on dictation error</string>
     <string name="watch_settings_quick_launch_auto_exit">Auto-exit after quick launch</string>
     <string name="watch_settings_auto_exit_off">Off</string>

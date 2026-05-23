@@ -41,7 +41,7 @@ class SmsSlots(
         // so the rest of the pipeline doesn't have to special-case punctuation
         // anchored to the verb. Surfaced when confirm-before-dispatch (phase
         // A1.5) showed "Text text,?" prompts in testing.
-        val normalised = lower.replaceFirst(Regex("^([a-z]+)\\s*,\\s*"), "$1 ")
+        val normalised = lower.replaceFirst(LEADING_COMMA_AFTER_VERB, "$1 ")
 
         // 1. Strip prefix verb.
         val prefix = PREFIXES.firstOrNull { normalised.startsWith(it) }
@@ -91,6 +91,10 @@ class SmsSlots(
             "text ", "tell ", "message ", "let ",
         )
         val CONJUNCTIONS = Regex("(?i)\\b(saying|that|telling (them|him|her))\\b")
+        // Matches a Whisper-inserted comma right after the verb (e.g.
+        // "text, mom hi") so we can normalise it to "<verb> " and let the
+        // PREFIXES check fire as designed.
+        val LEADING_COMMA_AFTER_VERB = Regex("^([a-z]+)\\s*,\\s*")
         const val MAX_NAME_WORDS = 4
     }
 }

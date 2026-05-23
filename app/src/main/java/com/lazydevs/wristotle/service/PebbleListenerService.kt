@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.service
 
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.AppConstants
+import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.handlers.CalendarHandler
 import com.lazydevs.wristotle.handlers.CallHandler
@@ -406,7 +407,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             )
         } else {
             Log.d(TAG, "Confirm: user cancelled intent=${pending.routed.intent}")
-            val cancelMsg = "Cancelled."
+            val cancelMsg = getString(R.string.confirm_cancelled_reply)
             when (pending.watchHint) {
                 Intent.Reminder -> transport.sendReminderResult(cancelMsg)
                 Intent.Cancel -> transport.sendCancelResult(cancelMsg)
