@@ -119,7 +119,7 @@ class WatchSettingsRepository(
             else -> null
         }
         val merged = WatchSettings(
-            loggingEnabled            = data.boolSetting(MessageKeys.SETTING_LOGGING)                 ?: previous?.loggingEnabled            ?: true,
+            loggingEnabled            = data.boolSetting(MessageKeys.SETTING_LOGGING)                 ?: previous?.loggingEnabled            ?: false,
             dictationConfirmation     = data.boolSetting(MessageKeys.SETTING_DICTATION_CONFIRMATION)  ?: previous?.dictationConfirmation     ?: true,
             findPhoneTarget           = data.intSetting (MessageKeys.SETTING_FIND_PHONE_TARGET)       ?: previous?.findPhoneTarget           ?: TARGET_AUTO,
             remindersTarget           = data.intSetting (MessageKeys.SETTING_REMINDERS_TARGET)        ?: previous?.remindersTarget           ?: TARGET_AUTO,
