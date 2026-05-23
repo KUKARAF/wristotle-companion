@@ -3,7 +3,6 @@ package com.lazydevs.wristotle.notes
 import android.content.Context
 import android.util.Log
 import java.io.File
-import java.io.RandomAccessFile
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -25,9 +24,10 @@ private val FILENAME_FORMAT = SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
  * disappears when the user deletes the note (or it's FIFO-pruned by
  * the keep-last-N cap).
  */
-class NotesAudioStore(context: Context) {
+class NotesAudioStore internal constructor(val dir: File) {
 
-    val dir: File = File(context.filesDir, DIR_NAME)
+    /** Production constructor — resolves the per-note audio dir under filesDir. */
+    constructor(context: Context) : this(File(context.filesDir, DIR_NAME))
 
     /**
      * Copies [source] (the transient conversation-audio `.wav` for this
@@ -97,61 +97,14 @@ class NotesAudioStore(context: Context) {
         }.onFailure { Log.w(TAG, "deleteAll failed", it) }
     }
 
-    /**
-     * Append source.pcmData onto target, rewriting the RIFF/data size
-     * fields. WAV header layout (44 bytes for the simple PCM case the
-     * dictation pipeline writes):
-     *   off 4..7   — RIFF chunk size (file size − 8)
-     *   off 40..43 — data subchunk size
-     * Returns true on success; throws on malformed input so the caller
-     * can fall back to a fresh file.
-     */
+    /** Thin Android-side wrapper around the pure [appendWav] for logging. */
     private fun appendWav(target: File, source: File): Boolean {
-        val sourceBytes = source.readBytes()
-        require(sourceBytes.size > HEADER_SIZE) { "source too small to be a WAV" }
-        require(String(sourceBytes, 0, 4, Charsets.US_ASCII) == "RIFF") { "source is not WAV" }
-        val sourceRate = readInt32LE(sourceBytes, 24)
-        RandomAccessFile(target, "rw").use { raf ->
-            val header = ByteArray(HEADER_SIZE)
-            raf.readFully(header)
-            require(String(header, 0, 4, Charsets.US_ASCII) == "RIFF") { "target is not WAV" }
-            val targetRate = readInt32LE(header, 24)
-            require(targetRate == sourceRate) {
-                "sample-rate mismatch (target=$targetRate vs source=$sourceRate)"
-            }
-            val existingDataSize = readInt32LE(header, 40)
-            val appendedSize = sourceBytes.size - HEADER_SIZE
-            // 1. Append PCM bytes to end of file (skip the source's own header).
-            raf.seek(raf.length())
-            raf.write(sourceBytes, HEADER_SIZE, appendedSize)
-            // 2. Rewrite the size fields. RIFF chunk size = file size − 8 =
-            //    36 (everything before the data subchunk size) + dataSize.
-            val newDataSize = existingDataSize + appendedSize
-            writeInt32LEAt(raf, 4, newDataSize + 36)
-            writeInt32LEAt(raf, 40, newDataSize)
-        }
-        Log.d(TAG, "appended ${sourceBytes.size - HEADER_SIZE} bytes onto ${target.absolutePath}")
+        val appended = com.lazydevs.wristotle.notes.appendWav(target, source)
+        Log.d(TAG, "appended $appended bytes onto ${target.absolutePath}")
         return true
-    }
-
-    private fun readInt32LE(buf: ByteArray, offset: Int): Int =
-        (buf[offset].toInt() and 0xFF) or
-            ((buf[offset + 1].toInt() and 0xFF) shl 8) or
-            ((buf[offset + 2].toInt() and 0xFF) shl 16) or
-            ((buf[offset + 3].toInt() and 0xFF) shl 24)
-
-    private fun writeInt32LEAt(raf: RandomAccessFile, offset: Long, value: Int) {
-        raf.seek(offset)
-        raf.write(byteArrayOf(
-            (value and 0xFF).toByte(),
-            ((value shr 8) and 0xFF).toByte(),
-            ((value shr 16) and 0xFF).toByte(),
-            ((value shr 24) and 0xFF).toByte(),
-        ))
     }
 
     private companion object {
         const val DIR_NAME = "notes-audio"
-        const val HEADER_SIZE = 44
     }
 }

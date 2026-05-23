@@ -16,7 +16,7 @@ private const val TAG = "NoteRepository"
 class NoteRepository(
     private val dao: NoteDao,
     private val audioStore: NotesAudioStore,
-    private val settings: NoteSettings,
+    private val settings: NoteSettingsView,
 ) {
 
     fun observeAll(): Flow<List<Note>> = dao.observeAllNewestFirst()

@@ -38,8 +38,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -126,10 +129,18 @@ fun NotesScreen(vm: NotesViewModel) {
                 contentPadding = PaddingValues(bottom = 80.dp),
             ) {
                 items(notes, key = { it.id }) { note ->
-                    val audioFiles = remember(note.audioFilePath) {
-                        com.lazydevs.wristotle.notes.NoteAudioPaths
-                            .parse(note.audioFilePath)
-                            .mapNotNull { File(it).takeIf(File::exists) }
+                    // Resolve audio paths + existence on IO so the LazyColumn
+                    // item composition doesn't block Main on filesystem stats.
+                    // Re-fires only when the encoded path string changes.
+                    val audioFiles by produceState(
+                        initialValue = emptyList<File>(),
+                        note.audioFilePath,
+                    ) {
+                        value = withContext(Dispatchers.IO) {
+                            com.lazydevs.wristotle.notes.NoteAudioPaths
+                                .parse(note.audioFilePath)
+                                .mapNotNull { File(it).takeIf(File::exists) }
+                        }
                     }
                     val playingClipForThis = if (playingId == note.id) playingClipIndex else null
                     NoteCard(

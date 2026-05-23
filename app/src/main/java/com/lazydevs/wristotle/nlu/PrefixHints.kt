@@ -58,6 +58,12 @@ internal object PrefixHints {
         // Existing non-media intents
         Regex("(?i)^\\s*(text|sms|message|send (a |an )?(text|message|sms))\\b") to Intent.Sms,
         Regex("(?i)^\\s*(call|dial|phone|ring)\\b") to Intent.Call,
+        // AppendNote — sits ABOVE CreateEvent (and Note) because it's the most
+        // specific rule: requires the (add|append) verb AND one of
+        // previous/last/latest/recent + notes. Without that qualifier, "add to
+        // my notes" stays Note, and "add to my meeting…" stays CreateEvent
+        // (neither test matches the qualifier in the AppendNote regex).
+        Regex("(?i)^\\s*(append\\b|(add|append)\\s+to\\s+(the\\s+|my\\s+)?(previous|last|latest|recent)\\s+notes?\\b)") to Intent.AppendNote,
         // CreateEvent — "schedule/set up/create/add/book … meeting/event/…".
         // Requires an event noun, so "schedule a reminder" does NOT match here
         // (it has no event noun) and stays with the reminder path. Rescues the
@@ -79,11 +85,6 @@ internal object PrefixHints {
         // watch's blanket Reminder hint can be refined to Reschedule. Sits above
         // the Reminder rule (which only matches a remind/reminder opener anyway).
         Regex("(?i)^\\s*(snooze|reschedule|postpone|delay|push|move|bump|shift)\\b") to Intent.Reschedule,
-        // AppendNote — must sit ABOVE Note so "add to my previous notes …"
-        // doesn't fall into Note's "(for|to|add to) my notes" arm. The trigger
-        // is one of "previous/last/latest/recent" (or the explicit "append"
-        // verb); without those, "add to my notes …" stays Note (create new).
-        Regex("(?i)^\\s*(append\\b|(add|append)\\s+to\\s+(the\\s+|my\\s+)?(previous|last|latest|recent)\\s+notes?\\b)") to Intent.AppendNote,
         // Note — unambiguous capture lead-ins. Placed above Reminder so a
         // "remember that …" opener routes to Note instead of falling through
         // to the embedding (which can drift to Unknown without a time). Leaves

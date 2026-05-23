@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.lazydevs.wristotle.R
 
 /**
@@ -60,6 +64,22 @@ fun AddNoteSheet(vm: NotesViewModel, onDismiss: () -> Unit) {
             kotlinx.coroutines.delay(3_000)
             vm.clearDictationError()
         }
+    }
+
+    // If the user backgrounds the app while a recording is in flight,
+    // stop the mic so we don't keep AudioRecord + Whisper inference
+    // running with the UI gone. Stop() transitions to TRANSCRIBING so
+    // the in-flight PCM still finalises into the field on return.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE &&
+                vm.dictationState.value == NotesViewModel.DictationState.RECORDING) {
+                vm.stopDictation()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     ModalBottomSheet(

@@ -95,13 +95,20 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
 
     /** The actively-recording mic + recognizer for this dictation, if any.
      *  Stored so [stopDictation] can drive them. Cleared in the flow's
-     *  terminal handler. */
+     *  terminal handler. @Volatile because the flow's `finally` runs on
+     *  [Dispatchers.IO] and the stop/cancel callsites are on Main —
+     *  without it, JMM doesn't guarantee Main sees the IO writes. */
     private var dictationJob: Job? = null
-    private var dictationSource: MicAudioSource? = null
-    private var dictationRecognizer: Recognizer? = null
+    @Volatile private var dictationSource: MicAudioSource? = null
+    @Volatile private var dictationRecognizer: Recognizer? = null
     /** Audio path published by the recognizer for the current draft, if
-     *  audio capture is enabled. Attached to the new note on save. */
-    private var draftAudioPath: String? = null
+     *  audio capture is enabled. Attached to the new note on save.
+     *  @Volatile because it's written from the IO collect lambda and
+     *  read from [saveDraft] on Main. */
+    @Volatile private var draftAudioPath: String? = null
+    /** Text typed before the user tapped Mic; preserved so dictation
+     *  *appends* to it rather than replacing. */
+    @Volatile private var preDictationText: String = ""
 
     fun setDraftBody(value: String) { _draftBody.value = value }
 
@@ -132,8 +139,11 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
         val source = MicAudioSource()
         dictationRecognizer = recognizer
         dictationSource = source
+        // Preserve any text the user typed BEFORE tapping mic — dictation
+        // appends to it instead of clobbering. Trailing space added when
+        // there's an existing prefix so the joined result reads naturally.
+        preDictationText = _draftBody.value
         _dictationState.value = DictationState.RECORDING
-        _draftBody.value = ""
 
         // IMPORTANT: collect on IO. The recognizer's flow runs whisper.cpp
         // inference inline on the collecting dispatcher (~1–2s blocking JNI);
@@ -144,9 +154,9 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 recognizer.transcribe(source).collect { event ->
                     when (event) {
-                        is TranscriptionEvent.Partial -> _draftBody.value = event.text
+                        is TranscriptionEvent.Partial -> _draftBody.value = joinDictation(event.text)
                         is TranscriptionEvent.Final -> {
-                            _draftBody.value = event.text
+                            _draftBody.value = joinDictation(event.text)
                             draftAudioPath = app.lastCapturedAudioPath
                             app.lastCapturedAudioPath = null
                         }
@@ -199,6 +209,11 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
         resetDraft()
     }
 
+    private fun joinDictation(transcript: String): String {
+        val prefix = preDictationText
+        return if (prefix.isBlank()) transcript else "$prefix $transcript"
+    }
+
     private fun resetDraft() {
         _draftBody.value = ""
         _dictationState.value = DictationState.IDLE
@@ -207,6 +222,7 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
         dictationJob = null
         dictationSource = null
         dictationRecognizer = null
+        preDictationText = ""
     }
 
     override fun onCleared() {

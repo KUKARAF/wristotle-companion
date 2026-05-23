@@ -198,4 +198,107 @@ class PrefixHintsTest {
         // open-verb itself.
         assertEquals(Intent.MediaPlay, PrefixHints.hintFor("play youtube"))
     }
+
+    // ─── Note + AppendNote rules ─────────────────────────────────────────
+    // These tests pin the cross-contamination guarantees: any
+    // "note(s)"-flavoured opener routes to Note, but a verb opener
+    // (text/call/play/open/schedule/remind/etc.) wins above it.
+
+    @Test fun `note colon routes to Note`() {
+        assertEquals(Intent.Note, PrefixHints.hintFor("note: pick up milk"))
+    }
+
+    @Test fun `note with whisper punctuation routes to Note`() {
+        // Whisper auto-punctuates with period and capital — the lead-in
+        // tolerates [\s.:,;!?\-] right after note/notes.
+        assertEquals(Intent.Note, PrefixHints.hintFor("Note. Pick up milk"))
+        assertEquals(Intent.Note, PrefixHints.hintFor("Notes, room changed"))
+    }
+
+    @Test fun `notes plural routes to Note`() {
+        assertEquals(Intent.Note, PrefixHints.hintFor("notes this is a test"))
+    }
+
+    @Test fun `make a note variants route to Note`() {
+        assertEquals(Intent.Note, PrefixHints.hintFor("make a note to buy bread"))
+        assertEquals(Intent.Note, PrefixHints.hintFor("take a note that meeting moved"))
+        assertEquals(Intent.Note, PrefixHints.hintFor("save a note about the trip"))
+    }
+
+    @Test fun `jot and write down route to Note`() {
+        assertEquals(Intent.Note, PrefixHints.hintFor("jot down the door code"))
+        assertEquals(Intent.Note, PrefixHints.hintFor("write down the parking spot"))
+        assertEquals(Intent.Note, PrefixHints.hintFor("jot this down: account number"))
+    }
+
+    @Test fun `remember that routes to Note but bare remember does not`() {
+        // "remember that …" is unambiguous capture; "remember to …" without
+        // a time is genuinely ambiguous (note vs reminder) so we leave it
+        // to the classifier. Pinned so a future regex tweak doesn't drift.
+        assertEquals(Intent.Note, PrefixHints.hintFor("remember that the wifi changed"))
+        assertNull(PrefixHints.hintFor("remember to water the plants"))
+    }
+
+    @Test fun `noted routes to Note`() {
+        assertEquals(Intent.Note, PrefixHints.hintFor("noted that the recipe needs salt"))
+    }
+
+    @Test fun `add to my notes still creates a new note (not append)`() {
+        // "add to my notes" without previous/last/latest stays Note (create).
+        // The AppendNote rule sits ABOVE Note and requires one of those
+        // qualifiers; this asserts the boundary holds.
+        assertEquals(Intent.Note, PrefixHints.hintFor("add to my notes the conference room is on the third floor"))
+        assertEquals(Intent.Note, PrefixHints.hintFor("for my notes the new account number is on the desk"))
+    }
+
+    // ─── AppendNote rule ─────────────────────────────────────────────────
+
+    @Test fun `add to previous notes routes to AppendNote`() {
+        assertEquals(Intent.AppendNote, PrefixHints.hintFor("add to previous notes the room changed"))
+        assertEquals(Intent.AppendNote, PrefixHints.hintFor("add to my previous note speaker is bob"))
+        assertEquals(Intent.AppendNote, PrefixHints.hintFor("add to the last note alex is bringing snacks"))
+        assertEquals(Intent.AppendNote, PrefixHints.hintFor("add to the latest notes meeting moved"))
+    }
+
+    @Test fun `append verb alone routes to AppendNote`() {
+        assertEquals(Intent.AppendNote, PrefixHints.hintFor("append the speaker is bob"))
+        assertEquals(Intent.AppendNote, PrefixHints.hintFor("append to my note tracking number"))
+    }
+
+    // ─── Cross-contamination: other verbs MUST win over Note ─────────────
+
+    @Test fun `sms with notes in body stays Sms`() {
+        assertEquals(Intent.Sms, PrefixHints.hintFor("text mom notes look good"))
+        assertEquals(Intent.Sms, PrefixHints.hintFor("message bob notes about today"))
+    }
+
+    @Test fun `call with notes in body stays Call`() {
+        assertEquals(Intent.Call, PrefixHints.hintFor("call mom about notes"))
+    }
+
+    @Test fun `open notes app routes to OpenApp not Note`() {
+        // The OpenApp rule sits above Note; "open notes …" stays OpenApp.
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("open notes app"))
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("launch the notes app"))
+    }
+
+    @Test fun `play the notes podcast stays MediaPlay`() {
+        assertEquals(Intent.MediaPlay, PrefixHints.hintFor("play the notes podcast"))
+    }
+
+    @Test fun `schedule a meeting about notes routes to CreateEvent`() {
+        assertEquals(
+            Intent.CreateEvent,
+            PrefixHints.hintFor("schedule a meeting about notes tomorrow at 3pm"),
+        )
+    }
+
+    @Test fun `remind me to send notes routes to Reminder`() {
+        // Reminder rule wins on the "remind" opener; the watch-hint family
+        // refinement would re-enforce this too.
+        assertEquals(
+            Intent.Reminder,
+            PrefixHints.hintFor("remind me to send notes to bob at 5pm"),
+        )
+    }
 }

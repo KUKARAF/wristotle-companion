@@ -17,6 +17,17 @@ import kotlinx.coroutines.flow.asStateFlow
 enum class AppendAudioMode { MERGE, SEPARATE }
 
 /**
+ * Read surface of [NoteSettings] used by non-UI callers (the repository).
+ * Lets the repo depend on the StateFlow contract instead of the concrete
+ * Context-bound [NoteSettings], so tests can inject a fake without
+ * standing up Android prefs.
+ */
+interface NoteSettingsView {
+    val keepLast: StateFlow<Int>
+    val appendAudioMode: StateFlow<AppendAudioMode>
+}
+
+/**
  * User preference for note retention. Stored count is the cap; the
  * special value [UNLIMITED] = 0 means "keep all notes" (default).
  *
@@ -24,14 +35,14 @@ enum class AppendAudioMode { MERGE, SEPARATE }
  * but is count-based, not time-based — long-form notes don't age the
  * way ephemeral conversation entries do.
  */
-class NoteSettings(context: Context) {
+class NoteSettings(context: Context) : NoteSettingsView {
 
     private val prefs = context.applicationContext
         .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _keepLast = MutableStateFlow(prefs.getInt(KEY_KEEP_LAST, UNLIMITED))
     /** Current cap; [UNLIMITED] (=0) means no cap. */
-    val keepLast: StateFlow<Int> = _keepLast.asStateFlow()
+    override val keepLast: StateFlow<Int> = _keepLast.asStateFlow()
 
     fun setKeepLast(value: Int) {
         val v = if (value < 0) 0 else value
@@ -40,7 +51,7 @@ class NoteSettings(context: Context) {
     }
 
     private val _appendAudioMode = MutableStateFlow(loadAppendAudioMode())
-    val appendAudioMode: StateFlow<AppendAudioMode> = _appendAudioMode.asStateFlow()
+    override val appendAudioMode: StateFlow<AppendAudioMode> = _appendAudioMode.asStateFlow()
 
     fun setAppendAudioMode(value: AppendAudioMode) {
         prefs.edit { putString(KEY_APPEND_AUDIO_MODE, value.name) }
