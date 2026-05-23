@@ -131,6 +131,17 @@
     <string name="settings_section_diagnostics">Diagnostics</string>
     <string name="settings_section_notes">Notes</string>
     <string name="settings_section_watch">Watch</string>
+    <string name="settings_section_backup">Backup &amp; Restore</string>
+
+    <!-- Backup &amp; Restore card -->
+    <string name="settings_backup_header">Backup &amp; Restore</string>
+    <string name="settings_backup_desc">Export your notes, conversations, reminders, aliases, and settings to a ZIP file. You can restore it later or on a new device.</string>
+    <string name="settings_backup_export_button">Export…</string>
+    <string name="settings_backup_restore_button">Restore…</string>
+    <string name="settings_backup_restore_coming_soon">Restore is coming in the next update.</string>
+    <string name="settings_backup_exporting">Exporting…</string>
+    <string name="settings_backup_export_success">Backup saved: %1$d notes, %2$d conversations, %3$d reminders, %4$d aliases (%5$d KB)</string>
+    <string name="settings_backup_export_failed">Backup failed: %1$s</string>
 
     <!-- Notes feature -->
     <string name="notes_header">Notes</string>

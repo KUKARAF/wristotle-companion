@@ -44,4 +44,9 @@ interface NoteDao {
 
     @Query("SELECT COUNT(*) FROM notes")
     suspend fun count(): Int
+
+    /** Full snapshot of every note for backup export. Ordered by id so the
+     *  resulting JSON is deterministic across exports (round-trip tests). */
+    @Query("SELECT * FROM notes ORDER BY id")
+    suspend fun allForBackup(): List<Note>
 }

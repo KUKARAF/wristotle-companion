@@ -56,6 +56,7 @@ fun SettingsScreen(
     notesVm: NotesViewModel,
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
+    backupVm: BackupViewModel,
 ) {
     val retentionDays by conversationVm.retentionDays.collectAsState()
     val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
@@ -109,6 +110,13 @@ fun SettingsScreen(
 
         SettingsSection(stringResource(R.string.settings_section_diagnostics)) {
             DiagnosticsCard(vm = diagnosticsVm)
+        }
+
+        // Backup & Restore — top-level user-data concern. Sits between
+        // Diagnostics and the per-feature configuration cards because
+        // it spans every feature's data, not any one feature's settings.
+        SettingsSection(stringResource(R.string.settings_section_backup)) {
+            BackupCard(vm = backupVm)
         }
 
         SettingsSection(stringResource(R.string.settings_section_notes)) {

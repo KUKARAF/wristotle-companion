@@ -34,4 +34,9 @@ interface ConversationDao {
      *  collecting the full observeAll Flow. */
     @Query("SELECT * FROM conversation_entries ORDER BY timestampEpochMs DESC LIMIT :limit")
     suspend fun recent(limit: Int): List<ConversationEntry>
+
+    /** Full snapshot of every entry for backup export. Ordered by id so the
+     *  resulting JSON is deterministic across exports (round-trip tests). */
+    @Query("SELECT * FROM conversation_entries ORDER BY id")
+    suspend fun allForBackup(): List<ConversationEntry>
 }

@@ -52,6 +52,7 @@ fun MainScreen(
     notesVm: NotesViewModel,
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
+    backupVm: BackupViewModel,
     onRequestWatchPermissions: () -> Unit,
     onRequestVoicePermissions: () -> Unit,
 ) {
@@ -158,6 +159,7 @@ fun MainScreen(
                         notesVm = notesVm,
                         diagnosticsVm = diagnosticsVm,
                         watchSettingsVm = watchSettingsVm,
+                        backupVm = backupVm,
                     )
                 }
             }

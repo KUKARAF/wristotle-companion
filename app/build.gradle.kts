@@ -139,6 +139,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    implementation(libs.zip4j)
     implementation(project(":speech"))
     implementation(project(":speech-whisper"))
     implementation(project(":speech-nlu"))

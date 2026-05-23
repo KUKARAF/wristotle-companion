@@ -99,6 +99,18 @@ class WristotleApplication : Application() {
     lateinit var notesAudioStore: com.lazydevs.wristotle.notes.NotesAudioStore
         private set
 
+    /** Room database singletons — exposed for the backup/restore feature so
+     *  it can pull rows via the existing DAOs (`db.<entity>Dao().allForBackup()`)
+     *  and encode them through the per-entity `*Json` codecs. No PRAGMA / WAL
+     *  ceremony — the backup format is JSON-per-table, decoupled from the
+     *  SQLite file layout entirely. */
+    lateinit var conversationDb: com.lazydevs.wristotle.history.ConversationDatabase
+        private set
+    lateinit var notesDb: com.lazydevs.wristotle.notes.NoteDatabase
+        private set
+    lateinit var nluDb: com.lazydevs.wristotle.speech.nlu.bank.NluDatabase
+        private set
+
     /**
      * Path of the most-recently-saved audio file, published by the
      * recognizer's [WhisperRecognizer.audioSink] and consumed by
@@ -195,12 +207,12 @@ class WristotleApplication : Application() {
         modelStorage = ModelStorage(this)
         nluModelStorage = NluModelStorage(this)
 
-        val database = ConversationDatabase.build(this)
+        conversationDb = ConversationDatabase.build(this)
         conversationSettings = ConversationSettings(this)
         conversationAudioSettings = ConversationAudioSettings(this)
         conversationAudioStore = ConversationAudioStore(this)
         conversationRepository = ConversationRepository(
-            dao = database.conversationDao(),
+            dao = conversationDb.conversationDao(),
             settings = conversationSettings,
             audioStore = conversationAudioStore,
         )
@@ -211,7 +223,7 @@ class WristotleApplication : Application() {
 
         // Notes — Room DB + audio store + retention setting. Prune on startup
         // in case the user lowered the keep-last-N cap while the app was off.
-        val notesDb = com.lazydevs.wristotle.notes.NoteDatabase.build(this)
+        notesDb = com.lazydevs.wristotle.notes.NoteDatabase.build(this)
         notesAudioStore = com.lazydevs.wristotle.notes.NotesAudioStore(this)
         noteSettings = com.lazydevs.wristotle.notes.NoteSettings(this)
         noteRepository = com.lazydevs.wristotle.notes.NoteRepository(
@@ -221,7 +233,8 @@ class WristotleApplication : Application() {
         )
         appScope.launch { noteRepository.prune() }
 
-        nluBank = ExampleBank(NluDatabase.build(this).exampleDao())
+        nluDb = NluDatabase.build(this)
+        nluBank = ExampleBank(nluDb.exampleDao())
         nluSettings = NluSettings(this)
 
         activeMediaSession = ActiveMediaSession(this)
