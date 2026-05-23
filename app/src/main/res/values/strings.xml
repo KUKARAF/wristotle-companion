@@ -153,6 +153,13 @@
     <string name="notes_settings_append_audio_desc">How the new dictation\'s audio is stored on the note.</string>
     <string name="notes_settings_append_audio_merge">Merge into one recording</string>
     <string name="notes_settings_append_audio_separate">Keep as separate clips</string>
+    <string name="notes_add_fab_desc">Add note</string>
+    <string name="notes_add_title">New note</string>
+    <string name="notes_add_field_label">Note</string>
+    <string name="notes_add_placeholder">Type, or tap the mic to dictate</string>
+    <string name="notes_add_save">Save</string>
+    <string name="notes_add_dictate_start">Start dictation</string>
+    <string name="notes_add_dictate_stop">Stop dictation</string>
     <string name="cancel">Cancel</string>
 
     <!-- Watch-settings mirror card -->

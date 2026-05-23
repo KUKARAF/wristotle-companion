@@ -3,6 +3,7 @@ package com.lazydevs.wristotle.ui
 import android.media.MediaPlayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -22,6 +24,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -67,6 +70,7 @@ fun NotesScreen(vm: NotesViewModel) {
     var playingId by remember { mutableStateOf<Long?>(null) }
     var playingClipIndex by remember { mutableStateOf<Int?>(null) }
     var pendingDeleteAll by remember { mutableStateOf(false) }
+    var showAddSheet by remember { mutableStateOf(false) }
 
     fun stopPlayback() {
         player?.runCatching { stop() }
@@ -98,6 +102,7 @@ fun NotesScreen(vm: NotesViewModel) {
 
     DisposableEffect(Unit) { onDispose { stopPlayback() } }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -167,6 +172,23 @@ fun NotesScreen(vm: NotesViewModel) {
             title = { Text(stringResource(R.string.notes_delete_all)) },
             text = { Text(stringResource(R.string.notes_delete_all_warning)) },
         )
+    }
+
+    FloatingActionButton(
+        onClick = { showAddSheet = true },
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(16.dp),
+    ) {
+        Icon(
+            Icons.Default.Add,
+            contentDescription = stringResource(R.string.notes_add_fab_desc),
+        )
+    }
+    } // close Box
+
+    if (showAddSheet) {
+        AddNoteSheet(vm = vm, onDismiss = { showAddSheet = false })
     }
 }
 
