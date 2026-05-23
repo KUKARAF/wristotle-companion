@@ -136,6 +136,11 @@ private fun EditableBody(baseline: WatchSettings, onSave: (WatchSettings) -> Uni
             onChange = { draft = draft.copy(dictationConfirmation = it) },
         )
         SwitchRow(
+            label = stringResource(R.string.watch_settings_confirm_before_send),
+            checked = draft.confirmBeforeSend,
+            onChange = { draft = draft.copy(confirmBeforeSend = it) },
+        )
+        SwitchRow(
             label = stringResource(R.string.watch_settings_skip_retry_dialog),
             checked = draft.skipRetryDialog,
             onChange = { draft = draft.copy(skipRetryDialog = it) },

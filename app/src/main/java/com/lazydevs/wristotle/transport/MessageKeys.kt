@@ -69,6 +69,21 @@ object MessageKeys {
     val NOTE_DETAIL_REQUEST: UInt  = 10029u
     val NOTE_DETAIL_RESPONSE: UInt = 10030u
 
+    /**
+     * Confirm-before-dispatch toggle (Phase A1).
+     *
+     * Lives in the settings snapshot like any other watch-persisted setting,
+     * but is deliberately NOT in [SETTING_KEYS] because in later phases this
+     * same key rides per-query inside [COMPANION_QUERY] as a flag indicating
+     * the watch wants a confirm prompt. Putting it in [SETTING_KEYS] would
+     * make `PebbleListenerService.isSettingsMessage()` misclassify confirm-
+     * enabled queries as settings batches.
+     *
+     * The snapshot still ingests correctly because it carries 10+ other
+     * SETTING_* keys; one missing entry doesn't change the detection.
+     */
+    val SETTING_CONFIRM_BEFORE_SEND: UInt = 10032u
+
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE].
      *  Stays under Pebble's AppMessage outbox budget (~636 bytes) minus
      *  tuple framing. */

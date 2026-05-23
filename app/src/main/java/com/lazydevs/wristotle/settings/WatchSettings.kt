@@ -24,4 +24,8 @@ data class WatchSettings(
     val skipRetryDialog: Boolean,
     /** Quick Launch action enum value. 0 = dictation (default), 1 = notes. */
     val quickLaunchAction: Int,
+    /** Confirm-before-dispatch toggle. When true, destructive intents
+     *  (call, sms, reminder, etc.) round-trip through a watch confirm prompt
+     *  before the companion runs them. Default false on a fresh install. */
+    val confirmBeforeSend: Boolean,
 )
