@@ -46,4 +46,21 @@ class CancelSlotsTest {
     @Test fun `delete reminder to call mom extracts call mom`() {
         assertEquals("call mom", target("delete my reminder to call mom"))
     }
+
+    // --- Whisper past-tense renderings reduce to bare-cancel ---
+
+    @Test fun `cancelled past-tense reduces to bare cancel`() {
+        // Whisper sometimes hears "Cancel the reminder." as "Cancelled
+        // reminder." Pre-fix, "cancelled" survived stripping and became
+        // the target — handler returned "No reminder matching 'cancelled'".
+        assertNull(target("Cancelled reminder."))
+    }
+
+    @Test fun `canceled American-spelling reduces to bare cancel`() {
+        assertNull(target("Canceled reminder."))
+    }
+
+    @Test fun `removed past-tense reduces to bare cancel`() {
+        assertNull(target("Removed the reminder."))
+    }
 }

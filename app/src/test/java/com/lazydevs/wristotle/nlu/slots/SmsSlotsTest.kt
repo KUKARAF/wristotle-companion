@@ -18,6 +18,25 @@ class SmsSlotsTest {
     private fun extract(query: String, contacts: Set<String> = emptySet()): Map<String, Any> =
         runBlocking { extractor(contacts).extract(query) }
 
+    // --- Whisper comma-after-verb gets normalised ---
+
+    @Test fun `comma after leading verb is stripped before prefix match`() {
+        // Whisper renders "text mom hi" as "text, mom hi" often enough that
+        // it broke the confirm prompt in testing — the leading comma
+        // prevented the "text " prefix from matching, contact ended up as
+        // "text,". The extractor normalises "<verb>, " to "<verb> " up
+        // front so the rest of the pipeline doesn't have to special-case it.
+        val result = extract("text, mom hi")
+        assertEquals("mom", result["contact"])
+        assertEquals("hi", result["body"])
+    }
+
+    @Test fun `comma after leading verb survives even with conjunction`() {
+        val result = extract("text, john saying hello")
+        assertEquals("john", result["contact"])
+        assertEquals("hello", result["body"])
+    }
+
     // --- Conjunction-split path (doesn't need a contact lookup) ----------
 
     @Test fun `saying conjunction splits cleanly`() {
