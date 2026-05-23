@@ -21,14 +21,14 @@ class ConfirmSummaryBuilderTest {
         val s = ConfirmSummaryBuilder.summary(
             result(Intent.Sms, "contact" to "mom", "body" to "hi"),
         )
-        assertEquals("action: text\nbody: [mom] hi", s)
+        assertEquals("action: text\ndetails: [mom] hi", s)
     }
 
     @Test fun smsWithoutBody() {
         // Whisper sometimes hears only the contact ("text mom"). Body row
         // shows just the contact in brackets — no trailing punctuation.
         val s = ConfirmSummaryBuilder.summary(result(Intent.Sms, "contact" to "mom"))
-        assertEquals("action: text\nbody: [mom]", s)
+        assertEquals("action: text\ndetails: [mom]", s)
     }
 
     @Test fun smsBodyTruncatesAt80Chars() {
@@ -47,19 +47,19 @@ class ConfirmSummaryBuilderTest {
         // so the user sees something to react to (and the prompt doesn't
         // render as a misleading empty list).
         val s = ConfirmSummaryBuilder.summary(result(Intent.Sms, "body" to "hi"))
-        assertEquals("action: text\nbody: [?] hi", s)
+        assertEquals("action: text\ndetails: [?] hi", s)
     }
 
     // ── Call ──────────────────────────────────────────────────────────────
 
     @Test fun call() {
         val s = ConfirmSummaryBuilder.summary(result(Intent.Call, "contact" to "alex"))
-        assertEquals("action: call\nbody: [alex]", s)
+        assertEquals("action: call\ndetails: [alex]", s)
     }
 
     @Test fun callMissingContactShowsQuestionMark() {
         val s = ConfirmSummaryBuilder.summary(result(Intent.Call))
-        assertEquals("action: call\nbody: [?]", s)
+        assertEquals("action: call\ndetails: [?]", s)
     }
 
     // ── Reminder / CreateEvent (title + time) ─────────────────────────────
@@ -68,7 +68,7 @@ class ConfirmSummaryBuilderTest {
         val s = ConfirmSummaryBuilder.summary(
             result(Intent.Reminder, "title" to "buy milk", "time" to fixedDate()),
         )
-        assertTrue(s.startsWith("action: reminder\nbody: buy milk @ "))
+        assertTrue(s.startsWith("action: reminder\ndetails: buy milk @ "))
     }
 
     @Test fun reminderWithoutTitleUsesDefault() {
@@ -78,7 +78,7 @@ class ConfirmSummaryBuilderTest {
         val s = ConfirmSummaryBuilder.summary(
             result(Intent.Reminder, "time" to fixedDate()),
         )
-        assertTrue(s.startsWith("action: reminder\nbody: Reminder @ "))
+        assertTrue(s.startsWith("action: reminder\ndetails: Reminder @ "))
     }
 
     @Test fun reminderWithoutTime() {
@@ -88,7 +88,7 @@ class ConfirmSummaryBuilderTest {
         val s = ConfirmSummaryBuilder.summary(
             result(Intent.Reminder, "title" to "gym"),
         )
-        assertEquals("action: reminder\nbody: gym", s)
+        assertEquals("action: reminder\ndetails: gym", s)
     }
 
     @Test fun createEventDefaultsTitleToMeeting() {
@@ -97,7 +97,7 @@ class ConfirmSummaryBuilderTest {
         val s = ConfirmSummaryBuilder.summary(
             result(Intent.CreateEvent, "time" to fixedDate()),
         )
-        assertTrue(s.startsWith("action: schedule\nbody: Meeting @ "))
+        assertTrue(s.startsWith("action: schedule\ndetails: Meeting @ "))
     }
 
     @Test fun createEventUsesScheduleVerb() {
@@ -107,7 +107,7 @@ class ConfirmSummaryBuilderTest {
             result(Intent.CreateEvent, "title" to "Standup", "time" to fixedDate()),
         )
         assertTrue(s.startsWith("action: schedule\n"))
-        assertTrue(s.contains("body: Standup @ "))
+        assertTrue(s.contains("details: Standup @"))
     }
 
     // ── Cancel / Reschedule ───────────────────────────────────────────────
@@ -117,40 +117,40 @@ class ConfirmSummaryBuilderTest {
         // most-recent pin. Confirm must spell that out so the user
         // doesn't see "?" and think nothing's selected.
         val s = ConfirmSummaryBuilder.summary(result(Intent.Cancel))
-        assertEquals("action: cancel\nbody: latest reminder", s)
+        assertEquals("action: cancel\ndetails: latest reminder", s)
     }
 
     @Test fun cancelWithNamedTarget() {
         val s = ConfirmSummaryBuilder.summary(result(Intent.Cancel, "target" to "gym"))
-        assertEquals("action: cancel\nbody: gym", s)
+        assertEquals("action: cancel\ndetails: gym", s)
     }
 
     @Test fun rescheduleTargetAndTime() {
         val s = ConfirmSummaryBuilder.summary(
             result(Intent.Reschedule, "target" to "gym", "time" to fixedDate()),
         )
-        assertTrue(s.startsWith("action: reschedule\nbody: gym → "))
+        assertTrue(s.startsWith("action: reschedule\ndetails: gym → "))
     }
 
     @Test fun rescheduleWithoutTargetUsesLatest() {
         val s = ConfirmSummaryBuilder.summary(
             result(Intent.Reschedule, "time" to fixedDate()),
         )
-        assertTrue(s.startsWith("action: reschedule\nbody: latest reminder → "))
+        assertTrue(s.startsWith("action: reschedule\ndetails: latest reminder → "))
     }
 
     // ── Open / Play ───────────────────────────────────────────────────────
 
     @Test fun openApp() {
         assertEquals(
-            "action: open\nbody: spotify",
+            "action: open\ndetails: spotify",
             ConfirmSummaryBuilder.summary(result(Intent.OpenApp, "app" to "spotify")),
         )
     }
 
     @Test fun mediaPlayWithApp() {
         assertEquals(
-            "action: play\nbody: audible",
+            "action: play\ndetails: audible",
             ConfirmSummaryBuilder.summary(result(Intent.MediaPlay, "app" to "audible")),
         )
     }
@@ -160,9 +160,9 @@ class ConfirmSummaryBuilderTest {
     @Test fun readOnlyIntentsRenderWithDash() {
         // Even though these never gate-on-confirm, the same builder is used
         // for the Phase A1.5 debug log. They should render cleanly, not "?".
-        assertEquals("action: time\nbody: -", ConfirmSummaryBuilder.summary(result(Intent.Time)))
-        assertEquals("action: battery\nbody: -", ConfirmSummaryBuilder.summary(result(Intent.Battery)))
-        assertEquals("action: find-phone\nbody: -", ConfirmSummaryBuilder.summary(result(Intent.FindPhone)))
+        assertEquals("action: time\ndetails: -", ConfirmSummaryBuilder.summary(result(Intent.Time)))
+        assertEquals("action: battery\ndetails: -", ConfirmSummaryBuilder.summary(result(Intent.Battery)))
+        assertEquals("action: find-phone\ndetails: -", ConfirmSummaryBuilder.summary(result(Intent.FindPhone)))
     }
 
     @Test fun unknownFallsBackToRawQuery() {
@@ -175,7 +175,7 @@ class ConfirmSummaryBuilderTest {
                 rawQuery = "an audiobook.",
             ),
         )
-        assertEquals("action: unknown\nbody: an audiobook.", s)
+        assertEquals("action: unknown\ndetails: an audiobook.", s)
     }
 
     // ── helpers ───────────────────────────────────────────────────────────

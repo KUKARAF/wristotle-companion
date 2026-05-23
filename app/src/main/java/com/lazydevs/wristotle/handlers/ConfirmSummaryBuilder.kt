@@ -16,7 +16,7 @@ import java.util.Locale
  *    inspect what the classifier + slot extractor produced for every query,
  *    before any wire protocol is in place.
  *
- * Format: `action: <verb>\nbody: <slots>` — readable, fits the watch's
+ * Format: `action: <verb>\ndetails: <slots>` — readable, fits the watch's
  * 5-line chat, and the `body:` line spells out the resolved targets so
  * mishearings ("text dadd, …" → contact = "dadd") are obvious.
  *
@@ -25,45 +25,45 @@ import java.util.Locale
 object ConfirmSummaryBuilder {
 
     fun summary(r: IntentResult): String = when (r.intent) {
-        Intent.Call          -> "action: call\nbody: [${slot(r, "contact")}]"
+        Intent.Call          -> "action: call\ndetails: [${slot(r, "contact")}]"
         Intent.Sms           -> {
             val to = slot(r, "contact")
             val body = (r.slots["body"] as? String)?.take(80)?.takeIf { it.isNotEmpty() }
-            if (body == null) "action: text\nbody: [$to]"
-            else              "action: text\nbody: [$to] $body"
+            if (body == null) "action: text\ndetails: [$to]"
+            else              "action: text\ndetails: [$to] $body"
         }
-        Intent.Reminder      -> "action: reminder\nbody: ${titleWithTime(r, defaultTitle = "Reminder")}"
+        Intent.Reminder      -> "action: reminder\ndetails: ${titleWithTime(r, defaultTitle = "Reminder")}"
         // Cancel/Reschedule slots use the key `target` (the reminder
         // descriptor). When absent the handler operates on the most-recent
         // pin — surface that as "latest reminder" so the user knows what's
         // about to happen rather than seeing a bare "?" or empty body.
-        Intent.Cancel        -> "action: cancel\nbody: ${targetOrLatest(r)}"
+        Intent.Cancel        -> "action: cancel\ndetails: ${targetOrLatest(r)}"
         // Reschedule shows target → new time so the user verifies both ends
         // of the change ("Move latest reminder → Fri 9:00 AM?").
-        Intent.Reschedule    -> "action: reschedule\nbody: ${targetOrLatest(r)} → ${timeOrDash(r)}"
+        Intent.Reschedule    -> "action: reschedule\ndetails: ${targetOrLatest(r)} → ${timeOrDash(r)}"
         // CreateEvent title defaults to "Meeting" in the handler when none
         // was spoken; mirror that here so the confirm doesn't show "?".
         // "schedule" reads more naturally than "create-event" — matches the
         // verb the user said ("schedule a meeting").
-        Intent.CreateEvent   -> "action: schedule\nbody: ${titleWithTime(r, defaultTitle = "Meeting")}"
-        Intent.OpenApp       -> "action: open\nbody: ${slot(r, "app")}"
-        Intent.MediaPlay     -> "action: play\nbody: ${slot(r, "app")}"
-        Intent.MediaPause    -> "action: pause\nbody: ${slotOrDash(r, "app")}"
-        Intent.MediaPlayPause -> "action: play-pause\nbody: ${slotOrDash(r, "app")}"
-        Intent.MediaNext     -> "action: next\nbody: ${slotOrDash(r, "app")}"
-        Intent.MediaPrevious -> "action: previous\nbody: ${slotOrDash(r, "app")}"
+        Intent.CreateEvent   -> "action: schedule\ndetails: ${titleWithTime(r, defaultTitle = "Meeting")}"
+        Intent.OpenApp       -> "action: open\ndetails: ${slot(r, "app")}"
+        Intent.MediaPlay     -> "action: play\ndetails: ${slot(r, "app")}"
+        Intent.MediaPause    -> "action: pause\ndetails: ${slotOrDash(r, "app")}"
+        Intent.MediaPlayPause -> "action: play-pause\ndetails: ${slotOrDash(r, "app")}"
+        Intent.MediaNext     -> "action: next\ndetails: ${slotOrDash(r, "app")}"
+        Intent.MediaPrevious -> "action: previous\ndetails: ${slotOrDash(r, "app")}"
         Intent.MediaSeekForward,
-        Intent.MediaSeekBackward -> "action: seek\nbody: ${slotOrDash(r, "seconds")}s"
-        Intent.Note          -> "action: note\nbody: ${slot(r, "body")}"
-        Intent.AppendNote    -> "action: append-note\nbody: ${slot(r, "body")}"
-        Intent.ListReminders -> "action: list-reminders\nbody: -"
-        Intent.Calendar      -> "action: calendar\nbody: -"
-        Intent.FindPhone     -> "action: find-phone\nbody: -"
-        Intent.Time          -> "action: time\nbody: -"
-        Intent.Battery       -> "action: battery\nbody: -"
-        Intent.Steps         -> "action: steps\nbody: -"
-        Intent.Vibrate       -> "action: vibrate\nbody: -"
-        Intent.Unknown       -> "action: unknown\nbody: ${r.rawQuery}"
+        Intent.MediaSeekBackward -> "action: seek\ndetails: ${slotOrDash(r, "seconds")}s"
+        Intent.Note          -> "action: note\ndetails: ${slot(r, "body")}"
+        Intent.AppendNote    -> "action: append-note\ndetails: ${slot(r, "body")}"
+        Intent.ListReminders -> "action: list-reminders\ndetails: -"
+        Intent.Calendar      -> "action: calendar\ndetails: -"
+        Intent.FindPhone     -> "action: find-phone\ndetails: -"
+        Intent.Time          -> "action: time\ndetails: -"
+        Intent.Battery       -> "action: battery\ndetails: -"
+        Intent.Steps         -> "action: steps\ndetails: -"
+        Intent.Vibrate       -> "action: vibrate\ndetails: -"
+        Intent.Unknown       -> "action: unknown\ndetails: ${r.rawQuery}"
     }
 
     private fun slot(r: IntentResult, key: String): String =
