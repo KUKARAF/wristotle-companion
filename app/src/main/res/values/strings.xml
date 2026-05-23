@@ -140,8 +140,18 @@
     <string name="settings_backup_restore_button">Restore…</string>
     <string name="settings_backup_restore_coming_soon">Restore is coming in the next update.</string>
     <string name="settings_backup_exporting">Exporting…</string>
-    <string name="settings_backup_export_success">Backup saved: %1$d notes, %2$d conversations, %3$d reminders, %4$d aliases (%5$d KB)</string>
+    <string name="settings_backup_export_success">Backup saved: %1$d notes, %2$d conversations, %3$d audio files (%4$d KB)</string>
+    <string name="settings_backup_export_success_encrypted">Backup saved (encrypted): %1$d notes, %2$d conversations, %3$d audio files (%4$d KB)</string>
     <string name="settings_backup_export_failed">Backup failed: %1$s</string>
+    <string name="settings_backup_dialog_title">Export backup</string>
+    <string name="settings_backup_include_audio">Include audio recordings</string>
+    <string name="settings_backup_audio_summary">%1$d files · %2$.1f MB</string>
+    <string name="settings_backup_audio_none">No audio recordings on device</string>
+    <string name="settings_backup_password_label">Password (optional)</string>
+    <string name="settings_backup_password_helper">When set, the backup is encrypted with AES-256. If you lose the password, the backup cannot be restored.</string>
+    <string name="settings_backup_password_show">Show password</string>
+    <string name="settings_backup_password_hide">Hide password</string>
+    <string name="settings_backup_dialog_confirm">Export</string>
 
     <!-- Notes feature -->
     <string name="notes_header">Notes</string>

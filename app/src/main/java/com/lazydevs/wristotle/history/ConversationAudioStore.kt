@@ -24,7 +24,9 @@ private const val TAG = "ConversationAudioStore"
  */
 class ConversationAudioStore(context: Context) {
 
-    private val dir: File = File(context.filesDir, DIR_NAME)
+    /** The on-disk directory holding the `.wav` files. Read-only access for
+     *  callers that need to enumerate files (e.g. the backup exporter). */
+    val dir: File = File(context.filesDir, DIR_NAME)
 
     /** Persists [samples] as a 16-bit PCM mono WAV. Returns the file on success, null on failure. */
     fun save(samples: ShortArray, sampleRate: Int): File? {
