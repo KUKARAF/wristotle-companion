@@ -17,6 +17,8 @@ import com.lazydevs.wristotle.handlers.MediaPlayHandler
 import com.lazydevs.wristotle.handlers.MediaPlayPauseHandler
 import com.lazydevs.wristotle.handlers.MediaPreviousHandler
 import com.lazydevs.wristotle.handlers.MediaSeekHandler
+import com.lazydevs.wristotle.handlers.AppendNoteHandler
+import com.lazydevs.wristotle.handlers.NoteHandler
 import com.lazydevs.wristotle.handlers.OpenAppHandler
 import com.lazydevs.wristotle.handlers.ReminderHandler
 import com.lazydevs.wristotle.handlers.RescheduleHandler
@@ -108,6 +110,8 @@ class PebbleListenerService : BasePebbleListenerService() {
             OpenAppHandler(this, appIndex),
             CalendarHandler(calendarRepo),
             CreateEventHandler(calendarRepo),
+            NoteHandler(app.noteRepository),
+            AppendNoteHandler(app.noteRepository),
         ))
     }
 
@@ -203,7 +207,22 @@ class PebbleListenerService : BasePebbleListenerService() {
         val routed = resolveIntent(classified, watchHint, query)
         Log.d(TAG, "Routed to intent=${routed.intent} confidence=${routed.confidence}")
 
-        val dispatchResult = registry.dispatch(routed)
+        // Claim the recognizer's published .wav path now (before dispatch) so
+        // the NoteHandler can copy it into permanent notes-audio/. The same
+        // path is still recorded on the ConversationEntry below — claiming
+        // once and reusing keeps watch-dictation audio attached to BOTH the
+        // history row and (when the intent is Note) the saved note row.
+        val app2 = application as WristotleApplication
+        val audioPath = app2.lastCapturedAudioPath
+        app2.lastCapturedAudioPath = null
+        val routedWithAudio = if (
+            (routed.intent == Intent.Note || routed.intent == Intent.AppendNote)
+            && audioPath != null
+        ) {
+            routed.copy(slots = routed.slots + (NoteHandler.SLOT_AUDIO_PATH to audioPath))
+        } else routed
+
+        val dispatchResult = registry.dispatch(routedWithAudio)
         Log.d(TAG, "Sending response: ${dispatchResult.response}")
 
         // Reply over the matching legacy channel so old watch firmware that
@@ -219,11 +238,6 @@ class PebbleListenerService : BasePebbleListenerService() {
             // surface to the user. NluSettings gates whether anything sticks.
             coroutineScope.launch { learningCollector.record(query, routed.intent) }
         }
-
-        // Claim and clear the audio path published by WhisperRecognizer for
-        // this dictation, so the next session can publish a fresh one.
-        val audioPath = (application as WristotleApplication).lastCapturedAudioPath
-        (application as WristotleApplication).lastCapturedAudioPath = null
 
         logInteraction(
             query = query,

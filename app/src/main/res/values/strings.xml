@@ -15,6 +15,7 @@
 
     <!-- Bottom navigation -->
     <string name="nav_conversation">Chat</string>
+    <string name="nav_notes">Notes</string>
     <string name="nav_permissions">Permissions</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_attention_badge_desc">Needs attention</string>
@@ -128,7 +129,31 @@
     <string name="settings_section_learning">Learning</string>
     <string name="settings_section_conversation">Conversation</string>
     <string name="settings_section_diagnostics">Diagnostics</string>
+    <string name="settings_section_notes">Notes</string>
     <string name="settings_section_watch">Watch</string>
+
+    <!-- Notes feature -->
+    <string name="notes_header">Notes</string>
+    <string name="notes_search_label">Search notes</string>
+    <string name="notes_empty_title">No notes yet</string>
+    <string name="notes_empty_subtitle">Say \"note: …\" or \"make a note that …\" on your watch.</string>
+    <string name="notes_empty_search_title">No matching notes</string>
+    <string name="notes_play_audio">Play recording</string>
+    <string name="notes_stop_audio">Stop playback</string>
+    <string name="notes_delete">Delete note</string>
+    <string name="notes_delete_all">Delete all notes</string>
+    <string name="notes_delete_all_confirm">Delete all</string>
+    <string name="notes_delete_all_warning">This permanently deletes every saved note and its recording. This cannot be undone.</string>
+    <string name="notes_settings_header">Notes retention</string>
+    <string name="notes_settings_desc">How many notes to keep. \"All\" never deletes; the other options FIFO-prune oldest notes (and their recordings) when the cap is reached.</string>
+    <string name="notes_settings_keep_label">Keep</string>
+    <string name="notes_settings_keep_all">All notes</string>
+    <string name="notes_settings_keep_count">Last %1$d</string>
+    <string name="notes_settings_append_audio_label">When appending to a note</string>
+    <string name="notes_settings_append_audio_desc">How the new dictation\'s audio is stored on the note.</string>
+    <string name="notes_settings_append_audio_merge">Merge into one recording</string>
+    <string name="notes_settings_append_audio_separate">Keep as separate clips</string>
+    <string name="cancel">Cancel</string>
 
     <!-- Watch-settings mirror card -->
     <string name="watch_settings_header">Watch app settings</string>

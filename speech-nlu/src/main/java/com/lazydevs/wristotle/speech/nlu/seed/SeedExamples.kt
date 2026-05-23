@@ -347,6 +347,43 @@ object SeedExamples {
             "schedule a one on one with Sam tomorrow at one",
             "book a meeting room friday at noon",
         ))
+        // ── Note ────────────────────────────────────────────────────────
+        // Free-form capture. Lead-ins ("note", "make a note", "remember
+        // that", "jot down") are deterministic in PrefixHints, so seeds
+        // here mostly cover the paraphrases without an explicit lead-in
+        // verb where the classifier has to lean on the body shape.
+        addAll(Intent.Note, listOf(
+            "note pick up milk on the way home",
+            "note that the meeting moved to four pm",
+            "make a note to buy batteries",
+            "make a note that the cat's vet visit is on may thirtieth",
+            "remember that the wifi password changed",
+            "remember to water the plants",
+            "jot down the parking spot is b twelve",
+            "save a note about the new gym schedule",
+            "write down the door code is one two three four",
+            "take a note the rental car return is at noon",
+            "noted that the recipe needs more salt",
+            "add to my notes the conference room is on the third floor",
+            "for my notes the new account number is on the desk",
+            "keep a note that the contractor said tuesday",
+            "store a note about the next book club pick",
+        ))
+        // ── AppendNote ──────────────────────────────────────────────────
+        // "Add this to the previous one" pattern. PrefixHints catches the
+        // canonical openers; seeds cover the variations.
+        addAll(Intent.AppendNote, listOf(
+            "add to my previous note the meeting is now at five",
+            "add to my previous notes that the room changed",
+            "add to the last note the dentist office is on 5th street",
+            "add to the latest note alex is bringing snacks",
+            "append the speaker is bob",
+            "append to my note the new tracking number is twelve thirty four",
+            "append to the previous note we need extra chairs",
+            "append to last note the time is now four pm",
+            "also add to my notes the conference room is on the third floor",
+            "also note in my last entry that the recipe needs more salt",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }

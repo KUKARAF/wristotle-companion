@@ -91,6 +91,14 @@ class WristotleApplication : Application() {
     lateinit var conversationAudioStore: ConversationAudioStore
         private set
 
+    /** Notes data layer (Phase A — watch-dictated text + optional .wav). */
+    lateinit var noteRepository: com.lazydevs.wristotle.notes.NoteRepository
+        private set
+    lateinit var noteSettings: com.lazydevs.wristotle.notes.NoteSettings
+        private set
+    lateinit var notesAudioStore: com.lazydevs.wristotle.notes.NotesAudioStore
+        private set
+
     /**
      * Path of the most-recently-saved audio file, published by the
      * recognizer's [WhisperRecognizer.audioSink] and consumed by
@@ -201,6 +209,18 @@ class WristotleApplication : Application() {
         // came back. Subsequent inserts also prune.
         appScope.launch { conversationRepository.prune() }
 
+        // Notes — Room DB + audio store + retention setting. Prune on startup
+        // in case the user lowered the keep-last-N cap while the app was off.
+        val notesDb = com.lazydevs.wristotle.notes.NoteDatabase.build(this)
+        notesAudioStore = com.lazydevs.wristotle.notes.NotesAudioStore(this)
+        noteSettings = com.lazydevs.wristotle.notes.NoteSettings(this)
+        noteRepository = com.lazydevs.wristotle.notes.NoteRepository(
+            dao = notesDb.noteDao(),
+            audioStore = notesAudioStore,
+            settings = noteSettings,
+        )
+        appScope.launch { noteRepository.prune() }
+
         nluBank = ExampleBank(NluDatabase.build(this).exampleDao())
         nluSettings = NluSettings(this)
 
@@ -243,6 +263,8 @@ class WristotleApplication : Application() {
             Intent.OpenApp to OpenAppSlots(),
             Intent.Calendar to CalendarSlots(),
             Intent.CreateEvent to CreateEventSlots(),
+            Intent.Note to com.lazydevs.wristotle.nlu.slots.NoteSlots(),
+            Intent.AppendNote to com.lazydevs.wristotle.nlu.slots.AppendNoteSlots(),
         ))
 
         learningCollector = LearningCollector(

@@ -58,6 +58,19 @@ enum class Intent {
      *  day). Handled by CalendarHandler reading CalendarContract. */
     Calendar,
 
+    /** Capture a free-form text note ("note: pick up milk", "note that the
+     *  meeting moved to 4", "remember that the cat's vet is on May 30").
+     *  Slot: `body` (String) — the note text with the lead-in stripped.
+     *  Handled by NoteHandler persisting to a Room store; on microPebble
+     *  the dictation .wav is copied into a per-note audio file. */
+    Note,
+
+    /** Append to the most recently created note ("add to my previous note …",
+     *  "add to the last note …", "append …"). Slot: `body` (String).
+     *  Handled by AppendNoteHandler — updates the existing row's body and
+     *  bumps its timestamp so it surfaces at the top of the list. */
+    AppendNote,
+
     /** Create a calendar event — "schedule a meeting tomorrow at 3pm",
      *  "add a meeting with Alex Friday at noon called standup". Slots:
      *  `time` (java.util.Date, required), `title` (String?), `attendee`

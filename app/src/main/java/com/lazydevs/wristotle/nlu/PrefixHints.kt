@@ -79,6 +79,19 @@ internal object PrefixHints {
         // watch's blanket Reminder hint can be refined to Reschedule. Sits above
         // the Reminder rule (which only matches a remind/reminder opener anyway).
         Regex("(?i)^\\s*(snooze|reschedule|postpone|delay|push|move|bump|shift)\\b") to Intent.Reschedule,
+        // AppendNote — must sit ABOVE Note so "add to my previous notes …"
+        // doesn't fall into Note's "(for|to|add to) my notes" arm. The trigger
+        // is one of "previous/last/latest/recent" (or the explicit "append"
+        // verb); without those, "add to my notes …" stays Note (create new).
+        Regex("(?i)^\\s*(append\\b|(add|append)\\s+to\\s+(the\\s+|my\\s+)?(previous|last|latest|recent)\\s+notes?\\b)") to Intent.AppendNote,
+        // Note — unambiguous capture lead-ins. Placed above Reminder so a
+        // "remember that …" opener routes to Note instead of falling through
+        // to the embedding (which can drift to Unknown without a time). Leaves
+        // "remind …" alone — that stays Reminder. "remember to …" without a
+        // clear time is genuinely ambiguous (note vs reminder); we don't
+        // prefix-route it and let the classifier seeds + slot extraction
+        // decide.
+        Regex("(?i)^\\s*(notes?[\\s.:,;!?\\-]|(make|take|save|store|keep|add)\\s+(a\\s+)?notes?\\b|(jot|write)\\s+(this|that|it)?\\s*down\\b|noted\\b|(for|to|add\\s+to)\\s+my\\s+notes?\\b|remember\\s+that\\b)") to Intent.Note,
         Regex("(?i)^\\s*(remind|set (a )?reminder|reminder)\\b") to Intent.Reminder,
         Regex("(?i)^\\s*(cancel|delete|remove|clear)\\b") to Intent.Cancel,
         Regex("(?i)^\\s*(find|locate|where('?s| is)) (my )?phone\\b") to Intent.FindPhone,

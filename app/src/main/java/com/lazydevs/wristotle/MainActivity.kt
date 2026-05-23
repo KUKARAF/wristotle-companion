@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
     private val conversationVm: ConversationViewModel by viewModels()
     private val appIndexVm: AppIndexViewModel by viewModels()
     private val appAliasesVm: com.lazydevs.wristotle.ui.AppAliasesViewModel by viewModels()
+    private val notesVm: com.lazydevs.wristotle.ui.NotesViewModel by viewModels()
     private val diagnosticsVm: DiagnosticsViewModel by viewModels()
     private val watchSettingsVm: WatchSettingsViewModel by viewModels()
 
@@ -82,6 +83,7 @@ class MainActivity : ComponentActivity() {
                     conversationVm = conversationVm,
                     appIndexVm = appIndexVm,
                     appAliasesVm = appAliasesVm,
+                    notesVm = notesVm,
                     diagnosticsVm = diagnosticsVm,
                     watchSettingsVm = watchSettingsVm,
                     onRequestWatchPermissions = ::requestWatchPermissions,

@@ -53,6 +53,7 @@ fun SettingsScreen(
     conversationVm: ConversationViewModel,
     appIndexVm: AppIndexViewModel,
     appAliasesVm: AppAliasesViewModel,
+    notesVm: NotesViewModel,
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
 ) {
@@ -108,6 +109,10 @@ fun SettingsScreen(
 
         SettingsSection(stringResource(R.string.settings_section_diagnostics)) {
             DiagnosticsCard(vm = diagnosticsVm)
+        }
+
+        SettingsSection(stringResource(R.string.settings_section_notes)) {
+            NotesSettingsCard(vm = notesVm)
         }
 
         // Two sub-sections grouped under one "Conversation" header —
