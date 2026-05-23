@@ -2,6 +2,9 @@ package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Pure formatter that renders an [IntentResult] as a short "action + body"
@@ -29,14 +32,20 @@ object ConfirmSummaryBuilder {
             if (body == null) "action: text\nbody: [$to]"
             else              "action: text\nbody: [$to] $body"
         }
-        Intent.Reminder      -> "action: reminder\nbody: ${slot(r, "title")}"
+        Intent.Reminder      -> "action: reminder\nbody: ${titleWithTime(r, defaultTitle = "Reminder")}"
         // Cancel/Reschedule slots use the key `target` (the reminder
         // descriptor). When absent the handler operates on the most-recent
         // pin — surface that as "latest reminder" so the user knows what's
         // about to happen rather than seeing a bare "?" or empty body.
         Intent.Cancel        -> "action: cancel\nbody: ${targetOrLatest(r)}"
-        Intent.Reschedule    -> "action: reschedule\nbody: ${targetOrLatest(r)}"
-        Intent.CreateEvent   -> "action: create-event\nbody: ${slot(r, "title")}"
+        // Reschedule shows target → new time so the user verifies both ends
+        // of the change ("Move latest reminder → Fri 9:00 AM?").
+        Intent.Reschedule    -> "action: reschedule\nbody: ${targetOrLatest(r)} → ${timeOrDash(r)}"
+        // CreateEvent title defaults to "Meeting" in the handler when none
+        // was spoken; mirror that here so the confirm doesn't show "?".
+        // "schedule" reads more naturally than "create-event" — matches the
+        // verb the user said ("schedule a meeting").
+        Intent.CreateEvent   -> "action: schedule\nbody: ${titleWithTime(r, defaultTitle = "Meeting")}"
         Intent.OpenApp       -> "action: open\nbody: ${slot(r, "app")}"
         Intent.MediaPlay     -> "action: play\nbody: ${slot(r, "app")}"
         Intent.MediaPause    -> "action: pause\nbody: ${slotOrDash(r, "app")}"
@@ -65,4 +74,27 @@ object ConfirmSummaryBuilder {
 
     private fun targetOrLatest(r: IntentResult): String =
         (r.slots["target"] as? String)?.takeIf { it.isNotEmpty() } ?: "latest reminder"
+
+    /**
+     * Format the title + time pair for Reminder / CreateEvent. The handler
+     * defaults a missing title to [defaultTitle], so we do the same so the
+     * confirm prompt accurately reflects what would land. Time is omitted
+     * when not parseable — the handler will fail with "Couldn't understand
+     * the time" anyway, but at least the title surfaces.
+     */
+    private fun titleWithTime(r: IntentResult, defaultTitle: String): String {
+        val title = (r.slots["title"] as? String)?.takeIf { it.isNotEmpty() } ?: defaultTitle
+        val time = (r.slots["time"] as? Date)?.let { TIME_FMT.format(it) }
+        return if (time != null) "$title @ $time" else title
+    }
+
+    private fun timeOrDash(r: IntentResult): String =
+        (r.slots["time"] as? Date)?.let { TIME_FMT.format(it) } ?: "-"
+
+    /**
+     * Short, watch-friendly time format. Example: "Fri 3:00 PM" or
+     * "May 25 3:00 PM" if a date >7 days out — adequate granularity for the
+     * user to spot a misheard time without burning chat lines.
+     */
+    private val TIME_FMT = SimpleDateFormat("EEE h:mm a", Locale.getDefault())
 }
