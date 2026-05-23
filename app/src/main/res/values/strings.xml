@@ -178,6 +178,10 @@
     <string name="watch_settings_quick_launch_auto_exit">Auto-exit after quick launch</string>
     <string name="watch_settings_auto_exit_off">Off</string>
     <string name="watch_settings_auto_exit_seconds">%1$d s</string>
+    <string name="watch_settings_quick_launch_action">Quick Launch opens</string>
+    <string name="watch_settings_quick_launch_action_dictate">Dictation</string>
+    <string name="watch_settings_quick_launch_action_notes">Notes</string>
+    <string name="watch_settings_quick_launch_action_menu">Show menu (Dictate / Notes)</string>
     <string name="watch_settings_vibrate_section">Vibration</string>
     <string name="watch_settings_vibrate_on_launch">On normal launch</string>
     <string name="watch_settings_vibrate_on_quick_launch">On quick launch</string>

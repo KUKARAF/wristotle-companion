@@ -144,6 +144,10 @@ private fun EditableBody(baseline: WatchSettings, onSave: (WatchSettings) -> Uni
             seconds = draft.quickLaunchAutoExitSeconds,
             onChange = { draft = draft.copy(quickLaunchAutoExitSeconds = it) },
         )
+        QuickLaunchActionDropdown(
+            value = draft.quickLaunchAction,
+            onChange = { draft = draft.copy(quickLaunchAction = it) },
+        )
 
         SectionDivider(stringResource(R.string.watch_settings_vibrate_section))
         SwitchRow(
@@ -259,6 +263,42 @@ private fun AutoExitDropdown(seconds: Int, onChange: (Int) -> Unit) {
                         onChange(s)
                         expanded = false
                     },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuickLaunchActionDropdown(value: Int, onChange: (Int) -> Unit) {
+    val choices = listOf(
+        com.lazydevs.wristotle.transport.MessageKeys.QUICK_LAUNCH_ACTION_DICTATE
+            to stringResource(R.string.watch_settings_quick_launch_action_dictate),
+        com.lazydevs.wristotle.transport.MessageKeys.QUICK_LAUNCH_ACTION_NOTES
+            to stringResource(R.string.watch_settings_quick_launch_action_notes),
+        com.lazydevs.wristotle.transport.MessageKeys.QUICK_LAUNCH_ACTION_MENU
+            to stringResource(R.string.watch_settings_quick_launch_action_menu),
+    )
+    val display = choices.firstOrNull { it.first == value }?.second
+        ?: stringResource(R.string.watch_settings_quick_launch_action_dictate)
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = display,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.watch_settings_quick_launch_action)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            choices.forEach { (v, text) ->
+                DropdownMenuItem(
+                    text = { Text(text) },
+                    onClick = { onChange(v); expanded = false },
                 )
             }
         }

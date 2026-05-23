@@ -39,6 +39,15 @@ object MessageKeys {
     val SETTING_VIBRATE_ON_QUICK_LAUNCH: UInt  = 10020u
     val SETTING_VIBRATE_RESPECT_QUIET: UInt    = 10021u
     val SETTING_SKIP_RETRY_DIALOG: UInt        = 10022u
+    /** Quick Launch action: which screen Wristotle opens when launched via
+     *  the system Quick Launch button. Int32 enum: 0 = dictation (default),
+     *  1 = notes. Matches the QuickLaunchAction enum in the watch's config.h. */
+    val SETTING_QUICK_LAUNCH_ACTION: UInt      = 10031u
+
+    /** Quick Launch action wire values. Stable; persisted on the watch. */
+    const val QUICK_LAUNCH_ACTION_DICTATE: Int = 0
+    const val QUICK_LAUNCH_ACTION_NOTES: Int   = 1
+    const val QUICK_LAUNCH_ACTION_MENU: Int    = 2
 
     /** Companion → watch: presence-only ping that asks the watch to ship back a
      *  snapshot containing every SETTING_* key + its current value. Added in
@@ -85,6 +94,7 @@ object MessageKeys {
         SETTING_VIBRATE_ON_QUICK_LAUNCH,
         SETTING_VIBRATE_RESPECT_QUIET,
         SETTING_SKIP_RETRY_DIALOG,
+        SETTING_QUICK_LAUNCH_ACTION,
     )
 
     /** Value of MSG_TARGET that means "this message is for the Android companion". */

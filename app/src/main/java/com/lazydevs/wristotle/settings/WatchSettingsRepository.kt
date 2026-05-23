@@ -129,6 +129,7 @@ class WatchSettingsRepository(
             vibrateOnQuickLaunch      = data.boolSetting(MessageKeys.SETTING_VIBRATE_ON_QUICK_LAUNCH) ?: previous?.vibrateOnQuickLaunch      ?: true,
             vibrateRespectQuiet       = data.boolSetting(MessageKeys.SETTING_VIBRATE_RESPECT_QUIET)   ?: previous?.vibrateRespectQuiet       ?: true,
             skipRetryDialog           = data.boolSetting(MessageKeys.SETTING_SKIP_RETRY_DIALOG)       ?: previous?.skipRetryDialog           ?: true,
+            quickLaunchAction         = data.intSetting (MessageKeys.SETTING_QUICK_LAUNCH_ACTION)     ?: previous?.quickLaunchAction         ?: MessageKeys.QUICK_LAUNCH_ACTION_DICTATE,
         )
         _state.value = WatchSettingsState.Loaded(merged)
     }
@@ -179,6 +180,7 @@ class WatchSettingsRepository(
             bool(MessageKeys.SETTING_VIBRATE_ON_QUICK_LAUNCH, baseline?.vibrateOnQuickLaunch, updated.vibrateOnQuickLaunch)
             bool(MessageKeys.SETTING_VIBRATE_RESPECT_QUIET, baseline?.vibrateRespectQuiet, updated.vibrateRespectQuiet)
             bool(MessageKeys.SETTING_SKIP_RETRY_DIALOG, baseline?.skipRetryDialog, updated.skipRetryDialog)
+            int(MessageKeys.SETTING_QUICK_LAUNCH_ACTION, baseline?.quickLaunchAction, updated.quickLaunchAction)
         }
     }
 

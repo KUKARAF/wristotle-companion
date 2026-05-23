@@ -22,4 +22,6 @@ data class WatchSettings(
     val vibrateOnQuickLaunch: Boolean,
     val vibrateRespectQuiet: Boolean,
     val skipRetryDialog: Boolean,
+    /** Quick Launch action enum value. 0 = dictation (default), 1 = notes. */
+    val quickLaunchAction: Int,
 )
