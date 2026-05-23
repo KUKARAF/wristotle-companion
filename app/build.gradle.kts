@@ -144,6 +144,11 @@ dependencies {
     implementation(project(":speech-whisper"))
     implementation(project(":speech-nlu"))
     testImplementation(libs.junit)
+    // org.json is bundled with Android but absent from the empty android.jar
+    // used by unit tests. Pulling the upstream JVM artifact lets the backup
+    // codec tests exercise the real JSONObject behaviour (vs. the no-op stubs
+    // that `unitTests.isReturnDefaultValues = true` would otherwise hand back).
+    testImplementation(libs.org.json)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

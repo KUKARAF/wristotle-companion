@@ -61,4 +61,6 @@ class FakeNoteDao : NoteDao {
     }
 
     override suspend fun count(): Int = rows.size
+
+    override suspend fun allForBackup(): List<Note> = rows.sortedBy { it.id }
 }
