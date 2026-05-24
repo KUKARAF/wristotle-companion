@@ -27,7 +27,6 @@ import com.lazydevs.wristotle.nlu.slots.MediaTargetSlots
 import com.lazydevs.wristotle.nlu.slots.OpenAppSlots
 import com.lazydevs.wristotle.nlu.slots.ReminderSlots
 import com.lazydevs.wristotle.nlu.slots.RescheduleSlots
-import com.lazydevs.wristotle.nlu.slots.SmsSlots
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.settings.WatchSettingsRepository
 import com.lazydevs.wristotle.speech.Recognizers
@@ -257,17 +256,16 @@ class WristotleApplication : Application() {
 
         watchSettingsRepository = WatchSettingsRepository(transport, appScope)
 
-        // Slot extractors are stateless aside from the contacts dep shared with
-        // SmsHandler, so building them once at startup is fine. The single
-        // MediaSeekSlots instance handles BOTH MediaSeekForward and
-        // MediaSeekBackward — direction lives on the intent, magnitude in
-        // the slot.
+        // Slot extractors are stateless aside from the contacts dep shared
+        // with SendMessageHandler / CallSlots, so building them once at
+        // startup is fine. The single MediaSeekSlots instance handles BOTH
+        // MediaSeekForward and MediaSeekBackward — direction lives on the
+        // intent, magnitude in the slot.
         val contacts = ContactsRepository(this)
         val mediaSeekSlots = MediaSeekSlots()
         val mediaTargetSlots = MediaTargetSlots()
         slotExtractors = SlotExtractorRegistry(mapOf(
             Intent.Call to CallSlots(),
-            Intent.Sms to SmsSlots(contacts),
             Intent.SendMessage to com.lazydevs.wristotle.nlu.slots.SendMessageSlots(contacts),
             Intent.Reminder to ReminderSlots(
                 defaultOffsetMinProvider = { reminderSettings.defaultOffsetMin.value },

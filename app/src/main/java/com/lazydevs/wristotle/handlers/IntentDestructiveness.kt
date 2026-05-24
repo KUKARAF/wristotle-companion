@@ -15,7 +15,9 @@ import com.lazydevs.wristotle.speech.nlu.Intent
  * AppendNote) dispatch straight through even with the toggle on.
  *
  * Rationale per intent:
- *  - **Call / Sms** — sends to another person; the user's original concern.
+ *  - **Call / SendMessage** — sends to another person; the user's original
+ *    concern. SendMessage covers SMS, WhatsApp, Telegram, Signal — every
+ *    way to send a message from the app.
  *  - **Reminder / Cancel / Reschedule** — modify persistent watch-side
  *    timeline pins.
  *  - **CreateEvent** — writes to the user's phone calendar.
@@ -26,7 +28,6 @@ import com.lazydevs.wristotle.speech.nlu.Intent
  */
 fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.Call,
-    Intent.Sms,
     Intent.SendMessage,
     Intent.Reminder,
     Intent.Cancel,

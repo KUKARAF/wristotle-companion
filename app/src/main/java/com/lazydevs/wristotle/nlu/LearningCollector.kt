@@ -66,7 +66,7 @@ class LearningCollector(
 
     companion object {
         private val LEARNABLE_INTENTS = setOf(
-            Intent.Call, Intent.Sms, Intent.Reminder, Intent.Cancel, Intent.FindPhone,
+            Intent.Call, Intent.SendMessage, Intent.Reminder, Intent.Cancel, Intent.FindPhone,
         )
         private const val REBUILD_DEBOUNCE_MS = 500L
     }

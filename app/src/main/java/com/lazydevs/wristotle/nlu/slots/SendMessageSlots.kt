@@ -45,12 +45,6 @@ class SendMessageSlots(
 ) : SlotExtractor {
     constructor(contacts: ContactsRepository) : this(contacts::findContact)
 
-    // Phase 4 fallback delegates to the original SMS slot extractor so we
-    // don't duplicate its greedy-contact-lookup + conjunction-split +
-    // single-space-fallback logic. SmsSlots stays as a delete-target in
-    // Phase A3; once removed, inline the logic here as private helpers.
-    private val smsSlotsFallback = SmsSlots(findContact)
-
     override suspend fun extract(query: String): Map<String, Any> {
         val lower = query.lowercase().trim()
         if (lower.isEmpty()) return emptyMap()
@@ -100,17 +94,76 @@ class SendMessageSlots(
             }
         }
 
-        // Shape 4: no explicit app named → default to SMS. Delegate to
-        // SmsSlots for the contact/body split (greedy contact-name
-        // lookup, conjunction-split for "saying"/"that", single-space
-        // fallback). Any non-empty result becomes a SendMessage slot
-        // map with app="SMS".
-        val smsResult = smsSlotsFallback.extract(query)
+        // Shape 4: no explicit app named → default to SMS. Inlined from
+        // the original SmsSlots class (removed in Phase A3); see
+        // [extractSmsLike] for the greedy-contact-lookup +
+        // conjunction-split + single-space-fallback logic.
+        val smsResult = extractSmsLike(query)
         if (smsResult.isNotEmpty()) {
             return mapOf("app" to MessagingTargets.Sms.displayName) + smsResult
         }
 
         return emptyMap()
+    }
+
+    /**
+     * SMS-style slot extraction — the bare-verb shape (`"text mom hi"` /
+     * `"send a message to mom saying running late"` / `"tell dad …"`).
+     * Used by [extract]'s Shape 4 fallback when no messaging app is
+     * named.
+     *
+     * Returns `contact` and (optionally) `body`. The `app` key is added
+     * by the caller — this function is purposely shape-compatible with
+     * the original SmsSlots so its tests carry over verbatim.
+     *
+     * Strategy:
+     *  1. Strip a Whisper-inserted comma after the verb (*"text, mom
+     *     hi"* → *"text mom hi"*).
+     *  2. Strip the longest matching verb prefix (`"text "` /
+     *     `"send a message to "` / *"tell "* / …).
+     *  3. If a `saying` / `that` / `telling them` conjunction is
+     *     present, split there — left is contact, right is body.
+     *  4. Else greedy contact-name lookup: try the longest N-word
+     *     prefix (down to 1) against [findContact]; longest match wins.
+     *  5. Else single-space fallback so the handler at least has
+     *     *something* to react to.
+     */
+    private suspend fun extractSmsLike(query: String): Map<String, Any> {
+        val lower = query.lowercase().trim()
+        val normalised = lower.replaceFirst(LEADING_COMMA_AFTER_VERB, "$1 ")
+
+        val prefix = SMS_LIKE_PREFIXES.firstOrNull { normalised.startsWith(it) }
+        val rest = (if (prefix != null) normalised.substring(prefix.length) else normalised).trim()
+        if (rest.isEmpty()) return emptyMap()
+
+        val conjMatch = SMS_LIKE_CONJUNCTIONS.find(rest)
+        if (conjMatch != null) {
+            // Strip trailing emphasis from the contact side only — the
+            // body is meaningful payload, even if it's "yes yes yes".
+            val contact = stripTrailingEmphasis(rest.substring(0, conjMatch.range.first).trim())
+            val body = rest.substring(conjMatch.range.last + 1).trim()
+            if (contact.isNotEmpty() && body.isNotEmpty()) {
+                return mapOf("contact" to contact, "body" to body)
+            }
+        }
+
+        val words = rest.split(Regex("\\s+")).map(::cleanNameToken).filter { it.isNotEmpty() }
+        for (n in minOf(MAX_NAME_WORDS, words.size) downTo 1) {
+            val candidate = words.subList(0, n).joinToString(" ")
+            if (findContact(candidate) != null) {
+                val body = if (n < words.size) words.subList(n, words.size).joinToString(" ").trim() else ""
+                if (body.isNotEmpty()) {
+                    return mapOf("contact" to candidate, "body" to body)
+                }
+            }
+        }
+
+        val spaceIdx = rest.indexOf(' ')
+        if (spaceIdx < 0) return mapOf("contact" to rest)
+        val contact = rest.substring(0, spaceIdx).trim()
+        val body = rest.substring(spaceIdx + 1).trim()
+        return if (body.isEmpty()) mapOf("contact" to contact)
+               else mapOf("contact" to contact, "body" to body)
     }
 
     /**
@@ -245,12 +298,26 @@ class SendMessageSlots(
     }
 
     private companion object {
-        // Same comma-after-verb fix SmsSlots uses.
+        // Whisper occasionally adds a comma after the leading verb
+        // ("text, mom hi") which prevents prefix-strip from firing. Same
+        // normalisation the original SmsSlots used.
         val LEADING_COMMA_AFTER_VERB = Regex("^([a-z]+)\\s*,\\s*")
 
-        // Verb prefixes mirroring SmsSlots.PREFIXES (so "text Mom on
-        // WhatsApp …" can be handled here when the classifier routes
-        // it to SendMessage). Longest first so multi-word matches win.
+        // SMS-style verb prefixes used by [extractSmsLike]. Longest
+        // first so multi-word matches win (formerly SmsSlots.PREFIXES).
+        val SMS_LIKE_PREFIXES = listOf(
+            "send a message to ", "send message to ", "send a message ", "send message ",
+            "send sms to ", "send sms ",
+            "text ", "tell ", "message ", "let ",
+        )
+
+        // SMS-style conjunctions for the contact/body split (formerly
+        // SmsSlots.CONJUNCTIONS).
+        val SMS_LIKE_CONJUNCTIONS = Regex("(?i)\\b(saying|that|telling (them|him|her))\\b")
+
+        // Verb prefixes used by [stripLeadingMessagingVerb] (Shape 3's
+        // pre-strip for the "<verb> contact on <app> body" form).
+        // Longest first.
         val VERB_PREFIXES = listOf(
             "send a message to ", "send message to ", "send a message ", "send message ",
             "send a whatsapp message to ", "send a telegram message to ", "send a signal message to ",

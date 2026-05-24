@@ -25,7 +25,6 @@ import com.lazydevs.wristotle.handlers.NoteHandler
 import com.lazydevs.wristotle.handlers.OpenAppHandler
 import com.lazydevs.wristotle.handlers.ReminderHandler
 import com.lazydevs.wristotle.handlers.RescheduleHandler
-import com.lazydevs.wristotle.handlers.SmsHandler
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.nlu.LearningCollector
@@ -121,7 +120,6 @@ class PebbleListenerService : BasePebbleListenerService() {
         val calendarRepo = CalendarRepository(this)
         registry = HandlerRegistry(listOf(
             CallHandler(this, contacts),
-            SmsHandler(this, contacts),
             com.lazydevs.wristotle.handlers.SendMessageHandler(this, contacts),
             ReminderHandler(this, transport),
             CancelReminderHandler(this, transport),

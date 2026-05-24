@@ -10,7 +10,6 @@ package com.lazydevs.wristotle.speech.nlu
  */
 enum class Intent {
     Call,
-    Sms,
     Reminder,
     Cancel,
 
@@ -87,11 +86,14 @@ enum class Intent {
      *  looks up the app in MessagingTargets, fires ACTION_VIEW / ACTION_SEND
      *  with the pre-filled body so the user only has to tap Send.
      *
-     *  Distinct from [Sms] which sends programmatically via SmsManager and
-     *  doesn't require a tap; the messaging apps gatekeep their playback /
-     *  send APIs to Google-Assistant-signed callers, so assisted-send via
-     *  intent is the only sideloaded path. Phase A2 will subsume Sms into
-     *  this intent with the SMS app as one entry in the registry. */
+     *  As of Phase A2, SMS is also routed here — the
+     *  MessagingTargets registry has an SMS entry that uses
+     *  [android.telephony.SmsManager.sendTextMessage] for programmatic
+     *  delivery (no compose screen, no tap). The slot extractor picks
+     *  app="SMS" by default when no third-party app is named. The
+     *  third-party apps still gatekeep their playback / send APIs to
+     *  Google-Assistant-signed callers, so the deep-link path is the
+     *  only sideloaded option there. */
     SendMessage,
 
     /** Fallback when no other intent matches with sufficient confidence. */

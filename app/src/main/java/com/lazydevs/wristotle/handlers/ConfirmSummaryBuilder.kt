@@ -26,24 +26,17 @@ object ConfirmSummaryBuilder {
 
     fun summary(r: IntentResult): String = when (r.intent) {
         Intent.Call          -> "action: call\ndetails: [${slot(r, "contact")}]"
-        Intent.Sms           -> {
-            val to = slot(r, "contact")
-            val body = (r.slots["body"] as? String)?.take(80)?.takeIf { it.isNotEmpty() }
-            if (body == null) "action: text\ndetails: [$to]"
-            else              "action: text\ndetails: [$to] $body"
-        }
-        // SendMessage shares Sms's shape but the verb (action) is the app
-        // name itself — "action: WhatsApp / details: [Mom] on my way" reads
-        // naturally on the watch chat surface. The `app` slot is set by
-        // SendMessageSlots when it matches; defaulting to "message" guards
-        // against the rare case where the classifier picks SendMessage but
-        // the slot extractor didn't populate the app field.
-        //
-        // SMS gets a special-case verb of `"text"` so the prompt matches
-        // the user's spoken word ("text mom hi" → "action: text"), not
-        // the protocol abbreviation. Post-A2 (SMS subsumed into
-        // SendMessage), the bare app.lowercase() would otherwise render
-        // "action: sms".
+        // SendMessage covers every send-a-message path — SMS via
+        // programmatic SmsManager, plus WhatsApp / Telegram / Signal
+        // via assisted-send deep-link. The verb (action) is the app
+        // name itself — "action: WhatsApp / details: [Mom] on my way"
+        // reads naturally on the watch chat surface. SMS gets a
+        // special-case verb of `"text"` so the prompt matches the
+        // user's spoken word ("text mom hi" → "action: text") rather
+        // than the protocol abbreviation. Defaulting to "message"
+        // guards against the rare case where the classifier picks
+        // SendMessage but the slot extractor didn't populate the app
+        // field.
         Intent.SendMessage   -> {
             val app = (r.slots["app"] as? String)?.takeIf { it.isNotEmpty() } ?: "message"
             val verb = if (app.equals("SMS", ignoreCase = true)) "text" else app.lowercase()

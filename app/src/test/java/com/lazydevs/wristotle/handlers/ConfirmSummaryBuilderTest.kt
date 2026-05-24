@@ -15,38 +15,29 @@ import java.util.Date
  */
 class ConfirmSummaryBuilderTest {
 
-    // ── Sms (the most-tested branch — most edge cases live here) ──────────
+    // ── SMS-style body shape (now under SendMessage, app="SMS") ──────────
+    // The SendMessage branch tests below carry the full coverage of
+    // edge cases (body truncation, missing contact). SMS uses app="SMS"
+    // and is rendered with the verb "text" so the prompt matches what
+    // the user dictated.
 
-    @Test fun smsContactAndBody() {
-        val s = ConfirmSummaryBuilder.summary(
-            result(Intent.Sms, "contact" to "mom", "body" to "hi"),
-        )
-        assertEquals("action: text\ndetails: [mom] hi", s)
-    }
-
-    @Test fun smsWithoutBody() {
-        // Whisper sometimes hears only the contact ("text mom"). Body row
-        // shows just the contact in brackets — no trailing punctuation.
-        val s = ConfirmSummaryBuilder.summary(result(Intent.Sms, "contact" to "mom"))
-        assertEquals("action: text\ndetails: [mom]", s)
-    }
-
-    @Test fun smsBodyTruncatesAt80Chars() {
+    @Test fun sendMessageWithSmsBodyTruncatesAt80Chars() {
         val longBody = "a".repeat(120)
         val s = ConfirmSummaryBuilder.summary(
-            result(Intent.Sms, "contact" to "x", "body" to longBody),
+            result(Intent.SendMessage, "app" to "SMS", "contact" to "x", "body" to longBody),
         )
-        // body field rendered as `body: [x] aaaa...` — verify the body
-        // portion was capped at 80 chars, not the full 120.
         assertTrue("expected 80-char body, got: $s", s.contains("a".repeat(80)))
         assertTrue("expected NO 81-char body", !s.contains("a".repeat(81)))
     }
 
-    @Test fun smsMissingContactShowsQuestionMark() {
-        // SmsSlots produces no contact in the fallback case. Render as `[?]`
-        // so the user sees something to react to (and the prompt doesn't
-        // render as a misleading empty list).
-        val s = ConfirmSummaryBuilder.summary(result(Intent.Sms, "body" to "hi"))
+    @Test fun sendMessageWithSmsMissingContactShowsQuestionMark() {
+        // SendMessageSlots' fallback can produce no contact when the
+        // greedy lookup misses. Render as `[?]` so the user sees
+        // something to react to (and the prompt doesn't render as a
+        // misleading empty list).
+        val s = ConfirmSummaryBuilder.summary(
+            result(Intent.SendMessage, "app" to "SMS", "body" to "hi"),
+        )
         assertEquals("action: text\ndetails: [?] hi", s)
     }
 
