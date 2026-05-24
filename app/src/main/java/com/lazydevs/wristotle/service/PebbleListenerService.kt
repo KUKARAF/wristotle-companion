@@ -352,7 +352,25 @@ class PebbleListenerService : BasePebbleListenerService() {
         audioPath: String?,
         classified: com.lazydevs.wristotle.speech.nlu.IntentResult?,
     ) {
-        val dispatchResult = registry.dispatch(routed)
+        // Catch the "user dictated a natural-language command (calendar,
+        // paraphrased reminder, …) but no NLU model is loaded" case before
+        // the registry returns the unhelpful "Unknown command: <query>" line.
+        // The stub classifier returns Unknown for everything, so detecting
+        // it == "stub" + Unknown intent + no watch-hint to override is the
+        // unambiguous signal we're in this state. Give the user something
+        // actionable instead of silent failure.
+        val noNluModel = routed.intent == Intent.Unknown &&
+            watchHint == null &&
+            intentClassifier.tag == "stub"
+        val dispatchResult = if (noNluModel) {
+            com.lazydevs.wristotle.handlers.HandlerResult(
+                response = getString(R.string.nlu_model_missing_response),
+                handler = "no-nlu-model",
+                success = false,
+            )
+        } else {
+            registry.dispatch(routed)
+        }
         Log.d(TAG, "Sending response: ${dispatchResult.response}")
 
         // Reply over the matching legacy channel so old watch firmware that
