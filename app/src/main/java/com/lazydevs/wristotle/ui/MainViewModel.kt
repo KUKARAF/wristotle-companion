@@ -37,6 +37,16 @@ data class PermissionState(
      * `MediaSessionManager.getActiveSessions(...)`.
      */
     val mediaControl: Boolean = false,
+    /**
+     * True when the user has granted SYSTEM_ALERT_WINDOW ("Display over
+     * other apps"). Wristotle never actually draws an overlay; holding
+     * the grant alone gives us `BAL_ALLOW_SAW_PERMISSION` in Android's
+     * BackgroundActivityStartController, which exempts our `startActivity`
+     * calls from the Android 14+ BAL restriction. Optional — without it,
+     * watch-triggered `open <app>` keeps hitting the BAL wall on cold
+     * start, same as today.
+     */
+    val canDrawOverlays: Boolean = false,
 )
 
 /**
@@ -101,6 +111,7 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
                     recordAudio                  = app.hasPermission(Manifest.permission.RECORD_AUDIO),
                     ignoringBatteryOptimizations = isIgnoringBatteryOptimizations(),
                     mediaControl                 = hasNotificationAccess(),
+                    canDrawOverlays              = Settings.canDrawOverlays(app),
                 )
             }
             _isDefaultVoiceProvider.update { isThisAppTheDefaultVoiceProvider() }

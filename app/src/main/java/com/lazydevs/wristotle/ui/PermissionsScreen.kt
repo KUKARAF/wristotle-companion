@@ -100,6 +100,27 @@ fun PermissionsScreen(
             granted = perms.mediaControl,
             onOpenSettings = { openNotificationListenerSettings(context) },
         )
+        BackgroundLaunchCard(
+            granted = perms.canDrawOverlays,
+            onOpenSettings = { openManageOverlayPermission(context) },
+        )
+    }
+}
+
+private fun openManageOverlayPermission(context: Context) {
+    try {
+        context.startActivity(
+            Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                android.net.Uri.parse("package:" + context.packageName),
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(
+            context,
+            context.getString(R.string.background_launch_no_settings_toast),
+            Toast.LENGTH_LONG,
+        ).show()
     }
 }
 
@@ -399,6 +420,52 @@ private fun openVoiceInputSettings(context: Context) {
  * which the `MediaXxxHandler`s need to control whatever app is currently
  * playing audio.
  */
+/**
+ * Optional "Display over other apps" / SYSTEM_ALERT_WINDOW grant —
+ * a spike to see whether `BAL_ALLOW_SAW_PERMISSION` in Android's
+ * BackgroundActivityStartController exempts our startActivity calls
+ * from the Android 14+ BAL restriction (which currently makes
+ * watch-triggered `open <app>` silently fail on cold start when
+ * Wristotle's PebbleListenerService is in BOUND_FGS state).
+ *
+ * Wristotle never actually draws an overlay — holding the grant alone
+ * is what matters. UX warning is honest: SAW is a sensitive permission
+ * users may distrust. Card hides nothing else; the fallback (no grant)
+ * leaves today's BAL-wall behaviour in place.
+ */
+@Composable
+private fun BackgroundLaunchCard(
+    granted: Boolean,
+    onOpenSettings: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CardTitleWithInfo(
+                title = stringResource(R.string.background_launch_header),
+                description = stringResource(R.string.background_launch_desc),
+            )
+            Text(
+                if (granted) stringResource(R.string.background_launch_active)
+                else stringResource(R.string.background_launch_inactive),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (granted) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!granted) {
+                Button(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.background_launch_open_settings))
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun MediaControlCard(
     granted: Boolean,

@@ -28,6 +28,19 @@
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Optional "Display over other apps" permission. Wristotle never
+         actually draws an overlay — holding the grant alone is what gets us
+         BAL_ALLOW_SAW_PERMISSION in Android's BackgroundActivityStartController,
+         which exempts our startActivity() calls from the Android 14+ BAL
+         restriction. Without this, watch-triggered `open <app>` reliably fails
+         on cold-state because PebbleListenerService runs in BOUND_FGS state.
+         User-grantable via Settings → Special access → Display over other apps;
+         the PermissionsScreen surfaces a Grant button. The fallback (no grant)
+         remains intact — without the grant we just hit the same wall we have
+         today. See project_watch_launch_bal_wall memory + apps-and-media.md
+         for the full BAL investigation history. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Required on Android 11+ so PackageManager.queryIntentActivities
          returns all installed launcher apps, not just the ones with
          existing interaction visibility. The AppIndexer uses this to
