@@ -111,8 +111,20 @@ class PebbleCompanionDetector(private val context: Context) {
      * Called from `PebbleListenerService.onBind` with the UID of the
      * binding caller. Maps the UID to a package name, classifies, and
      * persists. Idempotent — repeated calls with the same UID no-op.
+     *
+     * **Skips self-binds.** Wristotle's own service is sometimes bound
+     * from within Wristotle (e.g. when libraries the app uses bind for
+     * their own lifecycle reasons); recording a self-bind would
+     * misclassify the active companion as Unknown and re-show all the
+     * Whisper-related UI even under Core Devices. Compare against
+     * `Process.myUid()` rather than the package name so the test is
+     * robust to multi-package shared-UID scenarios.
      */
     fun recordBinderUid(uid: Int) {
+        if (uid == android.os.Process.myUid()) {
+            Log.d(TAG, "ignoring self-bind (uid=$uid is our own process)")
+            return
+        }
         val pkg = packageFromUid(uid) ?: run {
             Log.d(TAG, "no package found for binder uid=$uid; ignoring")
             return
@@ -135,8 +147,18 @@ class PebbleCompanionDetector(private val context: Context) {
     private fun initialState(): State {
         val installed = installedNow()
         val lastBinder = prefs.getString(KEY_LAST_BINDER_PACKAGE, null)
-        return if (lastBinder != null) {
-            stateFor(lastBinder, installed)
+        // Heal previously polluted state: if the persisted binder package
+        // is Wristotle's own (a self-bind that slipped past pre-v0.8.2
+        // [recordBinderUid]), treat it as no-bind-observed and fall back
+        // to the installed-package scan. Avoids stranding existing users
+        // on Unknown until they manually clear data.
+        val sanitizedBinder = if (lastBinder == context.packageName) null else lastBinder
+        if (sanitizedBinder == null && lastBinder != null) {
+            Log.d(TAG, "discarding stale self-bind in lastBinder='$lastBinder'")
+            prefs.edit().remove(KEY_LAST_BINDER_PACKAGE).apply()
+        }
+        return if (sanitizedBinder != null) {
+            stateFor(sanitizedBinder, installed)
         } else {
             // No bind observed yet — use installed-package presence.
             stateFromInstalled(installed)
