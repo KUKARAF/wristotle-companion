@@ -31,11 +31,10 @@ class ReminderHandler(context: Context, private val transport: PebbleTransport) 
     override val intent: Intent = Intent.Reminder
 
     override suspend fun handle(result: IntentResult): String {
-        val time = result.slots["time"] as? Date
-        if (time == null) {
-            Log.d(TAG, "no time slot in: ${result.rawQuery}")
-            return "Couldn't understand the time"
-        }
+        // ReminderSlots always populates a time — defaults to now + 30 min
+        // when no explicit time was spoken — so this cast won't fail in
+        // practice. Defensive null-check stays for the type system only.
+        val time = result.slots["time"] as? Date ?: return "Couldn't set reminder"
         val title = (result.slots["title"] as? String)?.takeIf { it.isNotBlank() }
             ?: result.rawQuery.replaceFirstChar { it.uppercaseChar() }
 

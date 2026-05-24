@@ -30,10 +30,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.WristotleApplication
+import com.lazydevs.wristotle.handlers.ReminderSettings
 import kotlinx.coroutines.launch
 
 /**
@@ -61,6 +64,10 @@ fun SettingsScreen(
     val retentionDays by conversationVm.retentionDays.collectAsState()
     val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
     val learningEnabled by nluSettingsVm.learningEnabled.collectAsState()
+    // Reminder defaults — read straight off the app-scoped singleton.
+    // Single int knob doesn't warrant a dedicated VM.
+    val reminderSettings = (LocalContext.current.applicationContext as WristotleApplication).reminderSettings
+    val reminderDefaultMinutes by reminderSettings.defaultOffsetMin.collectAsState()
     // Audio capture only works when Wristotle's Whisper recognizer is in the
     // dictation path (microPebble). Under Core Devices the audio never reaches
     // us, so the toggle would be a no-op — hide it.
@@ -121,6 +128,14 @@ fun SettingsScreen(
 
         SettingsSection(stringResource(R.string.settings_section_notes)) {
             NotesSettingsCard(vm = notesVm)
+        }
+
+        SettingsSection(stringResource(R.string.settings_section_reminders)) {
+            ReminderSettingsCard(
+                selectedMinutes = reminderDefaultMinutes,
+                options = ReminderSettings.ALLOWED_OFFSET_MIN,
+                onSelect = reminderSettings::setDefaultOffsetMin,
+            )
         }
 
         // Two sub-sections grouped under one "Conversation" header —
@@ -436,6 +451,58 @@ private fun HistoryRetentionCard(
             },
             onDismiss = { showConfirm = false },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReminderSettingsCard(
+    selectedMinutes: Int,
+    options: List<Int>,
+    onSelect: (Int) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CardTitleWithInfo(
+                title = stringResource(R.string.settings_reminders_header),
+                description = stringResource(R.string.settings_reminders_desc),
+            )
+
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+            ) {
+                OutlinedTextField(
+                    value = pluralStringResource(R.plurals.settings_reminders_default_minutes, selectedMinutes, selectedMinutes),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.settings_reminders_default_label)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                        .fillMaxWidth(),
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    options.forEach { minutes ->
+                        DropdownMenuItem(
+                            text = { Text(pluralStringResource(R.plurals.settings_reminders_default_minutes, minutes, minutes)) },
+                            onClick = {
+                                onSelect(minutes)
+                                expanded = false
+                            },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -1,24 +1,35 @@
 package com.lazydevs.wristotle.nlu.slots
 
+import com.lazydevs.wristotle.handlers.ReminderSettings
 import com.lazydevs.wristotle.handlers.parseTime
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
+import java.util.Date
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.Reminder]:
  *   - `time`  — parsed [java.util.Date], from the legacy `TimeParser`
- *               (PrettyTime + word-form number normalization).
+ *               (PrettyTime + word-form number normalization). Defaults
+ *               to now + [defaultOffsetMinProvider] minutes (configured
+ *               in Settings → Reminders, default 30) when the user
+ *               didn't say a time ("remind me to buy milk"). The confirm
+ *               prompt surfaces the defaulted time so the user can
+ *               cancel + re-dictate with an explicit time if needed.
  *   - `title` — the reminder body, with the reminder-prefix and any
- *               recognised time phrase stripped, then capitalised.
+ *               recognised time phrase stripped, then capitalised. If
+ *               the title strips to nothing, the handler falls back to
+ *               capitalizing the original query.
  *
- * Both slots are populated independently — if the time fails to parse,
- * the handler reports "Couldn't understand the time"; if the title strips
- * to nothing, the handler falls back to capitalizing the original query.
+ * The provider is a lambda (rather than a [ReminderSettings] handle) so
+ * the slot stays Android-free for unit testing — see `ReminderSlotsTest`.
  */
-class ReminderSlots : SlotExtractor {
+class ReminderSlots(
+    private val defaultOffsetMinProvider: () -> Int = { ReminderSettings.DEFAULT_OFFSET_MIN },
+) : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
-        parseTime(query)?.let { out["time"] = it.date }
+        out["time"] = parseTime(query)?.date
+            ?: Date(System.currentTimeMillis() + defaultOffsetMinProvider() * 60_000L)
         val title = buildTitle(query)
         if (title.isNotBlank()) out["title"] = title
         return out

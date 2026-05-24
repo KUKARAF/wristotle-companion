@@ -130,8 +130,18 @@
     <string name="settings_section_conversation">Conversation</string>
     <string name="settings_section_diagnostics">Diagnostics</string>
     <string name="settings_section_notes">Notes</string>
+    <string name="settings_section_reminders">Reminders</string>
     <string name="settings_section_watch">Watch</string>
     <string name="settings_section_backup">Backup &amp; Restore</string>
+
+    <!-- Reminders card -->
+    <string name="settings_reminders_header">Reminders</string>
+    <string name="settings_reminders_desc">Defaults for reminder voice commands. Used when the transcription is missing a piece of information the handler needs to fill in.</string>
+    <string name="settings_reminders_default_label">Default time when none spoken</string>
+    <plurals name="settings_reminders_default_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
 
     <!-- Backup &amp; Restore card -->
     <string name="settings_backup_header">Backup &amp; Restore</string>

@@ -99,6 +99,10 @@ class WristotleApplication : Application() {
     lateinit var notesAudioStore: com.lazydevs.wristotle.notes.NotesAudioStore
         private set
 
+    /** Reminder feature preferences (default offset when no time is spoken). */
+    lateinit var reminderSettings: com.lazydevs.wristotle.handlers.ReminderSettings
+        private set
+
     /** Room database singletons — exposed for the backup/restore feature so
      *  it can pull rows via the existing DAOs (`db.<entity>Dao().allForBackup()`)
      *  and encode them through the per-entity `*Json` codecs. No PRAGMA / WAL
@@ -233,6 +237,8 @@ class WristotleApplication : Application() {
         )
         appScope.launch { noteRepository.prune() }
 
+        reminderSettings = com.lazydevs.wristotle.handlers.ReminderSettings(this)
+
         nluDb = NluDatabase.build(this)
         nluBank = ExampleBank(nluDb.exampleDao())
         nluSettings = NluSettings(this)
@@ -262,7 +268,9 @@ class WristotleApplication : Application() {
         slotExtractors = SlotExtractorRegistry(mapOf(
             Intent.Call to CallSlots(),
             Intent.Sms to SmsSlots(contacts),
-            Intent.Reminder to ReminderSlots(),
+            Intent.Reminder to ReminderSlots(
+                defaultOffsetMinProvider = { reminderSettings.defaultOffsetMin.value },
+            ),
             Intent.Cancel to CancelSlots(),
             Intent.ListReminders to ListRemindersSlots(),
             Intent.Reschedule to RescheduleSlots(),
