@@ -6,15 +6,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -93,6 +97,7 @@ fun SettingsScreen(
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
     backupVm: BackupViewModel,
+    attentionByCategory: Map<SettingsCategory, Boolean> = emptyMap(),
 ) {
     val retentionDays by conversationVm.retentionDays.collectAsState()
     val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
@@ -131,7 +136,10 @@ fun SettingsScreen(
     ) {
         val current = category
         if (current == null) {
-            SettingsLanding(onCategorySelected = { category = it })
+            SettingsLanding(
+                onCategorySelected = { category = it },
+                attentionByCategory = attentionByCategory,
+            )
         } else {
             SettingsCategoryHeader(current, onBack = { category = null })
             SettingsCategoryContent(
@@ -225,11 +233,15 @@ fun SettingsScreen(
  * category is one-line wiring.
  */
 @Composable
-private fun SettingsLanding(onCategorySelected: (SettingsCategory) -> Unit) {
+private fun SettingsLanding(
+    onCategorySelected: (SettingsCategory) -> Unit,
+    attentionByCategory: Map<SettingsCategory, Boolean> = emptyMap(),
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column {
             val categories = SettingsCategory.entries
             categories.forEachIndexed { index, cat ->
+                val needsAttention = attentionByCategory[cat] == true
                 ListItem(
                     leadingContent = {
                         Text(
@@ -237,7 +249,21 @@ private fun SettingsLanding(onCategorySelected: (SettingsCategory) -> Unit) {
                             style = MaterialTheme.typography.titleLarge,
                         )
                     },
-                    headlineContent = { Text(stringResource(cat.labelRes)) },
+                    headlineContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(cat.labelRes))
+                            if (needsAttention) {
+                                Spacer(Modifier.width(8.dp))
+                                // Small red dot mirrors the bottom-nav badge — the
+                                // attention indicator that brought the user here is
+                                // pointed straight at the relevant category.
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(8.dp),
+                                )
+                            }
+                        }
+                    },
                     trailingContent = {
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,

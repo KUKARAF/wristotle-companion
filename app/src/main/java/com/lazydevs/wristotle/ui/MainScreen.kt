@@ -32,6 +32,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.ui.nav.Screen
+import com.lazydevs.wristotle.ui.SettingsCategory
 
 /**
  * Top-level app shell: TopAppBar + bottom NavigationBar + NavHost.
@@ -76,7 +77,21 @@ fun MainScreen(
     val permissionsAttention = !(perms.contacts && perms.callPhone && perms.sendSms) ||
         !perms.ignoringBatteryOptimizations ||
         (companion.whisperAppliesToWatchDictation && (!perms.recordAudio || !isDefaultVoiceProvider))
-    val settingsAttention = models.none { it.isDownloaded } || models.none { it.isActive }
+
+    // Per-category attention map for the Settings tab. The drill-down landing
+    // shows a dot on each row that has attention; the bottom-nav Settings tab
+    // badges if any value is true. Currently only the Models category drives
+    // attention (no Whisper model downloaded/active), and only when Whisper
+    // is actually in the watch dictation path — under Core Devices/rePebble
+    // the user has no reason to install a model, so the dot would otherwise
+    // be a permanent false-positive.
+    val settingsAttentionByCategory: Map<SettingsCategory, Boolean> = mapOf(
+        SettingsCategory.Models to (
+            companion.whisperAppliesToWatchDictation &&
+                (models.none { it.isDownloaded } || models.none { it.isActive })
+        ),
+    )
+    val settingsAttention = settingsAttentionByCategory.values.any { it }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.main_screen_title)) }) },
@@ -189,6 +204,7 @@ fun MainScreen(
                         diagnosticsVm = diagnosticsVm,
                         watchSettingsVm = watchSettingsVm,
                         backupVm = backupVm,
+                        attentionByCategory = settingsAttentionByCategory,
                     )
                 }
             }
