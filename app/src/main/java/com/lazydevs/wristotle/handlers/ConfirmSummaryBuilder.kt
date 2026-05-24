@@ -38,12 +38,19 @@ object ConfirmSummaryBuilder {
         // SendMessageSlots when it matches; defaulting to "message" guards
         // against the rare case where the classifier picks SendMessage but
         // the slot extractor didn't populate the app field.
+        //
+        // SMS gets a special-case verb of `"text"` so the prompt matches
+        // the user's spoken word ("text mom hi" → "action: text"), not
+        // the protocol abbreviation. Post-A2 (SMS subsumed into
+        // SendMessage), the bare app.lowercase() would otherwise render
+        // "action: sms".
         Intent.SendMessage   -> {
             val app = (r.slots["app"] as? String)?.takeIf { it.isNotEmpty() } ?: "message"
+            val verb = if (app.equals("SMS", ignoreCase = true)) "text" else app.lowercase()
             val to = slot(r, "contact")
             val body = (r.slots["body"] as? String)?.take(80)?.takeIf { it.isNotEmpty() }
-            if (body == null) "action: ${app.lowercase()}\ndetails: [$to]"
-            else              "action: ${app.lowercase()}\ndetails: [$to] $body"
+            if (body == null) "action: $verb\ndetails: [$to]"
+            else              "action: $verb\ndetails: [$to] $body"
         }
         Intent.Reminder      -> "action: reminder\ndetails: ${titleWithTime(r, defaultTitle = "Reminder")}"
         // Cancel/Reschedule slots use the key `target` (the reminder

@@ -7,12 +7,16 @@ import org.junit.Test
 
 class PrefixHintsTest {
 
-    @Test fun `text prefix maps to Sms`() {
-        assertEquals(Intent.Sms, PrefixHints.hintFor("text John saying yes"))
+    @Test fun `text prefix maps to SendMessage`() {
+        // Phase A2 subsumed Intent.Sms into Intent.SendMessage. The
+        // bare-verb shape ("text …" / "message …") still routes here;
+        // SMS is the default delivery target inside SendMessageHandler
+        // when no app name is parsed out of the body.
+        assertEquals(Intent.SendMessage, PrefixHints.hintFor("text John saying yes"))
     }
 
-    @Test fun `send a message to maps to Sms`() {
-        assertEquals(Intent.Sms, PrefixHints.hintFor("send a message to dad"))
+    @Test fun `send a message to maps to SendMessage`() {
+        assertEquals(Intent.SendMessage, PrefixHints.hintFor("send a message to dad"))
     }
 
     @Test fun `call prefix maps to Call`() {
@@ -117,8 +121,8 @@ class PrefixHintsTest {
     }
 
     @Test fun `case-insensitive matching`() {
-        assertEquals(Intent.Sms, PrefixHints.hintFor("Text John"))
-        assertEquals(Intent.Sms, PrefixHints.hintFor("TEXT JOHN"))
+        assertEquals(Intent.SendMessage, PrefixHints.hintFor("Text John"))
+        assertEquals(Intent.SendMessage, PrefixHints.hintFor("TEXT JOHN"))
     }
 
     // --- Media prefix rules ----------------------------------------
@@ -278,9 +282,12 @@ class PrefixHintsTest {
 
     // ─── Cross-contamination: other verbs MUST win over Note ─────────────
 
-    @Test fun `sms with notes in body stays Sms`() {
-        assertEquals(Intent.Sms, PrefixHints.hintFor("text mom notes look good"))
-        assertEquals(Intent.Sms, PrefixHints.hintFor("message bob notes about today"))
+    @Test fun `sms with notes in body stays SendMessage`() {
+        // Phase A2: "text mom …" routes to SendMessage (SMS as default
+        // target). The cross-contamination guarantee still holds — the
+        // Note rule loses to a leading verb opener.
+        assertEquals(Intent.SendMessage, PrefixHints.hintFor("text mom notes look good"))
+        assertEquals(Intent.SendMessage, PrefixHints.hintFor("message bob notes about today"))
     }
 
     @Test fun `call with notes in body stays Call`() {

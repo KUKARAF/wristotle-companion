@@ -43,11 +43,35 @@ class MessagingTargetsTest {
     // smoke test (see project_watch_launch_bal_wall memory). Add Roboletric-
     // backed tests later if regressions show up.
 
-    @Test fun `all targets list has expected size and packages`() {
-        val packages = MessagingTargets.ALL.map { it.packageId }.toSet()
-        assertEquals(3, MessagingTargets.ALL.size)
+    @Test fun `named targets list has expected size and packages`() {
+        // NAMED = only the speakable apps; SMS is excluded here because
+        // the slot extractor picks it as the default, not by name.
+        val packages = MessagingTargets.NAMED.map { it.packageId }.toSet()
+        assertEquals(3, MessagingTargets.NAMED.size)
         assertTrue("com.whatsapp" in packages)
         assertTrue("org.telegram.messenger" in packages)
         assertTrue("org.thoughtcrime.securesms" in packages)
+    }
+
+    @Test fun `ALL includes SMS as the default target`() {
+        // Phase A2 added SMS to the registry. It's reachable via
+        // findByDisplayName (the slot extractor emits app="SMS") and
+        // via the Sms property directly, NOT via find() which walks
+        // NAMED only.
+        assertEquals(4, MessagingTargets.ALL.size)
+        assertTrue(MessagingTargets.Sms in MessagingTargets.ALL)
+        assertNull("find() must not return SMS — no spoken aliases", MessagingTargets.find("sms"))
+    }
+
+    @Test fun `findByDisplayName resolves every registered target`() {
+        assertEquals(MessagingTargets.Sms,      MessagingTargets.findByDisplayName("SMS"))
+        assertEquals(MessagingTargets.WhatsApp, MessagingTargets.findByDisplayName("WhatsApp"))
+        assertEquals(MessagingTargets.Telegram, MessagingTargets.findByDisplayName("Telegram"))
+        assertEquals(MessagingTargets.Signal,   MessagingTargets.findByDisplayName("Signal"))
+    }
+
+    @Test fun `findByDisplayName is case-insensitive`() {
+        assertEquals(MessagingTargets.WhatsApp, MessagingTargets.findByDisplayName("whatsapp"))
+        assertEquals(MessagingTargets.Sms,      MessagingTargets.findByDisplayName("sms"))
     }
 }

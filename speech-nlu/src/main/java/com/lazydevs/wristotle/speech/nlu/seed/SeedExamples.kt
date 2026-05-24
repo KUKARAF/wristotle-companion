@@ -41,8 +41,24 @@ object SeedExamples {
             "ring up my brother",
             "call my office",
         ))
-        // ── Sms ─────────────────────────────────────────────────────────
-        addAll(Intent.Sms, listOf(
+        // ── SendMessage ─────────────────────────────────────────────────
+        // Phase A2 unified SMS into SendMessage. Both shapes train the
+        // same centroid because the slot extractor differentiates at
+        // dispatch time (no app named → SmsTarget; app named →
+        // WhatsApp / Telegram / Signal).
+        //
+        // - "Bare" rows (text mom hi / send sms to lisa) target SMS
+        //   via programmatic SmsManager.sendTextMessage. No tap.
+        // - "App-named" rows (WhatsApp / Telegram / Signal …) target
+        //   the third-party messaging apps via assisted-send (opens
+        //   compose pre-filled, user taps Send).
+        //
+        // Order is mixed deliberately — keeping bare + app-named
+        // phrasings interleaved means the centroid generalises across
+        // delivery shapes without leaning toward one. The classifier
+        // doesn't see slots; only text.
+        addAll(Intent.SendMessage, listOf(
+            // Bare SMS-style phrasings (formerly Intent.Sms seeds).
             "text mom hi",
             "text dad I'll be home soon",
             "message lisa about dinner",
@@ -58,13 +74,7 @@ object SeedExamples {
             "tell my boss I'll be late",
             "ping lisa",
             "text bob that I'll be there in five",
-        ))
-        // ── SendMessage ─────────────────────────────────────────────────
-        // Third-party messaging apps via assisted-send (opens compose
-        // pre-filled, user taps Send). Distinct from Sms (which sends
-        // programmatically). Phrasings cover both app-first and verb-
-        // first shapes plus the "on <app>" mid-sentence variant.
-        addAll(Intent.SendMessage, listOf(
+            // App-named phrasings (third-party messaging apps).
             "WhatsApp mom on my way",
             "WhatsApp dad I'll be late",
             "WhatsApp lisa happy birthday",

@@ -178,6 +178,42 @@ class ConfirmSummaryBuilderTest {
         assertEquals("action: unknown\ndetails: an audiobook.", s)
     }
 
+    // ── SendMessage (Phase A1+A2) ─────────────────────────────────────────
+
+    @Test fun sendMessageWithWhatsApp() {
+        val s = ConfirmSummaryBuilder.summary(
+            result(Intent.SendMessage, "app" to "WhatsApp", "contact" to "mom", "body" to "on my way"),
+        )
+        assertEquals("action: whatsapp\ndetails: [mom] on my way", s)
+    }
+
+    @Test fun sendMessageWithSmsAppRendersAsText() {
+        // Phase A2 routed bare-verb SMS through SendMessage with
+        // app="SMS". The prompt should still read "action: text" — the
+        // verb the user said — not "action: sms".
+        val s = ConfirmSummaryBuilder.summary(
+            result(Intent.SendMessage, "app" to "SMS", "contact" to "mom", "body" to "hi"),
+        )
+        assertEquals("action: text\ndetails: [mom] hi", s)
+    }
+
+    @Test fun sendMessageWithoutBody() {
+        val s = ConfirmSummaryBuilder.summary(
+            result(Intent.SendMessage, "app" to "WhatsApp", "contact" to "mom"),
+        )
+        assertEquals("action: whatsapp\ndetails: [mom]", s)
+    }
+
+    @Test fun sendMessageWithoutAppFallsBackToMessage() {
+        // Defensive fallback when the slot extractor didn't populate
+        // app — render as a generic "message" verb so the user still
+        // gets a comprehensible prompt.
+        val s = ConfirmSummaryBuilder.summary(
+            result(Intent.SendMessage, "contact" to "mom", "body" to "hi"),
+        )
+        assertEquals("action: message\ndetails: [mom] hi", s)
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────
 
     private fun result(intent: Intent, vararg slots: Pair<String, Any>) =

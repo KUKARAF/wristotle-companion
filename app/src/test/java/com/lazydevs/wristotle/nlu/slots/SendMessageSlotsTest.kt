@@ -90,24 +90,59 @@ class SendMessageSlotsTest {
         assertEquals("meeting moved", s["body"])
     }
 
-    // ── Failure modes ──────────────────────────────────────────────────
+    // ── SMS fallback (Phase A2) ────────────────────────────────────────
+    // Bare-verb shape with no app named falls back to the SMS target.
 
-    @Test fun `unrecognised app returns empty`() {
-        val s = extract("Skype mom hi")
-        assertTrue("expected empty for unsupported app, got $s", s.isEmpty())
+    @Test fun `text contact body defaults to SMS`() {
+        val s = extract("text mom hi")
+        assertEquals("SMS", s["app"])
+        assertEquals("mom", s["contact"])
+        assertEquals("hi", s["body"])
     }
+
+    @Test fun `send a message to contact saying body defaults to SMS`() {
+        // SmsSlots' conjunction split runs inside the fallback.
+        val s = extract("send a message to mom saying running late")
+        assertEquals("SMS", s["app"])
+        assertEquals("mom", s["contact"])
+        assertEquals("running late", s["body"])
+    }
+
+    @Test fun `tell contact body defaults to SMS`() {
+        val s = extract("tell dad the meeting moved")
+        assertEquals("SMS", s["app"])
+        assertEquals("dad", s["contact"])
+        assertEquals("the meeting moved", s["body"])
+    }
+
+    @Test fun `message multi-word contact defaults to SMS with greedy lookup`() {
+        val s = extract("message John Smith about the demo")
+        assertEquals("SMS", s["app"])
+        assertEquals("john smith", s["contact"])
+        assertEquals("about the demo", s["body"])
+    }
+
+    @Test fun `send sms to contact defaults to SMS`() {
+        val s = extract("send sms to alex meeting at five")
+        assertEquals("SMS", s["app"])
+        assertEquals("alex", s["contact"])
+        assertEquals("meeting at five", s["body"])
+    }
+
+    // ── Failure modes ──────────────────────────────────────────────────
 
     @Test fun `empty query returns empty`() {
         val s = extract("")
         assertTrue(s.isEmpty())
     }
 
-    @Test fun `app-first without body falls back to contact-only or empty`() {
-        // "WhatsApp mom" alone — no body. With "mom" a known contact, we
-        // expect contact set but no body (matches Sms's fallback pattern).
+    @Test fun `app-first without body returns contact-only against same app`() {
+        // "WhatsApp mom" alone — no body. Should commit to WhatsApp
+        // (the user named it on purpose), not fall through to SMS.
+        // The handler will surface "No message body" against WhatsApp.
         val s = extract("WhatsApp mom")
-        // Either contact-only result OR empty are both acceptable here;
-        // body absence is the load-bearing assertion.
+        assertEquals("WhatsApp", s["app"])
+        assertEquals("mom", s["contact"])
         assertNull("body should be absent", s["body"])
     }
 
@@ -118,5 +153,13 @@ class SendMessageSlotsTest {
         assertEquals("WhatsApp", s["app"])
         assertEquals("mom", s["contact"])
         assertEquals("on my way", s["body"])
+    }
+
+    @Test fun `comma after text verb is normalised in SMS fallback`() {
+        // Phase A1.5's comma-strip fix applies via SmsSlots delegation.
+        val s = extract("text, mom hi")
+        assertEquals("SMS", s["app"])
+        assertEquals("mom", s["contact"])
+        assertEquals("hi", s["body"])
     }
 }

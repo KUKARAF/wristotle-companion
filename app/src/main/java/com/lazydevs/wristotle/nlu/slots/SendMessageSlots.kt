@@ -1,41 +1,55 @@
 package com.lazydevs.wristotle.nlu.slots
 
+import com.lazydevs.wristotle.messaging.MessagingTarget
 import com.lazydevs.wristotle.messaging.MessagingTargets
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.SendMessage]:
- *   - `app`     — display name of the target messaging app (`"WhatsApp"`,
- *                 `"Telegram"`, `"Signal"`). Always set when the extractor
- *                 returns non-empty.
+ *   - `app`     — display name of the target (`"SMS"`, `"WhatsApp"`,
+ *                  `"Telegram"`, `"Signal"`). Always set when the
+ *                  extractor returns non-empty.
  *   - `contact` — recipient name as the user said it.
  *   - `body`    — message text.
  *
- * Two phrasing shapes recognised:
+ * Four phrasing shapes recognised:
  *
  *   1. **App-first** — `"<app> <contact> <body>"`.
  *      Examples: *"WhatsApp Mom on my way"*, *"Telegram Dad I'll be late"*,
  *      *"Signal Alex meeting moved to 5"*.
  *
- *   2. **Verb + "on" + app** — `"(text|message|send a … to) <contact> on <app> <body>"`.
+ *   2. **Verb naming app** — `"send a <app> message to <contact> <body>"`,
+ *      `"send a <app> to <contact> <body>"`.
+ *      The app token sits *inside* the verb prefix; both must be
+ *      peeled together so the generic verb-strip below doesn't consume
+ *      the app name first.
+ *
+ *   3. **Verb + "on" + app** — `"(text|message|send a … to) <contact> on <app> <body>"`.
  *      Examples: *"text Mom on WhatsApp on my way"*,
  *      *"send a message to Alex on Signal meeting moved"*.
  *
- * Both shapes share the same greedy contact-lookup logic from [SmsSlots]
- * (try the longest contiguous prefix as a contact name, fall back through
- * shorter prefixes until [findContact] resolves). Multi-word contacts work
- * the same way they do for SMS — *"WhatsApp John Smith on my way"* picks
- * `John Smith` as the contact when that row exists.
+ *   4. **Bare verb, no app named** — `"text <contact> <body>"`,
+ *      *"send a message to <contact> saying <body>"*, etc. Falls back
+ *      to the default SMS target (uses [SmsSlots]' greedy contact
+ *      lookup + conjunction-split logic internally). This is the
+ *      one shape Phase A2 added — Phase A1 returned empty here, which
+ *      now defaults to SMS so SmsHandler isn't needed on the side.
  *
- * Returns an empty map (signalling "no extractable slots") if the query
- * doesn't start with a recognised app name and doesn't contain `on <app>`.
- * The handler can then surface a graceful "didn't catch the app" message.
+ * Returns an empty map only when no contact / body shape was
+ * extractable; that surfaces as "didn't catch that" rather than a
+ * misleading "Contact not found" prompt.
  */
 class SendMessageSlots(
     private val findContact: suspend (String) -> ContactsRepository.Contact?,
 ) : SlotExtractor {
     constructor(contacts: ContactsRepository) : this(contacts::findContact)
+
+    // Phase 4 fallback delegates to the original SMS slot extractor so we
+    // don't duplicate its greedy-contact-lookup + conjunction-split +
+    // single-space-fallback logic. SmsSlots stays as a delete-target in
+    // Phase A3; once removed, inline the logic here as private helpers.
+    private val smsSlotsFallback = SmsSlots(findContact)
 
     override suspend fun extract(query: String): Map<String, Any> {
         val lower = query.lowercase().trim()
@@ -44,7 +58,12 @@ class SendMessageSlots(
         // Comma-after-verb normalisation (same Whisper quirk SmsSlots handles).
         val normalised = lower.replaceFirst(LEADING_COMMA_AFTER_VERB, "$1 ")
 
-        // Shape 1: app name at the front.
+        // Shape 1: app name at the front. Once an app is named
+        // explicitly we commit to it — even if extraction yields only
+        // a partial result (app + contact, no body), don't fall
+        // through to Shape 4 (SMS). The user said "WhatsApp" on
+        // purpose; the handler will surface "No message body" instead
+        // of silently routing to SMS.
         val leadingApp = matchLeadingApp(normalised)
         if (leadingApp != null) {
             val (target, rest) = leadingApp
@@ -62,9 +81,10 @@ class SendMessageSlots(
             return extractContactAndBody(rest, target.displayName)
         }
 
-        // Shape 3: "<verb> <contact> on <app> <body>" — verb at the front,
-        // app named mid-sentence. Strip the verb first so the "on" we look
-        // for is in the body region, not inside "text" / "send".
+        // Shape 3: "<verb> <contact> on <app> <body>" — verb at the
+        // front, app named mid-sentence. Strip the verb first so the
+        // "on" we look for is in the body region, not inside "text" /
+        // "send".
         val withoutVerb = stripLeadingMessagingVerb(normalised)
         val onAppSplit = matchOnApp(withoutVerb)
         if (onAppSplit != null) {
@@ -80,6 +100,16 @@ class SendMessageSlots(
             }
         }
 
+        // Shape 4: no explicit app named → default to SMS. Delegate to
+        // SmsSlots for the contact/body split (greedy contact-name
+        // lookup, conjunction-split for "saying"/"that", single-space
+        // fallback). Any non-empty result becomes a SendMessage slot
+        // map with app="SMS".
+        val smsResult = smsSlotsFallback.extract(query)
+        if (smsResult.isNotEmpty()) {
+            return mapOf("app" to MessagingTargets.Sms.displayName) + smsResult
+        }
+
         return emptyMap()
     }
 
@@ -92,9 +122,12 @@ class SendMessageSlots(
      * Returns the target + the remainder after the verb. The remainder
      * starts at the contact name (the trailing "to " is consumed) so
      * extractContactAndBody can do its greedy lookup directly.
+     *
+     * Walks [MessagingTargets.NAMED] only — SMS has no aliases and is
+     * never matched this way.
      */
-    private fun matchVerbPrefixNamingApp(text: String): Pair<com.lazydevs.wristotle.messaging.MessagingTarget, String>? {
-        for (target in com.lazydevs.wristotle.messaging.MessagingTargets.ALL) {
+    private fun matchVerbPrefixNamingApp(text: String): Pair<MessagingTarget, String>? {
+        for (target in MessagingTargets.NAMED) {
             for (alias in target.spokenAliases.sortedByDescending { it.length }) {
                 for (template in VERB_PREFIX_WITH_APP_TEMPLATES) {
                     val prefix = template.replace("<app>", alias)
@@ -108,38 +141,47 @@ class SendMessageSlots(
     }
 
     /**
-     * Greedy contact lookup over [rest] (the body region after the app name
-     * has been stripped). Mirrors [SmsSlots]' strategy: try the longest
-     * contiguous N-word prefix as a contact name, walk down to 1 word.
+     * Greedy contact lookup over [rest] (the body region after the app
+     * name has been stripped). Mirrors [SmsSlots]' strategy: try the
+     * longest contiguous N-word prefix as a contact name, walk down to
+     * 1 word; fall back to a single-space split so the handler always
+     * has *something* to surface.
+     *
+     * Always returns at least the `app` slot — Shape 1/2 callers
+     * commit to their app name, so an empty return would silently lose
+     * that. Partial returns (app + contact, no body) let the handler
+     * say *"No message body"* against the correct target.
      */
     private suspend fun extractContactAndBody(rest: String, appDisplay: String): Map<String, Any> {
-        // Strip a "to "/"saying "/"that "/etc connector if present so "send
-        // a WhatsApp message to Mom on my way" works after the verb-strip
-        // already removed "send a whatsapp message".
+        // Strip a "to "/"saying "/"that "/etc connector if present so
+        // "send a WhatsApp message to Mom on my way" works after the
+        // verb-strip already removed "send a whatsapp message".
         val cleaned = rest.replaceFirst(LEADING_CONNECTOR, "").trim()
-        if (cleaned.isEmpty()) return emptyMap()
+        if (cleaned.isEmpty()) return mapOf("app" to appDisplay)
 
         val words = cleaned.split(Regex("\\s+")).map(::cleanNameToken).filter { it.isNotEmpty() }
+
+        // Greedy contact-name lookup — try the longest N-word prefix
+        // first; the longest prefix that resolves wins, remainder is
+        // the body.
         for (n in minOf(MAX_NAME_WORDS, words.size) downTo 1) {
             val candidate = words.subList(0, n).joinToString(" ")
             if (findContact(candidate) != null) {
                 val body = if (n < words.size)
                     words.subList(n, words.size).joinToString(" ").trim()
                 else ""
-                if (body.isNotEmpty()) {
-                    return mapOf(
-                        "app" to appDisplay,
-                        "contact" to candidate,
-                        "body" to body,
-                    )
-                }
+                return if (body.isNotEmpty())
+                    mapOf("app" to appDisplay, "contact" to candidate, "body" to body)
+                else
+                    mapOf("app" to appDisplay, "contact" to candidate)
             }
         }
 
-        // Single-space fallback so the handler at least has *something* to
-        // try (matches SmsSlots' final tier). No contact-lookup success but
-        // we surface the slots anyway; the handler will return "contact
-        // not found" rather than the misleading "didn't catch that".
+        // Single-space fallback so the handler at least has *something*
+        // to try (matches SmsSlots' final tier). No contact-lookup
+        // success but we surface the slots anyway; the handler will
+        // return "Contact not found: X" rather than the misleading
+        // "didn't catch that".
         val spaceIdx = cleaned.indexOf(' ')
         if (spaceIdx < 0) return mapOf("app" to appDisplay, "contact" to cleaned)
         val contact = cleaned.substring(0, spaceIdx).trim()
@@ -152,13 +194,15 @@ class SendMessageSlots(
 
     /**
      * If [text] starts with one of the known app aliases (longest match
-     * first so "whats app" wins over "whats"), return the matched target
-     * and the remainder of the text after the alias + a space.
+     * first so "whats app" wins over "whats"), return the matched
+     * target and the remainder of the text after the alias + a space.
+     *
+     * Walks [MessagingTargets.NAMED] only.
      */
-    private fun matchLeadingApp(text: String): Pair<com.lazydevs.wristotle.messaging.MessagingTarget, String>? {
-        for (target in MessagingTargets.ALL) {
-            // Sort by length descending so the longer alias matches first
-            // when one is a prefix of another.
+    private fun matchLeadingApp(text: String): Pair<MessagingTarget, String>? {
+        for (target in MessagingTargets.NAMED) {
+            // Sort by length descending so the longer alias matches
+            // first when one is a prefix of another.
             for (alias in target.spokenAliases.sortedByDescending { it.length }) {
                 if (text.startsWith("$alias ")) {
                     return target to text.substring(alias.length + 1)
@@ -169,12 +213,12 @@ class SendMessageSlots(
     }
 
     /**
-     * Look for `" on <appname> "` anywhere in [text]. Returns the target +
-     * the substrings before and after the `on <app>` segment, or null if
-     * no match.
+     * Look for `" on <appname> "` anywhere in [text]. Returns the
+     * target + the substrings before and after the `on <app>` segment,
+     * or null if no match.
      */
-    private fun matchOnApp(text: String): Triple<com.lazydevs.wristotle.messaging.MessagingTarget, String, String>? {
-        for (target in MessagingTargets.ALL) {
+    private fun matchOnApp(text: String): Triple<MessagingTarget, String, String>? {
+        for (target in MessagingTargets.NAMED) {
             for (alias in target.spokenAliases.sortedByDescending { it.length }) {
                 val needle = " on $alias "
                 val idx = text.indexOf(needle)
@@ -183,7 +227,6 @@ class SendMessageSlots(
                     val after = text.substring(idx + needle.length)
                     return Triple(target, before, after)
                 }
-                // Trailing "on <app>" at the very end isn't useful — no body to send.
             }
         }
         return null
@@ -191,10 +234,10 @@ class SendMessageSlots(
 
     /**
      * Strip the same verb prefixes [SmsSlots] strips. Keeps the slot
-     * extractor consistent with SMS phrasings — *"text Mom on WhatsApp X"*
-     * routes here when the NLU classifier picks SendMessage over Sms
-     * (because of the "on WhatsApp" hint) and we still want the verb
-     * stripped before the "on" split.
+     * extractor consistent with SMS phrasings — *"text Mom on WhatsApp
+     * X"* routes here when the NLU classifier picks SendMessage over
+     * Sms (because of the "on WhatsApp" hint) and we still want the
+     * verb stripped before the "on" split.
      */
     private fun stripLeadingMessagingVerb(text: String): String {
         val verb = VERB_PREFIXES.firstOrNull { text.startsWith(it) }
@@ -205,9 +248,9 @@ class SendMessageSlots(
         // Same comma-after-verb fix SmsSlots uses.
         val LEADING_COMMA_AFTER_VERB = Regex("^([a-z]+)\\s*,\\s*")
 
-        // Verb prefixes mirroring SmsSlots.PREFIXES (so "text Mom on WhatsApp …"
-        // can be handled here when the classifier routes it to SendMessage).
-        // Longest first so multi-word matches win.
+        // Verb prefixes mirroring SmsSlots.PREFIXES (so "text Mom on
+        // WhatsApp …" can be handled here when the classifier routes
+        // it to SendMessage). Longest first so multi-word matches win.
         val VERB_PREFIXES = listOf(
             "send a message to ", "send message to ", "send a message ", "send message ",
             "send a whatsapp message to ", "send a telegram message to ", "send a signal message to ",

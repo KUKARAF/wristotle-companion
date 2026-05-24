@@ -18,7 +18,10 @@ class IntentDestructivenessTest {
     @Test fun destructiveSetMatchesPlan() {
         val expectedDestructive = setOf(
             Intent.Call,
-            Intent.Sms,
+            Intent.Sms,         // Subsumed into SendMessage in Phase A2; still
+            //                    in the set defensively until Intent.Sms is
+            //                    removed in Phase A3.
+            Intent.SendMessage, // Phase A1: third-party messaging apps.
             Intent.Reminder,
             Intent.Cancel,
             Intent.Reschedule,
