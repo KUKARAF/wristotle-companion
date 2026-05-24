@@ -62,15 +62,20 @@ fun MainScreen(
     val perms by vm.permissions.collectAsState()
     val isDefaultVoiceProvider by vm.isDefaultVoiceProvider.collectAsState()
     val models by modelsVm.models.collectAsState()
+    val companion by vm.pebbleCompanion.collectAsState()
 
     // Permissions tab badges if any of the watch perms (Contacts/Phone/SMS),
     // voice perms (Record Audio + battery exemption), or the default-voice-
-    // provider setting still need user attention. Settings tab badges if no
-    // Whisper model is downloaded/active yet — the only blocking thing in
-    // Settings at the moment.
+    // provider setting still need user attention. Under a cloud-dictation
+    // companion (Core Devices, rePebble) Wristotle's Whisper isn't in the
+    // watch dictation path — Record Audio + default-voice-provider don't
+    // matter for it to work, so drop those from the gate. Battery exemption
+    // is kept either way: the foreground watch bridge needs it regardless
+    // of which companion is in front. Settings tab badges if no Whisper
+    // model is downloaded/active yet — the only blocking thing in Settings.
     val permissionsAttention = !(perms.contacts && perms.callPhone && perms.sendSms) ||
-        !(perms.recordAudio && perms.ignoringBatteryOptimizations) ||
-        !isDefaultVoiceProvider
+        !perms.ignoringBatteryOptimizations ||
+        (companion.whisperAppliesToWatchDictation && (!perms.recordAudio || !isDefaultVoiceProvider))
     val settingsAttention = models.none { it.isDownloaded } || models.none { it.isActive }
 
     Scaffold(
