@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -23,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -116,7 +118,29 @@ fun MainScreen(
                                 Icon(screen.icon, contentDescription = null)
                             }
                         },
-                        label = { Text(stringResource(screen.labelRes)) },
+                        // Labels stay on one line even when a particular phone's
+                        // tab width is tight ("Permissions" was wrapping to a 2nd row
+                        // with an orphan "s" on narrow devices); ellipsize as a
+                        // belt-and-braces fallback.
+                        label = {
+                            Text(
+                                stringResource(screen.labelRes),
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        // Per-tab tint: selected icon + indicator pill take the screen's
+                        // brand color; unselected uses a desaturated alpha so the tab
+                        // still hints at its identity without competing with the
+                        // selected one.
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = screen.tint,
+                            selectedTextColor = screen.tint,
+                            indicatorColor = screen.tint.copy(alpha = 0.15f),
+                            unselectedIconColor = screen.tint.copy(alpha = 0.65f),
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     )
                 }
             }

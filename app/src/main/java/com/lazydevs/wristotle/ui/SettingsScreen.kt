@@ -1,12 +1,19 @@
 package com.lazydevs.wristotle.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -15,6 +22,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
@@ -29,6 +40,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -40,13 +52,34 @@ import com.lazydevs.wristotle.handlers.ReminderSettings
 import kotlinx.coroutines.launch
 
 /**
- * Settings tab — holds four cards:
- *   • Whisper model catalog / download / activation
- *   • NLU sentence-encoder model (optional; enables natural-language commands)
- *   • Intent learning (toggle + clear learned examples)
- *   • Conversation-history maintenance (retention picker + Clear all)
+ * Top-level Settings categories — order here is the listing order on the
+ * landing page. Each entry maps to one drill-down sub-screen rendered by
+ * [SettingsCategoryContent].
  *
- * Add more setting sections as new cards here as features grow.
+ * `emoji` is rendered via the system emoji font as the [ListItem]
+ * leading content. Emoji (not Material icons) intentionally: keeps the
+ * landing visually distinct from Material's standard chrome and avoids
+ * pulling in `material-icons-extended` symbols just for eight glyphs.
+ */
+enum class SettingsCategory(@StringRes val labelRes: Int, val emoji: String) {
+    Watch(R.string.settings_section_watch, "⌚"),         // ⌚
+    Conversation(R.string.settings_section_conversation, "💬"),  // 💬
+    Notes(R.string.settings_section_notes, "📝"),               // 📝
+    Reminders(R.string.settings_section_reminders, "⏰"),  // ⏰
+    Models(R.string.settings_section_models, "🧠"),  // 🧠
+    Learning(R.string.settings_section_learning, "🎓"),         // 🎓
+    Backup(R.string.settings_section_backup, "💾"),  // 💾
+    Diagnostics(R.string.settings_section_diagnostics, "🔧"),   // 🔧
+}
+
+/**
+ * Settings tab — drill-down navigation. The landing page is a short list
+ * of categories; tapping one swaps the body to that category's cards
+ * with a back button up top. System back goes back to the landing.
+ *
+ * Add new categories to [SettingsCategory] and wire them in
+ * [SettingsCategoryContent] — the landing list rebuilds from the enum
+ * automatically.
  */
 @Composable
 fun SettingsScreen(
@@ -84,92 +117,54 @@ fun SettingsScreen(
     var showClearLearnedConfirm by remember { mutableStateOf(false) }
     var showClearAudioConfirm by remember { mutableStateOf(false) }
 
+    // Drill-down: null = landing, non-null = that category's sub-screen.
+    // System back resets to null when on a sub-screen.
+    var category by remember { mutableStateOf<SettingsCategory?>(null) }
+    BackHandler(enabled = category != null) { category = null }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SettingsSection(stringResource(R.string.settings_section_watch)) {
-            WatchSettingsCard(vm = watchSettingsVm)
-        }
-
-        SettingsSection(stringResource(R.string.settings_section_models)) {
-            WhisperModelsCard(vm = modelsVm)
-            NluModelsCard(vm = nluModelsVm)
-        }
-
-        // "Learning" groups the two things the user can teach the
-        // companion: which apps are installed (powers `open <app>` /
-        // `play <app>`) and natural-phrasing intent classification
-        // (powers paraphrases like "ring Mom"). Each card's title
-        // doubles as the sub-section label.
-        SettingsSection(stringResource(R.string.settings_section_learning)) {
-            AppIndexCard(vm = appIndexVm)
-            AppAliasesCard(vm = appAliasesVm)
-            IntentLearningCard(
+        val current = category
+        if (current == null) {
+            SettingsLanding(onCategorySelected = { category = it })
+        } else {
+            SettingsCategoryHeader(current, onBack = { category = null })
+            SettingsCategoryContent(
+                category = current,
+                modelsVm = modelsVm,
+                nluModelsVm = nluModelsVm,
+                nluSettingsVm = nluSettingsVm,
+                conversationVm = conversationVm,
+                appIndexVm = appIndexVm,
+                appAliasesVm = appAliasesVm,
+                notesVm = notesVm,
+                diagnosticsVm = diagnosticsVm,
+                watchSettingsVm = watchSettingsVm,
+                backupVm = backupVm,
+                retentionDays = retentionDays,
+                audioCaptureEnabled = audioCaptureEnabled,
                 learningEnabled = learningEnabled,
-                onToggle = nluSettingsVm::setLearningEnabled,
-                onClearLearned = { showClearLearnedConfirm = true },
-            )
-        }
-
-        SettingsSection(stringResource(R.string.settings_section_diagnostics)) {
-            DiagnosticsCard(vm = diagnosticsVm)
-        }
-
-        // Backup & Restore — top-level user-data concern. Sits between
-        // Diagnostics and the per-feature configuration cards because
-        // it spans every feature's data, not any one feature's settings.
-        SettingsSection(stringResource(R.string.settings_section_backup)) {
-            BackupCard(vm = backupVm)
-        }
-
-        SettingsSection(stringResource(R.string.settings_section_notes)) {
-            NotesSettingsCard(vm = notesVm)
-        }
-
-        SettingsSection(stringResource(R.string.settings_section_reminders)) {
-            ReminderSettingsCard(
-                selectedMinutes = reminderDefaultMinutes,
-                options = ReminderSettings.ALLOWED_OFFSET_MIN,
-                onSelect = reminderSettings::setDefaultOffsetMin,
-            )
-        }
-
-        // Two sub-sections grouped under one "Conversation" header —
-        // History (retention + clear) and Audio (capture toggle +
-        // delete). Each card's own title doubles as the sub-section
-        // label, so the visual nesting is one fewer line.
-        SettingsSection(stringResource(R.string.settings_section_conversation)) {
-            HistoryRetentionCard(
-                selectedDays = retentionDays,
-                options = conversationVm.retentionOptions,
-                onSelect = { newDays ->
+                companion = companion,
+                reminderDefaultMinutes = reminderDefaultMinutes,
+                reminderSettings = reminderSettings,
+                onShowClearLearnedConfirm = { showClearLearnedConfirm = true },
+                onShowClearAudioConfirm = { showClearAudioConfirm = true },
+                onShrinkRequest = { newDays ->
                     if (newDays >= retentionDays) {
-                        // Growing the window can't delete anything — apply silently.
                         conversationVm.setRetentionDays(newDays)
                     } else {
-                        // Shrinking always shows a confirm dialog — even if zero
-                        // entries would be lost today, the user is committing to
-                        // tighter pruning for future ones, which is worth a
-                        // deliberate Yes.
                         scope.launch {
                             val count = conversationVm.countOlderThan(newDays)
                             pendingShrink = PendingShrink(newDays, count)
                         }
                     }
                 },
-                onClear = conversationVm::clearAll,
             )
-            if (companion.whisperAppliesToWatchDictation) {
-                AudioCaptureCard(
-                    enabled = audioCaptureEnabled,
-                    onToggle = conversationVm::setAudioCaptureEnabled,
-                    onClearAudio = { showClearAudioConfirm = true },
-                )
-            }
         }
     }
 
@@ -225,23 +220,140 @@ fun SettingsScreen(
 }
 
 /**
- * Visually groups one or more cards under a section header. Tighter spacing
- * inside the section so the cards read as a unit; the outer Column owns the
- * inter-section gap.
+ * Drill-down landing — single Card holding one tappable [ListItem] per
+ * [SettingsCategory]. Order matches the enum declaration so adding a new
+ * category is one-line wiring.
  */
 @Composable
-private fun SettingsSection(
-    title: String,
-    content: @Composable () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+private fun SettingsLanding(onCategorySelected: (SettingsCategory) -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            val categories = SettingsCategory.entries
+            categories.forEachIndexed { index, cat ->
+                ListItem(
+                    leadingContent = {
+                        Text(
+                            cat.emoji,
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    },
+                    headlineContent = { Text(stringResource(cat.labelRes)) },
+                    trailingContent = {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                        )
+                    },
+                    modifier = Modifier.clickable { onCategorySelected(cat) },
+                )
+                if (index < categories.lastIndex) HorizontalDivider()
+            }
+        }
+    }
+}
+
+/**
+ * Sub-screen header — back arrow + category label. Doubles as the title
+ * since the global TopAppBar shows the app name across all tabs.
+ */
+@Composable
+private fun SettingsCategoryHeader(category: SettingsCategory, onBack: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.settings_back),
+            )
+        }
         Text(
-            title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+            stringResource(category.labelRes),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(start = 4.dp),
         )
-        content()
+    }
+}
+
+/**
+ * Renders the cards for the selected category. Each branch corresponds to
+ * one [SettingsCategory] value — adding a category means adding a branch
+ * here and an enum entry, nothing else changes.
+ */
+@Suppress("LongParameterList")
+@Composable
+private fun SettingsCategoryContent(
+    category: SettingsCategory,
+    modelsVm: WhisperModelsViewModel,
+    nluModelsVm: NluModelsViewModel,
+    nluSettingsVm: NluSettingsViewModel,
+    conversationVm: ConversationViewModel,
+    appIndexVm: AppIndexViewModel,
+    appAliasesVm: AppAliasesViewModel,
+    notesVm: NotesViewModel,
+    diagnosticsVm: DiagnosticsViewModel,
+    watchSettingsVm: WatchSettingsViewModel,
+    backupVm: BackupViewModel,
+    retentionDays: Int,
+    audioCaptureEnabled: Boolean,
+    learningEnabled: Boolean,
+    companion: com.lazydevs.wristotle.transport.PebbleCompanionDetector.State,
+    reminderDefaultMinutes: Int,
+    reminderSettings: ReminderSettings,
+    onShowClearLearnedConfirm: () -> Unit,
+    onShowClearAudioConfirm: () -> Unit,
+    onShrinkRequest: (Int) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        when (category) {
+            SettingsCategory.Watch ->
+                WatchSettingsCard(vm = watchSettingsVm)
+
+            SettingsCategory.Conversation -> {
+                HistoryRetentionCard(
+                    selectedDays = retentionDays,
+                    options = conversationVm.retentionOptions,
+                    onSelect = onShrinkRequest,
+                    onClear = conversationVm::clearAll,
+                )
+                if (companion.whisperAppliesToWatchDictation) {
+                    AudioCaptureCard(
+                        enabled = audioCaptureEnabled,
+                        onToggle = conversationVm::setAudioCaptureEnabled,
+                        onClearAudio = onShowClearAudioConfirm,
+                    )
+                }
+            }
+
+            SettingsCategory.Notes ->
+                NotesSettingsCard(vm = notesVm)
+
+            SettingsCategory.Reminders ->
+                ReminderSettingsCard(
+                    selectedMinutes = reminderDefaultMinutes,
+                    options = ReminderSettings.ALLOWED_OFFSET_MIN,
+                    onSelect = reminderSettings::setDefaultOffsetMin,
+                )
+
+            SettingsCategory.Models -> {
+                WhisperModelsCard(vm = modelsVm)
+                NluModelsCard(vm = nluModelsVm)
+            }
+
+            SettingsCategory.Learning -> {
+                AppIndexCard(vm = appIndexVm)
+                AppAliasesCard(vm = appAliasesVm)
+                IntentLearningCard(
+                    learningEnabled = learningEnabled,
+                    onToggle = nluSettingsVm::setLearningEnabled,
+                    onClearLearned = onShowClearLearnedConfirm,
+                )
+            }
+
+            SettingsCategory.Backup ->
+                BackupCard(vm = backupVm)
+
+            SettingsCategory.Diagnostics ->
+                DiagnosticsCard(vm = diagnosticsVm)
+        }
     }
 }
 

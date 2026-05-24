@@ -16,7 +16,7 @@
     <!-- Bottom navigation -->
     <string name="nav_conversation">Chat</string>
     <string name="nav_notes">Notes</string>
-    <string name="nav_permissions">Permissions</string>
+    <string name="nav_permissions">Permission</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_attention_badge_desc">Needs attention</string>
 
@@ -123,6 +123,9 @@
     <string name="app_aliases_not_installed">%1$s (not installed)</string>
     <string name="app_aliases_show">Saved aliases (%1$d)</string>
     <string name="app_aliases_done">Done</string>
+
+    <!-- Settings drill-down navigation -->
+    <string name="settings_back">Back</string>
 
     <!-- Section headers grouping related Settings cards -->
     <string name="settings_section_models">Models</string>
