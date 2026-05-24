@@ -30,7 +30,7 @@ internal sealed interface AppTarget {
 
 /** Shared user-facing hint for the [AppTarget.EmptyIndex] case. */
 internal const val EMPTY_INDEX_HINT =
-    "App index is empty — open Settings and tap Scan installed apps."
+    "App index is empty — open Settings → Learning → Installed apps and tap Scan."
 
 internal suspend fun IntentResult.resolveAppTarget(appIndex: AppIndex): AppTarget {
     val appQuery = (slots["app"] as? String)?.trim()

@@ -128,7 +128,7 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         if (!isWhisperModelActive()) {
-            _dictationError.value = "Download a Whisper model in Settings first"
+            _dictationError.value = "Download a Whisper model in Settings → Models first"
             return
         }
         // Pre-clear the recognizer's last-captured slot so we attribute the

@@ -14,7 +14,7 @@
     <string name="grant_permissions_button">Grant Permissions</string>
 
     <!-- Watch chat replies -->
-    <string name="nlu_model_missing_response">Need the Intent classifier model. Install in the companion: Settings → Models.</string>
+    <string name="nlu_model_missing_response">Need the Intent classifier model. Install in the companion: Settings → Models → Intent classifier.</string>
 
     <!-- Bottom navigation -->
     <string name="nav_conversation">Chat</string>
