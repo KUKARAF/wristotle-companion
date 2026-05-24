@@ -1,6 +1,7 @@
 package com.lazydevs.wristotle.messaging
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -73,5 +74,29 @@ class MessagingTargetsTest {
     @Test fun `findByDisplayName is case-insensitive`() {
         assertEquals(MessagingTargets.WhatsApp, MessagingTargets.findByDisplayName("whatsapp"))
         assertEquals(MessagingTargets.Sms,      MessagingTargets.findByDisplayName("sms"))
+    }
+
+    // ── Enabled flag (third-party apps gated until auto-send lands) ───────
+
+    @Test fun `SMS is the only enabled target today`() {
+        assertTrue("SMS must stay enabled — it has a real programmatic API",
+            MessagingTargets.Sms.enabled)
+    }
+
+    @Test fun `WhatsApp Telegram and Signal are disabled`() {
+        // Deep-link path opens compose but doesn't send. Flip these to
+        // true once an AccessibilityService drives the Send button.
+        assertFalse(
+            "WhatsApp should be disabled until auto-send is implemented",
+            MessagingTargets.WhatsApp.enabled,
+        )
+        assertFalse(
+            "Telegram should be disabled until auto-send is implemented",
+            MessagingTargets.Telegram.enabled,
+        )
+        assertFalse(
+            "Signal should be disabled until auto-send is implemented",
+            MessagingTargets.Signal.enabled,
+        )
     }
 }

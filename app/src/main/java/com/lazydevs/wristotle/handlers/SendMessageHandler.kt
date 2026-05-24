@@ -30,13 +30,16 @@ import com.lazydevs.wristotle.speech.nlu.IntentResult
  *
  * Failure modes the handler reports back over the watch chat:
  *   - "Don't know that messaging app" — `app` slot missing or unknown
+ *   - "Can't send to <App> yet" — target's `enabled` flag is `false`
+ *     (currently WhatsApp / Telegram / Signal — see MessagingTargets).
+ *     Gates one-tap-only targets until we have an AccessibilityService
+ *     to drive their Send button.
  *   - "<App> isn't installed" — registry has it but not on device
  *     (SMS is exempt — system service, always installed)
  *   - "Contacts permission not granted" — gate before lookup
  *   - "Contact not found: <name>" — ContactsRepository returns null
  *   - delivery-specific failures — surfaced verbatim by the target's
- *     `deliver` lambda ("SMS permission not granted", "Could not open
- *     WhatsApp", etc.)
+ *     `deliver` lambda ("SMS permission not granted", etc.)
  */
 class SendMessageHandler(
     private val context: Context,
@@ -52,6 +55,13 @@ class SendMessageHandler(
 
         val target = MessagingTargets.findByDisplayName(appName)
             ?: return "Don't know that messaging app: $appName"
+
+        // Gate disabled targets before the installed-check so the error
+        // names the right reason. WhatsApp / Telegram / Signal are
+        // currently disabled because their deep-link only opens compose
+        // — there's no programmatic send for sideloaded callers. See
+        // MessagingTargets' comment block.
+        if (!target.enabled) return "Can't send to ${target.displayName} yet"
 
         if (!target.isInstalled(context)) return "${target.displayName} isn't installed"
 

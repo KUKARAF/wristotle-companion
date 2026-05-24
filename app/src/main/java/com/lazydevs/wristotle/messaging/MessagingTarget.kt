@@ -39,6 +39,22 @@ data class MessagingTarget(
     /** Lowercased aliases the user might say. May be empty for the default fallback target. */
     val spokenAliases: Set<String>,
     /**
+     * `false` blocks dispatch even though the slot extractor will still
+     * recognise the app name and route the intent here — the handler
+     * returns a *"Can't send to X yet"* string instead of firing
+     * [deliver]. Used to ship targets whose deep-link is one-tap-only
+     * (WhatsApp / Telegram / Signal) until we have an AccessibilityService
+     * to drive the Send button. SMS stays enabled because
+     * [android.telephony.SmsManager] provides a real programmatic API.
+     *
+     * Flip to `true` once auto-send is implemented for the target.
+     * Leaving them in the registry (rather than deleting) keeps the
+     * spoken aliases live — *"WhatsApp mom hi"* still routes correctly
+     * to SendMessage so the user gets a useful error rather than the
+     * silent SMS fallthrough that deletion would cause.
+     */
+    val enabled: Boolean = true,
+    /**
      * Sends the message and returns the user-facing response string
      * (e.g. *"Sent to Mom"*, *"Opened WhatsApp for Mom"*,
      * *"SMS permission not granted"*). Failure modes return a non-empty

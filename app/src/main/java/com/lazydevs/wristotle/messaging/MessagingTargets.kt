@@ -74,9 +74,29 @@ object MessagingTargets {
         },
     )
 
+    // ── Third-party messaging apps: disabled pending auto-send ─────────
+    //
+    // The `whatsapp://send` / `tg://msg` / Signal ACTION_SEND paths all
+    // open compose pre-filled but require the user to tap Send — there's
+    // no documented intent or URI parameter that triggers a true send
+    // from a sideloaded caller. The WhatsApp Business Cloud API works
+    // but needs a Meta business account + backend server, which is out
+    // of scope for a personal companion app.
+    //
+    // Until we wire an AccessibilityService that drives the Send button
+    // (heavyweight permission, deferred), these targets stay in the
+    // registry with `enabled = false`. The slot extractor still
+    // recognises their names so *"WhatsApp mom hi"* routes to
+    // SendMessage and the handler returns *"Can't send to WhatsApp
+    // yet"* — clearer than silently sending an SMS to a contact named
+    // "WhatsApp" (which would happen if we removed them from NAMED).
+    //
+    // Flip `enabled` to `true` once auto-send is in place.
+
     val WhatsApp = MessagingTarget(
         displayName = "WhatsApp",
         packageId = "com.whatsapp",
+        enabled = false,
         // Whisper occasionally splits or mangles "WhatsApp" — capture
         // the common variants so the slot extractor doesn't fall
         // through on a mistranscription that's obviously meant for
@@ -106,6 +126,7 @@ object MessagingTargets {
     val Telegram = MessagingTarget(
         displayName = "Telegram",
         packageId = "org.telegram.messenger",
+        enabled = false,
         spokenAliases = setOf("telegram"),
         deliver = { context, phone, body, contactName ->
             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -125,6 +146,7 @@ object MessagingTargets {
     val Signal = MessagingTarget(
         displayName = "Signal",
         packageId = "org.thoughtcrime.securesms",
+        enabled = false,
         spokenAliases = setOf("signal"),
         deliver = { context, _, body, contactName ->
             val intent = Intent(Intent.ACTION_SEND).apply {
