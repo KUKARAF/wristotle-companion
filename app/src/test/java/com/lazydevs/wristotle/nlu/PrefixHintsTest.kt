@@ -265,6 +265,17 @@ class PrefixHintsTest {
         assertEquals(Intent.AppendNote, PrefixHints.hintFor("append to my note tracking number"))
     }
 
+    // Whisper mishears "append" as "amend" reliably enough that we accept
+    // both spellings. "amend" is unambiguous (can only modify an existing
+    // thing) so it routes to AppendNote without needing the "previous/last/
+    // latest/recent" qualifier that disambiguates "add".
+    @Test fun `amend verb routes to AppendNote`() {
+        assertEquals(Intent.AppendNote, PrefixHints.hintFor("amend the notes this is a test"))
+        assertEquals(Intent.AppendNote, PrefixHints.hintFor("amend to the notes: this is a test"))
+        assertEquals(Intent.AppendNote, PrefixHints.hintFor("amend door code is 9876"))
+        assertEquals(Intent.AppendNote, PrefixHints.hintFor("amend to my last note speaker is bob"))
+    }
+
     // ─── Cross-contamination: other verbs MUST win over Note ─────────────
 
     @Test fun `sms with notes in body stays Sms`() {

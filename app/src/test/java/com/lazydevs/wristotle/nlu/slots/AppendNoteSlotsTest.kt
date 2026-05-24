@@ -45,4 +45,20 @@ class AppendNoteSlotsTest {
     @Test fun `add to the previous note with that connector`() {
         assertEquals("Recipe needs salt", body("add to the previous note that recipe needs salt"))
     }
+
+    // Whisper consistently mishears "append" as "amend" — caught when a Core
+    // Devices alpha-tester said "append to the notes" and the transcript
+    // came back as "Amend to the notes: ...". `amend` is unambiguous (can
+    // only modify something that exists) so it routes to AppendNote.
+    @Test fun `amend with colon`() {
+        assertEquals("This is a test", body("Amend to the notes: this is a test"))
+    }
+
+    @Test fun `amend alone is stripped`() {
+        assertEquals("Door code is 9876", body("amend door code is 9876"))
+    }
+
+    @Test fun `amend my last note is stripped`() {
+        assertEquals("Speaker is bob", body("amend my last note speaker is bob"))
+    }
 }

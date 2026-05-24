@@ -59,11 +59,18 @@ internal object PrefixHints {
         Regex("(?i)^\\s*(text|sms|message|send (a |an )?(text|message|sms))\\b") to Intent.Sms,
         Regex("(?i)^\\s*(call|dial|phone|ring)\\b") to Intent.Call,
         // AppendNote — sits ABOVE CreateEvent (and Note) because it's the most
-        // specific rule: requires the (add|append) verb AND one of
-        // previous/last/latest/recent + notes. Without that qualifier, "add to
-        // my notes" stays Note, and "add to my meeting…" stays CreateEvent
-        // (neither test matches the qualifier in the AppendNote regex).
-        Regex("(?i)^\\s*(append\\b|(add|append)\\s+to\\s+(the\\s+|my\\s+)?(previous|last|latest|recent)\\s+notes?\\b)") to Intent.AppendNote,
+        // specific rule. Two safe shapes:
+        //  - "append" or "amend" as a leading verb (both semantically
+        //    unambiguous — you can only append/amend something that exists).
+        //    "amend" is included because Whisper consistently mishears
+        //    "append" as "amend" — caught when a Core Devices alpha-tester
+        //    said "append to the notes" and the watch chat showed
+        //    "Amend to the notes: ...".
+        //  - "(add|append|amend) to (the|my)? (previous|last|latest|recent)
+        //    notes" — the qualifier guards against "add to my notes" routing
+        //    here when the user meant a new note. Without the qualifier "add"
+        //    stays Note, and "add to my meeting…" stays CreateEvent.
+        Regex("(?i)^\\s*((append|amend)\\b|(add|append|amend)\\s+to\\s+(the\\s+|my\\s+)?(previous|last|latest|recent)\\s+notes?\\b)") to Intent.AppendNote,
         // CreateEvent — "schedule/set up/create/add/book … meeting/event/…".
         // Requires an event noun, so "schedule a reminder" does NOT match here
         // (it has no event noun) and stays with the reminder path. Rescues the
