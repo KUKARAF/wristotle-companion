@@ -268,6 +268,7 @@ class WristotleApplication : Application() {
         slotExtractors = SlotExtractorRegistry(mapOf(
             Intent.Call to CallSlots(),
             Intent.Sms to SmsSlots(contacts),
+            Intent.SendMessage to com.lazydevs.wristotle.nlu.slots.SendMessageSlots(contacts),
             Intent.Reminder to ReminderSlots(
                 defaultOffsetMinProvider = { reminderSettings.defaultOffsetMin.value },
             ),

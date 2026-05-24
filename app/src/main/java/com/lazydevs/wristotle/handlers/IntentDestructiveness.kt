@@ -27,6 +27,7 @@ import com.lazydevs.wristotle.speech.nlu.Intent
 fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.Call,
     Intent.Sms,
+    Intent.SendMessage,
     Intent.Reminder,
     Intent.Cancel,
     Intent.Reschedule,

@@ -59,6 +59,28 @@ object SeedExamples {
             "ping lisa",
             "text bob that I'll be there in five",
         ))
+        // ── SendMessage ─────────────────────────────────────────────────
+        // Third-party messaging apps via assisted-send (opens compose
+        // pre-filled, user taps Send). Distinct from Sms (which sends
+        // programmatically). Phrasings cover both app-first and verb-
+        // first shapes plus the "on <app>" mid-sentence variant.
+        addAll(Intent.SendMessage, listOf(
+            "WhatsApp mom on my way",
+            "WhatsApp dad I'll be late",
+            "WhatsApp lisa happy birthday",
+            "Telegram alex meeting moved to five",
+            "Telegram my brother see you soon",
+            "Signal bob meeting at three",
+            "send a WhatsApp message to mom on my way",
+            "send a Telegram message to dad",
+            "send a Signal message to alex about the meeting",
+            "text mom on WhatsApp on my way",
+            "message bob on Telegram I'll be there in five",
+            "WhatsApp the office I'll be late",
+            "Telegram mom happy birthday",
+            "Signal dad about the meeting",
+            "shoot lisa a WhatsApp",
+        ))
         // ── Reminder ────────────────────────────────────────────────────
         addAll(Intent.Reminder, listOf(
             "remind me to pick up milk at five pm",

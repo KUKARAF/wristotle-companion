@@ -78,6 +78,22 @@ enum class Intent {
      *  CreateEventHandler writing to CalendarContract (WRITE_CALENDAR). */
     CreateEvent,
 
+    /** Open a third-party messaging app's compose screen with the contact
+     *  and body pre-filled — "WhatsApp Mom on my way", "Telegram Dad I'll
+     *  be late", "send a Signal message to Alex about meeting moved".
+     *  Slots: `app` (String — display name of the target app),
+     *  `contact` (String — recipient name), `body` (String — message text).
+     *  Handled by SendMessageHandler: resolves contact via ContactsRepository,
+     *  looks up the app in MessagingTargets, fires ACTION_VIEW / ACTION_SEND
+     *  with the pre-filled body so the user only has to tap Send.
+     *
+     *  Distinct from [Sms] which sends programmatically via SmsManager and
+     *  doesn't require a tap; the messaging apps gatekeep their playback /
+     *  send APIs to Google-Assistant-signed callers, so assisted-send via
+     *  intent is the only sideloaded path. Phase A2 will subsume Sms into
+     *  this intent with the SMS app as one entry in the registry. */
+    SendMessage,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

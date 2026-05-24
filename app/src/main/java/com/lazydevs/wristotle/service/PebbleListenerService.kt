@@ -122,6 +122,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         registry = HandlerRegistry(listOf(
             CallHandler(this, contacts),
             SmsHandler(this, contacts),
+            com.lazydevs.wristotle.handlers.SendMessageHandler(this, contacts),
             ReminderHandler(this, transport),
             CancelReminderHandler(this, transport),
             ListRemindersHandler(this),
@@ -511,6 +512,23 @@ class PebbleListenerService : BasePebbleListenerService() {
         //      may have missed (e.g. when a long body dilutes the
         //      cosine to the canonical intent centroid below 0.55).
         //   3. No hint AND no usable classifier pick → Unknown.
+        // Targeted override: SendMessage and Sms look nearly identical to
+        // the embedder ("send a WhatsApp message to John" vs "send a text
+        // to John"), and Sms's seed examples bias the classifier toward
+        // it. When PrefixHints unambiguously identifies SendMessage (the
+        // query names a known messaging app), trust the deterministic
+        // rule over the classifier — the user said the app name on
+        // purpose. Applied only against an Sms classification; a confident
+        // pick for any other intent stays.
+        if (classified.intent == Intent.Sms) {
+            val hint = PrefixHints.hintFor(query)
+            if (hint == Intent.SendMessage) {
+                Log.d(TAG, "Sms classified (conf=${classified.confidence}) but prefix hint = SendMessage; overriding")
+                val slots = slotExtractors.extract(Intent.SendMessage, query)
+                return classified.copy(intent = Intent.SendMessage, slots = slots)
+            }
+        }
+
         val runnerUp = classified.alternates.firstOrNull()?.score ?: 0f
         val below = classified.confidence < NluSettings.ROUTE_THRESHOLD
         val ambiguous = !below && (classified.confidence - runnerUp) < NluSettings.ROUTE_MARGIN

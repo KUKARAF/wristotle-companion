@@ -32,6 +32,19 @@ object ConfirmSummaryBuilder {
             if (body == null) "action: text\ndetails: [$to]"
             else              "action: text\ndetails: [$to] $body"
         }
+        // SendMessage shares Sms's shape but the verb (action) is the app
+        // name itself — "action: WhatsApp / details: [Mom] on my way" reads
+        // naturally on the watch chat surface. The `app` slot is set by
+        // SendMessageSlots when it matches; defaulting to "message" guards
+        // against the rare case where the classifier picks SendMessage but
+        // the slot extractor didn't populate the app field.
+        Intent.SendMessage   -> {
+            val app = (r.slots["app"] as? String)?.takeIf { it.isNotEmpty() } ?: "message"
+            val to = slot(r, "contact")
+            val body = (r.slots["body"] as? String)?.take(80)?.takeIf { it.isNotEmpty() }
+            if (body == null) "action: ${app.lowercase()}\ndetails: [$to]"
+            else              "action: ${app.lowercase()}\ndetails: [$to] $body"
+        }
         Intent.Reminder      -> "action: reminder\ndetails: ${titleWithTime(r, defaultTitle = "Reminder")}"
         // Cancel/Reschedule slots use the key `target` (the reminder
         // descriptor). When absent the handler operates on the most-recent

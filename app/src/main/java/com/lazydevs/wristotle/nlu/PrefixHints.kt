@@ -55,6 +55,21 @@ internal object PrefixHints {
         // "start" alone is too vague to dispatch. Only fire OpenApp when
         // there's body content after start/run/load.
         Regex("(?i)^\\s*(start|run|load)\\s+\\S") to Intent.OpenApp,
+        // SendMessage — sits ABOVE Sms because "send a WhatsApp message
+        // to Mom …" starts with "send a" and would otherwise match the
+        // bare Sms verb pattern below. We only fire SendMessage when an
+        // app name is mentioned either at the front or as "send a <app>
+        // message to …" / "text … on <app> …".
+        //
+        // The pattern list MUST stay in sync with MessagingTargets'
+        // spokenAliases so the prefix-hint can override the classifier on
+        // Whisper-mistranscribed variants like "what's up" / "whats app".
+        // The earlier MessagingTargets-only fix wasn't enough: the
+        // classifier's confident Sms pick wins unless PrefixHints itself
+        // declares SendMessage (see PebbleListenerService.resolveIntent).
+        Regex("(?i)^\\s*(whatsapp|whats\\s*app|what'?s\\s*up|whatapp|watsapp|whatsap|telegram|signal)\\b") to Intent.SendMessage,
+        Regex("(?i)^\\s*send\\s+(a\\s+|an\\s+)?(whatsapp|telegram|signal)\\b") to Intent.SendMessage,
+        Regex("(?i)\\b(text|message)\\s+\\S.*\\bon\\s+(whatsapp|whats\\s*app|telegram|signal)\\b") to Intent.SendMessage,
         // Existing non-media intents
         Regex("(?i)^\\s*(text|sms|message|send (a |an )?(text|message|sms))\\b") to Intent.Sms,
         Regex("(?i)^\\s*(call|dial|phone|ring)\\b") to Intent.Call,
