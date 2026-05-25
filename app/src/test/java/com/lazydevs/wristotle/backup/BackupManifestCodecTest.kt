@@ -1,5 +1,6 @@
 package com.lazydevs.wristotle.backup
 
+import com.lazydevs.wristotle.phone.ContactRef
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -13,10 +14,44 @@ class BackupManifestCodecTest {
     }
 
     @Test fun roundTrip_emptyPinsAndAliases() {
-        val original = sampleManifest().copy(reminderPins = emptyList(), appAliases = emptyMap())
+        val original = sampleManifest().copy(
+            reminderPins = emptyList(),
+            appAliases = emptyMap(),
+            contactAliases = emptyMap(),
+        )
         val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
         assertEquals(emptyList<BackupManifest.PinRecord>(), decoded.reminderPins)
         assertEquals(emptyMap<String, String>(), decoded.appAliases)
+        assertEquals(emptyMap<String, ContactRef>(), decoded.contactAliases)
+    }
+
+    @Test fun contactAliases_roundTrip() {
+        val original = sampleManifest().copy(
+            contactAliases = mapOf(
+                "mom" to ContactRef(
+                    lookupKey = "0r1-2A3B4C",
+                    nameSnapshot = "Aparna Smith",
+                    numberSnapshot = "+15551234567",
+                ),
+                "boss" to ContactRef(
+                    lookupKey = "0r5-9X8Y",
+                    nameSnapshot = "Jane Doe",
+                    numberSnapshot = "+15559876543",
+                ),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(original.contactAliases, decoded.contactAliases)
+    }
+
+    @Test fun preFeatureBackup_decodesContactAliasesAsEmpty() {
+        // Older backups (before this feature shipped) won't have the
+        // `contact_aliases` key. Decoder must treat absence as empty
+        // rather than throwing, same forward-compat rule as `tasks`.
+        val text = BackupManifestCodec.encode(sampleManifest())
+        val withoutField = JSONObject(text).apply { remove("contact_aliases") }.toString()
+        val decoded = BackupManifestCodec.decode(withoutField)
+        assertEquals(emptyMap<String, ContactRef>(), decoded.contactAliases)
     }
 
     @Test fun forwardCompat_unknownTopLevelKeysIgnored() {
@@ -91,5 +126,12 @@ class BackupManifestCodecTest {
             BackupManifest.PinRecord("pin-1", "gym", 1_700_001_000_000L),
         ),
         appAliases = mapOf("yt" to "com.google.android.youtube"),
+        contactAliases = mapOf(
+            "mom" to ContactRef(
+                lookupKey = "0r1-SAMPLE",
+                nameSnapshot = "Sample Contact",
+                numberSnapshot = "+15550000000",
+            ),
+        ),
     )
 }

@@ -3,6 +3,7 @@ package com.lazydevs.wristotle.backup
 import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.notes.Note
+import com.lazydevs.wristotle.phone.ContactRef
 import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
 import com.lazydevs.wristotle.tasks.TaskEntity
 
@@ -82,6 +83,44 @@ object MergeStrategies {
         existing: Map<String, String>,
         incoming: Map<String, String>,
     ): Map<String, String> = existing + incoming
+
+    /** Contact aliases. Backup wins on key collision — same rationale as
+     *  [mergeAliases]. Relinking the lookup keys for the imported rows
+     *  is a separate, IO-touching pass (see [relinkContactRef]); this
+     *  merge stays pure so the policy is unit-testable. */
+    fun mergeContactAliases(
+        existing: Map<String, ContactRef>,
+        incoming: Map<String, ContactRef>,
+    ): Map<String, ContactRef> = existing + incoming
+
+    /**
+     * Restore-time relink for a single [ContactRef]. Android lookup keys
+     * encode account-side identifiers that may not exist on a fresh
+     * device (factory reset, contacts re-imported from VCF, local-only
+     * Contacts that don't sync). The snapshot fields then carry the
+     * weight: if the lookup key is dead, try to find the same human via
+     * exact-name then phone-number on the new device's Contacts.
+     *
+     * Pure: callers inject the actual Contacts queries as lambdas
+     * ([isCurrent] / [byName] / [byNumber]) so the policy is unit-tested
+     * without a ContentResolver. The wrapper in [BackupImporter] supplies
+     * the real provider queries.
+     *
+     * Returns either an updated [ContactRef] with the new lookup key (when
+     * relink succeeds) or the original (when nothing matched — alias
+     * becomes a dead link and the Settings card flags it).
+     */
+    fun relinkContactRef(
+        ref: ContactRef,
+        isCurrent: (lookupKey: String) -> Boolean,
+        byName: (name: String) -> String?,
+        byNumber: (number: String) -> String?,
+    ): ContactRef {
+        if (isCurrent(ref.lookupKey)) return ref
+        byName(ref.nameSnapshot)?.let { return ref.copy(lookupKey = it) }
+        byNumber(ref.numberSnapshot)?.let { return ref.copy(lookupKey = it) }
+        return ref
+    }
 
     /**
      * Reminder pins. Dedupe by (title, timeMs). Keep newest-first ordering of

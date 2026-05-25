@@ -37,6 +37,7 @@ data class BackupExportResult(
     val nluLearned: Int,
     val reminders: Int,
     val aliases: Int,
+    val contactAliases: Int,
     val audioFiles: Int,
     val encrypted: Boolean,
     val bytes: Long,
@@ -99,6 +100,7 @@ class BackupExporter(private val app: WristotleApplication) {
         val nluLearned = app.nluDb.exampleDao().learned()
         val pinRecords = readPinRecords()
         val aliases = app.aliasStore.all()
+        val contactAliases = app.contactAliasStore.all()
         val audioFiles = if (includeAudio) audioFiles() else emptyList()
 
         val manifest = BackupManifest(
@@ -123,12 +125,14 @@ class BackupExporter(private val app: WristotleApplication) {
                 nluLearned = nluLearned.size,
                 reminders = pinRecords.size,
                 aliases = aliases.size,
+                contactAliases = contactAliases.size,
             ),
             prefs = readPrefsBlock(),
             reminderPins = pinRecords.map {
                 BackupManifest.PinRecord(it.id, it.title, it.timeMs)
             },
             appAliases = aliases,
+            contactAliases = contactAliases,
         )
 
         // Use cacheDir/backup-staging as zip4j's working dir; cleared before
@@ -199,6 +203,7 @@ class BackupExporter(private val app: WristotleApplication) {
                 nluLearned = manifest.stats.nluLearned,
                 reminders = manifest.stats.reminders,
                 aliases = manifest.stats.aliases,
+                contactAliases = manifest.stats.contactAliases,
                 audioFiles = audioFiles.size,
                 encrypted = encryptPassword != null,
                 bytes = stagingZip.length(),

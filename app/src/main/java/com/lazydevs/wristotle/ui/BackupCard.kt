@@ -189,6 +189,7 @@ private fun RestoreSuccessDialog(
                 ResultRow(stringResource(R.string.settings_backup_import_row_audio), result.audio)
                 ResultRow(stringResource(R.string.settings_backup_import_row_pins), result.pins)
                 ResultRow(stringResource(R.string.settings_backup_import_row_aliases), result.aliases)
+                ResultRow(stringResource(R.string.settings_backup_import_row_contact_aliases), result.contactAliases)
                 Text(
                     stringResource(R.string.settings_backup_import_settings_note),
                     style = MaterialTheme.typography.bodySmall,
@@ -254,6 +255,7 @@ private fun ExportSuccessDialog(result: BackupExportResult, onDismiss: () -> Uni
                     result.audioFiles,
                     result.reminders,
                     result.aliases,
+                    result.contactAliases,
                     kb,
                 ),
                 style = MaterialTheme.typography.bodyMedium,

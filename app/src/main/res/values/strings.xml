@@ -180,7 +180,7 @@
     <string name="settings_backup_exporting">Exporting…</string>
     <string name="settings_backup_export_success_title">Backup saved</string>
     <string name="settings_backup_export_success_title_encrypted">Backup saved (encrypted)</string>
-    <string name="settings_backup_export_success_body">The ZIP contains:\n• %1$d notes\n• %2$d tasks\n• %3$d conversation entries\n• %4$d learned phrases\n• %5$d audio files\n• %6$d reminders\n• %7$d aliases\n\nFile size: %8$d KB.</string>
+    <string name="settings_backup_export_success_body">The ZIP contains:\n• %1$d notes\n• %2$d tasks\n• %3$d conversation entries\n• %4$d learned phrases\n• %5$d audio files\n• %6$d reminders\n• %7$d app aliases\n• %8$d contact aliases\n\nFile size: %9$d KB.</string>
     <string name="settings_backup_export_failed_title">Backup failed</string>
     <string name="settings_backup_export_failed_body">The backup could not be saved.\n\nReason: %1$s</string>
     <string name="settings_backup_dialog_title">Export backup</string>
@@ -200,7 +200,8 @@
     <string name="settings_backup_import_row_nlu">Learned phrases</string>
     <string name="settings_backup_import_row_audio">Audio files</string>
     <string name="settings_backup_import_row_pins">Reminders</string>
-    <string name="settings_backup_import_row_aliases">Aliases</string>
+    <string name="settings_backup_import_row_aliases">App aliases</string>
+    <string name="settings_backup_import_row_contact_aliases">Contact aliases</string>
     <string name="settings_backup_import_row_counts">%1$d · %2$d · %3$d · %4$d</string>
     <string name="settings_backup_import_settings_note">Settings were overwritten with the values from the backup.</string>
     <string name="settings_backup_import_schema_skipped">Skipped (backup is newer than this app): %1$s. Update Wristotle Companion to import them.</string>

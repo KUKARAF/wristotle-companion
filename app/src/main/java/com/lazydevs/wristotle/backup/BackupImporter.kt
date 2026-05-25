@@ -10,8 +10,10 @@ import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.notes.AppendAudioMode
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.notes.NoteAudioPaths
+import com.lazydevs.wristotle.phone.ContactRef
 import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
 import com.lazydevs.wristotle.tasks.TaskEntity
+import android.provider.ContactsContract
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
@@ -96,6 +98,7 @@ class BackupImporter(private val app: WristotleApplication) {
             applyPrefs(manifest.prefs)
             val pins = applyPins(manifest.reminderPins)
             val aliases = applyAliases(manifest.appAliases)
+            val contactAliases = applyContactAliases(manifest.contactAliases)
 
             BackupImportResult(
                 notes = notes,
@@ -105,6 +108,7 @@ class BackupImporter(private val app: WristotleApplication) {
                 audio = audio.stats,
                 pins = pins,
                 aliases = aliases,
+                contactAliases = contactAliases,
                 schemaSkipped = schemaSkips.toList(),
             )
         } finally {
@@ -400,6 +404,83 @@ class BackupImporter(private val app: WristotleApplication) {
         return EntityStats(imported = newKeys.size, duplicates = overwrittenKeys.size)
     }
 
+    /**
+     * Contact aliases overwrite on key collision (same rule as app
+     * aliases). After the merge, walk every alias and re-link any whose
+     * `lookupKey` no longer resolves: try the snapshot name, then the
+     * snapshot number, against the device's current Contacts. This is
+     * the common case after backup-restore on a new device — same
+     * humans in Contacts but freshly aggregated, so their lookup keys
+     * are different.
+     *
+     * Dead links left as-is when both name and number queries miss; the
+     * Settings card surfaces them as "(not found)" so the user can prune.
+     */
+    private fun applyContactAliases(incoming: Map<String, ContactRef>): EntityStats {
+        if (incoming.isEmpty()) return EntityStats()
+        val existing = app.contactAliasStore.all()
+        val newKeys = incoming.keys - existing.keys
+        val overwrittenKeys = incoming.keys.intersect(existing.keys)
+        val merged = MergeStrategies.mergeContactAliases(existing, incoming)
+        val relinked = merged.mapValues { (_, ref) ->
+            MergeStrategies.relinkContactRef(
+                ref = ref,
+                isCurrent = ::isLookupKeyResolvable,
+                byName = ::findLookupKeyByName,
+                byNumber = ::findLookupKeyByNumber,
+            )
+        }
+        app.contactAliasStore.replaceAll(relinked)
+        return EntityStats(imported = newKeys.size, duplicates = overwrittenKeys.size)
+    }
+
+    /** Returns true if the lookup key resolves to a live contact. */
+    private fun isLookupKeyResolvable(lookupKey: String): Boolean {
+        val lookupUri = ContactsContract.Contacts.getLookupUri(0L, lookupKey)
+            ?: return false
+        return ContactsContract.Contacts.lookupContact(app.contentResolver, lookupUri) != null
+    }
+
+    /** Exact-name match (case-insensitive). Returns the new lookup key
+     *  iff EXACTLY ONE contact matches — ambiguous matches are left
+     *  for the user to disambiguate. */
+    private fun findLookupKeyByName(name: String): String? {
+        if (name.isBlank()) return null
+        val cursor = app.contentResolver.query(
+            ContactsContract.Contacts.CONTENT_URI,
+            arrayOf(ContactsContract.Contacts.LOOKUP_KEY),
+            "${ContactsContract.Contacts.DISPLAY_NAME_PRIMARY} = ? COLLATE NOCASE",
+            arrayOf(name),
+            null,
+        ) ?: return null
+        return cursor.use { c ->
+            if (c.count != 1) return@use null
+            if (!c.moveToFirst()) return@use null
+            c.getString(0)
+        }
+    }
+
+    /** Phone-number lookup via `PhoneLookup` so the framework's number
+     *  normalisation (E.164 + format-insensitive comparison) does the
+     *  heavy lifting. Returns the new lookup key iff exactly one match. */
+    private fun findLookupKeyByNumber(number: String): String? {
+        if (number.isBlank()) return null
+        val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
+            .buildUpon()
+            .appendPath(number)
+            .build()
+        val cursor = app.contentResolver.query(
+            uri,
+            arrayOf(ContactsContract.PhoneLookup.LOOKUP_KEY),
+            null, null, null,
+        ) ?: return null
+        return cursor.use { c ->
+            if (c.count != 1) return@use null
+            if (!c.moveToFirst()) return@use null
+            c.getString(0)
+        }
+    }
+
     private companion object {
         const val INCOMING_ZIP = "incoming.zip"
         const val STAGING_FAILED = "Could not read the backup file"
@@ -436,6 +517,7 @@ data class BackupImportResult(
     val audio: EntityStats,
     val pins: EntityStats,
     val aliases: EntityStats,
+    val contactAliases: EntityStats,
     /** Entity labels skipped because their per-entity schema in the ZIP is
      *  higher than the current code knows how to decode (forward backup).
      *  Empty in the common case. */

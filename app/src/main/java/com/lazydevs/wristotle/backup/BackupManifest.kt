@@ -1,5 +1,6 @@
 package com.lazydevs.wristotle.backup
 
+import com.lazydevs.wristotle.phone.ContactRef
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -31,6 +32,7 @@ data class BackupManifest(
     val prefs: PrefsBlock,
     val reminderPins: List<PinRecord>,
     val appAliases: Map<String, String>,
+    val contactAliases: Map<String, ContactRef>,
 ) {
     /**
      * Per-entity (NOT per-Room-DB) schema versions of the data files inside
@@ -60,6 +62,12 @@ data class BackupManifest(
         val nluLearned: Int,
         val reminders: Int,
         val aliases: Int,
+        // Defaulted so older code (or older backups deserialized into
+        // this dataclass via something other than the codec) compile
+        // cleanly. The decoder reads `contact_aliases` from stats and
+        // falls back to 0 when the field is absent in pre-feature
+        // backups.
+        val contactAliases: Int = 0,
     )
 
     /**
@@ -126,6 +134,7 @@ object BackupManifestCodec {
             put("nlu_learned", m.stats.nluLearned)
             put("reminders", m.stats.reminders)
             put("aliases", m.stats.aliases)
+            put("contact_aliases", m.stats.contactAliases)
         })
         put("prefs", JSONObject().apply {
             put("wristotle_notes", JSONObject().apply {
@@ -164,6 +173,24 @@ object BackupManifestCodec {
         put("app_aliases", JSONObject().apply {
             m.appAliases.forEach { (phrase, pkg) -> put(phrase, pkg) }
         })
+        // Contact aliases ride as a JSON array (not object) because the
+        // value is structured (lookup key + name snapshot + number
+        // snapshot), not a single string like app aliases. Older backups
+        // (pre this feature) lack the field; the decoder treats absence
+        // as empty.
+        put("contact_aliases", JSONArray().apply {
+            m.contactAliases.entries
+                .sortedBy { it.key }
+                .forEach { (phrase, ref) ->
+                    put(
+                        JSONObject()
+                            .put("phrase", phrase)
+                            .put("lookup_key", ref.lookupKey)
+                            .put("name", ref.nameSnapshot)
+                            .put("number", ref.numberSnapshot),
+                    )
+                }
+        })
     }.toString(2)
 
     fun decode(raw: String): BackupManifest {
@@ -180,6 +207,7 @@ object BackupManifestCodec {
         val stats = root.getJSONObject("stats")
         val pinsArr = root.optJSONArray("reminder_pins") ?: JSONArray()
         val aliasesObj = root.optJSONObject("app_aliases") ?: JSONObject()
+        val contactAliasesArr = root.optJSONArray("contact_aliases") ?: JSONArray()
 
         return BackupManifest(
             schema = root.getInt("schema"),
@@ -203,6 +231,7 @@ object BackupManifestCodec {
                 nluLearned = stats.optInt("nlu_learned", 0),
                 reminders = stats.optInt("reminders", 0),
                 aliases = stats.optInt("aliases", 0),
+                contactAliases = stats.optInt("contact_aliases", 0),
             ),
             prefs = BackupManifest.PrefsBlock(
                 notes = BackupManifest.NotesPrefs(
@@ -238,6 +267,20 @@ object BackupManifestCodec {
                 )
             },
             appAliases = aliasesObj.keys().asSequence().associateWith { aliasesObj.getString(it) },
+            contactAliases = (0 until contactAliasesArr.length()).mapNotNull { i ->
+                val obj = contactAliasesArr.optJSONObject(i) ?: return@mapNotNull null
+                val phrase = obj.optString("phrase").takeIf { it.isNotEmpty() }
+                    ?: return@mapNotNull null
+                val lookupKey = obj.optString("lookup_key").takeIf { it.isNotEmpty() }
+                    ?: return@mapNotNull null
+                val number = obj.optString("number").takeIf { it.isNotEmpty() }
+                    ?: return@mapNotNull null
+                phrase to ContactRef(
+                    lookupKey = lookupKey,
+                    nameSnapshot = obj.optString("name"),
+                    numberSnapshot = number,
+                )
+            }.toMap(),
         )
     }
 }
