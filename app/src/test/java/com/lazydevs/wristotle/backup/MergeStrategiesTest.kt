@@ -3,6 +3,7 @@ package com.lazydevs.wristotle.backup
 import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.notes.Note
+import com.lazydevs.wristotle.phone.ContactRef
 import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
 import com.lazydevs.wristotle.tasks.TaskEntity
 import org.junit.Assert.assertEquals
@@ -94,6 +95,87 @@ class MergeStrategiesTest {
         assertEquals("com.google.gmail", merged["gmail"]) // kept (local-only)
         assertEquals("com.spotify", merged["spot"])    // added
     }
+
+    // ── Contact aliases + relink ─────────────────────────────────────────
+
+    @Test fun contactAliases_backupWinsOnCollision() {
+        val existing = mapOf(
+            "mom" to ref("local-key-1"),
+            "boss" to ref("local-key-2"),
+        )
+        val incoming = mapOf(
+            "mom" to ref("backup-key-1"),
+            "dad" to ref("backup-key-3"),
+        )
+        val merged = MergeStrategies.mergeContactAliases(existing, incoming)
+        assertEquals("backup-key-1", merged["mom"]?.lookupKey)  // overwritten
+        assertEquals("local-key-2", merged["boss"]?.lookupKey)  // kept
+        assertEquals("backup-key-3", merged["dad"]?.lookupKey)  // added
+    }
+
+    @Test fun relink_keepsRefWhenLookupKeyStillValid() {
+        // The "import on the same device" case — Contacts DB is
+        // untouched, lookup keys still resolve, no relink needed.
+        val original = ref("still-valid")
+        val out = MergeStrategies.relinkContactRef(
+            ref = original,
+            isCurrent = { it == "still-valid" },
+            byName = { error("should not be called when key is valid") },
+            byNumber = { error("should not be called when key is valid") },
+        )
+        assertEquals(original, out)
+    }
+
+    @Test fun relink_findsByNameWhenKeyIsDead() {
+        val original = ref("dead-key").copy(nameSnapshot = "Aparna")
+        val out = MergeStrategies.relinkContactRef(
+            ref = original,
+            isCurrent = { false },                 // key is dead
+            byName = { if (it == "Aparna") "fresh-key" else null },
+            byNumber = { error("name match short-circuits before number") },
+        )
+        assertEquals("fresh-key", out.lookupKey)
+        // Snapshots are kept — they're still the record of what the
+        // alias was created against, useful if the new key later dies too.
+        assertEquals(original.nameSnapshot, out.nameSnapshot)
+        assertEquals(original.numberSnapshot, out.numberSnapshot)
+    }
+
+    @Test fun relink_fallsBackToNumberWhenNameMisses() {
+        // User renamed the contact in Contacts after the alias was
+        // created (export). Restore on a fresh device finds the number
+        // still belongs to that person, even though the snapshot name
+        // no longer matches.
+        val original = ref("dead-key").copy(numberSnapshot = "+15551112222")
+        val out = MergeStrategies.relinkContactRef(
+            ref = original,
+            isCurrent = { false },
+            byName = { null },                     // name no longer matches
+            byNumber = { if (it == "+15551112222") "fresh-key" else null },
+        )
+        assertEquals("fresh-key", out.lookupKey)
+    }
+
+    @Test fun relink_returnsOriginalRefWhenEverythingMisses() {
+        // Contact was deleted from Contacts; relink can't recover.
+        // Caller is expected to render the Settings card row as
+        // "(not found)" and let the user prune.
+        val original = ref("dead-key")
+        val out = MergeStrategies.relinkContactRef(
+            ref = original,
+            isCurrent = { false },
+            byName = { null },
+            byNumber = { null },
+        )
+        assertEquals(original, out)
+        assertEquals("dead-key", out.lookupKey)  // unchanged
+    }
+
+    private fun ref(lookupKey: String) = ContactRef(
+        lookupKey = lookupKey,
+        nameSnapshot = "Test Name",
+        numberSnapshot = "+15550000000",
+    )
 
     // ── Pins ──────────────────────────────────────────────────────────────
 
