@@ -171,6 +171,8 @@ class WristotleApplication : Application() {
         private set
     lateinit var aliasStore: com.lazydevs.wristotle.apps.AliasStore
         private set
+    lateinit var contactAliasStore: com.lazydevs.wristotle.phone.ContactAliasStore
+        private set
     lateinit var appIndexer: AppIndexer
         private set
 
@@ -256,6 +258,7 @@ class WristotleApplication : Application() {
 
         val appIndexDao = AppIndexDatabase.build(this).installedAppDao()
         aliasStore = com.lazydevs.wristotle.apps.AliasStore(this)
+        contactAliasStore = com.lazydevs.wristotle.phone.ContactAliasStore(this)
         appIndex = AppIndex(appIndexDao, aliasResolver = aliasStore::resolve)
         appIndexer = AppIndexer(this, appIndexDao, aliasStore)
 

@@ -136,6 +136,19 @@
     <string name="app_aliases_show">Saved aliases (%1$d)</string>
     <string name="app_aliases_done">Done</string>
 
+    <!-- Contact aliases (Settings → Learning → Contact aliases) -->
+    <string name="contact_aliases_header">Contact aliases</string>
+    <string name="contact_aliases_desc">Pin a spoken phrase to a specific contact, for when dictation mishears a name (\"next\" for \"text\" puts the wrong word in the contact slot) or you use a nickname (\"partner\" → a specific stored contact). Aliases win over the normal contact matching.</string>
+    <string name="contact_aliases_empty">No aliases yet. Add one below to fix a misheard or nicknamed contact.</string>
+    <string name="contact_aliases_phrase_label">When I say…</string>
+    <string name="contact_aliases_contact_label">Find a contact</string>
+    <string name="contact_aliases_add">Add alias</string>
+    <string name="contact_aliases_delete">Delete alias</string>
+    <string name="contact_aliases_not_found">%1$s (not found)</string>
+    <string name="contact_aliases_show">Saved aliases (%1$d)</string>
+    <string name="contact_aliases_done">Done</string>
+    <string name="contact_aliases_need_permission">Grant Contacts access in Permissions to add aliases.</string>
+
     <!-- Settings drill-down navigation -->
     <string name="settings_back">Back</string>
 

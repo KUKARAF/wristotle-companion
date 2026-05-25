@@ -93,6 +93,7 @@ fun SettingsScreen(
     conversationVm: ConversationViewModel,
     appIndexVm: AppIndexViewModel,
     appAliasesVm: AppAliasesViewModel,
+    contactAliasesVm: ContactAliasesViewModel,
     notesVm: NotesViewModel,
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
@@ -150,6 +151,7 @@ fun SettingsScreen(
                 conversationVm = conversationVm,
                 appIndexVm = appIndexVm,
                 appAliasesVm = appAliasesVm,
+                contactAliasesVm = contactAliasesVm,
                 notesVm = notesVm,
                 diagnosticsVm = diagnosticsVm,
                 watchSettingsVm = watchSettingsVm,
@@ -314,6 +316,7 @@ private fun SettingsCategoryContent(
     conversationVm: ConversationViewModel,
     appIndexVm: AppIndexViewModel,
     appAliasesVm: AppAliasesViewModel,
+    contactAliasesVm: ContactAliasesViewModel,
     notesVm: NotesViewModel,
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
@@ -367,6 +370,7 @@ private fun SettingsCategoryContent(
             SettingsCategory.Learning -> {
                 AppIndexCard(vm = appIndexVm)
                 AppAliasesCard(vm = appAliasesVm)
+                ContactAliasesCard(vm = contactAliasesVm)
                 IntentLearningCard(
                     learningEnabled = learningEnabled,
                     onToggle = nluSettingsVm::setLearningEnabled,

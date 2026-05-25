@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
     private val conversationVm: ConversationViewModel by viewModels()
     private val appIndexVm: AppIndexViewModel by viewModels()
     private val appAliasesVm: com.lazydevs.wristotle.ui.AppAliasesViewModel by viewModels()
+    private val contactAliasesVm: com.lazydevs.wristotle.ui.ContactAliasesViewModel by viewModels()
     private val notesVm: com.lazydevs.wristotle.ui.NotesViewModel by viewModels()
     private val tasksVm: com.lazydevs.wristotle.ui.TasksViewModel by viewModels()
     private val diagnosticsVm: DiagnosticsViewModel by viewModels()
@@ -85,6 +86,7 @@ class MainActivity : ComponentActivity() {
                     conversationVm = conversationVm,
                     appIndexVm = appIndexVm,
                     appAliasesVm = appAliasesVm,
+                    contactAliasesVm = contactAliasesVm,
                     notesVm = notesVm,
                     tasksVm = tasksVm,
                     diagnosticsVm = diagnosticsVm,
@@ -113,6 +115,7 @@ class MainActivity : ComponentActivity() {
         modelsVm.refresh()
         appIndexVm.refresh()
         appAliasesVm.refresh()
+        contactAliasesVm.refresh()
     }
 
     /** Runtime perms the watch-bridge handlers need (Watch tab Grant button). */
