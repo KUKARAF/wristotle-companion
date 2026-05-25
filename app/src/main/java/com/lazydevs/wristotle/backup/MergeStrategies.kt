@@ -4,6 +4,7 @@ import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
+import com.lazydevs.wristotle.tasks.TaskEntity
 
 /**
  * Pure per-domain merge functions used by [BackupImporter]. Each takes the
@@ -23,6 +24,18 @@ object MergeStrategies {
         val seen = existing.map { noteKey(it.createdAtEpochMs, it.body) }.toMutableSet()
         return incoming.mapNotNull { row ->
             val key = noteKey(row.createdAtEpochMs, row.body)
+            if (seen.add(key)) row.copy(id = 0) else null
+        }
+    }
+
+    /** Tasks to insert. Dedupe by (createdAtEpochMs, text) — same shape as
+     *  notes since both are user-typed/dictated free text with a creation
+     *  timestamp. `completed` state from the backup is preserved so a
+     *  restore of a fully-cleared checklist doesn't re-open all the tasks. */
+    fun mergeTasks(existing: List<TaskEntity>, incoming: List<TaskEntity>): List<TaskEntity> {
+        val seen = existing.map { taskKey(it.createdAtEpochMs, it.text) }.toMutableSet()
+        return incoming.mapNotNull { row ->
+            val key = taskKey(row.createdAtEpochMs, row.text)
             if (seen.add(key)) row.copy(id = 0) else null
         }
     }
@@ -94,6 +107,9 @@ object MergeStrategies {
 
     internal fun noteKey(createdAtEpochMs: Long, body: String): String =
         "$createdAtEpochMs$body"
+
+    internal fun taskKey(createdAtEpochMs: Long, text: String): String =
+        "$createdAtEpochMs$text"
 
     internal fun conversationKey(timestampMs: Long, query: String, response: String): String =
         "$timestampMs$query$response"

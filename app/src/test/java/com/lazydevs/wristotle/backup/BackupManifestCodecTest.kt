@@ -73,9 +73,9 @@ class BackupManifestCodecTest {
         deviceModel = "Test Phone",
         encrypted = false,
         includeAudio = true,
-        dataSchemas = BackupManifest.DataSchemas(notes = 1, conversations = 1, nlu = 1),
+        dataSchemas = BackupManifest.DataSchemas(notes = 1, tasks = 1, conversations = 1, nlu = 1),
         stats = BackupManifest.Stats(
-            notes = 7, conversations = 148, nluLearned = 37,
+            notes = 7, tasks = 4, conversations = 148, nluLearned = 37,
             reminders = 1, aliases = 2,
         ),
         prefs = BackupManifest.PrefsBlock(

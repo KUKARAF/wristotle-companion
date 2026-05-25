@@ -183,6 +183,7 @@ private fun RestoreSuccessDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 ResultRow(stringResource(R.string.settings_backup_import_row_notes), result.notes)
+                ResultRow(stringResource(R.string.settings_backup_import_row_tasks), result.tasks)
                 ResultRow(stringResource(R.string.settings_backup_import_row_conversations), result.conversations)
                 ResultRow(stringResource(R.string.settings_backup_import_row_nlu), result.nlu)
                 ResultRow(stringResource(R.string.settings_backup_import_row_audio), result.audio)
@@ -247,6 +248,7 @@ private fun ExportSuccessDialog(result: BackupExportResult, onDismiss: () -> Uni
                 stringResource(
                     R.string.settings_backup_export_success_body,
                     result.notes,
+                    result.tasks,
                     result.conversations,
                     result.nluLearned,
                     result.audioFiles,
@@ -434,7 +436,7 @@ private fun RestorePreviewDialog(
                 Text(
                     stringResource(
                         R.string.settings_backup_restore_preview_stats,
-                        s.notes, s.conversations, s.nluLearned, s.reminders, s.aliases,
+                        s.notes, s.tasks, s.conversations, s.nluLearned, s.reminders, s.aliases,
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                 )

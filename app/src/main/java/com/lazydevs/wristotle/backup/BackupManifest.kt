@@ -40,9 +40,22 @@ data class BackupManifest(
      * `CURRENT_SCHEMA` and refuses individual entities that are too new for
      * the current code to understand.
      */
-    data class DataSchemas(val notes: Int, val conversations: Int, val nlu: Int)
+    /**
+     * `tasks` is nullable on the data class level because backups
+     * exported BEFORE Phase D of the Tasks feature won't carry the
+     * field. The decoder falls back to null in that case; the importer
+     * treats null as "no tasks to import" (older backup, before the
+     * feature existed).
+     */
+    data class DataSchemas(
+        val notes: Int,
+        val tasks: Int?,
+        val conversations: Int,
+        val nlu: Int,
+    )
     data class Stats(
         val notes: Int,
+        val tasks: Int,
         val conversations: Int,
         val nluLearned: Int,
         val reminders: Int,
@@ -102,11 +115,13 @@ object BackupManifestCodec {
         put("include_audio", m.includeAudio)
         put("data_schemas", JSONObject().apply {
             put("notes", m.dataSchemas.notes)
+            if (m.dataSchemas.tasks != null) put("tasks", m.dataSchemas.tasks)
             put("conversations", m.dataSchemas.conversations)
             put("nlu", m.dataSchemas.nlu)
         })
         put("stats", JSONObject().apply {
             put("notes", m.stats.notes)
+            put("tasks", m.stats.tasks)
             put("conversations", m.stats.conversations)
             put("nlu_learned", m.stats.nluLearned)
             put("reminders", m.stats.reminders)
@@ -177,11 +192,13 @@ object BackupManifestCodec {
             includeAudio = root.optBoolean("include_audio", false),
             dataSchemas = BackupManifest.DataSchemas(
                 notes = dataSchemas.getInt("notes"),
+                tasks = if (dataSchemas.has("tasks")) dataSchemas.getInt("tasks") else null,
                 conversations = dataSchemas.getInt("conversations"),
                 nlu = dataSchemas.getInt("nlu"),
             ),
             stats = BackupManifest.Stats(
                 notes = stats.optInt("notes", 0),
+                tasks = stats.optInt("tasks", 0),
                 conversations = stats.optInt("conversations", 0),
                 nluLearned = stats.optInt("nlu_learned", 0),
                 reminders = stats.optInt("reminders", 0),

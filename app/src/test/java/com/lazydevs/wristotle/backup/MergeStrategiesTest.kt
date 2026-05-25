@@ -4,6 +4,7 @@ import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
+import com.lazydevs.wristotle.tasks.TaskEntity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -144,4 +145,68 @@ class MergeStrategiesTest {
     )
 
     private fun pin(title: String, timeMs: Long?) = ReminderRecord("id-$title-$timeMs", title, timeMs)
+
+    private fun task(
+        id: Long = 0,
+        text: String = "",
+        at: Long = 0,
+        completed: Boolean = false,
+        completedAt: Long? = null,
+    ) = TaskEntity(
+        id = id,
+        text = text,
+        completed = completed,
+        createdAtEpochMs = at,
+        completedAtEpochMs = completedAt,
+        source = "test",
+    )
+
+    // ── Tasks ─────────────────────────────────────────────────────────────
+
+    @Test fun tasks_emptyExisting_insertsAll() {
+        val incoming = listOf(
+            task(id = 5, text = "buy milk", at = 1),
+            task(id = 6, text = "call dentist", at = 2),
+        )
+        val out = MergeStrategies.mergeTasks(emptyList(), incoming)
+        assertEquals(2, out.size)
+        assertTrue("ids zeroed for Room autogen", out.all { it.id == 0L })
+        assertEquals(listOf("buy milk", "call dentist"), out.map { it.text })
+    }
+
+    @Test fun tasks_dedupeByCreatedAtAndText() {
+        val existing = listOf(task(id = 1, text = "buy milk", at = 100))
+        val incoming = listOf(
+            task(id = 99,  text = "buy milk",     at = 100),
+            task(id = 100, text = "call dentist", at = 100),
+            task(id = 101, text = "buy milk",     at = 200),
+        )
+        val out = MergeStrategies.mergeTasks(existing, incoming)
+        assertEquals(listOf("call dentist", "buy milk"), out.map { it.text })
+    }
+
+    @Test fun tasks_preservesCompletedState() {
+        val out = MergeStrategies.mergeTasks(
+            existing = emptyList(),
+            incoming = listOf(
+                task(text = "buy milk", at = 1, completed = true, completedAt = 50),
+                task(text = "call dentist", at = 2, completed = false),
+            ),
+        )
+        assertEquals(2, out.size)
+        assertTrue(out[0].completed)
+        assertEquals(50L, out[0].completedAtEpochMs)
+        assertTrue(!out[1].completed)
+    }
+
+    @Test fun tasks_dedupeWithinIncomingBatch() {
+        val out = MergeStrategies.mergeTasks(
+            existing = emptyList(),
+            incoming = listOf(
+                task(text = "x", at = 1),
+                task(text = "x", at = 1),
+            ),
+        )
+        assertEquals(1, out.size)
+    }
 }

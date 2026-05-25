@@ -11,6 +11,7 @@ import com.lazydevs.wristotle.notes.AppendAudioMode
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.notes.NoteAudioPaths
 import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
+import com.lazydevs.wristotle.tasks.TaskEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
@@ -89,6 +90,7 @@ class BackupImporter(private val app: WristotleApplication) {
             val schemaSkips = mutableListOf<String>()
             val audio = importAudio(extractDir, manifest.exportedAtMs)
             val notes = importNotes(extractDir, audio.map, schemaSkips)
+            val tasks = importTasks(extractDir, schemaSkips)
             val conversations = importConversations(extractDir, audio.map, schemaSkips)
             val nlu = importNlu(extractDir, schemaSkips)
             applyPrefs(manifest.prefs)
@@ -97,6 +99,7 @@ class BackupImporter(private val app: WristotleApplication) {
 
             BackupImportResult(
                 notes = notes,
+                tasks = tasks,
                 conversations = conversations,
                 nlu = nlu,
                 audio = audio.stats,
@@ -255,6 +258,29 @@ class BackupImporter(private val app: WristotleApplication) {
         return EntityStats(imported = imported, duplicates = duplicates, failed = failed)
     }
 
+    // ── Tasks ─────────────────────────────────────────────────────────────
+
+    private suspend fun importTasks(
+        extractDir: File,
+        schemaSkips: MutableList<String>,
+    ): EntityStats {
+        val rows = readRows(extractDir, "data/tasks.json", TaskJson.CURRENT_SCHEMA, "tasks", schemaSkips)
+            { row, schema -> TaskJson.decode(row, schema) }
+            ?: return EntityStats()
+        val dao = app.tasksDb.taskDao()
+        val existing = dao.allForBackup()
+        val toInsert = MergeStrategies.mergeTasks(existing, rows)
+        val duplicates = rows.size - toInsert.size
+        var imported = 0
+        var failed = 0
+        for (row in toInsert) {
+            try { dao.insert(row); imported++ } catch (t: Throwable) {
+                Log.w(TAG, "task insert failed", t); failed++
+            }
+        }
+        return EntityStats(imported = imported, duplicates = duplicates, failed = failed)
+    }
+
     // ── Conversations ─────────────────────────────────────────────────────
 
     private suspend fun importConversations(
@@ -404,6 +430,7 @@ data class EntityStats(
 /** Summary of a completed import for the result dialog. */
 data class BackupImportResult(
     val notes: EntityStats,
+    val tasks: EntityStats,
     val conversations: EntityStats,
     val nlu: EntityStats,
     val audio: EntityStats,

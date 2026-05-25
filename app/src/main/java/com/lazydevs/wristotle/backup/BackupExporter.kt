@@ -19,6 +19,7 @@ import java.io.File
 private const val DATA_ENTRY_NOTES = "data/notes.json"
 private const val DATA_ENTRY_CONVERSATIONS = "data/conversations.json"
 private const val DATA_ENTRY_NLU = "data/nlu.json"
+private const val DATA_ENTRY_TASKS = "data/tasks.json"
 private const val AUDIO_NOTES_PREFIX = "audio/notes/"
 private const val AUDIO_CONVERSATIONS_PREFIX = "audio/conversation/"
 
@@ -31,6 +32,7 @@ data class AudioInventory(val files: Int, val bytes: Long)
  */
 data class BackupExportResult(
     val notes: Int,
+    val tasks: Int,
     val conversations: Int,
     val nluLearned: Int,
     val reminders: Int,
@@ -90,6 +92,7 @@ class BackupExporter(private val app: WristotleApplication) {
         // Pull all rows through the existing DAOs. Suspending — runs on the
         // IO dispatcher we're already on.
         val notes = app.notesDb.noteDao().allForBackup()
+        val tasks = app.tasksDb.taskDao().allForBackup()
         val conversations = app.conversationDb.conversationDao().allForBackup()
         // ExampleDao.learned() — backups never contain seed rows (they ship
         // bundled with the app).
@@ -109,11 +112,13 @@ class BackupExporter(private val app: WristotleApplication) {
             includeAudio = includeAudio,
             dataSchemas = BackupManifest.DataSchemas(
                 notes = NoteJson.CURRENT_SCHEMA,
+                tasks = TaskJson.CURRENT_SCHEMA,
                 conversations = ConversationEntryJson.CURRENT_SCHEMA,
                 nlu = ExampleEntryJson.CURRENT_SCHEMA,
             ),
             stats = BackupManifest.Stats(
                 notes = notes.size,
+                tasks = tasks.size,
                 conversations = conversations.size,
                 nluLearned = nluLearned.size,
                 reminders = pinRecords.size,
@@ -159,6 +164,8 @@ class BackupExporter(private val app: WristotleApplication) {
             writeText(stagingDir, BackupManifest.FILENAME, BackupManifestCodec.encode(manifest))
             writeText(stagingDir, DATA_ENTRY_NOTES,
                 encodeRowsJson(NoteJson.CURRENT_SCHEMA, notes) { NoteJson.encode(it) })
+            writeText(stagingDir, DATA_ENTRY_TASKS,
+                encodeRowsJson(TaskJson.CURRENT_SCHEMA, tasks) { TaskJson.encode(it) })
             writeText(stagingDir, DATA_ENTRY_CONVERSATIONS,
                 encodeRowsJson(ConversationEntryJson.CURRENT_SCHEMA, conversations) { ConversationEntryJson.encode(it) })
             writeText(stagingDir, DATA_ENTRY_NLU,
@@ -166,6 +173,7 @@ class BackupExporter(private val app: WristotleApplication) {
 
             addToZip(zip, params, stagingDir, BackupManifest.FILENAME)
             addToZip(zip, params, stagingDir, DATA_ENTRY_NOTES)
+            addToZip(zip, params, stagingDir, DATA_ENTRY_TASKS)
             addToZip(zip, params, stagingDir, DATA_ENTRY_CONVERSATIONS)
             addToZip(zip, params, stagingDir, DATA_ENTRY_NLU)
 
@@ -186,6 +194,7 @@ class BackupExporter(private val app: WristotleApplication) {
 
             BackupExportResult(
                 notes = manifest.stats.notes,
+                tasks = manifest.stats.tasks,
                 conversations = manifest.stats.conversations,
                 nluLearned = manifest.stats.nluLearned,
                 reminders = manifest.stats.reminders,

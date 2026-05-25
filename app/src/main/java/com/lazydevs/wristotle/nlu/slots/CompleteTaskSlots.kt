@@ -44,13 +44,15 @@ class CompleteTaskSlots : SlotExtractor {
             """(?ix)
             ^\s*
             (
-              # Complete-style verbs.
+              # Complete-style verbs. `done\s+with` MUST sit above
+              # the bare `done\b` alternative — top-down alternation
+              # would otherwise stop at "done" and leave "with X" in
+              # the body.
               (
-                  (mark|check|tick|cross|knock|scratch)\s+off
-                | (mark|check)\s+as\s+(done|complete|completed|finished)
+                  done\s+with
+                | (mark|check|tick|cross|knock|scratch)\s+off
                 | (mark|check)\b
                 | (complete|finish|finished|done|completed)\b
-                | done\s+with
               )
               # Delete-style verbs (handled by same extractor; the
               # handler distinguishes via the routed intent).
@@ -68,15 +70,25 @@ class CompleteTaskSlots : SlotExtractor {
         )
 
         /**
-         * Strip the trailing "from (my|the) tasks" / "from my todo"
-         * tail when present. The user's body sits before this tail.
+         * Strip the trailing tail. Three shapes:
+         *  - `" from (my|the) tasks?"` — "delete X from my tasks"
+         *  - `" as done|complete|completed|finished"` — "mark X as done"
+         *  - bare `" done|complete|completed|finished"` — "mark X done"
+         *
+         * The bare-modifier case is needed so *"mark the latest task
+         * done"* yields the clean `latest task` keyword that the
+         * "last task" shortcut resolver in [TaskMatching] expects.
          */
         val STRIP_TRAILING = Regex(
             """(?ix)
             \s+
-            (from|off|out\s+of)\s+
-            (my|the)\s+
-            (tasks?|task\s+list|to[- ]?do(\s+list)?|todos?)
+            (
+                (from|off|out\s+of)\s+
+                (my|the)\s+
+                (tasks?|task\s+list|to[- ]?do(\s+list)?|todos?)
+              | as\s+(done|complete|completed|finished)
+              | (done|complete|completed|finished)
+            )
             \s*$
             """,
         )
