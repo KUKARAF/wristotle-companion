@@ -140,6 +140,8 @@ class PebbleListenerService : BasePebbleListenerService() {
             AppendNoteHandler(app.noteRepository),
             com.lazydevs.wristotle.handlers.AddTaskHandler(app.taskRepository),
             com.lazydevs.wristotle.handlers.ListTasksHandler(app.taskRepository),
+            com.lazydevs.wristotle.handlers.CompleteTaskHandler(app.taskRepository),
+            com.lazydevs.wristotle.handlers.DeleteTaskHandler(app.taskRepository),
         ))
     }
 

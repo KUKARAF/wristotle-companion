@@ -36,6 +36,9 @@ class TaskRepository(private val dao: TaskDao) {
     /** Snapshot of pending tasks, newest first. */
     suspend fun listPending(): List<TaskEntity> = dao.listPending()
 
+    /** Snapshot of completed tasks, most-recently-completed first. */
+    suspend fun listCompleted(): List<TaskEntity> = dao.listCompleted()
+
     /** Substring search over pending tasks (case-insensitive). */
     suspend fun searchPending(needle: String): List<TaskEntity> =
         dao.searchPending(needle.lowercase())

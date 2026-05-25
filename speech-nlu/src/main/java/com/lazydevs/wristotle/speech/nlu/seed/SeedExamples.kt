@@ -470,6 +470,50 @@ object SeedExamples {
             "what do I need to do",
             "what tasks are still pending",
         ))
+        // ── CompleteTask ────────────────────────────────────────────────
+        // Task-specific verbs — "complete", "mark done", "finish",
+        // "done with", "tick off". The `target` slot extracted by
+        // CompleteTaskSlots is what the handler matches against pending
+        // tasks; seeds train the classifier on the verb shapes only.
+        addAll(Intent.CompleteTask, listOf(
+            "complete buy milk",
+            "complete call the dentist",
+            "complete pick up the package",
+            "mark buy milk done",
+            "mark call the dentist as done",
+            "mark the laundry as complete",
+            "finish buy groceries",
+            "finished buy bread",
+            "done with the laundry",
+            "done with the gym task",
+            "tick off buy milk",
+            "check off call the dentist",
+            "complete the last task",
+            "mark the latest task done",
+            "complete my most recent task",
+        ))
+        // ── DeleteTask ──────────────────────────────────────────────────
+        // Same target-extraction logic as CompleteTask but the verb is
+        // delete/remove/scratch. Seeds emphasise the task-context
+        // anchor ("from my tasks", "task X") so the centroid sits
+        // clearly away from Cancel (reminder cancellation).
+        addAll(Intent.DeleteTask, listOf(
+            "delete task buy milk",
+            "delete the task buy milk",
+            "delete buy milk from my tasks",
+            "remove task buy milk",
+            "remove buy milk from my tasks",
+            "remove call the dentist from my todo",
+            "scratch buy milk off my list",
+            "scratch the gym task off my todo",
+            "drop the laundry task",
+            "drop call the dentist from my tasks",
+            "remove the last task",
+            "delete my latest task",
+            "remove my most recent task",
+            "delete task pick up the package",
+            "scratch task buy oysters",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }

@@ -71,6 +71,12 @@ object ConfirmSummaryBuilder {
         Intent.AppendNote    -> "action: append-note\ndetails: ${slot(r, "body")}"
         Intent.AddTask       -> "action: add-task\ndetails: ${slot(r, "body")}"
         Intent.ListTasks     -> "action: list-tasks\ndetails: -"
+        // Complete / Delete render the `target` (what the user named).
+        // The actual matching to a stored task happens at dispatch —
+        // the confirm prompt shows the spoken term so the user can
+        // catch a mis-target before the action runs.
+        Intent.CompleteTask  -> "action: complete\ndetails: ${slot(r, "target")}"
+        Intent.DeleteTask    -> "action: delete-task\ndetails: ${slot(r, "target")}"
         Intent.ListReminders -> "action: list-reminders\ndetails: -"
         Intent.Calendar      -> "action: calendar\ndetails: -"
         Intent.FindPhone     -> "action: find-phone\ndetails: -"

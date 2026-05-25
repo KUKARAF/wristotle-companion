@@ -296,7 +296,12 @@ class WristotleApplication : Application() {
             Intent.Note to com.lazydevs.wristotle.nlu.slots.NoteSlots(),
             Intent.AppendNote to com.lazydevs.wristotle.nlu.slots.AppendNoteSlots(),
             Intent.AddTask to com.lazydevs.wristotle.nlu.slots.AddTaskSlots(),
-            // Intent.ListTasks needs no slots — registry returns empty map by default.
+            Intent.ListTasks to com.lazydevs.wristotle.nlu.slots.ListTasksSlots(),
+            // CompleteTask + DeleteTask share the same target-extraction logic
+            // — the slot extractor strips both complete-style and delete-style
+            // verbs; the handlers differ only in what they DO with the matched task.
+            Intent.CompleteTask to com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots(),
+            Intent.DeleteTask to com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots(),
         ))
 
         learningCollector = LearningCollector(

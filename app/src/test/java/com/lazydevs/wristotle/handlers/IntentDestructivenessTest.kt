@@ -26,6 +26,8 @@ class IntentDestructivenessTest {
             Intent.CreateEvent,
             Intent.OpenApp,
             Intent.MediaPlay,
+            Intent.CompleteTask, // marks user-data row done
+            Intent.DeleteTask,   // removes user-data row
         )
         for (intent in Intent.entries) {
             val expected = intent in expectedDestructive

@@ -23,7 +23,17 @@ class ListTasksHandler(
     override val intent: Intent = Intent.ListTasks
 
     override suspend fun handle(result: IntentResult): String {
-        val pending = tasks.listPending()
-        return TasksResponseFormatter.format(pending)
+        // `filter` slot (set by ListTasksSlots) selects pending vs
+        // completed. Absent → pending (default — most common case).
+        return when ((result.slots["filter"] as? String)?.lowercase()) {
+            "completed" -> TasksResponseFormatter.format(
+                tasks = tasks.listCompleted(),
+                emptyMessage = "No completed tasks",
+            )
+            else -> TasksResponseFormatter.format(
+                tasks = tasks.listPending(),
+                emptyMessage = "No tasks",
+            )
+        }
     }
 }

@@ -22,6 +22,11 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE completed = 0 ORDER BY createdAtEpochMs DESC")
     suspend fun listPending(): List<TaskEntity>
 
+    /** One-shot snapshot of completed tasks — used by ListTasks voice
+     *  command when the user asks for "completed/done/finished tasks". */
+    @Query("SELECT * FROM tasks WHERE completed = 1 ORDER BY completedAtEpochMs DESC")
+    suspend fun listCompleted(): List<TaskEntity>
+
     /**
      * Most-recently-created pending task. Backs the *"complete the last
      * task"* / *"delete my latest task"* shortcut so users can act on a

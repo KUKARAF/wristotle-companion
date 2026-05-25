@@ -34,7 +34,10 @@ fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.Reschedule,
     Intent.CreateEvent,
     Intent.OpenApp,
-    Intent.MediaPlay -> true
+    Intent.MediaPlay,
+    Intent.CompleteTask, // marks a row done; user-data mutation
+    Intent.DeleteTask    // removes a row; harder to recover
+        -> true
 
     Intent.MediaPause,
     Intent.MediaPlayPause,

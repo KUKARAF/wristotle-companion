@@ -110,6 +110,21 @@ enum class Intent {
      *  for the watch chat. */
     ListTasks,
 
+    /** Mark a pending task as done ("complete buy milk", "mark call
+     *  dentist done", "finish the laundry"). Slot: `target` (String) —
+     *  text to substring-match against pending tasks, OR one of the
+     *  "last task" shortcut keywords (handler resolves). Destructive —
+     *  goes through the confirm gate when enabled. */
+    CompleteTask,
+
+    /** Remove a task entirely ("delete buy milk from my tasks", "remove
+     *  task call the dentist"). Slot: `target` (String) — same
+     *  matching strategy as CompleteTask. Distinct from [Cancel]
+     *  (reminders only) — DeleteTask requires an explicit
+     *  "task" / "tasks" / "todo" keyword in the query so "cancel X"
+     *  / "remove X" without that anchor stay with Cancel. Destructive. */
+    DeleteTask,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

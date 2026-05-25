@@ -126,6 +126,13 @@ internal object PrefixHints {
         // Mirrors the ListReminders shape. Sits ABOVE AddTask so a
         // "show my tasks" query never accidentally routes to create.
         Regex("(?i)^\\s*(what|which|when|do|does|did|have|has|had|any|list|show|read|tell)\\b.*\\btasks?\\b") to Intent.ListTasks,
+        // ListTasks — bare "completed tasks" / "done tasks" / "pending
+        // tasks" form. The past-tense verb here is a FILTER, not a
+        // command — without this rule, "completed tasks" would match
+        // the bare CompleteTask `^complete\b` regex below and try to
+        // mark a task named "tasks" done. MUST sit ABOVE the
+        // CompleteTask rules.
+        Regex("(?i)^\\s*(completed|done|finished|pending|open|remaining|outstanding)\\s+tasks?\\b") to Intent.ListTasks,
         // AddTask — narrow trigger words only, so we don't bleed into
         // Note ("note: buy milk") or Reminder ("remind me to buy milk").
         // Anti-rule context: the `remind` / `remember` / `note` rules
@@ -138,6 +145,24 @@ internal object PrefixHints {
         // pluralises in transcription — "add task" → "add tasks"
         // mid-sentence is the same pattern as "reminder" → "reminders".
         Regex("(?i)^\\s*((add|create|make|new)\\s+(a\\s+|an\\s+)?tasks?\\b|tasks?\\b|(add|put)\\s+(to|on|in|onto)\\s+(my|the)\\s+(tasks?|to[- ]?do(\\s+list)?|todos?)\\b|(add|put)\\s+\\S.*\\b(to|on|in|onto)\\s+(my|the)\\s+(task|tasks|to[- ]?do(\\s+list)?|todos?)\\s*$)") to Intent.AddTask,
+        // CompleteTask — task-specific verbs that don't collide with
+        // any existing intent. "complete X" / "mark X done" / "finish X"
+        // / "done with X" / "tick off X" — none of these are used for
+        // reminders or media. The slot extractor strips the verb and
+        // returns `target` for matching.
+        Regex("(?i)^\\s*(complete|completed|finish|finished|tick off|check off|cross off|mark off|knock off)\\b") to Intent.CompleteTask,
+        Regex("(?i)^\\s*mark\\b.*\\b(done|complete|completed|finished|off)\\b") to Intent.CompleteTask,
+        Regex("(?i)^\\s*done\\s+(with|the)\\b") to Intent.CompleteTask,
+        // DeleteTask — sits ABOVE Cancel so "delete X from my tasks"
+        // routes here, not to Cancel (which is reminder-only). Requires
+        // an explicit task[s] / todo keyword somewhere in the query so
+        // "delete X" / "remove X" without that anchor stays with Cancel
+        // (existing behaviour for reminder cancellation). Two shapes:
+        //  - leading-noun: "delete task X" / "remove task X"
+        //  - trailing-noun: "delete X from my tasks" / "scratch X off
+        //    my todo"
+        Regex("(?i)^\\s*(delete|remove|scratch|drop)\\s+(a\\s+|an\\s+|the\\s+|my\\s+)?tasks?\\b") to Intent.DeleteTask,
+        Regex("(?i)^\\s*(delete|remove|scratch|drop)\\b.*\\b(from|off|out\\s+of)\\s+(my|the)\\s+(tasks?|to[- ]?do(\\s+list)?|todos?)\\s*$") to Intent.DeleteTask,
         Regex("(?i)^\\s*(cancel|delete|remove|clear)\\b") to Intent.Cancel,
         Regex("(?i)^\\s*(find|locate|where('?s| is)) (my )?phone\\b") to Intent.FindPhone,
     )
