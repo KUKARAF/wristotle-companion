@@ -27,6 +27,14 @@ interface ExampleDao {
     @Query("DELETE FROM nlu_examples WHERE source = 'learned'")
     suspend fun deleteLearned()
 
+    /**
+     * Delete a single learned row by id. Guarded with `source = 'learned'`
+     * so a caller passing a wrong id can't accidentally evict a bundled
+     * seed (those aren't user-data and re-bundle on each install).
+     */
+    @Query("DELETE FROM nlu_examples WHERE id = :id AND source = 'learned'")
+    suspend fun deleteLearnedById(id: Long): Int
+
     @Query("SELECT COUNT(*) FROM nlu_examples WHERE source = 'learned' AND intent = :intent")
     suspend fun countLearnedForIntent(intent: String): Int
 }

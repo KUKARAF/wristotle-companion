@@ -17,6 +17,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
@@ -371,9 +373,13 @@ private fun SettingsCategoryContent(
                 AppIndexCard(vm = appIndexVm)
                 AppAliasesCard(vm = appAliasesVm)
                 ContactAliasesCard(vm = contactAliasesVm)
+                val learnedExamples by nluSettingsVm.learnedExamples.collectAsState()
                 IntentLearningCard(
                     learningEnabled = learningEnabled,
+                    learnedExamples = learnedExamples,
                     onToggle = nluSettingsVm::setLearningEnabled,
+                    onRefresh = nluSettingsVm::refresh,
+                    onDeletePhrase = nluSettingsVm::deleteLearned,
                     onClearLearned = onShowClearLearnedConfirm,
                 )
             }
@@ -434,9 +440,19 @@ private fun AudioCaptureCard(
 @Composable
 private fun IntentLearningCard(
     learningEnabled: Boolean,
+    learnedExamples: List<LearnedExampleRow>,
     onToggle: (Boolean) -> Unit,
+    onRefresh: () -> Unit,
+    onDeletePhrase: (id: Long) -> Unit,
     onClearLearned: () -> Unit,
 ) {
+    var showLearnedDialog by remember { mutableStateOf(false) }
+
+    // Re-read on (re)entry so dispatches that happened on the Conversation
+    // tab show up here without a process restart. The bank isn't observable
+    // so the VM snapshot would otherwise stay stale.
+    LaunchedEffect(Unit) { onRefresh() }
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -462,6 +478,21 @@ private fun IntentLearningCard(
                 )
                 Switch(checked = learningEnabled, onCheckedChange = onToggle)
             }
+
+            if (learnedExamples.isNotEmpty()) {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { showLearnedDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    androidx.compose.material3.Icon(
+                        androidx.compose.material.icons.Icons.AutoMirrored.Filled.List,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                    Text(stringResource(R.string.settings_learning_show, learnedExamples.size))
+                }
+            }
+
             Button(
                 onClick = onClearLearned,
                 colors = ButtonDefaults.buttonColors(
@@ -474,6 +505,109 @@ private fun IntentLearningCard(
             }
         }
     }
+
+    if (showLearnedDialog) {
+        LearnedPhrasesDialog(
+            rows = learnedExamples,
+            onDelete = onDeletePhrase,
+            onDismiss = { showLearnedDialog = false },
+        )
+    }
+}
+
+/**
+ * Read-out of every learned phrase grouped by intent + per-row delete.
+ * Header note reminds the user the data is on-device — the visibility
+ * of `rawText` (which includes anything spoken, like contact names in
+ * `"call John Smith"`) can otherwise be surprising.
+ */
+@Composable
+private fun LearnedPhrasesDialog(
+    rows: List<LearnedExampleRow>,
+    onDelete: (id: Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_learning_dialog_done))
+            }
+        },
+        title = { Text(stringResource(R.string.settings_learning_dialog_title)) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
+                Text(
+                    stringResource(R.string.settings_learning_dialog_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                // Group by intent so the user can scan one verb at a time.
+                // Ordering is already (intent ASC, addedAt DESC) from the VM.
+                val byIntent = rows.groupBy { it.intent }
+                byIntent.forEach { (intent, intentRows) ->
+                    Text(
+                        prettyIntentLabel(intent),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    intentRows.forEach { row ->
+                        androidx.compose.foundation.layout.Row(
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "“${row.rawText}”",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                if (row.usageCount > 1) {
+                                    Text(
+                                        stringResource(
+                                            R.string.settings_learning_usage,
+                                            row.usageCount,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            androidx.compose.material3.IconButton(
+                                onClick = { onDelete(row.id) },
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    androidx.compose.material.icons.Icons.Default.DeleteOutline,
+                                    contentDescription = stringResource(
+                                        R.string.settings_learning_delete,
+                                    ),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+    )
+}
+
+/**
+ * Map a stored `Intent.name` string to a user-friendly label for the
+ * learned-phrases dialog. Falls back to the enum name if an intent is
+ * added without a label entry here — better than crashing.
+ */
+private fun prettyIntentLabel(intent: String): String = when (intent) {
+    "Call" -> "Call"
+    "SendMessage" -> "Send message"
+    "Reminder" -> "Reminder"
+    "Cancel" -> "Cancel reminder"
+    "FindPhone" -> "Find phone"
+    else -> intent
 }
 
 private data class PendingShrink(val newDays: Int, val entriesToDelete: Int)

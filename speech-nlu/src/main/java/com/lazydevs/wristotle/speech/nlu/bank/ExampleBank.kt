@@ -48,6 +48,10 @@ class ExampleBank(private val dao: ExampleDao) {
 
     suspend fun deleteAllLearned() = dao.deleteLearned()
 
+    /** Delete a single learned row by id. Returns true iff a row was removed
+     *  (caller may want to rebuild centroids). */
+    suspend fun deleteLearnedById(id: Long): Boolean = dao.deleteLearnedById(id) > 0
+
     companion object {
         const val MAX_LEARNED_LEN = 120
         const val MAX_LEARNED_PER_INTENT = 200
