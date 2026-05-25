@@ -35,14 +35,21 @@ Dictate from your watch; the command runs on your phone. Supported phrases:
 |----------------------------------|----------------------------------|
 | "Call [name]" / "Dial [name]"    | Places a call to that contact    |
 | "Text [name] [message]"          | Sends an SMS to that contact     |
+| "WhatsApp [name] [message]" / "Telegram [name] [message]" / "Signal [name] [message]" | Opens a pre-filled draft in the target app (auto-send not yet supported; SMS is the only programmatically dispatched channel) |
 | "Remind me to [thing] at [time]" | Creates a watch-side reminder    |
-| "Cancel reminder"                | Cancels the most recent reminder |
+| "List reminders" / "What are my reminders" | Reads back the pending pins |
+| "Cancel [reminder]" / "Reschedule [reminder] to [time]" | Targets by descriptor; bare "cancel" still targets the latest |
 | "Open [app]" / "Launch [app]"    | Launches the named app           |
 | "Play [app]" / "Pause [app]"     | Plays / pauses media in that app |
 | "Play" / "Pause" / "Next" / "Previous" | Acts on the currently playing app |
 | "Rewind 10 seconds" / "Skip ahead 30 seconds" | Seek within current track |
 | "When is my next meeting" / "What's on my calendar [day]" | Reads your phone calendar back |
 | "Schedule a meeting [day] at [time]" | Creates an event on your phone calendar |
+| "Note to self: [body]" / "Take a note: [body]" | Saves a voice note (browsable on watch + companion Notes tab) |
+| "Append [body]" / "Add to my last note: [body]" | Appends to the most recent note |
+| "Add task [body]" / "New task [body]" | Adds a to-do (browsable on watch + companion Tasks tab) |
+| "What are my tasks" / "What are my completed tasks" | Lists pending or completed tasks |
+| "Complete [task]" / "Delete task [task]" / "Mark [task] done" | Substring-matches against pending tasks (or "complete the last task") |
 
 Calendar phrases ("when is my next meeting", "schedule a meeting tomorrow at
 3pm") are natural-language rather than verb-first, so they route through the
@@ -54,9 +61,9 @@ Wristotle Companion ships an `android.speech.RecognitionService` backed by on-de
 
 The canonical phrasings above (verb-first: `call`, `text`, `remind`, `cancel`, `play`, `pause`, `next`, `previous`, `open`, `launch`) work on a fresh install with no extra downloads — they route through a built-in prefix table. The optional **Intent Model** (a small on-device sentence encoder, ~23 MB) is a *polish layer* that adds tolerance for natural paraphrases ("ring Mom" instead of "call Mom", "tell Dad I'm running late" instead of "text Dad …", "buzz me at 3" instead of "remind me at 3"). It doesn't unlock new actions — only new ways to phrase the same ones.
 
-App-name commands (`open …`, `play …`, `pause …`) need a one-time **Scan installed apps** tap in *Settings → Installed apps* so the companion knows what's on the device; re-scan after installing or uninstalling apps. Cross-app media control also needs **Notification Access** — Wristotle requests it as part of the first-run permission flow, but you can grant or revoke it later via the *Media Control* card on the Permissions tab.
+App-name commands (`open …`, `play …`, `pause …`) need a one-time **Scan installed apps** tap in *Settings → Learning → Installed apps* so the companion knows what's on the device; re-scan after installing or uninstalling apps. Cross-app media control also needs **Notification Access** — Wristotle requests it as part of the first-run permission flow, but you can grant or revoke it later via the *Media Control* card on the Permissions tab.
 
-Every interaction — calls, texts, reminders, media commands, locally-handled commands like "what time is it" — is saved to a local **Conversation** history on the phone. The Conversation tab is the app's landing screen; long-press any message bubble to copy text. The **Settings** tab is grouped into sections — **Watch** (mirror of the watch app's own settings — vibration, dictation confirmation, routing, quick-launch, logging — editable from the phone and saved back to the watch; keep the watch app open while loading or saving), **Models** (Speech / Intent downloads), **Learning** (Installed apps index + intent learning), **Diagnostics** (bug-report export), **Backup & Restore** (export your notes / conversations / learned phrases / aliases / reminders / settings as a ZIP via the system Save-As dialog — optional AES-256 password, optional audio inclusion — and re-import with a merge-by-ID flow that keeps existing local data), **Notes** (audio-capture mode + retention), and **Conversation** (history retention 1 / 10 / 20 / 30 days, default 10 + optional audio capture of the last 5 dictations, off by default for privacy). Each card title shows an "ⓘ" icon — tap it to expand a detailed description in place. The third tab, **Permissions**, consolidates the watch-bridge perms (Contacts / Phone / SMS), the voice perms (Record Audio, battery exemption, default-voice-provider activation), and Notification Access for media control.
+Every interaction — calls, texts, reminders, media commands, locally-handled commands like "what time is it" — is saved to a local **Conversation** history on the phone. The companion has five tabs: **Conversation** (the app's landing screen — long-press any message bubble to copy text), **Notes**, **Tasks**, **Permissions**, and **Settings**. The Settings tab is a drill-down list of eight categories — **Watch** (mirror of the watch app's own settings: vibration, dictation confirmation, routing, quick-launch, confirm-before-send + timeout + default action, logging — editable from the phone and saved back to the watch; keep the watch app open while loading or saving), **Conversation** (history retention 1 / 10 / 20 / 30 days, default 10 + optional audio capture of the last 5 dictations, off by default for privacy), **Notes** (keep-last-N + append-audio mode), **Reminders** (default offset when no time is spoken), **Models** (Speech / Intent downloads), **Learning** (installed-app index, app aliases, contact aliases, intent learning), **Backup & Restore** (export your notes / tasks / conversations / learned phrases / app + contact aliases / reminders / settings as a ZIP via the system Save-As dialog — optional AES-256 password, optional audio inclusion — and re-import with a merge-by-ID flow that keeps existing local data), and **Diagnostics** (bug-report export). Each card title shows an "ⓘ" icon — tap it to expand a detailed description in place. The fourth tab, **Permissions**, consolidates the watch-bridge perms (Contacts / Phone / SMS), the voice perms (Record Audio, battery exemption, default-voice-provider activation), and Notification Access for media control.
 
 ### What you need
 
@@ -75,7 +82,7 @@ Or build from source — see [For developers](#for-developers).
 1. **Open Wristotle Companion.**
 2. **Grant permissions.** Tap *Grant Permissions* and walk through the chain — runtime perms (Contacts / Phone / SMS / Notifications) → battery-optimisation exemption → Notification Access (the last one is what unlocks cross-app media control).
 3. **Download a Whisper model.** Open *Settings → Models → Speech* and tap *Download* on a model. `Tiny (English, quantized)` (~32 MB) is the recommended starting point — fastest, smallest, accurate enough for short watch commands. The first model you download is set active automatically.
-4. **(Optional) Scan installed apps.** Open *Settings → Installed apps* and tap *Scan installed apps* if you want `open <app>` / `play <app>` style commands to work. Re-scan after installing or uninstalling apps.
+4. **(Optional) Scan installed apps.** Open *Settings → Learning → Installed apps* and tap *Scan installed apps* if you want `open <app>` / `play <app>` style commands to work. Re-scan after installing or uninstalling apps.
 5. **Pair the watch.** Make sure your watch is paired and the [Wristotle](../Wristotle) watch app is installed.
 6. **Try it.** Open Wristotle on the watch, press *Select*, and dictate one of the commands from the table above.
 
