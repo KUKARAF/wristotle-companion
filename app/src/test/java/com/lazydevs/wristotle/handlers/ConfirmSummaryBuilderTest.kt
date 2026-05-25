@@ -24,33 +24,79 @@ class ConfirmSummaryBuilderTest {
     @Test fun sendMessageWithSmsBodyTruncatesAt80Chars() {
         val longBody = "a".repeat(120)
         val s = ConfirmSummaryBuilder.summary(
-            result(Intent.SendMessage, "app" to "SMS", "contact" to "x", "body" to longBody),
+            result(
+                Intent.SendMessage,
+                "app" to "SMS",
+                "contact" to "x",
+                "resolvedContact" to "x",
+                "body" to longBody,
+            ),
         )
         assertTrue("expected 80-char body, got: $s", s.contains("a".repeat(80)))
         assertTrue("expected NO 81-char body", !s.contains("a".repeat(81)))
     }
 
-    @Test fun sendMessageWithSmsMissingContactShowsQuestionMark() {
-        // SendMessageSlots' fallback can produce no contact when the
-        // greedy lookup misses. Render as `[?]` so the user sees
-        // something to react to (and the prompt doesn't render as a
-        // misleading empty list).
+    @Test fun sendMessageWithUnresolvedContactEchoesSpokenAlongsideSentinel() {
+        // The spoken contact ("dadd") didn't match any Contacts row, so
+        // PebbleListenerService.enrichResolvedContact didn't populate
+        // `resolvedContact`. The watch confirm prompt must surface the
+        // `[NO_CONTACT]` sentinel AND the spoken string in a second
+        // bracketed token, so the user sees WHY the lookup failed
+        // (e.g. Whisper transcribed the wrong word as the contact
+        // name) and can BACK out rather than confirming a doomed
+        // action.
+        val s = ConfirmSummaryBuilder.summary(
+            result(Intent.SendMessage, "app" to "SMS", "contact" to "dadd", "body" to "hi"),
+        )
+        assertEquals("action: text\ndetails: [NO_CONTACT] [dadd] hi", s)
+    }
+
+    @Test fun sendMessageWithSmsMissingContactShowsNoNameSentinel() {
+        // No contact slot AND no resolvedContact slot — render the
+        // `[NO_NAME]` sentinel (distinct from `[NO_CONTACT]`) so the
+        // user knows the slot extractor pulled out nothing to look up,
+        // rather than that the lookup itself failed.
         val s = ConfirmSummaryBuilder.summary(
             result(Intent.SendMessage, "app" to "SMS", "body" to "hi"),
         )
-        assertEquals("action: text\ndetails: [?] hi", s)
+        assertEquals("action: text\ndetails: [NO_NAME] hi", s)
     }
 
     // ── Call ──────────────────────────────────────────────────────────────
 
     @Test fun call() {
-        val s = ConfirmSummaryBuilder.summary(result(Intent.Call, "contact" to "alex"))
+        val s = ConfirmSummaryBuilder.summary(
+            result(Intent.Call, "contact" to "alex", "resolvedContact" to "alex"),
+        )
         assertEquals("action: call\ndetails: [alex]", s)
     }
 
-    @Test fun callMissingContactShowsQuestionMark() {
+    @Test fun callWithResolvedFullNameShowsResolved() {
+        // Spoken "alex" resolves to "Alex Smith" in Contacts — the
+        // confirm prompt shows the resolved display name so the user
+        // sees who they're actually about to dial.
+        val s = ConfirmSummaryBuilder.summary(
+            result(Intent.Call, "contact" to "alex", "resolvedContact" to "Alex Smith"),
+        )
+        assertEquals("action: call\ndetails: [Alex Smith]", s)
+    }
+
+    @Test fun callMissingContactShowsNoNameSentinel() {
+        // No contact slot at all — the user said "call" with no name.
+        // Render `[NO_NAME]` so they know nothing was extracted, vs
+        // `[NO_CONTACT]` which means a name was tried + failed.
         val s = ConfirmSummaryBuilder.summary(result(Intent.Call))
-        assertEquals("action: call\ndetails: [?]", s)
+        assertEquals("action: call\ndetails: [NO_NAME]", s)
+    }
+
+    @Test fun callWithUnresolvedContactEchoesSpokenAlongsideSentinel() {
+        // Contact slot is populated (spoken="next") but resolvedContact
+        // is missing — Contacts didn't find a match. The prompt should
+        // show `[NO_CONTACT]` so the user knows dispatch will fail
+        // AND `[next]` so they can see what string the lookup actually
+        // used (i.e. catch the Whisper mishearing).
+        val s = ConfirmSummaryBuilder.summary(result(Intent.Call, "contact" to "next"))
+        assertEquals("action: call\ndetails: [NO_CONTACT] [next]", s)
     }
 
     // ── Reminder / CreateEvent (title + time) ─────────────────────────────
@@ -173,7 +219,13 @@ class ConfirmSummaryBuilderTest {
 
     @Test fun sendMessageWithWhatsApp() {
         val s = ConfirmSummaryBuilder.summary(
-            result(Intent.SendMessage, "app" to "WhatsApp", "contact" to "mom", "body" to "on my way"),
+            result(
+                Intent.SendMessage,
+                "app" to "WhatsApp",
+                "contact" to "mom",
+                "resolvedContact" to "mom",
+                "body" to "on my way",
+            ),
         )
         assertEquals("action: whatsapp\ndetails: [mom] on my way", s)
     }
@@ -183,14 +235,25 @@ class ConfirmSummaryBuilderTest {
         // app="SMS". The prompt should still read "action: text" — the
         // verb the user said — not "action: sms".
         val s = ConfirmSummaryBuilder.summary(
-            result(Intent.SendMessage, "app" to "SMS", "contact" to "mom", "body" to "hi"),
+            result(
+                Intent.SendMessage,
+                "app" to "SMS",
+                "contact" to "mom",
+                "resolvedContact" to "mom",
+                "body" to "hi",
+            ),
         )
         assertEquals("action: text\ndetails: [mom] hi", s)
     }
 
     @Test fun sendMessageWithoutBody() {
         val s = ConfirmSummaryBuilder.summary(
-            result(Intent.SendMessage, "app" to "WhatsApp", "contact" to "mom"),
+            result(
+                Intent.SendMessage,
+                "app" to "WhatsApp",
+                "contact" to "mom",
+                "resolvedContact" to "mom",
+            ),
         )
         assertEquals("action: whatsapp\ndetails: [mom]", s)
     }
@@ -200,7 +263,12 @@ class ConfirmSummaryBuilderTest {
         // app — render as a generic "message" verb so the user still
         // gets a comprehensible prompt.
         val s = ConfirmSummaryBuilder.summary(
-            result(Intent.SendMessage, "contact" to "mom", "body" to "hi"),
+            result(
+                Intent.SendMessage,
+                "contact" to "mom",
+                "resolvedContact" to "mom",
+                "body" to "hi",
+            ),
         )
         assertEquals("action: message\ndetails: [mom] hi", s)
     }

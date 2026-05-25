@@ -326,7 +326,14 @@ class PebbleListenerService : BasePebbleListenerService() {
             .onFailure { Log.w(TAG, "classify failed", it) }
             .getOrNull()
 
-        val routed = resolveIntent(classified, watchHint, query)
+        val routedRaw = resolveIntent(classified, watchHint, query)
+        // Enrich Call / SendMessage with the resolved contact's display
+        // name from ContactsRepository. The slot extractors only keep
+        // the spoken candidate (e.g. "mom"); the confirm prompt needs
+        // to show what's actually about to be dialled / texted (e.g.
+        // "Mom Smith") so the user catches a mis-resolution before
+        // SELECT. Idempotent: handlers re-resolve at dispatch time.
+        val routed = enrichResolvedContact(routedRaw)
         Log.d(TAG, "Routed to intent=${routed.intent} confidence=${routed.confidence}")
         // Phase A1.5 of confirm-before-dispatch: log the parsed action + slots
         // for every query so we can verify what the eventual confirm prompt
@@ -493,6 +500,41 @@ class PebbleListenerService : BasePebbleListenerService() {
      * threshold predictions become [Intent.Unknown]. Always populates slots
      * for the chosen intent via [slotExtractors].
      */
+    /**
+     * Resolve the spoken contact name (slots["contact"]) to the actual
+     * contact's display name via [ContactsRepository], stashed as
+     * `slots["resolvedContact"]`. Only enriches Call + SendMessage —
+     * the only intents whose confirm prompt currently shows a contact.
+     *
+     * Idempotent: handlers re-resolve the contact at dispatch time via
+     * the same `findContact` call, so this enrichment is purely for
+     * the confirm prompt's display. If `findContact` returns null (the
+     * spoken name doesn't match any contact), no enrichment happens —
+     * the prompt falls back to the spoken value and the dispatch will
+     * fail honestly with *"Contact not found"*.
+     *
+     * Why pre-confirm instead of inside the slot extractor: CallSlots
+     * doesn't currently take a `findContact` dep, and we don't want to
+     * change every contact-using slot extractor's constructor signature
+     * for a display-only concern. The lookup is cheap (one Contacts
+     * content-provider query) so doing it once here costs nothing.
+     */
+    private suspend fun enrichResolvedContact(routed: IntentResult): IntentResult {
+        if (routed.intent != Intent.Call && routed.intent != Intent.SendMessage) return routed
+        val spoken = (routed.slots["contact"] as? String)?.trim().orEmpty()
+        if (spoken.isEmpty()) return routed
+        val contacts = ContactsRepository(this)
+        if (!contacts.hasPermission()) return routed
+        val match = contacts.findContact(spoken) ?: return routed
+        // Always stash the resolved name when findContact succeeds, even
+        // when it happens to equal the spoken value. The confirm-gate
+        // check below uses `resolvedContact != null` as the
+        // "this dispatch can actually run" signal — without unconditional
+        // population, a spoken-equals-resolved pair would skip the
+        // confirm prompt incorrectly.
+        return routed.copy(slots = routed.slots + ("resolvedContact" to match.name))
+    }
+
     private suspend fun resolveIntent(
         classified: IntentResult?,
         watchHint: Intent?,

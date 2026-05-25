@@ -25,7 +25,7 @@ import java.util.Locale
 object ConfirmSummaryBuilder {
 
     fun summary(r: IntentResult): String = when (r.intent) {
-        Intent.Call          -> "action: call\ndetails: [${slot(r, "contact")}]"
+        Intent.Call          -> "action: call\ndetails: ${contactName(r)}"
         // SendMessage covers every send-a-message path — SMS via
         // programmatic SmsManager, plus WhatsApp / Telegram / Signal
         // via assisted-send deep-link. The verb (action) is the app
@@ -40,10 +40,10 @@ object ConfirmSummaryBuilder {
         Intent.SendMessage   -> {
             val app = (r.slots["app"] as? String)?.takeIf { it.isNotEmpty() } ?: "message"
             val verb = if (app.equals("SMS", ignoreCase = true)) "text" else app.lowercase()
-            val to = slot(r, "contact")
+            val to = contactName(r)
             val body = (r.slots["body"] as? String)?.take(80)?.takeIf { it.isNotEmpty() }
-            if (body == null) "action: $verb\ndetails: [$to]"
-            else              "action: $verb\ndetails: [$to] $body"
+            if (body == null) "action: $verb\ndetails: $to"
+            else              "action: $verb\ndetails: $to $body"
         }
         Intent.Reminder      -> "action: reminder\ndetails: ${titleWithTime(r, defaultTitle = "Reminder")}"
         // Cancel/Reschedule slots use the key `target` (the reminder
@@ -89,6 +89,39 @@ object ConfirmSummaryBuilder {
 
     private fun slot(r: IntentResult, key: String): String =
         (r.slots[key] as? String)?.takeIf { it.isNotEmpty() } ?: "?"
+
+    /**
+     * Bracket-wrapped contact display for Call / SendMessage confirm
+     * prompts. Three shapes, all already bracketed so the caller can
+     * splice it straight into the details line.
+     *
+     *  - Resolved (`resolvedContact` is set by
+     *    [com.lazydevs.wristotle.service.PebbleListenerService.enrichResolvedContact]
+     *    when ContactsRepository found a match):
+     *        `[John]` — the user sees the real contact name about to
+     *        be dialled / texted.
+     *
+     *  - A spoken value exists but didn't resolve (Whisper transcribed
+     *    something into the contact slot, but no Contacts row matched
+     *    — or READ_CONTACTS isn't granted):
+     *        `[NO_CONTACT] [next]` — the `NO_CONTACT` sentinel signals
+     *        dispatch will fail, and the second bracket echoes back the
+     *        actual string used for lookup so the user can see WHY it
+     *        failed ("ah, Whisper heard 'next' instead of 'text'").
+     *
+     *  - No spoken contact at all (slot extractor produced nothing —
+     *    e.g. "text hi" with no name spoken):
+     *        `[NO_NAME]` — distinguishes "the lookup found nothing"
+     *        from "there was nothing to look up", so the user knows
+     *        the fix is to dictate a name rather than retry the same
+     *        phrase.
+     */
+    private fun contactName(r: IntentResult): String {
+        val resolved = (r.slots["resolvedContact"] as? String)?.takeIf { it.isNotEmpty() }
+        if (resolved != null) return "[$resolved]"
+        val spoken = (r.slots["contact"] as? String)?.takeIf { it.isNotEmpty() }
+        return if (spoken != null) "[NO_CONTACT] [$spoken]" else "[NO_NAME]"
+    }
 
     private fun slotOrDash(r: IntentResult, key: String): String =
         (r.slots[key]?.toString())?.takeIf { it.isNotEmpty() } ?: "-"
