@@ -3,6 +3,7 @@ package com.lazydevs.wristotle.ui.nav
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
@@ -24,6 +25,7 @@ import com.lazydevs.wristotle.R
  * while still reading at small sizes:
  *   - Conversation: cool blue — communication
  *   - Notes:        warm amber — paper / writing
+ *   - Tasks:        teal — checklist / "do"
  *   - Permissions:  green — safety / "go"
  *   - Settings:     brand purple — matches the docs-site primary
  */
@@ -35,6 +37,7 @@ enum class Screen(
 ) {
     Conversation("conversation", R.string.nav_conversation, Icons.AutoMirrored.Filled.Chat, Color(0xFF1976D2)),
     Notes("notes", R.string.nav_notes, Icons.Default.Description, Color(0xFFF59E0B)),
+    Tasks("tasks", R.string.nav_tasks, Icons.Default.CheckCircleOutline, Color(0xFF14B8A6)),
     Permissions("permissions", R.string.nav_permissions, Icons.Default.Shield, Color(0xFF10B981)),
     Settings("settings", R.string.nav_settings, Icons.Default.Settings, Color(0xFF7C3AED)),
     ;

@@ -53,6 +53,7 @@ fun MainScreen(
     appIndexVm: AppIndexViewModel,
     appAliasesVm: AppAliasesViewModel,
     notesVm: NotesViewModel,
+    tasksVm: TasksViewModel,
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
     backupVm: BackupViewModel,
@@ -103,6 +104,7 @@ fun MainScreen(
                     val attention = when (screen) {
                         Screen.Conversation -> false
                         Screen.Notes        -> false
+                        Screen.Tasks        -> false
                         Screen.Permissions  -> permissionsAttention
                         Screen.Settings     -> settingsAttention
                     }
@@ -180,6 +182,11 @@ fun MainScreen(
             composable(Screen.Notes.route) {
                 Box(padding) {
                     NotesScreen(vm = notesVm)
+                }
+            }
+            composable(Screen.Tasks.route) {
+                Box(padding) {
+                    TasksScreen(vm = tasksVm)
                 }
             }
             composable(Screen.Permissions.route) {

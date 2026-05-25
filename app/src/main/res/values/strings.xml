@@ -19,6 +19,7 @@
     <!-- Bottom navigation -->
     <string name="nav_conversation">Chat</string>
     <string name="nav_notes">Notes</string>
+    <string name="nav_tasks">Tasks</string>
     <string name="nav_permissions">Permission</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_attention_badge_desc">Needs attention</string>
@@ -319,4 +320,19 @@
     <!-- CardTitleWithInfo accessibility labels -->
     <string name="card_info_show">Show description</string>
     <string name="card_info_hide">Hide description</string>
+
+    <!-- Tasks tab -->
+    <string name="tasks_header">Tasks</string>
+    <string name="tasks_empty_pending_title">No tasks yet</string>
+    <string name="tasks_empty_pending_subtitle">Add one above, or say \"add task &lt;…&gt;\" to your watch.</string>
+    <string name="tasks_add_placeholder">Add a task</string>
+    <string name="tasks_add_button">Add</string>
+    <string name="tasks_completed_section">Completed (%1$d)</string>
+    <string name="tasks_delete_one">Delete task</string>
+    <string name="tasks_complete_one">Mark task complete</string>
+    <string name="tasks_reopen_one">Mark task as pending</string>
+    <string name="tasks_clear_all">Clear all</string>
+    <string name="tasks_clear_all_title">Clear all tasks?</string>
+    <string name="tasks_clear_all_message">Permanently removes every task — pending and completed.</string>
+    <string name="tasks_clear_all_apply">Clear</string>
 </resources>
