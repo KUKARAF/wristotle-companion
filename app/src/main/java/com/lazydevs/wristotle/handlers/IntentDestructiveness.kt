@@ -44,6 +44,8 @@ fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.MediaSeekBackward,
     Intent.Note,
     Intent.AppendNote,
+    Intent.AddTask,        // matches Note rationale: personal data, often dictated in bursts
+    Intent.ListTasks,      // read-only
     Intent.ListReminders,
     Intent.Calendar,
     Intent.FindPhone,

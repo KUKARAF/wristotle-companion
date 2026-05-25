@@ -416,6 +416,60 @@ object SeedExamples {
             "also add to my notes the conference room is on the third floor",
             "also note in my last entry that the recipe needs more salt",
         ))
+        // ── AddTask ─────────────────────────────────────────────────────
+        // Narrow trigger words: explicit "task" or "to-do" noun. Avoid
+        // overlap with Note ("remember", "jot"), Reminder ("remind",
+        // "set a reminder"), and CreateEvent ("schedule"). The PrefixHints
+        // anti-rule + the ordering above keeps the boundary deterministic
+        // for the cases that matter; the seeds here teach the classifier
+        // the centroid.
+        addAll(Intent.AddTask, listOf(
+            "add task buy milk",
+            "add task pick up the package",
+            "add task call the dentist",
+            "new task fix the kitchen sink",
+            "new task book a haircut",
+            "create a task review the budget",
+            "create task plan the weekend trip",
+            "make a task email the team",
+            "task drop off the dry cleaning",
+            "task return the library books",
+            "add buy milk to my tasks",
+            "add pick up package to my tasks",
+            "add fix the sink to my to-do list",
+            "put email the team on my tasks",
+            "put grocery shopping on my todo",
+            // "Leading-noun" shape — Whisper sometimes inverts the body
+            // and the trailing noun. *"add task to buy milk"* comes back
+            // as *"add to my tasks buy milk"*. Teach the centroid both
+            // orders so the classifier doesn't drift toward ListTasks
+            // when this shape appears.
+            "add to my tasks buy oysters",
+            "add to my tasks pick up the package",
+            "add to my to-do list call the dentist",
+            "put on my tasks email the team",
+        ))
+        // ── ListTasks ───────────────────────────────────────────────────
+        // Interrogatives + list / show + the `tasks` noun. Mirrors the
+        // ListReminders seed shape — query forms that are read-only by
+        // construction.
+        addAll(Intent.ListTasks, listOf(
+            "what are my tasks",
+            "list my tasks",
+            "show my tasks",
+            "show me my tasks",
+            "what tasks do I have",
+            "do I have any tasks",
+            "any tasks",
+            "what's on my task list",
+            "read my tasks",
+            "tell me my tasks",
+            "what's left on my to-do list",
+            "what's on my todo",
+            "any open tasks",
+            "what do I need to do",
+            "what tasks are still pending",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }

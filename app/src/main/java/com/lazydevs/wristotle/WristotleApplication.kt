@@ -98,6 +98,12 @@ class WristotleApplication : Application() {
     lateinit var notesAudioStore: com.lazydevs.wristotle.notes.NotesAudioStore
         private set
 
+    /** Tasks data layer (separate Room DB; checklist items, no due dates). */
+    lateinit var taskRepository: com.lazydevs.wristotle.tasks.TaskRepository
+        private set
+    lateinit var tasksDb: com.lazydevs.wristotle.tasks.TasksDatabase
+        private set
+
     /** Reminder feature preferences (default offset when no time is spoken). */
     lateinit var reminderSettings: com.lazydevs.wristotle.handlers.ReminderSettings
         private set
@@ -236,6 +242,10 @@ class WristotleApplication : Application() {
         )
         appScope.launch { noteRepository.prune() }
 
+        // Tasks — separate Room DB, no auto-prune (user-managed checklist).
+        tasksDb = com.lazydevs.wristotle.tasks.TasksDatabase.build(this)
+        taskRepository = com.lazydevs.wristotle.tasks.TaskRepository(tasksDb.taskDao())
+
         reminderSettings = com.lazydevs.wristotle.handlers.ReminderSettings(this)
 
         nluDb = NluDatabase.build(this)
@@ -285,6 +295,8 @@ class WristotleApplication : Application() {
             Intent.CreateEvent to CreateEventSlots(),
             Intent.Note to com.lazydevs.wristotle.nlu.slots.NoteSlots(),
             Intent.AppendNote to com.lazydevs.wristotle.nlu.slots.AppendNoteSlots(),
+            Intent.AddTask to com.lazydevs.wristotle.nlu.slots.AddTaskSlots(),
+            // Intent.ListTasks needs no slots — registry returns empty map by default.
         ))
 
         learningCollector = LearningCollector(

@@ -138,6 +138,8 @@ class PebbleListenerService : BasePebbleListenerService() {
             CreateEventHandler(calendarRepo),
             NoteHandler(app.noteRepository),
             AppendNoteHandler(app.noteRepository),
+            com.lazydevs.wristotle.handlers.AddTaskHandler(app.taskRepository),
+            com.lazydevs.wristotle.handlers.ListTasksHandler(app.taskRepository),
         ))
     }
 

@@ -69,6 +69,8 @@ object ConfirmSummaryBuilder {
         Intent.MediaSeekBackward -> "action: seek\ndetails: ${slotOrDash(r, "seconds")}s"
         Intent.Note          -> "action: note\ndetails: ${slot(r, "body")}"
         Intent.AppendNote    -> "action: append-note\ndetails: ${slot(r, "body")}"
+        Intent.AddTask       -> "action: add-task\ndetails: ${slot(r, "body")}"
+        Intent.ListTasks     -> "action: list-tasks\ndetails: -"
         Intent.ListReminders -> "action: list-reminders\ndetails: -"
         Intent.Calendar      -> "action: calendar\ndetails: -"
         Intent.FindPhone     -> "action: find-phone\ndetails: -"

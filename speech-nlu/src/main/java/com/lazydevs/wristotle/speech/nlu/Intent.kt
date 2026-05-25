@@ -96,6 +96,20 @@ enum class Intent {
      *  only sideloaded option there. */
     SendMessage,
 
+    /** Add a new task to the user's checklist ("add buy milk to my tasks",
+     *  "add task buy milk", "new task pick up package"). Slot: `body`
+     *  (String) — the task text with the lead-in stripped. Handled by
+     *  AddTaskHandler persisting to the tasks Room store. Distinct from
+     *  [Note] (free-form capture, no checkable state) and [Reminder]
+     *  (time-triggered alert). See messaging-apps.md / tasks.md. */
+    AddTask,
+
+    /** Read-only list of the user's pending tasks ("what are my tasks",
+     *  "list my tasks", "show my tasks"). No slots. Handled by
+     *  ListTasksHandler — returns the first 5 pending tasks formatted
+     *  for the watch chat. */
+    ListTasks,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

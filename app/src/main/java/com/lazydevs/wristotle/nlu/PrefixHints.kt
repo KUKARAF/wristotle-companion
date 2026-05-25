@@ -122,6 +122,22 @@ internal object PrefixHints {
         // decide.
         Regex("(?i)^\\s*(notes?[\\s.:,;!?\\-]|(make|take|save|store|keep|add)\\s+(a\\s+)?notes?\\b|(jot|write)\\s+(this|that|it)?\\s*down\\b|noted\\b|(for|to|add\\s+to)\\s+my\\s+notes?\\b|remember\\s+that\\b)") to Intent.Note,
         Regex("(?i)^\\s*(remind|set (a )?reminder|reminder)\\b") to Intent.Reminder,
+        // ListTasks — interrogative / list / show + the `tasks` noun.
+        // Mirrors the ListReminders shape. Sits ABOVE AddTask so a
+        // "show my tasks" query never accidentally routes to create.
+        Regex("(?i)^\\s*(what|which|when|do|does|did|have|has|had|any|list|show|read|tell)\\b.*\\btasks?\\b") to Intent.ListTasks,
+        // AddTask — narrow trigger words only, so we don't bleed into
+        // Note ("note: buy milk") or Reminder ("remind me to buy milk").
+        // Anti-rule context: the `remind` / `remember` / `note` rules
+        // above all sit higher in this list, so an opener that names
+        // those verbs wins over AddTask even when "task" appears in the
+        // body. Keep the AddTask list tight; broader phrasings ("add X")
+        // are too ambiguous and stay with the embedding classifier.
+        //
+        // `tasks?` (singular or plural) because Whisper routinely
+        // pluralises in transcription — "add task" → "add tasks"
+        // mid-sentence is the same pattern as "reminder" → "reminders".
+        Regex("(?i)^\\s*((add|create|make|new)\\s+(a\\s+|an\\s+)?tasks?\\b|tasks?\\b|(add|put)\\s+(to|on|in|onto)\\s+(my|the)\\s+(tasks?|to[- ]?do(\\s+list)?|todos?)\\b|(add|put)\\s+\\S.*\\b(to|on|in|onto)\\s+(my|the)\\s+(task|tasks|to[- ]?do(\\s+list)?|todos?)\\s*$)") to Intent.AddTask,
         Regex("(?i)^\\s*(cancel|delete|remove|clear)\\b") to Intent.Cancel,
         Regex("(?i)^\\s*(find|locate|where('?s| is)) (my )?phone\\b") to Intent.FindPhone,
     )
