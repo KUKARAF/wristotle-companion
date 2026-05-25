@@ -27,6 +27,12 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE completed = 1 ORDER BY completedAtEpochMs DESC")
     suspend fun listCompleted(): List<TaskEntity>
 
+    /** Pending first (newest-first), then completed (most-recently-
+     *  completed first). Backs the watch's "All" filter view so the
+     *  user sees outstanding work above what they've already cleared. */
+    @Query("SELECT * FROM tasks ORDER BY completed ASC, createdAtEpochMs DESC, completedAtEpochMs DESC")
+    suspend fun listAll(): List<TaskEntity>
+
     /**
      * Most-recently-created pending task. Backs the *"complete the last
      * task"* / *"delete my latest task"* shortcut so users can act on a

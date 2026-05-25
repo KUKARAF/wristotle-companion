@@ -92,6 +92,21 @@ internal object PrefixHints {
         //    here when the user meant a new note. Without the qualifier "add"
         //    stays Note, and "add to my meeting…" stays CreateEvent.
         Regex("(?i)^\\s*((append|amend)\\b|(add|append|amend)\\s+to\\s+(the\\s+|my\\s+)?(previous|last|latest|recent)\\s+notes?\\b)") to Intent.AppendNote,
+        // AddTask — sits ABOVE CreateEvent because CreateEvent's noun
+        // set includes "call" (for "schedule a call with X"), and the
+        // user's task body often mentions "call the dentist". Without
+        // this ordering, "add task to call the dentist" matches the
+        // CreateEvent rule (^add … \bcall\b) and routes to schedule a
+        // meeting. AddTask's regex requires the explicit `task[s]` /
+        // `todo` anchor so it can't false-match "add a meeting".
+        //
+        // Narrow trigger words only, so we don't bleed into Note
+        // ("note: buy milk") or Reminder ("remind me to buy milk").
+        // Anti-rule context: the `remind` / `remember` / `note` rules
+        // sit even higher in this list, so those openers win over
+        // AddTask even when "task" appears in the body. `tasks?`
+        // (singular or plural) because Whisper routinely pluralises.
+        Regex("(?i)^\\s*((add|create|make|new)\\s+(a\\s+|an\\s+)?tasks?\\b|tasks?\\b|(add|put)\\s+(to|on|in|onto)\\s+(my|the)\\s+(tasks?|to[- ]?do(\\s+list)?|todos?)\\b|(add|put)\\s+\\S.*\\b(to|on|in|onto)\\s+(my|the)\\s+(task|tasks|to[- ]?do(\\s+list)?|todos?)\\s*$)") to Intent.AddTask,
         // CreateEvent — "schedule/set up/create/add/book … meeting/event/…".
         // Requires an event noun, so "schedule a reminder" does NOT match here
         // (it has no event noun) and stays with the reminder path. Rescues the
@@ -133,18 +148,10 @@ internal object PrefixHints {
         // mark a task named "tasks" done. MUST sit ABOVE the
         // CompleteTask rules.
         Regex("(?i)^\\s*(completed|done|finished|pending|open|remaining|outstanding)\\s+tasks?\\b") to Intent.ListTasks,
-        // AddTask — narrow trigger words only, so we don't bleed into
-        // Note ("note: buy milk") or Reminder ("remind me to buy milk").
-        // Anti-rule context: the `remind` / `remember` / `note` rules
-        // above all sit higher in this list, so an opener that names
-        // those verbs wins over AddTask even when "task" appears in the
-        // body. Keep the AddTask list tight; broader phrasings ("add X")
-        // are too ambiguous and stay with the embedding classifier.
-        //
-        // `tasks?` (singular or plural) because Whisper routinely
-        // pluralises in transcription — "add task" → "add tasks"
-        // mid-sentence is the same pattern as "reminder" → "reminders".
-        Regex("(?i)^\\s*((add|create|make|new)\\s+(a\\s+|an\\s+)?tasks?\\b|tasks?\\b|(add|put)\\s+(to|on|in|onto)\\s+(my|the)\\s+(tasks?|to[- ]?do(\\s+list)?|todos?)\\b|(add|put)\\s+\\S.*\\b(to|on|in|onto)\\s+(my|the)\\s+(task|tasks|to[- ]?do(\\s+list)?|todos?)\\s*$)") to Intent.AddTask,
+        // AddTask is now declared higher up — ABOVE CreateEvent —
+        // because *"add task to call the dentist"* contains "call"
+        // which CreateEvent's noun set would otherwise catch. The
+        // rule stays the same; only its position moved.
         // CompleteTask — task-specific verbs that don't collide with
         // any existing intent. "complete X" / "mark X done" / "finish X"
         // / "done with X" / "tick off X" — none of these are used for

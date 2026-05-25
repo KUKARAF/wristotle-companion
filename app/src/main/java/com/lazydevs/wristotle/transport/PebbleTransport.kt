@@ -42,6 +42,20 @@ class PebbleTransport(context: Context) : java.io.Closeable {
         mapOf(MessageKeys.NOTE_DETAIL_RESPONSE to PebbleDictionaryItem.Text(text))
     )
 
+    /** Tasks-on-watch (Phase B): framed list of pending tasks for the
+     *  watch's tasks window in response to a TASKS_REQUEST. */
+    suspend fun sendTasksResponse(text: String) = sendWithNackRetry(
+        mapOf(MessageKeys.TASKS_RESPONSE to PebbleDictionaryItem.Text(text))
+    )
+
+    /** Confirmation back to the watch after a TASK_COMPLETE_REQUEST —
+     *  either *"Completed: X"* on success or a graceful failure
+     *  ("No pending tasks", "Task already completed"). The watch
+     *  displays this in the existing chat surface. */
+    suspend fun sendTaskCompleteResponse(text: String) = sendWithNackRetry(
+        mapOf(MessageKeys.TASK_COMPLETE_RESPONSE to PebbleDictionaryItem.Text(text))
+    )
+
     /** Ship the confirm-prompt summary to the watch (Phase A3+). The watch
      *  displays it under the existing chat surface and waits for SELECT/BACK;
      *  the response arrives back via [MessageKeys.CONFIRM_RESPONSE] which the

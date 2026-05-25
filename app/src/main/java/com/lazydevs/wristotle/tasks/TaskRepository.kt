@@ -39,6 +39,9 @@ class TaskRepository(private val dao: TaskDao) {
     /** Snapshot of completed tasks, most-recently-completed first. */
     suspend fun listCompleted(): List<TaskEntity> = dao.listCompleted()
 
+    /** Pending first, then completed. Backs the watch's "All" view. */
+    suspend fun listAll(): List<TaskEntity> = dao.listAll()
+
     /** Substring search over pending tasks (case-insensitive). */
     suspend fun searchPending(needle: String): List<TaskEntity> =
         dao.searchPending(needle.lowercase())

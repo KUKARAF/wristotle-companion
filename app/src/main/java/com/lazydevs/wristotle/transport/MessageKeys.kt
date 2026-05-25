@@ -113,6 +113,43 @@ object MessageKeys {
      *  when [SETTING_CONFIRM_BEFORE_SEND] is on. Lives in the snapshot. */
     val SETTING_CONFIRM_DEFAULT_SEND: UInt = 10036u
 
+    /** Tasks-on-watch (Phase B). Watch → companion: Int32 filter value
+     *  selecting which task list to return:
+     *      0 = pending (default — also when the Int32 is absent / unknown)
+     *      1 = completed
+     *      2 = all
+     *  See [TASKS_FILTER_PENDING] / [_COMPLETED] / [_ALL].
+     *
+     *  Companion → watch: a single CSTRING containing tasks framed as
+     *  `<id><US><state><US><text><RS>…<id><US><state><US><text>`.
+     *  `state` is the literal `"0"` or `"1"` (0 = pending, 1 = completed)
+     *  so the watch can render a checkmark prefix in the All / Completed
+     *  views. The id is round-tripped so a follow-up
+     *  [TASK_COMPLETE_REQUEST] can target the row directly.
+     *
+     *  Mirrors the NOTES_REQUEST shape but ships id + state alongside
+     *  the text (notes-on-watch doesn't need either because
+     *  NOTE_DETAIL_REQUEST uses positional index — tasks need the id
+     *  because completing one by position would race the underlying
+     *  list ordering, and the state because All view shows both
+     *  pending and completed inline). */
+    val TASKS_REQUEST: UInt  = 10037u
+    val TASKS_RESPONSE: UInt = 10038u
+
+    /** Filter values for [TASKS_REQUEST]. Wire-stable; the watch sends
+     *  these per-request, and the companion picks the corresponding
+     *  TaskRepository method. */
+    const val TASKS_FILTER_PENDING: Int   = 0
+    const val TASKS_FILTER_COMPLETED: Int = 1
+    const val TASKS_FILTER_ALL: Int       = 2
+
+    /** Per-task quick-complete. Watch → companion: Int32 with the task's
+     *  id (the value the watch received in [TASKS_RESPONSE]). Companion
+     *  → watch: a single CSTRING with the user-facing result
+     *  (*"Completed: Buy milk"* / *"No pending tasks"*). */
+    val TASK_COMPLETE_REQUEST: UInt  = 10039u
+    val TASK_COMPLETE_RESPONSE: UInt = 10040u
+
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE].
      *  Stays under Pebble's AppMessage outbox budget (~636 bytes) minus
      *  tuple framing. */
@@ -122,6 +159,22 @@ object MessageKeys {
      *  single NOTES_RESPONSE payload. Never appears in printable text so
      *  splitting is unambiguous. */
     const val NOTES_SEPARATOR: Char = ''
+
+    /** Record-separator (US-ASCII 0x1E) — between tasks in TASKS_RESPONSE. */
+    const val TASKS_RECORD_SEPARATOR: Char = ''
+
+    /** Unit-separator (US-ASCII 0x1F) — between the id and text of a single
+     *  task in TASKS_RESPONSE. Neither separator appears in printable text
+     *  so the split is unambiguous. */
+    const val TASKS_UNIT_SEPARATOR: Char = ''
+
+    /** Cap on the [TASKS_RESPONSE] CSTRING payload. Pebble's AppMessage
+     *  outbox budget is ~636 bytes; framing overhead + tuple headers
+     *  leaves us ~600 bytes of payload to work with. The watch's
+     *  TASKS_MAX row cap (16) is the harder limit for typical task
+     *  text lengths; this budget only kicks in when many of the tasks
+     *  have unusually long bodies. */
+    const val TASKS_RESPONSE_MAX_CHARS: Int = 600
 
     /** All settings keys, grouped so [PebbleListenerService.onMessageReceived]
      *  can detect "this incoming message carries settings tuples" without a

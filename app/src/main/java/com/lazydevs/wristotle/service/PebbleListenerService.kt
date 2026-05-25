@@ -205,6 +205,44 @@ class PebbleListenerService : BasePebbleListenerService() {
             return ReceiveResult.Ack
         }
 
+        // Tasks-on-watch request: Int32 filter (0=pending, 1=completed,
+        // 2=all). Default to pending when the value is missing OR
+        // unrecognised so older watch builds still get a sensible
+        // response.
+        if (data[MessageKeys.TASKS_REQUEST] != null) {
+            val tasksApp = application as WristotleApplication
+            val filter = data.int32(MessageKeys.TASKS_REQUEST) ?: MessageKeys.TASKS_FILTER_PENDING
+            val list = when (filter) {
+                MessageKeys.TASKS_FILTER_COMPLETED -> tasksApp.taskRepository.listCompleted()
+                MessageKeys.TASKS_FILTER_ALL       -> tasksApp.taskRepository.listAll()
+                else                               -> tasksApp.taskRepository.listPending()
+            }
+            val payload = com.lazydevs.wristotle.tasks.TasksWireFrame.encode(list)
+            Log.d(TAG, "TASKS_REQUEST filter=$filter → sending ${list.size} tasks (${payload.length} chars)")
+            transport.sendTasksResponse(payload)
+            return ReceiveResult.Ack
+        }
+
+        // Per-task quick-complete: int32 task id. Watch's SELECT on a
+        // task row sends this; companion marks complete + replies with
+        // a user-facing string the watch shows in the chat surface.
+        val completeTaskId = data.int32(MessageKeys.TASK_COMPLETE_REQUEST)
+        if (completeTaskId != null) {
+            val tasksApp = application as WristotleApplication
+            val task = tasksApp.taskRepository.findById(completeTaskId.toLong())
+            val reply = when {
+                task == null -> "Task no longer exists"
+                task.completed -> "Task already completed"
+                else -> {
+                    tasksApp.taskRepository.markCompleted(task.id)
+                    "Completed: ${task.text}"
+                }
+            }
+            Log.d(TAG, "TASK_COMPLETE_REQUEST id=$completeTaskId → $reply")
+            transport.sendTaskCompleteResponse(reply)
+            return ReceiveResult.Ack
+        }
+
         // Per-note detail fetch: int32 index into the most-recent snapshot.
         // Watch shows the full body in its detail window, with a short
         // timestamp header prepended for context.
