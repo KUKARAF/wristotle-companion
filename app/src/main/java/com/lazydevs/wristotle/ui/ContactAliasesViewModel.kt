@@ -115,6 +115,23 @@ class ContactAliasesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
+     * Check whether the given alias phrase already matches a Contacts
+     * row via the regular score-floor matcher (no alias involved). Used
+     * by the add form to surface a "this phrase already matches X —
+     * alias will override" warning so users don't accidentally
+     * supersede an existing contact's literal name.
+     *
+     * Returns the conflicting contact's display name, or null if no
+     * conflict (phrase wouldn't have meant anyone before the alias is
+     * added). Mirrors what the dispatch path would do for the same
+     * spoken value.
+     */
+    suspend fun conflictingContact(phrase: String): String? {
+        if (phrase.isBlank() || !hasContactsPermission) return null
+        return contacts.findInContacts(phrase)?.name
+    }
+
+    /**
      * Search Contacts for the picker dropdown. Returns up to
      * [MAX_PICKER_RESULTS] best matches sorted alphabetically.
      * Each row carries the `lookupKey` so the eventual save persists

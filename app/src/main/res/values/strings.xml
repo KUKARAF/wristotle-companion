@@ -148,6 +148,7 @@
     <string name="contact_aliases_show">Saved aliases (%1$d)</string>
     <string name="contact_aliases_done">Done</string>
     <string name="contact_aliases_need_permission">Grant Contacts access in Permissions to add aliases.</string>
+    <string name="contact_aliases_conflict_warning">This phrase already matches %1$s — your alias will override that.</string>
 
     <!-- Settings drill-down navigation -->
     <string name="settings_back">Back</string>

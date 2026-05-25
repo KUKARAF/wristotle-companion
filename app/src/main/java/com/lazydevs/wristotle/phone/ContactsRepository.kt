@@ -54,14 +54,33 @@ class ContactsRepository(
             // so the caller surfaces a not-found state. The Settings
             // card flags the dead alias so the user can prune.
         }
+        findInProvider(query)
+    }
 
+    /**
+     * Provider-only lookup, bypassing the alias store. Same matcher
+     * `findContact` uses on alias miss — exposed publicly so the
+     * Settings card can ask "would this phrase already mean someone?"
+     * when the user is creating an alias, without involving aliases
+     * (which by definition haven't been saved yet).
+     *
+     * Returns null when the query doesn't clear [CONTACT_MATCH_FLOOR],
+     * same as `findContact` — the "(none of your contacts come close)"
+     * outcome.
+     */
+    suspend fun findInContacts(query: String): Contact? =
+        withContext(Dispatchers.IO) { findInProvider(query) }
+
+    /** Single implementation of the LIKE %query% + score-floor matcher.
+     *  Must be called from an IO dispatcher. */
+    private fun findInProvider(query: String): Contact? {
         val nameCursor = context.contentResolver.query(
             ContactsContract.Contacts.CONTENT_URI,
             arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME_PRIMARY),
             "${ContactsContract.Contacts.DISPLAY_NAME_PRIMARY} LIKE ?",
             arrayOf("%$query%"),
             "${ContactsContract.Contacts.DISPLAY_NAME_PRIMARY} ASC"
-        ) ?: return@withContext null
+        ) ?: return null
 
         var bestId: String? = null
         var bestName: String? = null
@@ -80,9 +99,9 @@ class ContactsRepository(
             }
         }
 
-        if (bestScore < CONTACT_MATCH_FLOOR) return@withContext null
-        val id   = bestId   ?: return@withContext null
-        val name = bestName ?: return@withContext null
+        if (bestScore < CONTACT_MATCH_FLOOR) return null
+        val id   = bestId   ?: return null
+        val name = bestName ?: return null
 
         val phoneCursor = context.contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -90,13 +109,13 @@ class ContactsRepository(
             "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
             arrayOf(id),
             null
-        ) ?: return@withContext null
+        ) ?: return null
 
         val number = phoneCursor.use { cursor ->
             if (cursor.moveToFirst()) cursor.getString(0) else null
-        } ?: return@withContext null
+        } ?: return null
 
-        Contact(name, number)
+        return Contact(name, number)
     }
 
     /**

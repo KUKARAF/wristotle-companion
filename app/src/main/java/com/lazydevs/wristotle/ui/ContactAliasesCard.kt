@@ -89,6 +89,7 @@ fun ContactAliasesCard(
             if (vm.hasContactsPermission) {
                 AddContactAliasForm(
                     onSearch = vm::searchContacts,
+                    onConflictCheck = vm::conflictingContact,
                     onAdd = { phrase, pick -> vm.add(phrase, pick) },
                 )
             } else {
@@ -161,6 +162,7 @@ private fun ContactAliasesDialog(
 @Composable
 internal fun AddContactAliasForm(
     onSearch: suspend (String) -> List<PickableContact>,
+    onConflictCheck: suspend (String) -> String?,
     onAdd: (phrase: String, pick: PickableContact) -> Unit,
 ) {
     var phrase by rememberSaveable { mutableStateOf("") }
@@ -168,7 +170,16 @@ internal fun AddContactAliasForm(
     var selected by remember { mutableStateOf<PickableContact?>(null) }
     var matches by remember { mutableStateOf<List<PickableContact>>(emptyList()) }
     var expanded by remember { mutableStateOf(false) }
+    var conflict by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    // Re-run the conflict check whenever the phrase field changes.
+    // Cheap query (LIKE %phrase% + score filter, indexed) so debouncing
+    // isn't worth the complexity — every keystroke re-runs in the IO
+    // dispatcher.
+    LaunchedEffect(phrase) {
+        conflict = if (phrase.isBlank()) null else onConflictCheck(phrase)
+    }
 
     // Re-query whenever the user edits the contact field. Each
     // keystroke launches a fresh coroutine — cheap since the LIKE
@@ -189,6 +200,14 @@ internal fun AddContactAliasForm(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
+
+        conflict?.let { name ->
+            Text(
+                stringResource(R.string.contact_aliases_conflict_warning, name),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+        }
 
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
             OutlinedTextField(
