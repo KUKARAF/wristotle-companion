@@ -189,4 +189,50 @@ internal object PrefixHints {
      */
     fun hintFor(query: String): Intent? =
         HINTS.firstOrNull { (re, _) -> re.containsMatchIn(query) }?.second
+
+    /**
+     * Deterministic SetAlarm ↔ SetTimer disambiguation, applied AFTER the
+     * classifier picks (overrides even a confident pick — unlike [hintFor],
+     * which the router only consults when the classifier is uncertain).
+     *
+     * The embedding confuses the two: both are "set a X for <time>", and
+     * Whisper routinely drops the distinguishing word ("timer" → "time"),
+     * which pushes a timer phrase toward the alarm centroid. A
+     * confident-but-wrong SetAlarm pick then runs the duration through
+     * prettytime (which resolves "10 minutes" to now+10min) and sets a
+     * bogus alarm — the exact "my timer set an alarm" bug.
+     *
+     * The signal is unambiguous, though:
+     *   - a RELATIVE DURATION ("for 10 minutes", "30 seconds", "an hour")
+     *     is always a timer;
+     *   - a CLOCK TIME ("7am", "6:30", "o'clock", "noon", "tonight") is
+     *     always an alarm.
+     *
+     * When exactly one signal is present we correct to it; when both or
+     * neither appear (genuinely ambiguous, e.g. a bare "set a timer for
+     * five") we trust the classifier's pick. No-ops for any intent
+     * outside the alarm/timer pair.
+     */
+    fun refineAlarmTimer(query: String, intent: Intent): Intent {
+        if (intent != Intent.SetAlarm && intent != Intent.SetTimer) return intent
+        val hasClock = CLOCK_MARKER.containsMatchIn(query)
+        val hasDuration = DURATION_UNIT.containsMatchIn(query)
+        return when {
+            hasDuration && !hasClock -> Intent.SetTimer
+            hasClock && !hasDuration -> Intent.SetAlarm
+            else -> intent
+        }
+    }
+
+    // A wall-clock time: "7:30", "7 am", "o'clock", or a time-of-day word.
+    private val CLOCK_MARKER = Regex(
+        "(?i)\\b(\\d{1,2}\\s*:\\s*\\d{2}|\\d{1,2}\\s*(a\\.?m\\.?|p\\.?m\\.?)|o'?clock|noon|midnight|midday|morning|afternoon|evening|tonight)\\b"
+    )
+    // A relative duration: a number (digit or word) immediately followed by
+    // a time unit. "for an hour", "ten minutes", "30 seconds", "half an
+    // hour". The number-word is required before the unit so a bare "alarm"
+    // / "timer" noun can't match.
+    private val DURATION_UNIT = Regex(
+        "(?i)\\b(\\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|forty[- ]five|fifty|sixty|ninety|half)\\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\\b"
+    )
 }

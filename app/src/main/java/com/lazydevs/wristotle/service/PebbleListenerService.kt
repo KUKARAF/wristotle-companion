@@ -610,15 +610,25 @@ class PebbleListenerService : BasePebbleListenerService() {
             val why = if (below) "below-threshold" else "ambiguous"
             val hint = PrefixHints.hintFor(query)
             if (hint != null) {
-                Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) → prefix hint $hint wins")
-                val slots = slotExtractors.extract(hint, query)
-                return classified.copy(intent = hint, slots = slots)
+                val refined = PrefixHints.refineAlarmTimer(query, hint)
+                Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) → prefix hint $refined wins")
+                val slots = slotExtractors.extract(refined, query)
+                return classified.copy(intent = refined, slots = slots)
             }
             Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) and no prefix hint → Unknown")
             return classified.copy(intent = Intent.Unknown, slots = emptyMap())
         }
-        val slots = slotExtractors.extract(classified.intent, query)
-        return classified.copy(slots = slots)
+        // Confident classifier pick — trusted directly, EXCEPT for the
+        // deterministic SetAlarm↔SetTimer correction. The embedding
+        // confidently confuses the pair (and Whisper drops "timer"→"time"),
+        // so a relative duration vs. a clock time overrides the pick. No-op
+        // for every other intent. See PrefixHints.refineAlarmTimer.
+        val finalIntent = PrefixHints.refineAlarmTimer(query, classified.intent)
+        if (finalIntent != classified.intent) {
+            Log.d(TAG, "alarm/timer refine: ${classified.intent} → $finalIntent for \"$query\"")
+        }
+        val slots = slotExtractors.extract(finalIntent, query)
+        return classified.copy(intent = finalIntent, slots = slots)
     }
 
     /**

@@ -26,9 +26,15 @@ class SetTimerHandler(private val context: Context) : ActionHandler {
         val seconds = result.slots["seconds"] as? Int
             ?: return "Couldn't understand the duration.\nTry \"set a timer for 10 minutes\"."
 
+        // Deliberately NOT EXTRA_SKIP_UI=true (unlike SetAlarmHandler).
+        // Google Clock, given SKIP_UI, runs the timer in the background and
+        // never surfaces the Timers tab — the countdown fires but the user
+        // can't see or cancel it. A running timer is something you want to
+        // watch, so let the Clock app open + show it. (Alarms are
+        // set-and-forget, so SetAlarm keeps SKIP_UI.)
         val timerIntent = AndroidIntent(AlarmClock.ACTION_SET_TIMER).apply {
             putExtra(AlarmClock.EXTRA_LENGTH, seconds)
-            putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+            putExtra(AlarmClock.EXTRA_SKIP_UI, false)
             addFlags(AndroidIntent.FLAG_ACTIVITY_NEW_TASK)
         }
 
