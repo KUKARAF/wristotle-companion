@@ -305,6 +305,8 @@ class WristotleApplication : Application() {
             // verbs; the handlers differ only in what they DO with the matched task.
             Intent.CompleteTask to com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots(),
             Intent.DeleteTask to com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots(),
+            Intent.SetAlarm to com.lazydevs.wristotle.nlu.slots.SetAlarmSlots(),
+            Intent.SetTimer to com.lazydevs.wristotle.nlu.slots.SetTimerSlots(),
         ))
 
         learningCollector = LearningCollector(

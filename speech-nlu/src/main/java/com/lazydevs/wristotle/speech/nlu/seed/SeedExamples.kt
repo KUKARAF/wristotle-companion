@@ -96,18 +96,45 @@ object SeedExamples {
             "remind me to pick up milk at five pm",
             "set a reminder for the meeting tomorrow at noon",
             "remember to call the dentist on friday",
-            "set an alarm for ten am",
-            "wake me up at seven",
             "remind me to take my pills at nine",
             "schedule a reminder for laundry tonight",
             "ping me in twenty minutes",
-            "buzz me at three pm",
             "remind me about the standup at nine thirty",
-            "set timer for fifteen minutes",
             "remind me to leave by six",
             "I need a reminder to call grandma tomorrow",
             "tell me when it's three pm",
             "remind me later",
+        ))
+        // ── SetAlarm ────────────────────────────────────────────────────
+        // Distinct from Reminder: an alarm makes the PHONE ring at a
+        // wall-clock time via the system clock app. The "alarm" / "wake
+        // me" keywords are the discriminator from "remind me".
+        addAll(Intent.SetAlarm, listOf(
+            "set an alarm for seven am",
+            "set an alarm for six thirty",
+            "wake me up at seven",
+            "wake me at six fifteen tomorrow",
+            "set alarm for eight o'clock",
+            "alarm for five thirty am",
+            "can you set an alarm for nine",
+            "put an alarm on for ten thirty",
+            "new alarm at six am",
+            "set my alarm for quarter past seven",
+        ))
+        // ── SetTimer ────────────────────────────────────────────────────
+        // A countdown via the system clock app. "timer" keyword + a
+        // duration. Distinct from SetAlarm (wall-clock time).
+        addAll(Intent.SetTimer, listOf(
+            "set a timer for ten minutes",
+            "set a timer for five minutes",
+            "timer for thirty seconds",
+            "set a twenty minute timer",
+            "start a timer for two minutes",
+            "set a timer for one hour",
+            "timer for fifteen minutes",
+            "set a timer for an hour and a half",
+            "give me a timer for forty five minutes",
+            "countdown timer for three minutes",
         ))
         // ── Cancel ──────────────────────────────────────────────────────
         addAll(Intent.Cancel, listOf(

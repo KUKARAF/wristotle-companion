@@ -36,7 +36,9 @@ fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.OpenApp,
     Intent.MediaPlay,
     Intent.CompleteTask, // marks a row done; user-data mutation
-    Intent.DeleteTask    // removes a row; harder to recover
+    Intent.DeleteTask,   // removes a row; harder to recover
+    Intent.SetAlarm,     // a misheard time wakes you at the wrong hour
+    Intent.SetTimer      // a misheard duration is annoying to catch after the fact
         -> true
 
     Intent.MediaPause,

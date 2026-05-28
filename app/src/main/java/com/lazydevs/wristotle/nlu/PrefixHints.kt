@@ -136,6 +136,15 @@ internal object PrefixHints {
         // prefix-route it and let the classifier seeds + slot extraction
         // decide.
         Regex("(?i)^\\s*(notes?[\\s.:,;!?\\-]|(make|take|save|store|keep|add)\\s+(a\\s+)?notes?\\b|(jot|write)\\s+(this|that|it)?\\s*down\\b|noted\\b|(for|to|add\\s+to)\\s+my\\s+notes?\\b|remember\\s+that\\b)") to Intent.Note,
+        // SetAlarm + SetTimer — sit ABOVE Reminder. The embedding confuses
+        // "wake me up at 7" / "set an alarm for 7" with "remind me at 7"
+        // (the time dominates the cosine), so the alarm / timer keyword is
+        // the deterministic discriminator. "wake me" has no keyword noun so
+        // it gets its own opener. These don't collide with the Cancel rule
+        // ("kill the alarm" / "delete the alarm" start with cancel verbs,
+        // not set/start, so they stay Cancel).
+        Regex("(?i)(^\\s*(set|start|put|create|new)\\b.*\\balarm\\b|\\balarm\\s+(for|at)\\b|^\\s*wake\\s+me\\b)") to Intent.SetAlarm,
+        Regex("(?i)(^\\s*(set|start|put|create|new|countdown|give\\s+me)\\b.*\\btimer\\b|\\btimer\\s+for\\b)") to Intent.SetTimer,
         Regex("(?i)^\\s*(remind|set (a )?reminder|reminder)\\b") to Intent.Reminder,
         // ListTasks — interrogative / list / show + the `tasks` noun.
         // Mirrors the ListReminders shape. Sits ABOVE AddTask so a

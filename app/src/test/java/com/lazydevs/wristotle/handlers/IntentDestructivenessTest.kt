@@ -28,6 +28,8 @@ class IntentDestructivenessTest {
             Intent.MediaPlay,
             Intent.CompleteTask, // marks user-data row done
             Intent.DeleteTask,   // removes user-data row
+            Intent.SetAlarm,     // misheard time wakes you at the wrong hour
+            Intent.SetTimer,     // misheard duration annoying to catch after
         )
         for (intent in Intent.entries) {
             val expected = intent in expectedDestructive

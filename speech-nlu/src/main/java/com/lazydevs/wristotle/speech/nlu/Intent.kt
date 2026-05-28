@@ -125,6 +125,19 @@ enum class Intent {
      *  / "remove X" without that anchor stay with Cancel. Destructive. */
     DeleteTask,
 
+    /** Set a phone alarm via the system clock app ("set an alarm for 7am",
+     *  "wake me up at 6:30"). Slot: `time` (java.util.Date — hour + minute
+     *  are read off it). Handled by SetAlarmHandler firing
+     *  AlarmClock.ACTION_SET_ALARM with EXTRA_SKIP_UI. Set-only: Android
+     *  has no API to list or cancel a scheduled alarm. */
+    SetAlarm,
+
+    /** Start a countdown timer via the system clock app ("set a timer for
+     *  10 minutes", "timer for 5 min"). Slot: `seconds` (Int). Handled by
+     *  SetTimerHandler firing AlarmClock.ACTION_SET_TIMER with EXTRA_LENGTH
+     *  + EXTRA_SKIP_UI. A bare number ("timer for 10") defaults to minutes. */
+    SetTimer,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

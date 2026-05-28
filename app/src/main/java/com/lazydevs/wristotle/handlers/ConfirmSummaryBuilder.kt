@@ -77,6 +77,12 @@ object ConfirmSummaryBuilder {
         // catch a mis-target before the action runs.
         Intent.CompleteTask  -> "action: complete\ndetails: ${slot(r, "target")}"
         Intent.DeleteTask    -> "action: delete-task\ndetails: ${slot(r, "target")}"
+        // SetAlarm shows just the wall-clock time ("7:00 AM") — the date
+        // portion of the slot is irrelevant to an alarm. SetTimer shows a
+        // compact duration ("10m" / "1m 30s"). A misheard time/duration is
+        // exactly what the confirm prompt is here to catch.
+        Intent.SetAlarm      -> "action: alarm\ndetails: ${alarmTime(r)}"
+        Intent.SetTimer      -> "action: timer\ndetails: ${timerDuration(r)}"
         Intent.ListReminders -> "action: list-reminders\ndetails: -"
         Intent.Calendar      -> "action: calendar\ndetails: -"
         Intent.FindPhone     -> "action: find-phone\ndetails: -"
@@ -145,6 +151,23 @@ object ConfirmSummaryBuilder {
     private fun timeOrDash(r: IntentResult): String =
         (r.slots["time"] as? Date)?.let { TIME_FMT.get()!!.format(it) } ?: "-"
 
+    /** Wall-clock time for SetAlarm — "7:00 AM". No day: an alarm is a
+     *  time-of-day, not a dated event. */
+    private fun alarmTime(r: IntentResult): String =
+        (r.slots["time"] as? Date)?.let { ALARM_FMT.get()!!.format(it) } ?: "?"
+
+    /** Compact duration for SetTimer — "10m" / "1m 30s" / "45s". */
+    private fun timerDuration(r: IntentResult): String {
+        val secs = r.slots["seconds"] as? Int ?: return "?"
+        val m = secs / 60
+        val s = secs % 60
+        return when {
+            m > 0 && s > 0 -> "${m}m ${s}s"
+            m > 0 -> "${m}m"
+            else -> "${s}s"
+        }
+    }
+
     /**
      * Short, watch-friendly time format. Example: "Fri 3:00 PM" or
      * "May 25 3:00 PM" if a date >7 days out — adequate granularity for the
@@ -160,5 +183,11 @@ object ConfirmSummaryBuilder {
      */
     private val TIME_FMT: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
         override fun initialValue() = SimpleDateFormat("EEE h:mm a", Locale.getDefault())
+    }
+
+    /** Time-of-day only (no day) for SetAlarm. Same ThreadLocal rationale
+     *  as [TIME_FMT]. */
+    private val ALARM_FMT: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue() = SimpleDateFormat("h:mm a", Locale.getDefault())
     }
 }
