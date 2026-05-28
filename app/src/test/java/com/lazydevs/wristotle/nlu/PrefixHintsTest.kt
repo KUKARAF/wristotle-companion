@@ -319,4 +319,59 @@ class PrefixHintsTest {
             PrefixHints.hintFor("remind me to send notes to bob at 5pm"),
         )
     }
+
+    // --- Alarm / Timer prefix hints (sit above Reminder) ----------------
+
+    @Test fun `set an alarm maps to SetAlarm`() {
+        assertEquals(Intent.SetAlarm, PrefixHints.hintFor("set an alarm for 7am"))
+    }
+
+    @Test fun `wake me maps to SetAlarm`() {
+        assertEquals(Intent.SetAlarm, PrefixHints.hintFor("wake me up at 6:30"))
+    }
+
+    @Test fun `set a timer maps to SetTimer`() {
+        assertEquals(Intent.SetTimer, PrefixHints.hintFor("set a timer for 10 minutes"))
+    }
+
+    @Test fun `timer for maps to SetTimer`() {
+        assertEquals(Intent.SetTimer, PrefixHints.hintFor("timer for 5 minutes"))
+    }
+
+    // --- refineAlarmTimer: deterministic post-classifier correction -----
+
+    @Test fun `duration forces SetTimer even when classifier said SetAlarm`() {
+        // The Whisper "timer"->"time" mishearing case: classifier lands on
+        // SetAlarm, but the relative duration must win.
+        assertEquals(
+            Intent.SetTimer,
+            PrefixHints.refineAlarmTimer("set a time for 10 minutes", Intent.SetAlarm),
+        )
+    }
+
+    @Test fun `clock time forces SetAlarm even when classifier said SetTimer`() {
+        assertEquals(
+            Intent.SetAlarm,
+            PrefixHints.refineAlarmTimer("set a timer for 7am", Intent.SetTimer),
+        )
+    }
+
+    @Test fun `ambiguous bare query keeps the classifier pick`() {
+        // No clock marker, no duration unit → trust the classifier.
+        assertEquals(
+            Intent.SetTimer,
+            PrefixHints.refineAlarmTimer("set a timer for five", Intent.SetTimer),
+        )
+    }
+
+    @Test fun `refine is a no-op for non-alarm-timer intents`() {
+        assertEquals(
+            Intent.Reminder,
+            PrefixHints.refineAlarmTimer("set a timer for 10 minutes", Intent.Reminder),
+        )
+        assertEquals(
+            Intent.Call,
+            PrefixHints.refineAlarmTimer("call mom at 7am", Intent.Call),
+        )
+    }
 }
