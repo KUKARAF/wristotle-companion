@@ -87,6 +87,7 @@ object ConfirmSummaryBuilder {
         Intent.Calendar      -> "action: calendar\ndetails: -"
         Intent.FindPhone     -> "action: find-phone\ndetails: -"
         Intent.Time          -> "action: time\ndetails: -"
+        Intent.WorldTime     -> "action: world-time\ndetails: ${slot(r, "location")}"
         Intent.Battery       -> "action: battery\ndetails: -"
         Intent.Steps         -> "action: steps\ndetails: -"
         Intent.Vibrate       -> "action: vibrate\ndetails: -"

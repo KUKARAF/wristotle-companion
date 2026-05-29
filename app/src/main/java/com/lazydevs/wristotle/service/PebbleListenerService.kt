@@ -146,6 +146,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             com.lazydevs.wristotle.handlers.DeleteTaskHandler(app.taskRepository),
             SetAlarmHandler(this),
             SetTimerHandler(this),
+            com.lazydevs.wristotle.handlers.WorldTimeHandler(),
         ))
     }
 
@@ -610,7 +611,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             val why = if (below) "below-threshold" else "ambiguous"
             val hint = PrefixHints.hintFor(query)
             if (hint != null) {
-                val refined = PrefixHints.refineAlarmTimer(query, hint)
+                val refined = PrefixHints.refineWorldTime(query, PrefixHints.refineAlarmTimer(query, hint))
                 Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) → prefix hint $refined wins")
                 val slots = slotExtractors.extract(refined, query)
                 return classified.copy(intent = refined, slots = slots)
@@ -623,9 +624,9 @@ class PebbleListenerService : BasePebbleListenerService() {
         // confidently confuses the pair (and Whisper drops "timer"→"time"),
         // so a relative duration vs. a clock time overrides the pick. No-op
         // for every other intent. See PrefixHints.refineAlarmTimer.
-        val finalIntent = PrefixHints.refineAlarmTimer(query, classified.intent)
+        val finalIntent = PrefixHints.refineWorldTime(query, PrefixHints.refineAlarmTimer(query, classified.intent))
         if (finalIntent != classified.intent) {
-            Log.d(TAG, "alarm/timer refine: ${classified.intent} → $finalIntent for \"$query\"")
+            Log.d(TAG, "intent refine: ${classified.intent} → $finalIntent for \"$query\"")
         }
         val slots = slotExtractors.extract(finalIntent, query)
         return classified.copy(intent = finalIntent, slots = slots)

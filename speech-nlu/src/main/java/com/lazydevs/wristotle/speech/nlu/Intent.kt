@@ -26,6 +26,21 @@ enum class Intent {
 
     FindPhone,
     Time,
+
+    /** World-clock query — "what time is it in Tokyo", "time in London".
+     *  Slot: `location` (String — the spoken city / country / region).
+     *  Handled by WorldTimeHandler: TimeZoneResolver maps the spoken
+     *  location to an Olson zone id (`java.util.TimeZone`, no network),
+     *  then formats the current time there plus the day + offset relative
+     *  to the phone's own zone.
+     *
+     *  Distinct from [Time], which the watch answers locally for the
+     *  wearer's own zone and never forwards — only location-qualified
+     *  queries reach the companion (the watch's local "time" command
+     *  bows out when it sees a standalone "in", so "what time is it in
+     *  X" falls through to COMPANION_QUERY). There is intentionally no
+     *  companion handler for plain [Time]. */
+    WorldTime,
     Battery,
     Steps,
     Vibrate,

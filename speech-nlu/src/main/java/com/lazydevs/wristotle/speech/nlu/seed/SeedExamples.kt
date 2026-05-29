@@ -224,6 +224,31 @@ object SeedExamples {
             "show me the time",
             "give me the time",
         ))
+        // ── WorldTime ───────────────────────────────────────────────────
+        // Location-qualified time queries. The "in <place>" suffix is the
+        // discriminator from the bare Time centroid (which the watch
+        // answers locally and never forwards). Variety of cities +
+        // countries across the "what time is it in" / "what's the time in"
+        // / "current time in" / bare "time in" shapes. The open-vocabulary
+        // location is resolved by TimeZoneResolver at dispatch time, so the
+        // seeds teach the question shapes rather than every city.
+        addAll(Intent.WorldTime, listOf(
+            "what time is it in tokyo",
+            "what time is it in london",
+            "what's the time in new york",
+            "what's the time in paris",
+            "time in los angeles",
+            "time in sydney",
+            "current time in berlin",
+            "current time in dubai",
+            "what time is it in india",
+            "what time is it in california",
+            "tell me the time in singapore",
+            "what's the local time in moscow",
+            "what time is it in san francisco right now",
+            "the time in chicago",
+            "what time is it in hong kong",
+        ))
         // ── Battery ─────────────────────────────────────────────────────
         addAll(Intent.Battery, listOf(
             "what's my battery",

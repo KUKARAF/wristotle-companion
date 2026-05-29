@@ -145,6 +145,13 @@ internal object PrefixHints {
         // not set/start, so they stay Cancel).
         Regex("(?i)(^\\s*(set|start|put|create|new)\\b.*\\balarm\\b|\\balarm\\s+(for|at)\\b|^\\s*wake\\s+me\\b)") to Intent.SetAlarm,
         Regex("(?i)(^\\s*(set|start|put|create|new|countdown|give\\s+me)\\b.*\\btimer\\b|\\btimer\\s+for\\b)") to Intent.SetTimer,
+        // WorldTime — a "time" / "clock" cue followed by a standalone "in
+        // <place>". The bare "what time is it" form is answered on the watch
+        // and never forwarded, so a location-qualified time query reaching
+        // the companion is a world-clock lookup. `\btime\b` (whole word) so
+        // "timer" / "sometime" don't trip it; sits below the timer rule so
+        // "set a timer …" keeps its meaning.
+        Regex("(?i)\\b(time|clock)\\b.*\\bin\\s+[a-z]") to Intent.WorldTime,
         Regex("(?i)^\\s*(remind|set (a )?reminder|reminder)\\b") to Intent.Reminder,
         // ListTasks — interrogative / list / show + the `tasks` noun.
         // Mirrors the ListReminders shape. Sits ABOVE AddTask so a
@@ -223,6 +230,29 @@ internal object PrefixHints {
             else -> intent
         }
     }
+
+    /**
+     * Deterministic Time → WorldTime correction, applied AFTER the classifier
+     * picks (same shape as [refineAlarmTimer]). Only ever upgrades a [Time] or
+     * [Unknown] pick — never touches a confident Calendar / Reminder / etc.
+     *
+     * Why it's needed: there is no companion handler for plain [Time] (the
+     * watch answers the wearer's own clock locally and only forwards
+     * location-qualified queries). But "what time is it in Tokyo" embeds very
+     * close to the bare "what time is it" centroid, so the classifier can
+     * confidently pick [Time] — which would dead-end at "Unknown command".
+     * When a "time"/"clock" cue is paired with a standalone "in <place>",
+     * route to [WorldTime] regardless of confidence; the slot extractor +
+     * resolver then decide whether the place is real.
+     */
+    fun refineWorldTime(query: String, intent: Intent): Intent {
+        if (intent != Intent.Time && intent != Intent.Unknown) return intent
+        return if (WORLDTIME_MARKER.containsMatchIn(query)) Intent.WorldTime else intent
+    }
+
+    // A "time"/"clock" cue followed by a standalone "in <letters>". Mirrors
+    // the WorldTime prefix-hint rule above.
+    private val WORLDTIME_MARKER = Regex("(?i)\\b(time|clock)\\b.*\\bin\\s+[a-z]")
 
     // A wall-clock time: "7:30", "7 am", "o'clock", or a time-of-day word.
     private val CLOCK_MARKER = Regex(

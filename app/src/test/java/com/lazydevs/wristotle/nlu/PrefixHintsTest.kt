@@ -374,4 +374,54 @@ class PrefixHintsTest {
             PrefixHints.refineAlarmTimer("call mom at 7am", Intent.Call),
         )
     }
+
+    // --- WorldTime: prefix hint + refineWorldTime correction ------------
+
+    @Test fun `time in a city maps to WorldTime via prefix hint`() {
+        assertEquals(Intent.WorldTime, PrefixHints.hintFor("what time is it in tokyo"))
+        assertEquals(Intent.WorldTime, PrefixHints.hintFor("time in london"))
+    }
+
+    @Test fun `bare time query is not a WorldTime hint`() {
+        // No location → no WorldTime hint (and the watch answers it locally
+        // anyway, so it never reaches the classifier path here).
+        assertNull(PrefixHints.hintFor("what time is it"))
+    }
+
+    @Test fun `timer query is not a WorldTime hint`() {
+        // \btime\b is whole-word, so "timer" must not trip the WorldTime rule.
+        assertEquals(Intent.SetTimer, PrefixHints.hintFor("set a timer for 10 minutes in the kitchen"))
+    }
+
+    @Test fun `refineWorldTime upgrades a confident Time pick`() {
+        // There's no companion Time handler; "what time is it in Tokyo" that
+        // the classifier confidently labels Time must be rerouted.
+        assertEquals(
+            Intent.WorldTime,
+            PrefixHints.refineWorldTime("what time is it in tokyo", Intent.Time),
+        )
+    }
+
+    @Test fun `refineWorldTime upgrades an Unknown pick`() {
+        assertEquals(
+            Intent.WorldTime,
+            PrefixHints.refineWorldTime("the time in paris", Intent.Unknown),
+        )
+    }
+
+    @Test fun `refineWorldTime leaves a bare Time pick alone`() {
+        assertEquals(
+            Intent.Time,
+            PrefixHints.refineWorldTime("what time is it", Intent.Time),
+        )
+    }
+
+    @Test fun `refineWorldTime is a no-op for other intents`() {
+        // A Calendar query that happens to contain "time ... in ..." keeps
+        // its pick — refineWorldTime only ever touches Time / Unknown.
+        assertEquals(
+            Intent.Calendar,
+            PrefixHints.refineWorldTime("what time is my meeting in the morning", Intent.Calendar),
+        )
+    }
 }
