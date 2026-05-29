@@ -108,6 +108,10 @@ class WristotleApplication : Application() {
     lateinit var reminderSettings: com.lazydevs.wristotle.handlers.ReminderSettings
         private set
 
+    /** Weather feature preferences (unit + provider + OpenWeather API key). */
+    lateinit var weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings
+        private set
+
     /** Room database singletons — exposed for the backup/restore feature so
      *  it can pull rows via the existing DAOs (`db.<entity>Dao().allForBackup()`)
      *  and encode them through the per-entity `*Json` codecs. No PRAGMA / WAL
@@ -249,6 +253,7 @@ class WristotleApplication : Application() {
         taskRepository = com.lazydevs.wristotle.tasks.TaskRepository(tasksDb.taskDao())
 
         reminderSettings = com.lazydevs.wristotle.handlers.ReminderSettings(this)
+        weatherSettings = com.lazydevs.wristotle.settings.WeatherSettings(this)
 
         nluDb = NluDatabase.build(this)
         nluBank = ExampleBank(nluDb.exampleDao())

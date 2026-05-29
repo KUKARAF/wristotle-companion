@@ -2,6 +2,8 @@ package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.nlu.slots.weatherLocation
 import com.lazydevs.wristotle.phone.PhoneLocation
+import com.lazydevs.wristotle.settings.WeatherProviderId
+import com.lazydevs.wristotle.settings.WeatherSettings
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import kotlin.math.roundToInt
@@ -21,9 +23,10 @@ import kotlin.math.roundToInt
  * card.
  */
 class WeatherHandler(
-    private val provider: WeatherProvider,
+    private val openMeteo: WeatherProvider,
+    private val openWeatherFactory: (apiKey: String) -> WeatherProvider,
     private val phoneLocation: PhoneLocation,
-    private val unitProvider: () -> TempUnit = ::localeDefaultTempUnit,
+    private val settings: WeatherSettings,
 ) : ActionHandler {
 
     override val tag: String = "weather"
@@ -34,9 +37,9 @@ class WeatherHandler(
         val location = if (place != null) {
             WeatherLocation.Place(place)
         } else {
-            // Bare query — try the phone's cached fix; the three messages
-            // below name the specific reason the bare path can't proceed so
-            // the user knows what to fix.
+            // Bare query — try the phone's cached fix; the messages below
+            // name the specific reason the bare path can't proceed so the
+            // user knows what to fix.
             val fix = phoneLocation.lastKnown()
             if (fix == null) {
                 return if (phoneLocation.hasPermission()) NO_RECENT_LOCATION_HINT
@@ -44,7 +47,16 @@ class WeatherHandler(
             }
             WeatherLocation.Coords(fix.latitude, fix.longitude)
         }
-        return format(provider.currentWeather(location, unitProvider()))
+        val provider = selectProvider()
+        return format(provider.currentWeather(location, settings.unit.value))
+    }
+
+    /** Reads the user's chosen provider from settings. The OpenWeather impl
+     *  is constructed fresh each call so the freshest API key from settings
+     *  always lands — open-meteo is stateless and shared. */
+    private fun selectProvider(): WeatherProvider = when (settings.provider.value) {
+        WeatherProviderId.OPEN_METEO -> openMeteo
+        WeatherProviderId.OPEN_WEATHER -> openWeatherFactory(settings.apiKey.value)
     }
 
     private fun format(result: WeatherResult): String = when (result) {

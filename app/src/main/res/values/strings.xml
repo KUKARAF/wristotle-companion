@@ -166,7 +166,19 @@
     <string name="settings_section_diagnostics">Diagnostics</string>
     <string name="settings_section_notes">Notes</string>
     <string name="settings_section_reminders">Reminders</string>
+    <string name="settings_section_weather">Weather</string>
     <string name="settings_section_watch">Watch</string>
+
+    <string name="weather_settings_header">Weather</string>
+    <string name="weather_settings_desc">Picks the unit and the backend for voice weather queries. Default is open-meteo (no key, free). Switch to OpenWeather if you\'d rather use your own free-tier API key — more control over your quota and slightly different data fields.</string>
+    <string name="weather_settings_unit_label">Unit</string>
+    <string name="weather_settings_unit_celsius">Celsius (°C)</string>
+    <string name="weather_settings_unit_fahrenheit">Fahrenheit (°F)</string>
+    <string name="weather_settings_provider_label">Provider</string>
+    <string name="weather_settings_provider_openmeteo">open-meteo (default, no key)</string>
+    <string name="weather_settings_provider_openweather">OpenWeather (your API key)</string>
+    <string name="weather_settings_api_key_label">OpenWeather API key</string>
+    <string name="weather_settings_api_key_hint">Get a free key at openweathermap.org → API keys. Stored locally; sent only with weather requests to OpenWeather.</string>
     <string name="settings_section_backup">Backup &amp; Restore</string>
 
     <!-- Reminders card -->

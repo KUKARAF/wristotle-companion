@@ -72,6 +72,7 @@ enum class SettingsCategory(@StringRes val labelRes: Int, val emoji: String) {
     Conversation(R.string.settings_section_conversation, "💬"),  // 💬
     Notes(R.string.settings_section_notes, "📝"),               // 📝
     Reminders(R.string.settings_section_reminders, "⏰"),  // ⏰
+    Weather(R.string.settings_section_weather, "☁️"),  // ☁️
     Models(R.string.settings_section_models, "🧠"),  // 🧠
     Learning(R.string.settings_section_learning, "🎓"),         // 🎓
     Backup(R.string.settings_section_backup, "💾"),  // 💾
@@ -109,6 +110,7 @@ fun SettingsScreen(
     // Single int knob doesn't warrant a dedicated VM.
     val reminderSettings = (LocalContext.current.applicationContext as WristotleApplication).reminderSettings
     val reminderDefaultMinutes by reminderSettings.defaultOffsetMin.collectAsState()
+    val weatherSettings = (LocalContext.current.applicationContext as WristotleApplication).weatherSettings
     // Audio capture only works when Wristotle's Whisper recognizer is in the
     // dictation path (microPebble). Under Core Devices the audio never reaches
     // us, so the toggle would be a no-op — hide it.
@@ -164,6 +166,7 @@ fun SettingsScreen(
                 companion = companion,
                 reminderDefaultMinutes = reminderDefaultMinutes,
                 reminderSettings = reminderSettings,
+                weatherSettings = weatherSettings,
                 onShowClearLearnedConfirm = { showClearLearnedConfirm = true },
                 onShowClearAudioConfirm = { showClearAudioConfirm = true },
                 onShrinkRequest = { newDays ->
@@ -329,6 +332,7 @@ private fun SettingsCategoryContent(
     companion: com.lazydevs.wristotle.transport.PebbleCompanionDetector.State,
     reminderDefaultMinutes: Int,
     reminderSettings: ReminderSettings,
+    weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings,
     onShowClearLearnedConfirm: () -> Unit,
     onShowClearAudioConfirm: () -> Unit,
     onShrinkRequest: (Int) -> Unit,
@@ -363,6 +367,9 @@ private fun SettingsCategoryContent(
                     options = ReminderSettings.ALLOWED_OFFSET_MIN,
                     onSelect = reminderSettings::setDefaultOffsetMin,
                 )
+
+            SettingsCategory.Weather ->
+                WeatherSettingsCard(settings = weatherSettings)
 
             SettingsCategory.Models -> {
                 WhisperModelsCard(vm = modelsVm)
