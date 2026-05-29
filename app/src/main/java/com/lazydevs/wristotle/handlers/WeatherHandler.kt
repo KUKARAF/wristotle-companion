@@ -1,6 +1,7 @@
 package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.nlu.slots.weatherLocation
+import com.lazydevs.wristotle.phone.PhoneLocation
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import kotlin.math.roundToInt
@@ -9,15 +10,19 @@ import kotlin.math.roundToInt
  * Handles [Intent.Weather] — fetches the current weather from a
  * [WeatherProvider] and renders a short, watch-friendly line.
  *
- * **Phase A:** location slot required. Bare *"what's the weather"* returns
- * a hint to specify a city. Phase B will wire `PhoneLocation` so the bare
- * form can fall back to the phone's last-known location.
+ * Two paths:
+ *  - **Place named** (*"weather in Tokyo"*) → provider geocodes + fetches.
+ *  - **Bare query** (*"what's the weather"*) → tries the phone's last-known
+ *    location via [phoneLocation]. Falls back to a permission-specific hint
+ *    when no cached fix is available so the user knows whether to grant
+ *    Location or just name a city.
  *
- * Unit is the locale default for Phase A; Phase C reads it from
- * `WeatherSettings`.
+ * Unit is the locale default for now; Phase C will read it from a settings
+ * card.
  */
 class WeatherHandler(
     private val provider: WeatherProvider,
+    private val phoneLocation: PhoneLocation,
     private val unitProvider: () -> TempUnit = ::localeDefaultTempUnit,
 ) : ActionHandler {
 
@@ -26,8 +31,20 @@ class WeatherHandler(
 
     override suspend fun handle(result: IntentResult): String {
         val place = result.slots.weatherLocation()
-            ?: return BARE_QUERY_HINT
-        return format(provider.currentWeather(WeatherLocation.Place(place), unitProvider()))
+        val location = if (place != null) {
+            WeatherLocation.Place(place)
+        } else {
+            // Bare query — try the phone's cached fix; the three messages
+            // below name the specific reason the bare path can't proceed so
+            // the user knows what to fix.
+            val fix = phoneLocation.lastKnown()
+            if (fix == null) {
+                return if (phoneLocation.hasPermission()) NO_RECENT_LOCATION_HINT
+                else NO_PERMISSION_HINT
+            }
+            WeatherLocation.Coords(fix.latitude, fix.longitude)
+        }
+        return format(provider.currentWeather(location, unitProvider()))
     }
 
     private fun format(result: WeatherResult): String = when (result) {
@@ -41,9 +58,9 @@ class WeatherHandler(
     }
 
     private companion object {
-        // Phase A hint — Phase B replaces this with a last-known-location
-        // attempt, falling back to a similar message when no location is
-        // available or the permission isn't granted.
-        const val BARE_QUERY_HINT = "Say \"weather in <city>\"."
+        const val NO_RECENT_LOCATION_HINT =
+            "No recent location.\nTry \"weather in <city>\"."
+        const val NO_PERMISSION_HINT =
+            "Location not allowed.\nTry \"weather in <city>\"\nor enable it in the app."
     }
 }

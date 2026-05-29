@@ -88,6 +88,12 @@
     <string name="media_control_open_settings">Open Notification Access settings</string>
     <string name="media_control_no_settings_toast">This device doesn\'t expose the Notification Access page in Settings.</string>
 
+    <string name="weather_location_header">Weather (Location)</string>
+    <string name="weather_location_active">Granted — \"what\'s the weather\" answers for your current location</string>
+    <string name="weather_location_inactive">Not granted — bare \"what\'s the weather\" replies with a hint; \"weather in &lt;city&gt;\" still works</string>
+    <string name="weather_location_desc">Coarse (~3 km) location lets the bare \"what\'s the weather\" voice command read your phone\'s last-known location and report the conditions there. Optional — without it, ask \"weather in &lt;city&gt;\" instead. No background location is used; the handler reads the cached fix at the moment you ask.</string>
+    <string name="weather_location_grant">Grant location</string>
+
     <!-- Background launch card -->
     <string name="background_launch_header">Reliable background app launch (optional)</string>
     <string name="background_launch_active">Active — \"open &lt;app&gt;\" from the watch foregrounds reliably</string>

@@ -33,6 +33,13 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Coarse location (~3 km accuracy) for bare "what's the weather"
+         queries — the handler reads the phone's last-known location and
+         fetches that point's current conditions. Optional: if denied,
+         the user can still ask "weather in <city>" and everything else
+         keeps working. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <!-- Optional "Display over other apps" permission. Wristotle never
          actually draws an overlay — holding the grant alone is what gets us
          BAL_ALLOW_SAW_PERMISSION in Android's BackgroundActivityStartController,

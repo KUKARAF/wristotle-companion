@@ -94,6 +94,7 @@ class MainActivity : ComponentActivity() {
                     backupVm = backupVm,
                     onRequestWatchPermissions = ::requestWatchPermissions,
                     onRequestVoicePermissions = ::requestVoicePermissions,
+                    onRequestLocationPermission = ::requestLocationPermission,
                 )
             }
         }
@@ -147,6 +148,17 @@ class MainActivity : ComponentActivity() {
             }
         }
         permissionRequest.launch(permissions.toTypedArray())
+    }
+
+    /**
+     * Runtime perm the bare "what's the weather" voice command needs (Weather
+     * card on the Permissions tab). Coarse location only — city-level
+     * accuracy is plenty for weather and it's less invasive than fine. Doesn't
+     * chain into the battery / notification flow because nothing else
+     * depends on it.
+     */
+    private fun requestLocationPermission() {
+        permissionRequest.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION))
     }
 
     /**

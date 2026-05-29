@@ -60,6 +60,7 @@ fun MainScreen(
     backupVm: BackupViewModel,
     onRequestWatchPermissions: () -> Unit,
     onRequestVoicePermissions: () -> Unit,
+    onRequestLocationPermission: () -> Unit,
 ) {
     val navController = rememberNavController()
     val perms by vm.permissions.collectAsState()
@@ -196,6 +197,7 @@ fun MainScreen(
                         vm = vm,
                         onRequestWatchPermissions = onRequestWatchPermissions,
                         onRequestVoicePermissions = onRequestVoicePermissions,
+                        onRequestLocationPermission = onRequestLocationPermission,
                     )
                 }
             }

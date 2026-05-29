@@ -58,6 +58,7 @@ fun PermissionsScreen(
     vm: MainViewModel,
     onRequestWatchPermissions: () -> Unit,
     onRequestVoicePermissions: () -> Unit,
+    onRequestLocationPermission: () -> Unit,
 ) {
     val perms by vm.permissions.collectAsState()
     val isDefaultProvider by vm.isDefaultVoiceProvider.collectAsState()
@@ -99,6 +100,10 @@ fun PermissionsScreen(
         MediaControlCard(
             granted = perms.mediaControl,
             onOpenSettings = { openNotificationListenerSettings(context) },
+        )
+        WeatherLocationCard(
+            granted = perms.coarseLocation,
+            onRequest = onRequestLocationPermission,
         )
         BackgroundLaunchCard(
             granted = perms.canDrawOverlays,
@@ -496,6 +501,39 @@ private fun MediaControlCard(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.media_control_open_settings))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeatherLocationCard(
+    granted: Boolean,
+    onRequest: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CardTitleWithInfo(
+                title = stringResource(R.string.weather_location_header),
+                description = stringResource(R.string.weather_location_desc),
+            )
+            Text(
+                if (granted) stringResource(R.string.weather_location_active)
+                else stringResource(R.string.weather_location_inactive),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (granted) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error,
+            )
+            if (!granted) {
+                Button(
+                    onClick = onRequest,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.weather_location_grant))
                 }
             }
         }

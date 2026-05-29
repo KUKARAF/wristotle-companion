@@ -47,6 +47,12 @@ data class PermissionState(
      * start, same as today.
      */
     val canDrawOverlays: Boolean = false,
+    /**
+     * True when `ACCESS_COARSE_LOCATION` is granted. Used by the bare
+     * "what's the weather" path to read the phone's last-known location.
+     * Optional — without it the user can still say "weather in &lt;city&gt;".
+     */
+    val coarseLocation: Boolean = false,
 )
 
 /**
@@ -112,6 +118,7 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
                     ignoringBatteryOptimizations = isIgnoringBatteryOptimizations(),
                     mediaControl                 = hasNotificationAccess(),
                     canDrawOverlays              = Settings.canDrawOverlays(app),
+                    coarseLocation               = app.hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION),
                 )
             }
             _isDefaultVoiceProvider.update { isThisAppTheDefaultVoiceProvider() }
