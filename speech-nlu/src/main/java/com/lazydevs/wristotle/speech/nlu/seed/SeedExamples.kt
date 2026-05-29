@@ -566,6 +566,28 @@ object SeedExamples {
             "delete task pick up the package",
             "scratch task buy oysters",
         ))
+        // ── Calculate ───────────────────────────────────────────────────
+        // On-device arithmetic. The digits + operator-word shapes are the
+        // discriminator; CalculateSlots does the real parsing, so the seeds
+        // teach the classifier the question shapes (percent-of / plus /
+        // minus / times / divided-by) rather than every number combination.
+        addAll(Intent.Calculate, listOf(
+            "what's 15 percent of 80",
+            "what is 20% of 50",
+            "what's 25 plus 17",
+            "what is 100 minus 30",
+            "12 times 8",
+            "what's 96 divided by 4",
+            "what is 7 times 6",
+            "calculate 45 plus 55",
+            "what's 18 divided by 3",
+            "how much is 30 percent of 200",
+            "what's 250 minus 75",
+            "what is 9 times 9",
+            "what's 50 percent of 120",
+            "compute 144 divided by 12",
+            "what's 15% of 80",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }

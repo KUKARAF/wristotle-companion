@@ -152,6 +152,13 @@ internal object PrefixHints {
         // "timer" / "sometime" don't trip it; sits below the timer rule so
         // "set a timer …" keeps its meaning.
         Regex("(?i)\\b(time|clock)\\b.*\\bin\\s+[a-z]") to Intent.WorldTime,
+        // Calculate — a number immediately followed by an arithmetic operator
+        // word/symbol ("15% of", "25 plus", "96 divided by"). Distinctive
+        // enough that no other intent's phrasing collides: reminder/timer
+        // numbers are followed by time units ("20 minutes"), not operators.
+        // Rescues the below-threshold/ambiguous path when the classifier is
+        // unsure on a bare "what's <math>".
+        Regex("(?i)\\b\\d+(\\.\\d+)?\\s*(%|\\b(?:plus|minus|times|multiplied\\s+by|divided\\s+by|over|percent)\\b)") to Intent.Calculate,
         Regex("(?i)^\\s*(remind|set (a )?reminder|reminder)\\b") to Intent.Reminder,
         // ListTasks — interrogative / list / show + the `tasks` noun.
         // Mirrors the ListReminders shape. Sits ABOVE AddTask so a

@@ -308,6 +308,7 @@ class WristotleApplication : Application() {
             Intent.SetAlarm to com.lazydevs.wristotle.nlu.slots.SetAlarmSlots(),
             Intent.SetTimer to com.lazydevs.wristotle.nlu.slots.SetTimerSlots(),
             Intent.WorldTime to com.lazydevs.wristotle.nlu.slots.WorldTimeSlots(),
+            Intent.Calculate to com.lazydevs.wristotle.nlu.slots.CalculateSlots(),
         ))
 
         learningCollector = LearningCollector(

@@ -153,6 +153,15 @@ enum class Intent {
      *  + EXTRA_SKIP_UI. A bare number ("timer for 10") defaults to minutes. */
     SetTimer,
 
+    /** On-device calculator — "what's 15% of 80", "25 plus 17", "96 divided
+     *  by 4". Slot: `expression` (String — a normalised arithmetic string,
+     *  e.g. "15 / 100 * 80"). CalculateSlots turns spoken operators
+     *  ("plus"/"times"/"divided by") and the "X% of Y" / "X% off Y" forms
+     *  into symbols; CalculateHandler evaluates via the pure [Calculator]
+     *  (recursive-descent over the four operators and parens) and formats the
+     *  result. Pure arithmetic, no network. Read-only — not in the confirm gate. */
+    Calculate,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

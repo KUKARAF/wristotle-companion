@@ -147,6 +147,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             SetAlarmHandler(this),
             SetTimerHandler(this),
             com.lazydevs.wristotle.handlers.WorldTimeHandler(),
+            com.lazydevs.wristotle.handlers.CalculateHandler(),
         ))
     }
 

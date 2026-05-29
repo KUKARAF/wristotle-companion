@@ -424,4 +424,26 @@ class PrefixHintsTest {
             PrefixHints.refineWorldTime("what time is my meeting in the morning", Intent.Calendar),
         )
     }
+
+    // --- Calculate: math-pattern hint -----------------------------------
+
+    @Test fun `percent of maps to Calculate`() {
+        assertEquals(Intent.Calculate, PrefixHints.hintFor("what's 15% of 80"))
+        assertEquals(Intent.Calculate, PrefixHints.hintFor("how much is 30 percent of 200"))
+    }
+
+    @Test fun `arithmetic operators map to Calculate`() {
+        assertEquals(Intent.Calculate, PrefixHints.hintFor("what's 25 plus 17"))
+        assertEquals(Intent.Calculate, PrefixHints.hintFor("96 divided by 4"))
+        assertEquals(Intent.Calculate, PrefixHints.hintFor("12 times 8"))
+    }
+
+    @Test fun `a reminder with a duration is not Calculate`() {
+        // "20 minutes" is a number + time unit, not a number + operator.
+        assertEquals(Intent.Reminder, PrefixHints.hintFor("remind me in 20 minutes to stretch"))
+    }
+
+    @Test fun `a timer is not Calculate`() {
+        assertEquals(Intent.SetTimer, PrefixHints.hintFor("set a timer for 10 minutes"))
+    }
 }
