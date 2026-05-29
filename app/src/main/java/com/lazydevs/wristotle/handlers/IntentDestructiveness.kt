@@ -57,6 +57,7 @@ fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.Time,
     Intent.WorldTime,     // read-only clock lookup
     Intent.Calculate,     // read-only arithmetic
+    Intent.Weather,       // read-only network lookup
     Intent.Battery,
     Intent.Steps,
     Intent.Vibrate,

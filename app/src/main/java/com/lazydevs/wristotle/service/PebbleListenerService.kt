@@ -148,6 +148,9 @@ class PebbleListenerService : BasePebbleListenerService() {
             SetTimerHandler(this),
             com.lazydevs.wristotle.handlers.WorldTimeHandler(),
             com.lazydevs.wristotle.handlers.CalculateHandler(),
+            com.lazydevs.wristotle.handlers.WeatherHandler(
+                provider = com.lazydevs.wristotle.handlers.OpenMeteoProvider(),
+            ),
         ))
     }
 

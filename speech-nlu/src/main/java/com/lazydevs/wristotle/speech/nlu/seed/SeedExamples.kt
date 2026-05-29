@@ -566,6 +566,32 @@ object SeedExamples {
             "delete task pick up the package",
             "scratch task buy oysters",
         ))
+        // ── Weather ─────────────────────────────────────────────────────
+        // Bare ("what's the weather") + location-qualified ("weather in
+        // Tokyo") + colloquial ("is it raining"). The "weather" / "forecast"
+        // / "raining" / "sunny" keyword shapes are the discriminator from
+        // every other intent.
+        addAll(Intent.Weather, listOf(
+            "what's the weather",
+            "what is the weather",
+            "weather",
+            "weather in tokyo",
+            "weather in london",
+            "what's the weather in new york",
+            "what's the weather in san francisco",
+            "how's the weather",
+            "how's the weather in paris",
+            "what's the forecast",
+            "what's it like outside",
+            "is it raining",
+            "is it sunny",
+            "is it cold outside",
+            "how hot is it",
+            "what's the temperature",
+            "what's the temperature in chicago",
+            "weather in india",
+            "current weather",
+        ))
         // ── Calculate ───────────────────────────────────────────────────
         // On-device arithmetic. The digits + operator-word shapes are the
         // discriminator; CalculateSlots does the real parsing, so the seeds

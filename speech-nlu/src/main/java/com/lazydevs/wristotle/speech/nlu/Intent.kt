@@ -153,6 +153,17 @@ enum class Intent {
      *  + EXTRA_SKIP_UI. A bare number ("timer for 10") defaults to minutes. */
     SetTimer,
 
+    /** Current weather — "what's the weather", "weather in Tokyo", "is it
+     *  raining". Slot: `location` (String?, optional — the spoken place).
+     *  Handled by WeatherHandler: a place-named query goes through geocoding
+     *  + a current-weather lookup; a bare query uses the phone's last-known
+     *  location (if `ACCESS_COARSE_LOCATION` is granted) or returns a hint.
+     *  **First network-using intent in the app** — provider is open-meteo by
+     *  default (no key) with optional OpenWeather (user-provided key) via the
+     *  Weather settings card; output is short and watch-friendly. See
+     *  `weather.md`. Read-only — not in the confirm gate. */
+    Weather,
+
     /** On-device calculator — "what's 15% of 80", "25 plus 17", "96 divided
      *  by 4". Slot: `expression` (String — a normalised arithmetic string,
      *  e.g. "15 / 100 * 80"). CalculateSlots turns spoken operators

@@ -152,6 +152,11 @@ internal object PrefixHints {
         // "timer" / "sometime" don't trip it; sits below the timer rule so
         // "set a timer …" keeps its meaning.
         Regex("(?i)\\b(time|clock)\\b.*\\bin\\s+[a-z]") to Intent.WorldTime,
+        // Weather — distinctive keywords with no overlap. Covers the bare
+        // "weather" / "forecast" forms and the colloquial "raining" / "sunny"
+        // / "temperature" shapes. Sits above the Calculate rule (which keys
+        // on digits + operators — no overlap) so the order isn't load-bearing.
+        Regex("(?i)\\b(weather|forecast|raining|sunny|temperature)\\b") to Intent.Weather,
         // Calculate — a number immediately followed by an arithmetic operator
         // word/symbol ("15% of", "25 plus", "96 divided by"). Distinctive
         // enough that no other intent's phrasing collides: reminder/timer
