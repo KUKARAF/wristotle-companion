@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-build manifest overlay. Permits cleartext (http://) traffic so the
+  MCP phase-A Settings card can be exercised against a local LAN HTTP MCP
+  server during development — Android blocks cleartext by default at
+  targetSdk 28+. Release builds inherit the main manifest unchanged
+  (cleartext still blocked).
+
+  Phase B (Intent.AskAgent + LLM) will decide whether release builds need
+  cleartext too — most real MCP servers are HTTPS-fronted, but local/self-
+  hosted ones aren't. A network_security_config can replace this overlay
+  if release-build cleartext becomes a requirement.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:usesCleartextTraffic="true"
+        tools:replace="android:usesCleartextTraffic"
+        xmlns:tools="http://schemas.android.com/tools" />
+</manifest>

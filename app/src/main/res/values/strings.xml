@@ -194,12 +194,18 @@
     <string name="settings_mcp_empty">No servers configured yet.</string>
     <string name="settings_mcp_transport_streamable">Transport: Streaming HTTP</string>
     <string name="settings_mcp_transport_sse">Transport: SSE</string>
+    <string name="settings_mcp_transport_streamable_short">Streaming HTTP</string>
+    <string name="settings_mcp_transport_sse_short">SSE</string>
     <string name="settings_mcp_refresh">List / refresh tools</string>
     <string name="settings_mcp_delete">Delete server</string>
     <string name="settings_mcp_loading">Connecting…</string>
     <string name="settings_mcp_probe_failed">Failed: %1$s</string>
     <string name="settings_mcp_no_tools">Server reported zero tools.</string>
     <string name="settings_mcp_tools_count">%1$d tool(s) — tap to call:</string>
+    <string name="settings_mcp_status_idle">not loaded</string>
+    <string name="settings_mcp_status_failed">connection failed</string>
+    <string name="settings_mcp_status_tools">%1$d tools</string>
+    <string name="settings_mcp_tap_refresh">Tap 🔄 to load this server\'s tools.</string>
     <string name="settings_mcp_schema_label">Input schema:</string>
     <string name="settings_mcp_args_label">Arguments (JSON object)</string>
     <string name="settings_mcp_call_button">Call</string>
@@ -207,6 +213,8 @@
     <string name="settings_mcp_close_button">Close</string>
     <string name="settings_mcp_result_success">Result</string>
     <string name="settings_mcp_result_failed">Error</string>
+    <string name="settings_mcp_calling_title">Calling…</string>
+    <string name="settings_mcp_calling_text">%1$s</string>
 
     <!-- Support card -->
     <string name="settings_support_header">Support Wristotle</string>

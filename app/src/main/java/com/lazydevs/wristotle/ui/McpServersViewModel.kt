@@ -31,10 +31,17 @@ sealed interface ServerProbeState {
     data class Failed(val message: String) : ServerProbeState
 }
 
-/** Outcome of a debug tool invocation, surfaced via AlertDialog. */
+/**
+ * Outcome of a debug tool invocation, surfaced via AlertDialog.
+ *
+ * `Calling` carries the tool name so the in-flight dialog can show
+ * "Calling get_me…" — without it the user would just see an opaque
+ * spinner and not know which call is in flight (matters more on slow
+ * MCP servers where calls can take several seconds).
+ */
 sealed interface ToolCallState {
     data object Idle : ToolCallState
-    data object Calling : ToolCallState
+    data class Calling(val toolName: String) : ToolCallState
     data class Done(val result: ToolCallResult) : ToolCallState
 }
 
@@ -111,7 +118,7 @@ class McpServersViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun callTool(server: McpServerEntity, toolName: String, jsonArgs: String) {
         viewModelScope.launch {
-            _callState.value = ToolCallState.Calling
+            _callState.value = ToolCallState.Calling(toolName)
             val parsedArgs: Map<String, JsonElement> = try {
                 val raw = jsonArgs.trim().ifEmpty { "{}" }
                 (Json.parseToJsonElement(raw) as JsonObject).toMap()
