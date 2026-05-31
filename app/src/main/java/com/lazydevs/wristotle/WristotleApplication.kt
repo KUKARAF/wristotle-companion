@@ -104,6 +104,12 @@ class WristotleApplication : Application() {
     lateinit var tasksDb: com.lazydevs.wristotle.tasks.TasksDatabase
         private set
 
+    /** MCP client data layer (phase A — HTTP MCP server configs). */
+    lateinit var mcpDb: com.lazydevs.wristotle.mcp.McpDatabase
+        private set
+    lateinit var mcpServerRepository: com.lazydevs.wristotle.mcp.McpServerRepository
+        private set
+
     /** Reminder feature preferences (default offset when no time is spoken). */
     lateinit var reminderSettings: com.lazydevs.wristotle.handlers.ReminderSettings
         private set
@@ -251,6 +257,10 @@ class WristotleApplication : Application() {
         // Tasks — separate Room DB, no auto-prune (user-managed checklist).
         tasksDb = com.lazydevs.wristotle.tasks.TasksDatabase.build(this)
         taskRepository = com.lazydevs.wristotle.tasks.TaskRepository(tasksDb.taskDao())
+
+        // MCP — separate Room DB, user-typed HTTP server configs.
+        mcpDb = com.lazydevs.wristotle.mcp.McpDatabase.build(this)
+        mcpServerRepository = com.lazydevs.wristotle.mcp.McpServerRepository(mcpDb.mcpServerDao())
 
         reminderSettings = com.lazydevs.wristotle.handlers.ReminderSettings(this)
         weatherSettings = com.lazydevs.wristotle.settings.WeatherSettings(this)

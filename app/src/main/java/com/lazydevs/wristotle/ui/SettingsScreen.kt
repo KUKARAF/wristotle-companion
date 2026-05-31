@@ -76,6 +76,7 @@ enum class SettingsCategory(@StringRes val labelRes: Int, val emoji: String) {
     Models(R.string.settings_section_models, "🧠"),  // 🧠
     Learning(R.string.settings_section_learning, "🎓"),         // 🎓
     Backup(R.string.settings_section_backup, "💾"),  // 💾
+    Mcp(R.string.settings_section_mcp, "🔌"),  // 🔌
     Diagnostics(R.string.settings_section_diagnostics, "🔧"),   // 🔧
     Support(R.string.settings_section_support, "❤️"),  // ❤️
 }
@@ -102,6 +103,7 @@ fun SettingsScreen(
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
     backupVm: BackupViewModel,
+    mcpServersVm: McpServersViewModel,
     attentionByCategory: Map<SettingsCategory, Boolean> = emptyMap(),
 ) {
     val retentionDays by conversationVm.retentionDays.collectAsState()
@@ -161,6 +163,7 @@ fun SettingsScreen(
                 diagnosticsVm = diagnosticsVm,
                 watchSettingsVm = watchSettingsVm,
                 backupVm = backupVm,
+                mcpServersVm = mcpServersVm,
                 retentionDays = retentionDays,
                 audioCaptureEnabled = audioCaptureEnabled,
                 learningEnabled = learningEnabled,
@@ -327,6 +330,7 @@ private fun SettingsCategoryContent(
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
     backupVm: BackupViewModel,
+    mcpServersVm: McpServersViewModel,
     retentionDays: Int,
     audioCaptureEnabled: Boolean,
     learningEnabled: Boolean,
@@ -394,6 +398,9 @@ private fun SettingsCategoryContent(
 
             SettingsCategory.Backup ->
                 BackupCard(vm = backupVm)
+
+            SettingsCategory.Mcp ->
+                McpServersCard(vm = mcpServersVm)
 
             SettingsCategory.Diagnostics ->
                 DiagnosticsCard(vm = diagnosticsVm)

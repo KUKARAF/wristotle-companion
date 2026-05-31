@@ -180,7 +180,33 @@
     <string name="weather_settings_api_key_label">OpenWeather API key</string>
     <string name="weather_settings_api_key_hint">Get a free key at openweathermap.org → API keys. Stored locally; sent only with weather requests to OpenWeather.</string>
     <string name="settings_section_backup">Backup &amp; Restore</string>
+    <string name="settings_section_mcp">MCP servers</string>
     <string name="settings_section_support">Support</string>
+
+    <!-- MCP servers card (phase A) -->
+    <string name="settings_mcp_header">MCP servers</string>
+    <string name="settings_mcp_desc">Phase A — add HTTP MCP servers and inspect their tools. The AskAgent voice intent that uses these is coming in phase B. Tool calls here are for debug verification only; pick an LLM-side dialogue later.</string>
+    <string name="settings_mcp_name_label">Name</string>
+    <string name="settings_mcp_url_label">URL</string>
+    <string name="settings_mcp_auth_label">Authorization header (optional)</string>
+    <string name="settings_mcp_streamable_label">Streaming HTTP (off = SSE)</string>
+    <string name="settings_mcp_add_button">Add server</string>
+    <string name="settings_mcp_empty">No servers configured yet.</string>
+    <string name="settings_mcp_transport_streamable">Transport: Streaming HTTP</string>
+    <string name="settings_mcp_transport_sse">Transport: SSE</string>
+    <string name="settings_mcp_refresh">List / refresh tools</string>
+    <string name="settings_mcp_delete">Delete server</string>
+    <string name="settings_mcp_loading">Connecting…</string>
+    <string name="settings_mcp_probe_failed">Failed: %1$s</string>
+    <string name="settings_mcp_no_tools">Server reported zero tools.</string>
+    <string name="settings_mcp_tools_count">%1$d tool(s) — tap to call:</string>
+    <string name="settings_mcp_schema_label">Input schema:</string>
+    <string name="settings_mcp_args_label">Arguments (JSON object)</string>
+    <string name="settings_mcp_call_button">Call</string>
+    <string name="settings_mcp_cancel_button">Cancel</string>
+    <string name="settings_mcp_close_button">Close</string>
+    <string name="settings_mcp_result_success">Result</string>
+    <string name="settings_mcp_result_failed">Error</string>
 
     <!-- Support card -->
     <string name="settings_support_header">Support Wristotle</string>

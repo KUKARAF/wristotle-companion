@@ -58,6 +58,7 @@ fun MainScreen(
     diagnosticsVm: DiagnosticsViewModel,
     watchSettingsVm: WatchSettingsViewModel,
     backupVm: BackupViewModel,
+    mcpServersVm: McpServersViewModel,
     onRequestWatchPermissions: () -> Unit,
     onRequestVoicePermissions: () -> Unit,
     onRequestLocationPermission: () -> Unit,
@@ -215,6 +216,7 @@ fun MainScreen(
                         diagnosticsVm = diagnosticsVm,
                         watchSettingsVm = watchSettingsVm,
                         backupVm = backupVm,
+                        mcpServersVm = mcpServersVm,
                         attentionByCategory = settingsAttentionByCategory,
                     )
                 }

@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
 }
 
@@ -119,6 +120,15 @@ android {
     }
 }
 
+// Ktor (pulled in by the MCP client) brings slf4j-api 2.x, and
+// prettytime-nlp ships an older slf4j shaded inside its own jar — D8
+// then fails with `Duplicate class org.slf4j.*`. Drop Ktor's slf4j-api
+// since the shaded copy already satisfies the API references at
+// runtime. Logging from Ktor is verbose-debug only and isn't load-bearing.
+configurations.all {
+    exclude(group = "org.slf4j", module = "slf4j-api")
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -143,6 +153,14 @@ dependencies {
     implementation(project(":speech"))
     implementation(project(":speech-whisper"))
     implementation(project(":speech-nlu"))
+    // MCP client (phase A of AskAgent) — official SDK over Ktor's OkHttp engine.
+    // Pure-package under app/.../mcp/; no separate module per the
+    // module-vs-package check (single consumer, no NDK, no model lifecycle).
+    implementation(libs.mcp.kotlin.sdk)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
     // org.json is bundled with Android but absent from the empty android.jar
     // used by unit tests. Pulling the upstream JVM artifact lets the backup
