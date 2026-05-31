@@ -61,9 +61,9 @@ class OpenAiCompatibleLlmClient(
 
                 when {
                     status == 401 -> LlmResult.Failure.BadKey("API key rejected (401)")
-                    status == 429 -> LlmResult.Failure.RateLimit(payload.errorMessage() ?: "rate-limited (429)")
+                    status == 429 -> LlmResult.Failure.RateLimit(payload.providerErrorMessage() ?: "rate-limited (429)")
                     status !in 200..299 -> LlmResult.Failure.Other(
-                        payload.errorMessage() ?: "HTTP $status",
+                        payload.providerErrorMessage() ?: "HTTP $status",
                     )
                     payload == null -> LlmResult.Failure.Network("empty response body")
                     else -> parseSuccess(payload)
@@ -114,16 +114,6 @@ class OpenAiCompatibleLlmClient(
         } finally {
             conn.disconnect()
         }
-    }
-
-    /** Best-effort extraction from common error body shapes. */
-    private fun String?.errorMessage(): String? {
-        if (this == null) return null
-        return runCatching {
-            val obj = JSONObject(this)
-            obj.optJSONObject("error")?.optString("message")?.ifBlank { null }
-                ?: obj.optString("error").ifBlank { null }
-        }.getOrNull()
     }
 
     companion object {

@@ -15,19 +15,10 @@ import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 /**
- * One MCP server configured by the user (HTTP endpoint + optional
- * `Authorization` header). Phase A only persists the inputs the user
- * types — no prompts, no per-server tool overrides, no metadata.
- *
- * `streamable` chooses between MCP's two HTTP transports: `true` =
- * Streaming HTTP (the current recommendation in the MCP spec), `false`
- * = SSE (legacy, kept because plenty of servers in the wild still only
- * speak SSE). Default to streaming for new entries.
- *
- * `authHeader` is the raw value the client sends as the `Authorization`
- * header — e.g. `"Bearer sk-..."`. Null when the server takes no auth.
- * Stored verbatim because every MCP server wants a different scheme;
- * SharedPreferences-style "API key" abstractions don't fit.
+ * `streamable = true` → Streaming HTTP (current MCP spec recommendation);
+ * `false` → SSE (legacy, kept because plenty of servers only speak SSE).
+ * `authHeader` is the raw `Authorization` value (e.g. `"Bearer sk-..."`),
+ * stored verbatim because every MCP server's auth scheme differs.
  */
 @Entity(tableName = "mcp_servers")
 data class McpServerEntity(
@@ -57,18 +48,6 @@ interface McpServerDao {
     suspend fun deleteById(id: Long)
 }
 
-/**
- * Separate Room DB at `wristotle-mcp.db` — same isolation pattern as
- * Notes / Tasks / NLU / AppIndex. Keeping MCP state out of the main
- * conversation DB means a corrupt MCP table can't take down the
- * conversation history, and exports/backups can choose to skip MCP
- * config (it's typically per-device-paired, not portable).
- *
- * Schema migrations: when changing the entity, bump [version] and add a
- * Migration object below; never use `.fallbackToDestructiveMigration()`
- * (the per-feature memory `feedback_portable_format_over_storage_copy`
- * applies — a user's MCP servers shouldn't get wiped on app upgrade).
- */
 @Database(entities = [McpServerEntity::class], version = 1, exportSchema = false)
 abstract class McpDatabase : RoomDatabase() {
     abstract fun mcpServerDao(): McpServerDao
@@ -76,10 +55,6 @@ abstract class McpDatabase : RoomDatabase() {
     companion object {
         private const val DB_NAME = "wristotle-mcp.db"
 
-        /**
-         * Built once per process by `WristotleApplication`. Non-destructive
-         * migrations only — user-typed server configs are user data.
-         */
         fun build(context: Context): McpDatabase =
             Room.databaseBuilder(context.applicationContext, McpDatabase::class.java, DB_NAME)
                 .build()

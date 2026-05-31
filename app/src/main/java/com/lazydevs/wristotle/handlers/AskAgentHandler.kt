@@ -6,18 +6,10 @@ import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 
 /**
- * Handles [Intent.AskAgent] — passes the user's query to the
- * configured LLM provider and returns the response text.
- *
- * Phase B1: pure Q&A, no MCP tool calls. The agent loop that lets the
- * LLM pick + invoke MCP tools is B2; until then this is just a thin
- * wrapper around [com.lazydevs.wristotle.agent.LlmClient.complete].
- *
- * Reads the active client from [AskAgentSettings] on every call so a
- * settings change (new key, new model, new provider) takes effect on
- * the very next voice query — no app restart needed.
- *
  * Read-only by construction — not in the confirm-before-dispatch set.
+ * Reads `settings.activeClient()` on every call so a settings edit
+ * (new key, new model, new provider) takes effect on the next query
+ * without an app restart.
  */
 class AskAgentHandler(private val settings: AskAgentSettings) : ActionHandler {
 

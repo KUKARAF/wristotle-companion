@@ -19,27 +19,22 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
 /**
- * HTTP MCP integration. Wraps the official kotlin-sdk client over a
- * Ktor OkHttp engine so we use the same network stack as the rest of
- * the app's outbound HTTP (weather, model downloads).
+ * HTTP MCP integration over the official kotlin-sdk client + Ktor
+ * OkHttp engine.
  *
- * Transport choice is dictated by [streamable]:
- *   - `true`  → Streaming HTTP (the current MCP spec recommendation).
- *   - `false` → SSE (legacy; keep because many MCP servers in the wild
- *               still only speak SSE).
+ * - `streamable = true` → Streaming HTTP (current MCP spec
+ *   recommendation); `false` → SSE (legacy, kept because many servers
+ *   in the wild still only speak it).
+ * - `authHeader` is the raw `Authorization` value (e.g. `"Bearer
+ *   sk-..."`), installed once on Ktor's default request so every
+ *   transport request carries it.
+ * - Tool-list cache: 30 s TTL keyed on the instance — most servers
+ *   don't change their tool list between requests. A user-driven
+ *   refresh tap should call [resetCache] before [listTools] to force a
+ *   fresh fetch (the dialog refresh button does this).
  *
- * [authHeader] is the raw `Authorization` header value (e.g.
- * `"Bearer sk-..."`). Null when the server takes no auth. Stored on the
- * client's [defaultRequest] so every transport request carries it.
- *
- * Tool-list cache: 30 s, matching the mobileapp reference. Cleared by
- * [resetCache]. The cache duration is a server-courtesy default — most
- * servers don't change their tool list between requests; a UI refresh
- * tap calls [resetCache] explicitly when the user wants a fresh fetch.
- *
- * NOT thread-safe across processes; safe across coroutines on a single
- * instance because every SDK call is sequenced through the SDK's own
- * internal locking and the [connectMutex] guards the connect-once
+ * Safe across coroutines on a single instance: the SDK has its own
+ * locking, and [connectMutex] guards the connect-once / close-once
  * lifecycle.
  */
 class HttpMcpIntegration(
@@ -47,8 +42,6 @@ class HttpMcpIntegration(
     private val url: String,
     private val streamable: Boolean = true,
     authHeader: String? = null,
-    private val clientImplementation: Implementation =
-        Implementation(name = "wristotle-companion", version = "1"),
 ) : McpIntegration {
 
     private val httpClient: HttpClient = HttpClient(OkHttp) {
@@ -59,7 +52,7 @@ class HttpMcpIntegration(
         }
     }
 
-    private val client = Client(clientImplementation)
+    private val client = Client(Implementation(name = "wristotle-companion", version = "1"))
 
     private val transport = if (streamable) {
         StreamableHttpClientTransport(httpClient, url)
@@ -82,19 +75,14 @@ class HttpMcpIntegration(
         }
     }
 
+    // MUST close BOTH client (SDK) AND httpClient (Ktor engine) — the SDK
+    // doesn't own the engine, so closing only the SDK leaks the OkHttp
+    // connection pool until GC.
     override suspend fun close() {
         connectMutex.withLock {
             if (!connected) return
-            try {
-                client.close()
-            } catch (t: Throwable) {
-                Log.w(TAG, "close failed for $name", t)
-            }
-            try {
-                httpClient.close()
-            } catch (t: Throwable) {
-                Log.w(TAG, "ktor close failed for $name", t)
-            }
+            runCatching { client.close() }.onFailure { Log.w(TAG, "sdk close failed for $name", it) }
+            runCatching { httpClient.close() }.onFailure { Log.w(TAG, "ktor close failed for $name", it) }
             connected = false
         }
     }
@@ -110,8 +98,7 @@ class HttpMcpIntegration(
 
         val result = client.listTools()
         if (result?.nextCursor != null) {
-            // Phase A doesn't paginate. Most server tool lists fit in the
-            // default page; revisit if a server complains.
+            // First page only — most servers fit. Revisit if one complains.
             Log.w(TAG, "$name returned a paginated tool list; only first page is shown")
         }
         val tools = (result?.tools ?: emptyList()).map { sdkTool ->

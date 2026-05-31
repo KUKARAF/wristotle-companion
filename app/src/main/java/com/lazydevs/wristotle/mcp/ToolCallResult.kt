@@ -1,14 +1,10 @@
 package com.lazydevs.wristotle.mcp
 
 /**
- * Outcome of a single MCP tool call.
- *
- * Phase A flattens the SDK's structured result into a string —
- * `TextContent` parts joined by newlines for the success case,
- * server-reported error text (or thrown exception message) for the
- * failure case. Phase B (AskAgent) may want the structured JSON back
- * for richer LLM context; at that point introduce a structured variant
- * here rather than parsing the string apart in the agent loop.
+ * Outcome of one MCP tool call. Text-flattened — `TextContent` parts
+ * are joined by newlines on success, error text or thrown message on
+ * failure. The SDK's structured `CallToolResult` is collapsed at the
+ * integration boundary so callers don't have to depend on SDK types.
  */
 sealed interface ToolCallResult {
     data class Success(val text: String) : ToolCallResult

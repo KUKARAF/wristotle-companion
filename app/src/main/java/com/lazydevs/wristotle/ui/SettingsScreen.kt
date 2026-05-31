@@ -68,18 +68,18 @@ import kotlinx.coroutines.launch
  * pulling in `material-icons-extended` symbols just for eight glyphs.
  */
 enum class SettingsCategory(@StringRes val labelRes: Int, val emoji: String) {
-    Watch(R.string.settings_section_watch, "⌚"),         // ⌚
-    Conversation(R.string.settings_section_conversation, "💬"),  // 💬
-    Notes(R.string.settings_section_notes, "📝"),               // 📝
-    Reminders(R.string.settings_section_reminders, "⏰"),  // ⏰
-    Weather(R.string.settings_section_weather, "☁️"),  // ☁️
-    Models(R.string.settings_section_models, "🧠"),  // 🧠
-    Learning(R.string.settings_section_learning, "🎓"),         // 🎓
-    Backup(R.string.settings_section_backup, "💾"),  // 💾
-    Mcp(R.string.settings_section_mcp, "🔌"),  // 🔌
-    AskAgent(R.string.settings_section_askagent, "✨"),  // ✨
-    Diagnostics(R.string.settings_section_diagnostics, "🔧"),   // 🔧
-    Support(R.string.settings_section_support, "❤️"),  // ❤️
+    Watch(R.string.settings_section_watch, "⌚"),
+    Conversation(R.string.settings_section_conversation, "💬"),
+    Notes(R.string.settings_section_notes, "📝"),
+    Reminders(R.string.settings_section_reminders, "⏰"),
+    Weather(R.string.settings_section_weather, "☁️"),
+    Models(R.string.settings_section_models, "🧠"),
+    Learning(R.string.settings_section_learning, "🎓"),
+    Backup(R.string.settings_section_backup, "💾"),
+    Mcp(R.string.settings_section_mcp, "🔌"),
+    AskAgent(R.string.settings_section_askagent, "✨"),
+    Diagnostics(R.string.settings_section_diagnostics, "🔧"),
+    Support(R.string.settings_section_support, "❤️"),
 }
 
 /**

@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -47,20 +49,12 @@ import com.lazydevs.wristotle.mcp.McpTool
 import com.lazydevs.wristotle.mcp.ToolCallResult
 
 /**
- * Settings → 🔌 MCP servers — phase A.
- *
- * Layout:
- *   Card 1: header + description + add-server form.
- *   Card N: one per configured server. Single-line summary only —
- *           tools open in a popup dialog so the Settings page stays
- *           scannable when the user has many servers, and a 40+ tool
- *           list doesn't overflow the page vertically.
- *
- * Tap a server row → tools dialog opens. Refresh inside the dialog
- * triggers an explicit refetch. Tapping a tool stacks a JSON-args
- * dialog on top, then a result dialog on top of that. The tools list
- * stays mounted underneath the whole stack so the user can fire
- * multiple tools without re-opening from the card.
+ * One Card for the add-server form, plus one Card per configured
+ * server (single-line summary; tools open in a popup so the page
+ * stays scannable when the user has many servers and a 40+ tool list
+ * doesn't overflow). The tools dialog stays mounted while the args +
+ * result dialogs stack on top so users can fire multiple tool calls
+ * without re-opening the list.
  */
 @Composable
 fun McpServersCard(vm: McpServersViewModel) {
@@ -95,13 +89,13 @@ fun McpServersCard(vm: McpServersViewModel) {
         servers.forEach { server ->
             McpServerCard(
                 server = server,
-                probeState = probeStates[server.name] ?: ServerProbeState.Idle,
+                probeState = probeStates[server.id] ?: ServerProbeState.Idle,
                 onOpen = {
                     openServer = server
                     // If never loaded yet, kick off a fetch so the dialog
                     // doesn't open empty waiting for the user to tap refresh.
-                    if (probeStates[server.name] == null ||
-                        probeStates[server.name] == ServerProbeState.Idle
+                    if (probeStates[server.id] == null ||
+                        probeStates[server.id] == ServerProbeState.Idle
                     ) {
                         vm.refreshTools(server)
                     }
@@ -118,7 +112,7 @@ fun McpServersCard(vm: McpServersViewModel) {
     openServer?.let { server ->
         ToolsListDialog(
             server = server,
-            probeState = probeStates[server.name] ?: ServerProbeState.Idle,
+            probeState = probeStates[server.id] ?: ServerProbeState.Idle,
             onRefresh = { vm.refreshTools(server) },
             onToolClicked = { tool -> pendingTool = server to tool },
             onDismiss = { openServer = null },
@@ -269,19 +263,77 @@ private fun ServerStatusLine(server: McpServerEntity, probeState: ServerProbeSta
 }
 
 @Composable
-private fun RefreshIconOrSpinner(isLoading: Boolean, onClick: () -> Unit) {
-    if (isLoading) {
-        Box(
-            modifier = Modifier.size(48.dp),
+private fun ToolsDialogBody(
+    probeState: ServerProbeState,
+    onToolClicked: (McpTool) -> Unit,
+) {
+    when (probeState) {
+        ServerProbeState.Idle -> Text(
+            stringResource(R.string.settings_mcp_tap_refresh),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        ServerProbeState.Loading -> Box(
+            modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center,
         ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(28.dp).padding(top = 12.dp),
+                strokeWidth = 3.dp,
+            )
+        }
+        is ServerProbeState.Failed -> Text(
+            stringResource(R.string.settings_mcp_probe_failed, probeState.message),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        is ServerProbeState.Tools -> {
+            if (probeState.tools.isEmpty()) {
+                Text(
+                    stringResource(R.string.settings_mcp_no_tools),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                LazyColumn(modifier = Modifier.heightIn(max = 480.dp)) {
+                    itemsIndexed(probeState.tools) { index, tool ->
+                        if (index > 0) HorizontalDivider()
+                        ListItem(
+                            modifier = Modifier.clickable { onToolClicked(tool) },
+                            headlineContent = {
+                                Text(tool.name, style = MaterialTheme.typography.bodyMedium)
+                            },
+                            supportingContent = tool.description
+                                ?.takeIf { it.isNotBlank() }
+                                ?.let { desc ->
+                                    {
+                                        Text(
+                                            desc,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                },
+                            colors = ListItemDefaults.colors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RefreshIconOrSpinner(isLoading: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, enabled = !isLoading) {
+        if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
                 strokeWidth = 2.dp,
             )
-        }
-    } else {
-        IconButton(onClick = onClick) {
+        } else {
             Icon(
                 Icons.Filled.Refresh,
                 contentDescription = stringResource(R.string.settings_mcp_refresh),
@@ -315,69 +367,7 @@ private fun ToolsListDialog(
                 )
             }
         },
-        text = {
-            Box(modifier = Modifier.heightIn(max = 480.dp)) {
-                when (probeState) {
-                    ServerProbeState.Idle -> {
-                        Text(
-                            stringResource(R.string.settings_mcp_tap_refresh),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    ServerProbeState.Loading -> {
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(28.dp).padding(top = 12.dp),
-                                strokeWidth = 3.dp,
-                            )
-                        }
-                    }
-                    is ServerProbeState.Failed -> {
-                        Text(
-                            stringResource(R.string.settings_mcp_probe_failed, probeState.message),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                    is ServerProbeState.Tools -> {
-                        if (probeState.tools.isEmpty()) {
-                            Text(
-                                stringResource(R.string.settings_mcp_no_tools),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                                probeState.tools.forEachIndexed { index, tool ->
-                                    if (index > 0) HorizontalDivider()
-                                    ListItem(
-                                        modifier = Modifier.clickable { onToolClicked(tool) },
-                                        headlineContent = {
-                                            Text(tool.name, style = MaterialTheme.typography.bodyMedium)
-                                        },
-                                        supportingContent = tool.description
-                                            ?.takeIf { it.isNotBlank() }
-                                            ?.let { desc ->
-                                                {
-                                                    Text(
-                                                        desc,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        maxLines = 2,
-                                                        overflow = TextOverflow.Ellipsis,
-                                                    )
-                                                }
-                                            },
-                                        colors = ListItemDefaults.colors(
-                                            containerColor = MaterialTheme.colorScheme.surface,
-                                        ),
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
+        text = { ToolsDialogBody(probeState, onToolClicked) },
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.settings_mcp_close_button))
