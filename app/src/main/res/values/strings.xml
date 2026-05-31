@@ -180,6 +180,18 @@
     <string name="weather_settings_api_key_label">OpenWeather API key</string>
     <string name="weather_settings_api_key_hint">Get a free key at openweathermap.org → API keys. Stored locally; sent only with weather requests to OpenWeather.</string>
     <string name="settings_section_backup">Backup &amp; Restore</string>
+    <string name="settings_section_support">Support</string>
+
+    <!-- Support card -->
+    <string name="settings_support_header">Support Wristotle</string>
+    <string name="settings_support_desc">Wristotle is free and open-source, built in spare time. If it\'s become part of your day, a coffee goes a long way to keep new features and watch fixes coming.</string>
+    <string name="settings_support_bmc_button">Buy me a coffee</string>
+    <string name="settings_support_other_ways">Other ways to help — all free:</string>
+    <string name="settings_support_star_companion">⭐ Star the companion repo on Codeberg</string>
+    <string name="settings_support_star_watch">⭐ Star the watch app repo on Codeberg</string>
+    <string name="settings_support_like_rebble">👍 Like the watch app on the Rebble appstore</string>
+    <string name="settings_support_like_repebble">👍 Like the watch app on the Core Devices appstore</string>
+    <string name="settings_support_learn_more">Learn more on the docs site</string>
 
     <!-- Reminders card -->
     <string name="settings_reminders_header">Reminders</string>

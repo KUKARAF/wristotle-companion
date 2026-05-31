@@ -77,6 +77,7 @@ enum class SettingsCategory(@StringRes val labelRes: Int, val emoji: String) {
     Learning(R.string.settings_section_learning, "🎓"),         // 🎓
     Backup(R.string.settings_section_backup, "💾"),  // 💾
     Diagnostics(R.string.settings_section_diagnostics, "🔧"),   // 🔧
+    Support(R.string.settings_section_support, "❤️"),  // ❤️
 }
 
 /**
@@ -396,6 +397,9 @@ private fun SettingsCategoryContent(
 
             SettingsCategory.Diagnostics ->
                 DiagnosticsCard(vm = diagnosticsVm)
+
+            SettingsCategory.Support ->
+                SupportCard()
         }
     }
 }
