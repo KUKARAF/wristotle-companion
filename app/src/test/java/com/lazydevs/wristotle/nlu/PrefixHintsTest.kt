@@ -113,7 +113,7 @@ class PrefixHintsTest {
     }
 
     @Test fun `unknown phrase returns null`() {
-        assertNull(PrefixHints.hintFor("what's the weather"))
+        assertNull(PrefixHints.hintFor("tell me a joke"))
     }
 
     @Test fun `leading whitespace doesn't block detection`() {
