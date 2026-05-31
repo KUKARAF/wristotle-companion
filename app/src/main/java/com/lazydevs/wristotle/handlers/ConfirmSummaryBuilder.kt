@@ -90,6 +90,11 @@ object ConfirmSummaryBuilder {
         Intent.WorldTime     -> "action: world-time\ndetails: ${slot(r, "location")}"
         Intent.Calculate     -> "action: calculate\ndetails: ${slot(r, "expression")}"
         Intent.Weather       -> "action: weather\ndetails: ${slotOrDash(r, "location")}"
+        // AskAgent is not in the destructive set so the confirm prompt
+        // never fires for it in practice — this branch is here only to
+        // keep the `when` exhaustive (and to surface a sane debug-log
+        // line in PebbleListenerService's pre-dispatch trace).
+        Intent.AskAgent      -> "action: ask-agent\ndetails: ${slot(r, "query")}"
         Intent.Battery       -> "action: battery\ndetails: -"
         Intent.Steps         -> "action: steps\ndetails: -"
         Intent.Vibrate       -> "action: vibrate\ndetails: -"

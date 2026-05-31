@@ -181,7 +181,23 @@
     <string name="weather_settings_api_key_hint">Get a free key at openweathermap.org → API keys. Stored locally; sent only with weather requests to OpenWeather.</string>
     <string name="settings_section_backup">Backup &amp; Restore</string>
     <string name="settings_section_mcp">MCP servers</string>
+    <string name="settings_section_askagent">Ask Agent</string>
     <string name="settings_section_support">Support</string>
+
+    <!-- Ask Agent card (phase B1 of the agent feature) -->
+    <string name="settings_askagent_header">Ask Agent</string>
+    <string name="settings_askagent_desc">Routes the "ask agent …" / "ask claude …" voice intent to an LLM. Phase B1 is plain Q&amp;A only — MCP tool calling (so the LLM can actually take actions) lands in phase B2. Pick a provider, paste your API key, and the next voice query goes through.</string>
+    <string name="settings_askagent_provider_label">Provider</string>
+    <string name="settings_askagent_provider_anthropic">Anthropic (Claude)</string>
+    <string name="settings_askagent_provider_openai">OpenAI-compatible (OpenAI / OpenRouter / Ollama / …)</string>
+    <string name="settings_askagent_model_label">Model</string>
+    <string name="settings_askagent_anthropic_key_label">Anthropic API key</string>
+    <string name="settings_askagent_anthropic_key_hint">Get a key at console.anthropic.com → API Keys. Stored locally; sent only with AskAgent requests.</string>
+    <string name="settings_askagent_openai_endpoint_label">Endpoint URL (full /chat/completions)</string>
+    <string name="settings_askagent_openai_endpoint_hint">e.g. https://api.openai.com/v1/chat/completions, https://openrouter.ai/api/v1/chat/completions, http://&lt;your-server&gt;/v1/chat/completions</string>
+    <string name="settings_askagent_openai_key_label">API key (leave blank for local servers)</string>
+    <string name="settings_askagent_system_prompt_label">System prompt (optional)</string>
+    <string name="settings_askagent_system_prompt_hint">Prepended to every AskAgent query. Useful for "keep answers under 2 sentences" or "answer plainly, no markdown".</string>
 
     <!-- MCP servers card (phase A) -->
     <string name="settings_mcp_header">MCP servers</string>

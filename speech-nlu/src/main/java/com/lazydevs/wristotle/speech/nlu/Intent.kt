@@ -173,6 +173,14 @@ enum class Intent {
      *  result. Pure arithmetic, no network. Read-only — not in the confirm gate. */
     Calculate,
 
+    /** Free-form LLM query — "ask agent <question>" / "ask claude <question>".
+     *  Slot: `query` (String — the question text with the lead-in stripped).
+     *  Handled by AskAgentHandler: routes to the user-configured LLM provider
+     *  (Anthropic or OpenAI-compatible — see AskAgentSettings) and returns the
+     *  response text. Phase B1 is plain Q&A only — no MCP tool calling yet
+     *  (that's phase B2). Read-only — not in the confirm gate. */
+    AskAgent,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

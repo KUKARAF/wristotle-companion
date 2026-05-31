@@ -79,6 +79,14 @@ internal object PrefixHints {
         // SendMessage so the centroid stays meaningful.
         Regex("(?i)^\\s*(text|sms|message|send (a |an )?(text|message|sms))\\b") to Intent.SendMessage,
         Regex("(?i)^\\s*(call|dial|phone|ring)\\b") to Intent.Call,
+        // AskAgent — explicit LLM passthrough lead-in. Sits high in the
+        // rule list because the trigger words are unambiguous: nothing
+        // else in the intent set opens with "ask <agent|claude|ai|llm|
+        // assistant|bot|gpt>". Sits BELOW Call so an unlikely "ask call
+        // mom" still goes to Call (the verb-anchor wins by position),
+        // and above the note/reminder rules so "ask agent remind me..."
+        // doesn't fall through to Reminder.
+        Regex("(?i)^\\s*(ask|hey)\\s+(the\\s+)?(agent|claude|ai|llm|assistant|bot|chatbot|chat\\s*gpt|gpt)\\b") to Intent.AskAgent,
         // AppendNote — sits ABOVE CreateEvent (and Note) because it's the most
         // specific rule. Two safe shapes:
         //  - "append" or "amend" as a leading verb (both semantically

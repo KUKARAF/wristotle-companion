@@ -118,6 +118,10 @@ class WristotleApplication : Application() {
     lateinit var weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings
         private set
 
+    /** AskAgent (phase B1) preferences — LLM provider + API key + model. */
+    lateinit var askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings
+        private set
+
     /** Room database singletons — exposed for the backup/restore feature so
      *  it can pull rows via the existing DAOs (`db.<entity>Dao().allForBackup()`)
      *  and encode them through the per-entity `*Json` codecs. No PRAGMA / WAL
@@ -264,6 +268,7 @@ class WristotleApplication : Application() {
 
         reminderSettings = com.lazydevs.wristotle.handlers.ReminderSettings(this)
         weatherSettings = com.lazydevs.wristotle.settings.WeatherSettings(this)
+        askAgentSettings = com.lazydevs.wristotle.agent.AskAgentSettings(this)
 
         nluDb = NluDatabase.build(this)
         nluBank = ExampleBank(nluDb.exampleDao())
@@ -325,6 +330,7 @@ class WristotleApplication : Application() {
             Intent.WorldTime to com.lazydevs.wristotle.nlu.slots.WorldTimeSlots(),
             Intent.Calculate to com.lazydevs.wristotle.nlu.slots.CalculateSlots(),
             Intent.Weather to com.lazydevs.wristotle.nlu.slots.WeatherSlots(),
+            Intent.AskAgent to com.lazydevs.wristotle.nlu.slots.AskAgentSlots(),
         ))
 
         learningCollector = LearningCollector(

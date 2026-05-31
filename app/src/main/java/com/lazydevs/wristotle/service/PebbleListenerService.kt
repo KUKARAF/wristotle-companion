@@ -154,6 +154,7 @@ class PebbleListenerService : BasePebbleListenerService() {
                 phoneLocation = com.lazydevs.wristotle.phone.PhoneLocation(this),
                 settings = app.weatherSettings,
             ),
+            com.lazydevs.wristotle.handlers.AskAgentHandler(app.askAgentSettings),
         ))
     }
 

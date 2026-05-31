@@ -77,6 +77,7 @@ enum class SettingsCategory(@StringRes val labelRes: Int, val emoji: String) {
     Learning(R.string.settings_section_learning, "🎓"),         // 🎓
     Backup(R.string.settings_section_backup, "💾"),  // 💾
     Mcp(R.string.settings_section_mcp, "🔌"),  // 🔌
+    AskAgent(R.string.settings_section_askagent, "✨"),  // ✨
     Diagnostics(R.string.settings_section_diagnostics, "🔧"),   // 🔧
     Support(R.string.settings_section_support, "❤️"),  // ❤️
 }
@@ -114,6 +115,7 @@ fun SettingsScreen(
     val reminderSettings = (LocalContext.current.applicationContext as WristotleApplication).reminderSettings
     val reminderDefaultMinutes by reminderSettings.defaultOffsetMin.collectAsState()
     val weatherSettings = (LocalContext.current.applicationContext as WristotleApplication).weatherSettings
+    val askAgentSettings = (LocalContext.current.applicationContext as WristotleApplication).askAgentSettings
     // Audio capture only works when Wristotle's Whisper recognizer is in the
     // dictation path (microPebble). Under Core Devices the audio never reaches
     // us, so the toggle would be a no-op — hide it.
@@ -171,6 +173,7 @@ fun SettingsScreen(
                 reminderDefaultMinutes = reminderDefaultMinutes,
                 reminderSettings = reminderSettings,
                 weatherSettings = weatherSettings,
+                askAgentSettings = askAgentSettings,
                 onShowClearLearnedConfirm = { showClearLearnedConfirm = true },
                 onShowClearAudioConfirm = { showClearAudioConfirm = true },
                 onShrinkRequest = { newDays ->
@@ -338,6 +341,7 @@ private fun SettingsCategoryContent(
     reminderDefaultMinutes: Int,
     reminderSettings: ReminderSettings,
     weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings,
+    askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings,
     onShowClearLearnedConfirm: () -> Unit,
     onShowClearAudioConfirm: () -> Unit,
     onShrinkRequest: (Int) -> Unit,
@@ -401,6 +405,9 @@ private fun SettingsCategoryContent(
 
             SettingsCategory.Mcp ->
                 McpServersCard(vm = mcpServersVm)
+
+            SettingsCategory.AskAgent ->
+                AskAgentSettingsCard(settings = askAgentSettings)
 
             SettingsCategory.Diagnostics ->
                 DiagnosticsCard(vm = diagnosticsVm)

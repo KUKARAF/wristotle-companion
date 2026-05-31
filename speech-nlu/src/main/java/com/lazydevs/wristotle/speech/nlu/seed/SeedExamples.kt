@@ -614,6 +614,23 @@ object SeedExamples {
             "compute 144 divided by 12",
             "what's 15% of 80",
         ))
+        // ── AskAgent ─────────────────────────────────────────────────────
+        // LLM passthrough — "ask <agent>" lead-in is the discriminator.
+        // The slot extractor strips the lead-in; classifier centroid
+        // only has to recognise "this is a question shape with an ask-
+        // lead-in," not the specific content. Phase B1 is no-tool Q&A.
+        addAll(Intent.AskAgent, listOf(
+            "ask agent what is the capital of france",
+            "ask agent who wrote the great gatsby",
+            "ask agent explain quantum entanglement in one sentence",
+            "ask claude what is photosynthesis",
+            "ask claude write a haiku about coffee",
+            "ask the agent what time is it in tokyo",
+            "ask the agent translate hello into spanish",
+            "ask agent summarise the theory of relativity",
+            "ask agent how many planets are in the solar system",
+            "ask claude give me a recipe for pancakes",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }
