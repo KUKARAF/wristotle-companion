@@ -4,6 +4,8 @@ Android companion app for the [Wristotle](../Wristotle) Pebble watch app. Bridge
 
 **User docs:** <https://wristotle.codeberg.page/> — install guide, voice commands, troubleshooting, privacy details. The sections below are the developer reference.
 
+**Support the project:** <https://wristotle.codeberg.page/support/> — buy a coffee, or just star the [companion](https://codeberg.org/wristotle/wristotle-companion) and [watch](https://codeberg.org/wristotle/wristotle) repos. Both help.
+
 ---
 
 **Contents**
