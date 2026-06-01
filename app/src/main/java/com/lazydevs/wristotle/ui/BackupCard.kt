@@ -393,7 +393,8 @@ private fun RestorePreviewDialog(
                 Text(
                     stringResource(
                         R.string.settings_backup_restore_preview_stats,
-                        s.notes, s.tasks, s.conversations, s.nluLearned, s.reminders, s.aliases,
+                        s.notes, s.tasks, s.conversations, s.nluLearned, s.reminders,
+                        s.aliases, s.contactAliases, s.mcpServers,
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -558,6 +559,7 @@ private fun ExportSuccessDialog(result: BackupExportResult, onDismiss: () -> Uni
                     result.reminders,
                     result.aliases,
                     result.contactAliases,
+                    result.mcpServers,
                     kb,
                 ),
                 style = MaterialTheme.typography.bodyMedium,
