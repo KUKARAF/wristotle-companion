@@ -1,24 +1,42 @@
 package com.lazydevs.wristotle.agent
 
 /**
- * Provider-agnostic LLM client for the AskAgent intent (phase B1 — no
- * MCP tool calling yet; that's B2). One method, one suspending call,
- * one round-trip. Streaming + multi-turn history are deliberately
- * out-of-scope for B1.
- *
- * Implementations must marshal their HTTP work onto
- * [kotlinx.coroutines.Dispatchers.IO] themselves so callers can stay
- * on the main dispatcher without ceremony.
+ * Provider-agnostic LLM client. Implementations marshal their HTTP
+ * work onto [kotlinx.coroutines.Dispatchers.IO] themselves so callers
+ * can stay on the main dispatcher without ceremony. Expected wire-
+ * level failures (network, 4xx, etc.) surface as [LlmResult.Failure]
+ * or [LlmResponse.Failure] — never thrown — so the handler's loop
+ * can decide whether to give up or retry.
  */
 interface LlmClient {
+
     /**
-     * Send [userQuery] (optionally with a [systemPrompt]) and return the
-     * model's response text. Errors surface as [LlmResult.Failure] —
-     * implementations should NOT throw for expected wire-level problems
-     * (network, 4xx, etc.); unexpected exceptions still propagate so
-     * the handler's outer try/catch can log them.
+     * One-shot Q&A — no tools, no message history. Used by the AskAgent
+     * fallback path when no MCP servers are enabled (B1 behaviour).
      */
     suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult
+
+    /**
+     * Multi-turn chat with optional tool-calling. The provider may
+     * return text only (final answer) or text + tool calls the caller
+     * must execute and feed back as [LlmMessage.Tool] messages in the
+     * next call. Implementations send the [tools] schema verbatim to
+     * the provider's native tool-calling API (Anthropic Messages
+     * `tools`, OpenAI Chat Completions `tools`).
+     */
+    suspend fun chat(
+        messages: List<LlmMessage>,
+        tools: List<LlmTool>,
+    ): LlmResponse
+}
+
+sealed interface LlmResponse {
+    /** Assistant text + zero-or-more tool calls. `text` is null when the
+     *  model returned a pure-tool-call turn with no commentary. */
+    data class Ok(val text: String?, val toolCalls: List<LlmToolCall>) : LlmResponse
+
+    /** Same shape as [LlmResult.Failure] but for the chat path. */
+    data class Failure(val failure: LlmResult.Failure) : LlmResponse
 }
 
 sealed interface LlmResult {
