@@ -12,8 +12,5 @@
   if release-build cleartext becomes a requirement.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application
-        android:usesCleartextTraffic="true"
-        tools:replace="android:usesCleartextTraffic"
-        xmlns:tools="http://schemas.android.com/tools" />
+    <application android:usesCleartextTraffic="true" />
 </manifest>
