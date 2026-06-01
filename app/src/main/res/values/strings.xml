@@ -232,14 +232,16 @@
 
     <!-- Support card -->
     <string name="settings_support_header">Support Wristotle</string>
-    <string name="settings_support_desc">Wristotle is free and open-source, built in spare time. If it\'s become part of your day, a coffee goes a long way to keep new features and watch fixes coming.</string>
-    <string name="settings_support_bmc_button">Buy me a coffee</string>
-    <string name="settings_support_other_ways">Other ways to help — all free:</string>
+    <string name="settings_support_desc">Wristotle is free and open-source, built in spare time. The free options below help just as much as the paid one — please start there.</string>
+    <string name="settings_support_free_ways">Free, takes a minute:</string>
     <string name="settings_support_star_companion">⭐ Star the companion repo on Codeberg</string>
     <string name="settings_support_star_watch">⭐ Star the watch app repo on Codeberg</string>
     <string name="settings_support_like_rebble">👍 Like the watch app on the Rebble appstore</string>
     <string name="settings_support_like_repebble">👍 Like the watch app on the Core Devices appstore</string>
     <string name="settings_support_learn_more">Learn more on the docs site</string>
+    <string name="settings_support_bmc_section">Only if you have spare cash</string>
+    <string name="settings_support_bmc_caveat">If money\'s tight or you need it for yourself or family, please skip this. Wristotle is free forever — a star above means just as much. No pressure.</string>
+    <string name="settings_support_bmc_button">Buy me a coffee</string>
 
     <!-- Reminders card -->
     <string name="settings_reminders_header">Reminders</string>

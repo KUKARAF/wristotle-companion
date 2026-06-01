@@ -45,17 +45,14 @@ fun SupportCard() {
                 description = stringResource(R.string.settings_support_desc),
             )
 
-            Button(
-                onClick = { openUrl(context, URL_BMC) },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.settings_support_bmc_button))
-            }
-
+            // Free options first — most users land here without
+            // disposable income to spare, and the project's framing
+            // is "no pressure to pay." Free actions (star, like, share)
+            // matter just as much to discovery + momentum.
             Text(
-                stringResource(R.string.settings_support_other_ways),
+                stringResource(R.string.settings_support_free_ways),
                 style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = 4.dp),
             )
 
             TextButton(onClick = { openUrl(context, URL_REPO_COMPANION) }) {
@@ -72,6 +69,25 @@ fun SupportCard() {
             }
             TextButton(onClick = { openUrl(context, URL_DOCS_SUPPORT) }) {
                 Text(stringResource(R.string.settings_support_learn_more))
+            }
+
+            // Paid option last, with an explicit "skip this if money's
+            // tight" caveat so the framing matches the docs site.
+            Text(
+                stringResource(R.string.settings_support_bmc_section),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+            Text(
+                stringResource(R.string.settings_support_bmc_caveat),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(
+                onClick = { openUrl(context, URL_BMC) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_support_bmc_button))
             }
         }
     }
