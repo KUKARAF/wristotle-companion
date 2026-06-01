@@ -67,7 +67,7 @@ import kotlinx.coroutines.launch
  * landing visually distinct from Material's standard chrome and avoids
  * pulling in `material-icons-extended` symbols just for eight glyphs.
  */
-enum class SettingsCategory(@StringRes val labelRes: Int, val emoji: String) {
+enum class SettingsCategory(@param:StringRes val labelRes: Int, val emoji: String) {
     Watch(R.string.settings_section_watch, "⌚"),
     Conversation(R.string.settings_section_conversation, "💬"),
     Notes(R.string.settings_section_notes, "📝"),

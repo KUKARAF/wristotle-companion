@@ -31,7 +31,7 @@ import com.lazydevs.wristotle.R
  */
 enum class Screen(
     val route: String,
-    @StringRes val labelRes: Int,
+    @param:StringRes val labelRes: Int,
     val icon: ImageVector,
     val tint: Color,
 ) {

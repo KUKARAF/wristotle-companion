@@ -102,8 +102,13 @@ jobs:
 
       - name: Run unit tests
         # Fail fast before paying the release-build cost if a recent commit
-        # broke a dedup / slot / prefix test.
-        run: ./gradlew :app:testDebugUnitTest :speech-whisper:testDebugUnitTest
+        # broke a dedup / slot / prefix test. --no-daemon for the same
+        # reason as assembleRelease below: the medium runner is tight on
+        # RAM, and a long-lived daemon + the forked test JVM + cmake/ninja
+        # subprocesses competing on a ~4 GB box trip the OOM killer.
+        # v0.14.1 saw two consecutive daemon-disappeared failures here
+        # before this was added; --no-daemon cleared it.
+        run: ./gradlew --no-daemon -Dorg.gradle.workers.max=2 :app:testDebugUnitTest :speech-whisper:testDebugUnitTest
 
       - name: Build release APK
         env:
