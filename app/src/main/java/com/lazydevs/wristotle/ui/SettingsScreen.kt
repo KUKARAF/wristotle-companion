@@ -108,6 +108,17 @@ fun SettingsScreen(
     backupVm: BackupViewModel,
     mcpServersVm: McpServersViewModel,
     attentionByCategory: Map<SettingsCategory, Boolean> = emptyMap(),
+    /** Non-null when the app launched into a version it hasn't seen
+     *  before — drill straight into [SettingsCategory.Help] and have
+     *  the card mark + auto-scroll to the matching FeatureEntry, so
+     *  the user lands on the entry that documents what they just got
+     *  without losing the rest of the page. See
+     *  [com.lazydevs.wristotle.help.WhatsNewState]. */
+    whatsNewVersion: String? = null,
+    /** Called once the auto-open has fired so MainScreen can clear its
+     *  one-shot trigger and we don't re-trigger on configuration changes
+     *  / process recreates. */
+    onWhatsNewConsumed: () -> Unit = {},
 ) {
     // Reminder / Weather / AskAgent settings are app-scoped singletons,
     // not StateFlows — cheap to read here and pass down. The actual
@@ -134,6 +145,22 @@ fun SettingsScreen(
     // System back resets to null when on a sub-screen.
     var category by remember { mutableStateOf<SettingsCategory?>(null) }
     BackHandler(enabled = category != null) { category = null }
+
+    // First-launch-after-install/update: drill straight into Help with
+    // the just-installed version pre-filled. The capturedPrefill state
+    // is the dance to avoid a race — onWhatsNewConsumed() nulls the
+    // upstream MainScreen state before HelpCard ever composes, so we
+    // copy the value into local state first, then signal upstream to
+    // clear. HelpCard reads from capturedPrefill, not from the param
+    // chain that's about to go null.
+    var capturedPrefill by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(whatsNewVersion) {
+        if (whatsNewVersion != null) {
+            capturedPrefill = whatsNewVersion
+            category = SettingsCategory.Help
+            onWhatsNewConsumed()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -169,6 +196,8 @@ fun SettingsScreen(
                 askAgentSettings = askAgentSettings,
                 onShowClearLearnedConfirm = { showClearLearnedConfirm = true },
                 onShowClearAudioConfirm = { showClearAudioConfirm = true },
+                helpHighlightVersion = capturedPrefill,
+                onHelpHighlightConsumed = { capturedPrefill = null },
                 onShrinkRequest = { newDays ->
                     val currentDays = conversationVm.retentionDays.value
                     if (newDays >= currentDays) {
@@ -322,6 +351,13 @@ private fun SettingsCategoryContent(
     onShowClearLearnedConfirm: () -> Unit,
     onShowClearAudioConfirm: () -> Unit,
     onShrinkRequest: (Int) -> Unit,
+    /** When non-null, the Help card marks the matching FeatureEntry
+     *  with a "✨ New" chip and auto-scrolls to it on first
+     *  composition — used by the first-launch-after-install/update
+     *  flow to point the user at what they just got without hiding
+     *  the rest of the page. */
+    helpHighlightVersion: String? = null,
+    onHelpHighlightConsumed: () -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Each branch collects the flows it actually uses — when the user
@@ -402,8 +438,18 @@ private fun SettingsCategoryContent(
             SettingsCategory.Diagnostics ->
                 DiagnosticsCard(vm = diagnosticsVm)
 
-            SettingsCategory.Help ->
-                HelpCard()
+            SettingsCategory.Help -> {
+                // Pass the captured highlight version to HelpCard
+                // once, then null it. HelpCard captures its initial
+                // scroll target via remember {}, so the second
+                // composition (with highlight=null) doesn't re-trigger
+                // a scroll — and user-driven re-entries to Help
+                // (Landing → Help) don't replay the "new feature"
+                // highlight either.
+                val highlight = helpHighlightVersion
+                LaunchedEffect(Unit) { onHelpHighlightConsumed() }
+                HelpCard(highlightVersion = highlight)
+            }
 
             SettingsCategory.Support ->
                 SupportCard()

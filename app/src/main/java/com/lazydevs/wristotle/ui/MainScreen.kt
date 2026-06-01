@@ -19,10 +19,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -31,6 +36,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.ui.nav.Screen
 import com.lazydevs.wristotle.ui.SettingsCategory
 
@@ -65,6 +71,24 @@ fun MainScreen(
 ) {
     val navController = rememberNavController()
     val perms by vm.permissions.collectAsState()
+
+    // Auto-open Settings → ❓ Help on the first launch after a fresh
+    // install or a version upgrade. WhatsNewState.consumeOnce() returns
+    // the just-installed version exactly once per version change; null
+    // on every subsequent call (and across cold starts on the same
+    // version). Captured into a mutableStateOf so SettingsScreen can
+    // observe it as a one-shot trigger via LaunchedEffect.
+    val app = LocalContext.current.applicationContext as WristotleApplication
+    var whatsNewVersion by remember { mutableStateOf(app.whatsNewState.consumeOnce()) }
+    LaunchedEffect(whatsNewVersion) {
+        if (whatsNewVersion != null) {
+            navController.navigate(Screen.Settings.route) {
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
     val isDefaultVoiceProvider by vm.isDefaultVoiceProvider.collectAsState()
     // Only the boolean — see ModelsViewModel.attentionNeeded for why we don't
     // collect the full models list here (download progress would recompose
@@ -218,6 +242,8 @@ fun MainScreen(
                         backupVm = backupVm,
                         mcpServersVm = mcpServersVm,
                         attentionByCategory = settingsAttentionByCategory,
+                        whatsNewVersion = whatsNewVersion,
+                        onWhatsNewConsumed = { whatsNewVersion = null },
                     )
                 }
             }

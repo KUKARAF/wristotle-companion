@@ -219,6 +219,12 @@ class WristotleApplication : Application() {
     lateinit var watchSettingsRepository: WatchSettingsRepository
         private set
 
+    /** Decides whether the first launch after a fresh install or an
+     *  update should auto-open Settings → ❓ Help. Singleton; the UI
+     *  layer pulls once at MainScreen mount via [com.lazydevs.wristotle.help.WhatsNewState.consumeOnce]. */
+    lateinit var whatsNewState: com.lazydevs.wristotle.help.WhatsNewState
+        private set
+
     /**
      * Application-scoped scope for fire-and-forget housekeeping (DB pruning, etc).
      * SupervisorJob so one failure doesn't cancel siblings.
@@ -294,6 +300,11 @@ class WristotleApplication : Application() {
             com.lazydevs.wristotle.transport.PebbleCompanionDetector(this)
 
         watchSettingsRepository = WatchSettingsRepository(transport, appScope)
+
+        whatsNewState = com.lazydevs.wristotle.help.WhatsNewState(
+            context = this,
+            currentVersion = BuildConfig.VERSION_NAME,
+        )
 
         // Slot extractors are stateless aside from the contacts dep shared
         // with SendMessageHandler / CallSlots, so building them once at

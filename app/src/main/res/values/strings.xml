@@ -197,6 +197,7 @@
     <string name="settings_help_open_docs">Open docs ↗</string>
     <string name="settings_help_troubleshooting_prompt">Stuck? The troubleshooting page covers dictation problems, permissions, the Whisper hallucination filter, and more.</string>
     <string name="settings_help_troubleshooting_button">Need help troubleshooting? ↗</string>
+    <string name="settings_help_new_chip">✨ NEW IN THIS RELEASE</string>
 
     <!-- Ask Agent card (phase B1 of the agent feature) -->
     <string name="settings_askagent_header">Ask Agent</string>
