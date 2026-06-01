@@ -183,6 +183,20 @@
     <string name="settings_section_mcp">MCP servers</string>
     <string name="settings_section_askagent">Ask Agent</string>
     <string name="settings_section_support">Support</string>
+    <string name="settings_section_help">Help</string>
+
+    <!-- Help card — tips + feature history -->
+    <string name="settings_help_header">Help</string>
+    <string name="settings_help_desc">Quick tips for features you might not stumble onto by tapping around, and a running list of everything Wristotle does — newest first, with the release it shipped in.</string>
+    <string name="settings_help_tips_header">Tips</string>
+    <string name="settings_help_history_header">Feature history</string>
+    <string name="settings_help_history_desc">Newest releases at the top. Each entry shows the version + release date, what it does, and where useful a sample voice command.</string>
+    <string name="settings_help_search_label">Search</string>
+    <string name="settings_help_search_placeholder">Try \"weather\", \"backup\", \"v0.10\"…</string>
+    <string name="settings_help_no_matches">No tips or features match that search.</string>
+    <string name="settings_help_open_docs">Open docs ↗</string>
+    <string name="settings_help_troubleshooting_prompt">Stuck? The troubleshooting page covers dictation problems, permissions, the Whisper hallucination filter, and more.</string>
+    <string name="settings_help_troubleshooting_button">Need help troubleshooting? ↗</string>
 
     <!-- Ask Agent card (phase B1 of the agent feature) -->
     <string name="settings_askagent_header">Ask Agent</string>

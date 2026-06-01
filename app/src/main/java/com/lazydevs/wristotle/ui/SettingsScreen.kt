@@ -80,6 +80,7 @@ enum class SettingsCategory(@param:StringRes val labelRes: Int, val emoji: Strin
     Mcp(R.string.settings_section_mcp, "🔌"),
     AskAgent(R.string.settings_section_askagent, "✨"),
     Diagnostics(R.string.settings_section_diagnostics, "🔧"),
+    Help(R.string.settings_section_help, "❓"),
     Support(R.string.settings_section_support, "❤️"),
 }
 
@@ -400,6 +401,9 @@ private fun SettingsCategoryContent(
 
             SettingsCategory.Diagnostics ->
                 DiagnosticsCard(vm = diagnosticsVm)
+
+            SettingsCategory.Help ->
+                HelpCard()
 
             SettingsCategory.Support ->
                 SupportCard()
