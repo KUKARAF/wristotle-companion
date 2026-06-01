@@ -8,7 +8,6 @@ import com.lazydevs.wristotle.agent.LlmProvider
 import com.lazydevs.wristotle.handlers.PinStore
 import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.handlers.TempUnit
-import com.lazydevs.wristotle.mcp.McpServerEntity
 import com.lazydevs.wristotle.settings.WeatherProviderId
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.notes.AppendAudioMode
@@ -76,28 +75,34 @@ class BackupImporter(private val app: WristotleApplication) {
     /**
      * Runs the full import using the [manifest] [peek] already validated.
      * Re-stages the ZIP (peek's staging dir is gone by now) and processes
-     * every entry.
-     */
-    /**
-     * @param selection Per-category opt-in (subset of what's in the ZIP).
-     *   Categories with `false` are skipped — no row writes, no pref
-     *   writes for that section. Defaults to everything the ZIP carries
-     *   (i.e. `manifest.selected`) so callers that don't pass a custom
-     *   selection get the "restore everything" behaviour.
+     * every entry the [options] selection opts in to.
+     *
+     * @param options Per-category opt-in + password for the ZIP. The
+     *   selection is typically `manifest.selected` (restore everything
+     *   the ZIP carries) or a user-trimmed subset of it; categories with
+     *   `false` skip both extraction and writes. The password reuses the
+     *   value [peek] validated against the ZIP MAC.
      */
     suspend fun import(
         source: Uri,
-        password: String? = null,
         manifest: BackupManifest,
-        selection: BackupSelection = manifest.selected,
+        options: BackupOptions,
     ): BackupImportResult = withContext(Dispatchers.IO) {
+        val selection = options.selection
+        val password = options.password
         val staging = stage(source) ?: error("Could not stage incoming ZIP")
         try {
             val tempZip = File(staging, INCOMING_ZIP)
             val zip = if (password.isNullOrEmpty()) ZipFile(tempZip)
                      else ZipFile(tempZip, password.toCharArray())
             val extractDir = File(staging, "extract").apply { mkdirs() }
-            zip.extractAll(extractDir.absolutePath)
+            // Extract only the entries the user actually wants to restore.
+            // For a 50 MB ZIP where the user unticked Audio recordings, this
+            // skips the bulk of the bytes — disk + cache pressure both
+            // matter on a 2 GB phone. Falls back to a full extract on any
+            // entry-traversal error so a corrupt header doesn't drop us
+            // into a silent partial restore.
+            extractSelected(zip, extractDir, selection)
 
             val schemaSkips = mutableListOf<String>()
             val audio = if (selection.audioRecordings) importAudio(extractDir, manifest.exportedAtMs)
@@ -153,6 +158,44 @@ class BackupImporter(private val app: WristotleApplication) {
             } ?: return@runCatching null
             dir
         }.onFailure { Log.w(TAG, "stage failed", it) }.getOrNull()
+    }
+
+    // ── Selective extraction ──────────────────────────────────────────────
+
+    /**
+     * Extracts only the entries the user's [selection] needs into
+     * [extractDir]. The manifest is always extracted (the import flow has
+     * already read it via [peek], but extraction puts it on disk for any
+     * downstream caller). Data files extract only when their category is
+     * ticked; the audio prefixes extract only when audio is ticked.
+     *
+     * On any unexpected zip4j failure during traversal we fall back to a
+     * full extract — better to import a category the user didn't tick
+     * than to silently skip one they did. Symptom of a real failure
+     * would surface via the per-entity readRows step regardless.
+     */
+    private fun extractSelected(zip: ZipFile, extractDir: File, selection: BackupSelection) {
+        runCatching {
+            val targetPath = extractDir.absolutePath
+            for (header in zip.fileHeaders) {
+                val name = header.fileName
+                if (shouldExtract(name, selection)) zip.extractFile(header, targetPath)
+            }
+        }.onFailure {
+            Log.w(TAG, "selective extract failed; falling back to extractAll", it)
+            zip.extractAll(extractDir.absolutePath)
+        }
+    }
+
+    private fun shouldExtract(entryName: String, selection: BackupSelection): Boolean = when {
+        entryName == BackupManifest.FILENAME -> true
+        entryName == "data/notes.json" -> selection.notes
+        entryName == "data/tasks.json" -> selection.tasks
+        entryName == "data/conversations.json" -> selection.conversations
+        entryName == "data/nlu.json" -> selection.nluLearned
+        entryName == "data/mcp_servers.json" -> selection.mcpServers
+        entryName.startsWith("audio/") -> selection.audioRecordings
+        else -> true  // unknown future entries — forward-compatible
     }
 
     // ── Manifest ──────────────────────────────────────────────────────────
@@ -358,14 +401,6 @@ class BackupImporter(private val app: WristotleApplication) {
 
     // ── MCP servers ───────────────────────────────────────────────────────
 
-    /**
-     * MCP server merge: dedupe by (name, url) — same server is the same
-     * server whether or not it was renamed locally. Existing rows are
-     * preserved (the local auth_header isn't clobbered by a backup row
-     * that lacks one). New rows insert with the auth_header stripped to
-     * null when [includeAuthHeaders] is false (the user opted out of
-     * the secret category).
-     */
     private suspend fun importMcpServers(
         extractDir: File,
         includeAuthHeaders: Boolean,
@@ -374,20 +409,18 @@ class BackupImporter(private val app: WristotleApplication) {
         val rows = readRows(extractDir, "data/mcp_servers.json", McpServerJson.CURRENT_SCHEMA, "mcp_servers", schemaSkips)
             { row, schema -> McpServerJson.decode(row, schema) }
             ?: return EntityStats()
-        val sanitised: List<McpServerEntity> = if (includeAuthHeaders) rows
-            else rows.map { it.copy(authHeader = null) }
         val repo = app.mcpServerRepository
         val existing = repo.listAll()
-        val existingKeys = existing.map { it.name to it.url }.toSet()
-        val (skip, insert) = sanitised.partition { (it.name to it.url) in existingKeys }
+        val toInsert = MergeStrategies.mergeMcpServers(existing, rows, stripAuthHeaders = !includeAuthHeaders)
+        val duplicates = rows.size - toInsert.size
         var imported = 0
         var failed = 0
-        for (row in insert) {
+        for (row in toInsert) {
             try { repo.add(row); imported++ } catch (t: Throwable) {
                 Log.w(TAG, "mcp server insert failed", t); failed++
             }
         }
-        return EntityStats(imported = imported, duplicates = skip.size, failed = failed)
+        return EntityStats(imported = imported, duplicates = duplicates, failed = failed)
     }
 
     // ── JSON row reader ───────────────────────────────────────────────────
@@ -421,26 +454,28 @@ class BackupImporter(private val app: WristotleApplication) {
     // ── Prefs / pins / aliases ────────────────────────────────────────────
 
     /**
-     * Writes the prefs blocks the user opted into. Each top-level group
-     * is gated by its corresponding [BackupSelection] field. The
-     * non-secret legacy blocks (Notes / Conversation / NLU / Diagnostics
-     * / model prefs / Reminder) share the [BackupSelection.appPreferences]
-     * gate. Weather + AskAgent each have their own; their secret
-     * sub-fields (api keys) only restore when the matching secret
-     * checkbox is ticked.
+     * Writes the prefs blocks the user opted into. Each sub-block is
+     * doubly gated: by the [BackupSelection] field (user opted in on this
+     * restore) AND by the block being non-null in the manifest (the ZIP
+     * actually carries it). Either gate failing leaves the device's
+     * current value untouched.
      */
     private fun applyPrefs(p: BackupManifest.PrefsBlock, sel: BackupSelection) {
         if (sel.appPreferences) {
-            app.noteSettings.setKeepLast(p.notes.keepLast)
-            runCatching { AppendAudioMode.valueOf(p.notes.appendAudioMode) }
-                .onSuccess { app.noteSettings.setAppendAudioMode(it) }
-            app.conversationSettings.setRetentionDays(p.conversationSettings.retentionDays)
-            app.conversationAudioSettings.setCaptureEnabled(p.conversationAudio.captureEnabled)
-            app.nluSettings.setLearningEnabled(p.nluSettings.learningEnabled)
-            app.diagnosticsSettings.setRedactPii(p.diagnostics.redactPii)
-            app.diagnosticsSettings.setIncludeAudio(p.diagnostics.includeAudio)
-            app.modelStorage.activeModelId = p.whisperModels.activeModelId
-            app.nluModelStorage.activeModelId = p.nluModels.activeModelId
+            p.notes?.let { n ->
+                app.noteSettings.setKeepLast(n.keepLast)
+                runCatching { AppendAudioMode.valueOf(n.appendAudioMode) }
+                    .onSuccess { app.noteSettings.setAppendAudioMode(it) }
+            }
+            p.conversationSettings?.let { app.conversationSettings.setRetentionDays(it.retentionDays) }
+            p.conversationAudio?.let { app.conversationAudioSettings.setCaptureEnabled(it.captureEnabled) }
+            p.nluSettings?.let { app.nluSettings.setLearningEnabled(it.learningEnabled) }
+            p.diagnostics?.let { d ->
+                app.diagnosticsSettings.setRedactPii(d.redactPii)
+                app.diagnosticsSettings.setIncludeAudio(d.includeAudio)
+            }
+            p.whisperModels?.let { app.modelStorage.activeModelId = it.activeModelId }
+            p.nluModels?.let { app.nluModelStorage.activeModelId = it.activeModelId }
             p.reminder?.let { app.reminderSettings.setDefaultOffsetMin(it.defaultOffsetMin) }
         }
 

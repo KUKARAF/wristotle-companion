@@ -2,11 +2,13 @@ package com.lazydevs.wristotle.backup
 
 import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.history.ConversationEntry
+import com.lazydevs.wristotle.mcp.McpServerEntity
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.phone.ContactRef
 import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
 import com.lazydevs.wristotle.tasks.TaskEntity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -291,4 +293,52 @@ class MergeStrategiesTest {
         )
         assertEquals(1, out.size)
     }
+
+    // ── MCP servers ───────────────────────────────────────────────────────
+
+    @Test fun mcpServers_dedupeByNameAndUrl() {
+        val existing = listOf(
+            mcp(id = 1, name = "github", url = "https://api.github.com/mcp"),
+        )
+        val incoming = listOf(
+            // Same (name, url) → skip even though the auth header differs.
+            mcp(id = 99, name = "github", url = "https://api.github.com/mcp", auth = "Bearer different"),
+            // Same name, different url → distinct server.
+            mcp(id = 100, name = "github", url = "https://other.com/mcp"),
+            // Different name, same url → distinct server.
+            mcp(id = 101, name = "github-mirror", url = "https://api.github.com/mcp"),
+        )
+        val out = MergeStrategies.mergeMcpServers(existing, incoming, stripAuthHeaders = false)
+        assertEquals(2, out.size)
+        assertTrue("ids zeroed for Room autogen", out.all { it.id == 0L })
+        assertTrue(out.any { it.url == "https://other.com/mcp" })
+        assertTrue(out.any { it.name == "github-mirror" })
+    }
+
+    @Test fun mcpServers_stripAuthHeadersBlanksOnInsert() {
+        val incoming = listOf(mcp(name = "x", url = "https://x", auth = "Bearer sk-leak"))
+        val out = MergeStrategies.mergeMcpServers(emptyList(), incoming, stripAuthHeaders = true)
+        assertEquals(1, out.size)
+        assertNull("secret stripped per restore-side opt-out", out[0].authHeader)
+    }
+
+    @Test fun mcpServers_preserveAuthHeadersWhenAllowed() {
+        val incoming = listOf(mcp(name = "x", url = "https://x", auth = "Bearer sk-keep"))
+        val out = MergeStrategies.mergeMcpServers(emptyList(), incoming, stripAuthHeaders = false)
+        assertEquals("Bearer sk-keep", out[0].authHeader)
+    }
+
+    private fun mcp(
+        id: Long = 0,
+        name: String,
+        url: String,
+        auth: String? = null,
+    ) = McpServerEntity(
+        id = id,
+        name = name,
+        url = url,
+        streamable = true,
+        authHeader = auth,
+        enabled = true,
+    )
 }

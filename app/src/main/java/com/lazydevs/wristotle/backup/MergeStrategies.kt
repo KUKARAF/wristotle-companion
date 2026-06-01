@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.backup
 
 import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.history.ConversationEntry
+import com.lazydevs.wristotle.mcp.McpServerEntity
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.phone.ContactRef
 import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
@@ -120,6 +121,28 @@ object MergeStrategies {
         byName(ref.nameSnapshot)?.let { return ref.copy(lookupKey = it) }
         byNumber(ref.numberSnapshot)?.let { return ref.copy(lookupKey = it) }
         return ref
+    }
+
+    /**
+     * MCP servers to insert. Dedupe by (name, url) — same server is the
+     * same server whether or not it was renamed locally. Existing rows
+     * are preserved (the local auth_header isn't clobbered by a backup
+     * row that lacks one). [stripAuthHeaders] sets each incoming row's
+     * `authHeader` to null before the comparison so a "no secrets"
+     * restore can't smuggle the field in via this path.
+     */
+    fun mergeMcpServers(
+        existing: List<McpServerEntity>,
+        incoming: List<McpServerEntity>,
+        stripAuthHeaders: Boolean,
+    ): List<McpServerEntity> {
+        val sanitised = if (stripAuthHeaders) incoming.map { it.copy(authHeader = null) } else incoming
+        val seen = HashSet<Pair<String, String>>(existing.size).apply {
+            existing.forEach { add(it.name to it.url) }
+        }
+        return sanitised.mapNotNull { row ->
+            if (seen.add(row.name to row.url)) row.copy(id = 0) else null
+        }
     }
 
     /**

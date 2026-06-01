@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -91,7 +92,6 @@ fun BackupCard(vm: BackupViewModel) {
             ) {
                 Button(
                     onClick = {
-                        vm.refreshAudioInventory()
                         vm.refreshExportCounts()
                         showExportDialog = true
                     },
@@ -128,22 +128,23 @@ fun BackupCard(vm: BackupViewModel) {
 
     // Two-stage commit on Export: the options dialog returns a (selection,
     // password) pair, then — if secrets are ticked AND password is blank —
-    // a "plaintext secrets?" confirm dialog blocks the SAF launch until the
-    // user explicitly acknowledges the plaintext-leak risk.
-    var pendingPlaintextLaunch by remember { mutableStateOf<String?>(null) }
+    // a "plaintext secrets?" confirm dialog blocks the SAF launch until
+    // the user explicitly acknowledges the plaintext-leak risk. The flag
+    // is a Boolean (not the password string) because the only branch that
+    // reaches this stash already proved the password is blank.
+    var showPlaintextConfirm by remember { mutableStateOf(false) }
     if (showExportDialog) {
-        val selection by vm.exportSelection.collectAsState()
+        val options by vm.exportOptions.collectAsState()
         val counts by vm.exportCounts.collectAsState()
         ExportOptionsDialog(
-            selection = selection,
+            selection = options.selection,
             counts = counts,
             onSelectionChange = vm::setExportSelection,
             onSelectAll = vm::toggleExportSelectAll,
             onConfirm = { password ->
                 showExportDialog = false
-                if (selection.anySecretSelected && password.isBlank()) {
-                    // Stash the (empty) password until the user OKs the warning.
-                    pendingPlaintextLaunch = password
+                if (options.selection.anySecretSelected && password.isBlank()) {
+                    showPlaintextConfirm = true
                 } else {
                     vm.setPendingPassword(password)
                     createDocument.launch(vm.suggestedFilename())
@@ -153,15 +154,15 @@ fun BackupCard(vm: BackupViewModel) {
         )
     }
 
-    pendingPlaintextLaunch?.let { pw ->
+    if (showPlaintextConfirm) {
         PlaintextSecretsConfirmDialog(
             onProceed = {
-                pendingPlaintextLaunch = null
-                vm.setPendingPassword(pw)
+                showPlaintextConfirm = false
+                vm.setPendingPassword("")
                 createDocument.launch(vm.suggestedFilename())
             },
             onCancel = {
-                pendingPlaintextLaunch = null
+                showPlaintextConfirm = false
                 showExportDialog = true   // back to the options dialog
             },
         )
@@ -218,9 +219,20 @@ private fun BackupSelectionEditor(
     onSelectAll: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        // Master row's checked state:
+        //   - Export side (available == null): mirror "all content + settings
+        //     ticked". Using `allSelected` here would require secrets too,
+        //     and since secrets default OFF the master would lie about
+        //     state on first open.
+        //   - Restore side: "ticked" means the user wants everything that's
+        //     in the ZIP — i.e. the full available set.
+        val masterChecked = remember(selection, available) {
+            if (available == null) selection.allContentAndSettingsSelected
+            else selection == available
+        }
         CheckRow(
             label = stringResource(R.string.settings_backup_select_all),
-            checked = if (available == null) selection.allSelected else selection == available,
+            checked = masterChecked,
             enabled = true,
             onCheckedChange = { onSelectAll() },
             isBold = true,
@@ -318,17 +330,25 @@ private fun CatRow(
 ) {
     val enabled = available ?: true
     val base = stringResource(labelRes)
-    val withCount = if (count != null) {
-        if (audioBytes != null) {
-            val mb = audioBytes / 1024.0 / 1024.0
-            stringResource(R.string.settings_backup_cat_count_with_size, base, count, mb)
-        } else {
-            stringResource(R.string.settings_backup_cat_count, base, count)
+    // Derived label depends on the static base + the two dynamic counts +
+    // whether the category is in the ZIP. Memoizing avoids re-evaluating
+    // the stringResource lookups on every parent recomposition (the editor
+    // sits inside a dialog that recomposes the whole tree on each tick).
+    val countWithSizeFormat = stringResource(R.string.settings_backup_cat_count_with_size)
+    val countFormat = stringResource(R.string.settings_backup_cat_count)
+    val unavailableSuffix = stringResource(R.string.settings_backup_restore_unavailable)
+    val locale = java.util.Locale.getDefault()
+    val label = remember(base, count, audioBytes, available, countWithSizeFormat, countFormat, unavailableSuffix) {
+        val withCount = when {
+            count == null -> base
+            audioBytes != null -> {
+                val mb = audioBytes / 1024.0 / 1024.0
+                String.format(locale, countWithSizeFormat, base, count, mb)
+            }
+            else -> String.format(locale, countFormat, base, count)
         }
-    } else base
-    val label = if (available == false) {
-        "$withCount " + stringResource(R.string.settings_backup_restore_unavailable)
-    } else withCount
+        if (available == false) "$withCount $unavailableSuffix" else withCount
+    }
     CheckRow(label = label, checked = checked && enabled, enabled = enabled, onCheckedChange = onCheckedChange)
 }
 
@@ -350,8 +370,9 @@ private fun CheckRow(
         Checkbox(checked = checked, enabled = enabled, onCheckedChange = onCheckedChange)
         Text(
             label,
-            style = if (isBold) MaterialTheme.typography.bodyMedium
-                else MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.let {
+                if (isBold) it.copy(fontWeight = FontWeight.SemiBold) else it
+            },
             color = if (enabled) MaterialTheme.colorScheme.onSurface
                 else MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -6,13 +6,13 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.backup.AudioInventory
 import com.lazydevs.wristotle.backup.BackupCounts
 import com.lazydevs.wristotle.backup.BackupExportResult
 import com.lazydevs.wristotle.backup.BackupExporter
 import com.lazydevs.wristotle.backup.BackupImportResult
 import com.lazydevs.wristotle.backup.BackupImporter
 import com.lazydevs.wristotle.backup.BackupManifest
+import com.lazydevs.wristotle.backup.BackupOptions
 import com.lazydevs.wristotle.backup.BackupSelection
 import com.lazydevs.wristotle.backup.PeekResult
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,10 +43,9 @@ class BackupViewModel(app: Application) : AndroidViewModel(app) {
     private val _isExporting = MutableStateFlow(false)
     val isExporting: StateFlow<Boolean> = _isExporting
 
-    private val _audioInventory = MutableStateFlow(AudioInventory(0, 0))
-    val audioInventory: StateFlow<AudioInventory> = _audioInventory
-
-    /** Per-category counts loaded fresh when the export dialog opens. */
+    /** Per-category counts loaded fresh when the export dialog opens.
+     *  `audioRecordings` / `audioBytes` ride here too — the dialog reads
+     *  them directly off this flow, no separate inventory stream. */
     private val _exportCounts = MutableStateFlow(BackupCounts.EMPTY)
     val exportCounts: StateFlow<BackupCounts> = _exportCounts
 
@@ -55,24 +54,17 @@ class BackupViewModel(app: Application) : AndroidViewModel(app) {
     val exportResult: StateFlow<ExportResultState> = _exportResult
 
     /**
-     * User-visible per-category selection for the next export. Observed
-     * by `BackupCard`'s checkbox tree; each toggle calls one of the
-     * `setExport*` methods to flip a single field.
+     * Pending export configuration — selection + password. Both fields
+     * are captured in the options dialog, then read by [export] when SAF
+     * returns a URI. Combining them removes a prior `@Volatile var`
+     * outlier and lets the dialog observe both as one piece of state.
      */
-    private val _exportSelection = MutableStateFlow(BackupSelection())
-    val exportSelection: StateFlow<BackupSelection> = _exportSelection
-
-    @Volatile private var pendingPassword: String = ""
+    private val _exportOptions = MutableStateFlow(BackupOptions())
+    val exportOptions: StateFlow<BackupOptions> = _exportOptions
 
     fun suggestedFilename(now: Long = System.currentTimeMillis()): String {
         val ts = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date(now))
         return "wristotle-backup-$ts.zip"
-    }
-
-    fun refreshAudioInventory() {
-        viewModelScope.launch {
-            _audioInventory.value = exporter.audioInventory()
-        }
     }
 
     /** Reloads per-category counts. Called when the export dialog opens. */
@@ -83,32 +75,33 @@ class BackupViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setExportSelection(value: BackupSelection) {
-        _exportSelection.value = value
+        _exportOptions.value = _exportOptions.value.copy(selection = value)
     }
 
     fun toggleExportSelectAll() {
-        _exportSelection.value =
-            if (_exportSelection.value.allSelected) BackupSelection.NONE
-            else BackupSelection.ALL
+        // The master checkbox reflects "all content + settings ticked"
+        // (secrets are independent — see BackupSelection.allContentAndSettingsSelected).
+        // So tapping it flips between NONE and ALL.
+        val current = _exportOptions.value.selection
+        val next = if (current.allContentAndSettingsSelected) BackupSelection.NONE
+        else BackupSelection.ALL
+        _exportOptions.value = _exportOptions.value.copy(selection = next)
     }
 
     fun setPendingPassword(password: String) {
-        pendingPassword = password
+        _exportOptions.value = _exportOptions.value.copy(password = password.takeIf { it.isNotEmpty() })
     }
 
     fun export(destination: Uri) {
         if (_isExporting.value) return
-        val selection = _exportSelection.value
-        val password = pendingPassword
-        pendingPassword = ""
+        val options = _exportOptions.value
+        // Reset password after read so a follow-up export starts fresh;
+        // selection persists so the user's choices survive the SAF roundtrip.
+        _exportOptions.value = options.copy(password = null)
         viewModelScope.launch {
             _isExporting.value = true
             _exportResult.value = try {
-                val result = exporter.export(
-                    destination = destination,
-                    selection = selection,
-                    password = password.takeIf { it.isNotEmpty() },
-                )
+                val result = exporter.export(destination = destination, options = options)
                 ExportResultState.Success(result)
             } catch (t: Throwable) {
                 Log.w(TAG, "backup export failed", t)
@@ -150,7 +143,7 @@ class BackupViewModel(app: Application) : AndroidViewModel(app) {
         // Categories not in the ZIP can't be restored regardless of
         // what the user ticks — clamp the requested selection by the
         // manifest's `available` so the view always shows truth.
-        _restore.value = current.copy(restoreSelection = clamp(value, current.available))
+        _restore.value = current.copy(restoreSelection = value and current.available)
     }
 
     fun toggleRestoreSelectAll() {
@@ -170,9 +163,11 @@ class BackupViewModel(app: Application) : AndroidViewModel(app) {
             _restore.value = try {
                 val result = importer.import(
                     source = current.uri,
-                    password = current.password,
                     manifest = current.manifest,
-                    selection = current.restoreSelection,
+                    options = BackupOptions(
+                        selection = current.restoreSelection,
+                        password = current.password,
+                    ),
                 )
                 RestoreState.Success(result)
             } catch (t: Throwable) {
@@ -181,25 +176,6 @@ class BackupViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
-
-    /** Categories the user can pick from at most — i.e. what's in the ZIP. */
-    private fun clamp(requested: BackupSelection, available: BackupSelection) = BackupSelection(
-        notes = requested.notes && available.notes,
-        tasks = requested.tasks && available.tasks,
-        conversations = requested.conversations && available.conversations,
-        reminders = requested.reminders && available.reminders,
-        nluLearned = requested.nluLearned && available.nluLearned,
-        appAliases = requested.appAliases && available.appAliases,
-        contactAliases = requested.contactAliases && available.contactAliases,
-        audioRecordings = requested.audioRecordings && available.audioRecordings,
-        appPreferences = requested.appPreferences && available.appPreferences,
-        weatherSettings = requested.weatherSettings && available.weatherSettings,
-        mcpServers = requested.mcpServers && available.mcpServers,
-        askAgentSetup = requested.askAgentSetup && available.askAgentSetup,
-        weatherApiKey = requested.weatherApiKey && available.weatherApiKey,
-        mcpAuthHeaders = requested.mcpAuthHeaders && available.mcpAuthHeaders,
-        askAgentApiKeys = requested.askAgentApiKeys && available.askAgentApiKeys,
-    )
 
     /** User dismissed any restore dialog (cancel button, OK on result, etc). */
     fun cancelRestore() {

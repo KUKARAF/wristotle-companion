@@ -75,8 +75,8 @@ class BackupManifestCodecTest {
             ),
         )
         val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(withModels))
-        assertEquals("base.en-q5_1", decoded.prefs.whisperModels.activeModelId)
-        assertEquals("minilm-l6-v2-int8", decoded.prefs.nluModels.activeModelId)
+        assertEquals("base.en-q5_1", decoded.prefs.whisperModels?.activeModelId)
+        assertEquals("minilm-l6-v2-int8", decoded.prefs.nluModels?.activeModelId)
     }
 
     @Test fun nullActiveModelIdDecodesAsNull() {
@@ -87,8 +87,8 @@ class BackupManifestCodecTest {
             ),
         )
         val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(withNullModels))
-        assertNull(decoded.prefs.whisperModels.activeModelId)
-        assertNull(decoded.prefs.nluModels.activeModelId)
+        assertNull(decoded.prefs.whisperModels?.activeModelId)
+        assertNull(decoded.prefs.nluModels?.activeModelId)
     }
 
     @Test fun pinWithNullTimeRoundTrips() {
@@ -266,6 +266,60 @@ class BackupManifestCodecTest {
         val decoded = BackupManifestCodec.decode(root.toString())
         assertNull(decoded.dataSchemas.mcpServers)
         assertEquals(0, decoded.stats.mcpServers)
+    }
+
+    // ── Schema-1 audio-prefs key compat ──────────────────────────────────────
+
+    @Test fun schema1Backup_legacyAudioPrefsKey_decodes() {
+        // Schema 1 emitted the audio prefs under `wristotle_conversation_audio`;
+        // schema 2 renamed it. Decoder must read both names so older ZIPs
+        // continue to restore cleanly.
+        val text = BackupManifestCodec.encode(sampleManifest())
+        val root = JSONObject(text)
+        val prefs = root.getJSONObject("prefs")
+        val convAudio = prefs.getJSONObject("wristotle_audio_recordings")
+        prefs.remove("wristotle_audio_recordings")
+        prefs.put("wristotle_conversation_audio", convAudio)
+        root.put("schema", 1)
+        root.remove("selected")
+        val decoded = BackupManifestCodec.decode(root.toString())
+        assertEquals(true, decoded.prefs.conversationAudio?.captureEnabled)
+    }
+
+    // ── Nullable prefs blocks (any unticked category produces no JSON bytes) ──
+
+    @Test fun nullPrefsBlocks_roundTrip() {
+        val original = sampleManifest().copy(
+            prefs = BackupManifest.PrefsBlock(
+                // Everything null — what an export with no categories
+                // selected would produce.
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertNull(decoded.prefs.notes)
+        assertNull(decoded.prefs.conversationSettings)
+        assertNull(decoded.prefs.conversationAudio)
+        assertNull(decoded.prefs.nluSettings)
+        assertNull(decoded.prefs.diagnostics)
+        assertNull(decoded.prefs.whisperModels)
+        assertNull(decoded.prefs.nluModels)
+        assertNull(decoded.prefs.reminder)
+        assertNull(decoded.prefs.weather)
+        assertNull(decoded.prefs.askAgent)
+    }
+
+    @Test fun mixedPrefsBlocks_roundTrip() {
+        // Mix of present / absent — e.g. a user who unticked App Preferences
+        // but kept Weather Settings on.
+        val original = sampleManifest().copy(
+            prefs = BackupManifest.PrefsBlock(
+                weather = BackupManifest.WeatherPrefs("CELSIUS", "OPEN_METEO"),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals("CELSIUS", decoded.prefs.weather?.unit)
+        assertNull(decoded.prefs.notes)
+        assertNull(decoded.prefs.diagnostics)
     }
 
     private fun sampleManifest() = BackupManifest(

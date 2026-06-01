@@ -47,22 +47,15 @@ data class BackupManifest(
      * `data/<name>.json` wrapper, matching the entity's `*Json.CURRENT_SCHEMA`
      * at export time. The importer compares each field to the live decoder's
      * `CURRENT_SCHEMA` and refuses individual entities that are too new for
-     * the current code to understand.
-     */
-    /**
-     * `tasks` is nullable on the data class level because backups
-     * exported BEFORE Phase D of the Tasks feature won't carry the
-     * field. The decoder falls back to null in that case; the importer
-     * treats null as "no tasks to import" (older backup, before the
-     * feature existed).
+     * the current code to understand. Fields are nullable when the entity
+     * may be absent from a given ZIP — either because it was unticked at
+     * export, or because the feature didn't exist when the ZIP was written.
      */
     data class DataSchemas(
         val notes: Int,
         val tasks: Int?,
         val conversations: Int,
         val nlu: Int,
-        // Schema 2+. Nullable for the same reason `tasks` is: a backup
-        // exported before the field existed won't carry it.
         val mcpServers: Int? = null,
     )
     data class Stats(
@@ -72,32 +65,25 @@ data class BackupManifest(
         val nluLearned: Int,
         val reminders: Int,
         val aliases: Int,
-        // Defaulted so older code (or older backups deserialized into
-        // this dataclass via something other than the codec) compile
-        // cleanly. The decoder reads `contact_aliases` from stats and
-        // falls back to 0 when the field is absent in pre-feature
-        // backups.
         val contactAliases: Int = 0,
         val mcpServers: Int = 0,
     )
 
     /**
-     * All prefs we back up, keyed by SharedPreferences name so the importer
-     * can write them back into the same store. Each value is a typed
-     * sub-object — keeping the same shape across versions matters more than
-     * field-by-field shapelessness, so we model them.
+     * Everything we back up, keyed by feature. Each sub-block is nullable
+     * — when null on export the encoder omits it from the JSON entirely,
+     * and on import the decoder reads null as "no change, keep the
+     * device's current value." This is what lets per-category opt-in
+     * work: an unticked category produces no prefs bytes in the ZIP.
      */
     data class PrefsBlock(
-        val notes: NotesPrefs,
-        val conversationSettings: ConversationPrefs,
-        val conversationAudio: ConversationAudioPrefs,
-        val nluSettings: NluPrefs,
-        val diagnostics: DiagnosticsPrefs,
-        val whisperModels: ModelPrefs,
-        val nluModels: ModelPrefs,
-        // Added in schema 2. Nullable so reading a schema-1 backup
-        // doesn't fail — encoder writes them only when the matching
-        // category was selected; decoder defaults to null when absent.
+        val notes: NotesPrefs? = null,
+        val conversationSettings: ConversationPrefs? = null,
+        val conversationAudio: ConversationAudioPrefs? = null,
+        val nluSettings: NluPrefs? = null,
+        val diagnostics: DiagnosticsPrefs? = null,
+        val whisperModels: ModelPrefs? = null,
+        val nluModels: ModelPrefs? = null,
         val reminder: ReminderPrefs? = null,
         val weather: WeatherPrefs? = null,
         val askAgent: AskAgentPrefs? = null,
@@ -109,20 +95,18 @@ data class BackupManifest(
     data class DiagnosticsPrefs(val redactPii: Boolean, val includeAudio: Boolean)
     data class ModelPrefs(val activeModelId: String?)
 
-    /** Reminder feature prefs — single int, lives in its own SharedPrefs file. */
     data class ReminderPrefs(val defaultOffsetMin: Int)
 
-    /** Weather feature prefs. `apiKey` rides only when the user ticks
-     *  the secret checkbox AND has set a key for the OpenWeather provider. */
+    /** `apiKey` rides only when the user ticks the secret checkbox. */
     data class WeatherPrefs(
         val unit: String,
         val provider: String,
         val apiKey: String? = null,
     )
 
-    /** AskAgent feature prefs. Per-provider API keys ride only when the
-     *  user ticks the secret checkbox. Endpoints/models/system-prompt
-     *  ride with the non-sensitive "askAgent setup" category. */
+    /** Per-provider API keys ride only when the user ticks the secret
+     *  checkbox. Endpoints/models/system-prompt ride with the
+     *  non-sensitive "askAgent setup" category. */
     data class AskAgentPrefs(
         val provider: String,
         val anthropicModel: String,
@@ -138,15 +122,22 @@ data class BackupManifest(
 
     companion object {
         /**
-         * Backup manifest schema:
+         * Backup manifest schema history:
          *
          * - **1** — original release. No selection block; no per-category
          *   filtering. Decoder assumes everything in the ZIP was wanted.
-         * - **2** (2026-05-31) — adds `selected: BackupSelection`, plus
-         *   `prefs.reminder` / `prefs.weather` / `prefs.askAgent`, plus
-         *   `data/mcp_servers.json` (referenced from `dataSchemas.mcpServers`).
-         *   Decoder defaults the new fields to null / LEGACY_FULL when
-         *   reading a schema-1 ZIP — backward compatible.
+         * - **2** (2026-05-31) — added on v0.15.0:
+         *   * `selected: BackupSelection` records what was opted in.
+         *   * Three new prefs blocks: `reminder` / `weather` / `askAgent`.
+         *   * `data/mcp_servers.json` (referenced from `dataSchemas.mcpServers`).
+         *   * All legacy prefs blocks became nullable so an unticked
+         *     category produces no JSON bytes (instead of dummy-default
+         *     bytes). Decoder treats null prefs as "no change on restore."
+         *   * Audio-prefs key was `wristotle_conversation_audio` in
+         *     schema 1; decoder reads both names for back-compat.
+         *
+         * Decoder is backward-compatible — schema-1 ZIPs decode by
+         * falling missing fields back to null / LEGACY_FULL / 0.
          */
         const val CURRENT_SCHEMA = 2
         const val FILENAME = "manifest.json"
@@ -207,32 +198,49 @@ object BackupManifestCodec {
             put("mcp_auth_headers", m.selected.mcpAuthHeaders)
             put("ask_agent_api_keys", m.selected.askAgentApiKeys)
         })
+        // Each block is omitted entirely when null (category wasn't
+        // selected on export); the decoder treats absence as "no change
+        // on restore." Encoder is gated for every block, not just the
+        // schema-2 additions, so an unticked category produces zero
+        // pref bytes in the ZIP.
         put("prefs", JSONObject().apply {
-            put("wristotle_notes", JSONObject().apply {
-                put("keep_last", m.prefs.notes.keepLast)
-                put("append_audio_mode", m.prefs.notes.appendAudioMode)
-            })
-            put("wristotle_conversation_settings", JSONObject().apply {
-                put("retention_days", m.prefs.conversationSettings.retentionDays)
-            })
-            put("wristotle_audio_recordings", JSONObject().apply {
-                put("capture_enabled", m.prefs.conversationAudio.captureEnabled)
-            })
-            put("wristotle_nlu_settings", JSONObject().apply {
-                put("learning_enabled", m.prefs.nluSettings.learningEnabled)
-            })
-            put("wristotle_diagnostics", JSONObject().apply {
-                put("redact_pii", m.prefs.diagnostics.redactPii)
-                put("include_audio", m.prefs.diagnostics.includeAudio)
-            })
-            put("whisper_models", JSONObject().apply {
-                m.prefs.whisperModels.activeModelId?.let { put("active_model_id", it) }
-            })
-            put("nlu_models", JSONObject().apply {
-                m.prefs.nluModels.activeModelId?.let { put("active_model_id", it) }
-            })
-            // Schema 2+. Each block is omitted entirely when null
-            // (category wasn't selected on export).
+            m.prefs.notes?.let { n ->
+                put("wristotle_notes", JSONObject().apply {
+                    put("keep_last", n.keepLast)
+                    put("append_audio_mode", n.appendAudioMode)
+                })
+            }
+            m.prefs.conversationSettings?.let { c ->
+                put("wristotle_conversation_settings", JSONObject().apply {
+                    put("retention_days", c.retentionDays)
+                })
+            }
+            m.prefs.conversationAudio?.let { ca ->
+                put("wristotle_audio_recordings", JSONObject().apply {
+                    put("capture_enabled", ca.captureEnabled)
+                })
+            }
+            m.prefs.nluSettings?.let { nl ->
+                put("wristotle_nlu_settings", JSONObject().apply {
+                    put("learning_enabled", nl.learningEnabled)
+                })
+            }
+            m.prefs.diagnostics?.let { d ->
+                put("wristotle_diagnostics", JSONObject().apply {
+                    put("redact_pii", d.redactPii)
+                    put("include_audio", d.includeAudio)
+                })
+            }
+            m.prefs.whisperModels?.let { wm ->
+                put("whisper_models", JSONObject().apply {
+                    wm.activeModelId?.let { put("active_model_id", it) }
+                })
+            }
+            m.prefs.nluModels?.let { nm ->
+                put("nlu_models", JSONObject().apply {
+                    nm.activeModelId?.let { put("active_model_id", it) }
+                })
+            }
             m.prefs.reminder?.let { r ->
                 put("wristotle_reminder_settings", JSONObject().apply {
                     put("default_offset_min", r.defaultOffsetMin)
@@ -294,13 +302,19 @@ object BackupManifestCodec {
     fun decode(raw: String): BackupManifest {
         val root = JSONObject(raw)
         val prefs = root.getJSONObject("prefs")
-        val notesPrefs = prefs.getJSONObject("wristotle_notes")
-        val convPrefs = prefs.getJSONObject("wristotle_conversation_settings")
-        val convAudio = prefs.getJSONObject("wristotle_audio_recordings")
-        val nluPrefs = prefs.getJSONObject("wristotle_nlu_settings")
-        val diagPrefs = prefs.getJSONObject("wristotle_diagnostics")
-        val whisper = prefs.getJSONObject("whisper_models")
-        val nluModels = prefs.getJSONObject("nlu_models")
+        // Every prefs sub-block is optional — schema 2 made all blocks
+        // nullable so an unticked category produces no JSON bytes.
+        val notesPrefs = prefs.optJSONObject("wristotle_notes")
+        val convPrefs = prefs.optJSONObject("wristotle_conversation_settings")
+        // Schema 1 emitted this as `wristotle_conversation_audio`; schema 2
+        // renamed it to `wristotle_audio_recordings`. Read both so schema-1
+        // ZIPs continue to restore cleanly.
+        val convAudio = prefs.optJSONObject("wristotle_audio_recordings")
+            ?: prefs.optJSONObject("wristotle_conversation_audio")
+        val nluPrefs = prefs.optJSONObject("wristotle_nlu_settings")
+        val diagPrefs = prefs.optJSONObject("wristotle_diagnostics")
+        val whisper = prefs.optJSONObject("whisper_models")
+        val nluModels = prefs.optJSONObject("nlu_models")
         val dataSchemas = root.getJSONObject("data_schemas")
         val stats = root.getJSONObject("stats")
         val pinsArr = root.optJSONArray("reminder_pins") ?: JSONArray()
@@ -334,29 +348,43 @@ object BackupManifestCodec {
                 mcpServers = stats.optInt("mcp_servers", 0),
             ),
             prefs = BackupManifest.PrefsBlock(
-                notes = BackupManifest.NotesPrefs(
-                    keepLast = notesPrefs.optInt("keep_last", 0),
-                    appendAudioMode = notesPrefs.optString("append_audio_mode", "MERGE"),
-                ),
-                conversationSettings = BackupManifest.ConversationPrefs(
-                    retentionDays = convPrefs.optInt("retention_days", 10),
-                ),
-                conversationAudio = BackupManifest.ConversationAudioPrefs(
-                    captureEnabled = convAudio.optBoolean("capture_enabled", false),
-                ),
-                nluSettings = BackupManifest.NluPrefs(
-                    learningEnabled = nluPrefs.optBoolean("learning_enabled", true),
-                ),
-                diagnostics = BackupManifest.DiagnosticsPrefs(
-                    redactPii = diagPrefs.optBoolean("redact_pii", true),
-                    includeAudio = diagPrefs.optBoolean("include_audio", false),
-                ),
-                whisperModels = BackupManifest.ModelPrefs(
-                    activeModelId = whisper.optString("active_model_id").takeIf { it.isNotEmpty() },
-                ),
-                nluModels = BackupManifest.ModelPrefs(
-                    activeModelId = nluModels.optString("active_model_id").takeIf { it.isNotEmpty() },
-                ),
+                notes = notesPrefs?.let {
+                    BackupManifest.NotesPrefs(
+                        keepLast = it.optInt("keep_last", 0),
+                        appendAudioMode = it.optString("append_audio_mode", "MERGE"),
+                    )
+                },
+                conversationSettings = convPrefs?.let {
+                    BackupManifest.ConversationPrefs(
+                        retentionDays = it.optInt("retention_days", 10),
+                    )
+                },
+                conversationAudio = convAudio?.let {
+                    BackupManifest.ConversationAudioPrefs(
+                        captureEnabled = it.optBoolean("capture_enabled", false),
+                    )
+                },
+                nluSettings = nluPrefs?.let {
+                    BackupManifest.NluPrefs(
+                        learningEnabled = it.optBoolean("learning_enabled", true),
+                    )
+                },
+                diagnostics = diagPrefs?.let {
+                    BackupManifest.DiagnosticsPrefs(
+                        redactPii = it.optBoolean("redact_pii", true),
+                        includeAudio = it.optBoolean("include_audio", false),
+                    )
+                },
+                whisperModels = whisper?.let {
+                    BackupManifest.ModelPrefs(
+                        activeModelId = it.optString("active_model_id").takeIf { s -> s.isNotEmpty() },
+                    )
+                },
+                nluModels = nluModels?.let {
+                    BackupManifest.ModelPrefs(
+                        activeModelId = it.optString("active_model_id").takeIf { s -> s.isNotEmpty() },
+                    )
+                },
                 reminder = prefs.optJSONObject("wristotle_reminder_settings")?.let { r ->
                     BackupManifest.ReminderPrefs(
                         defaultOffsetMin = r.optInt("default_offset_min", 0),

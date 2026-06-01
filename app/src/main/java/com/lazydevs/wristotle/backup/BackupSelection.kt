@@ -36,12 +36,23 @@ data class BackupSelection(
     val mcpAuthHeaders: Boolean = false,
     val askAgentApiKeys: Boolean = false,
 ) {
-    /** True when every category is selected. Drives the "Select all" master checkbox. */
+    /** True when EVERY category — content, settings, and secrets — is ticked.
+     *  [ALL] is the only value that satisfies this. */
     val allSelected: Boolean
         get() = notes && tasks && conversations && reminders && nluLearned &&
             appAliases && contactAliases && audioRecordings &&
             appPreferences && weatherSettings && mcpServers && askAgentSetup &&
             weatherApiKey && mcpAuthHeaders && askAgentApiKeys
+
+    /** True when every content + settings box is ticked, regardless of
+     *  whether the user opted any secrets in. Drives the master "Select
+     *  all" checkbox's *displayed* state — secrets default OFF, so requiring
+     *  them in `allSelected` would leave the master row visually unchecked
+     *  even when the user has ticked everything they expected to. */
+    val allContentAndSettingsSelected: Boolean
+        get() = notes && tasks && conversations && reminders && nluLearned &&
+            appAliases && contactAliases && audioRecordings &&
+            appPreferences && weatherSettings && mcpServers && askAgentSetup
 
     /** True when nothing is selected — used to disable the Export button. */
     val noneSelected: Boolean
@@ -54,6 +65,29 @@ data class BackupSelection(
      *  "plaintext secrets?" confirm dialog when no password is set. */
     val anySecretSelected: Boolean
         get() = weatherApiKey || mcpAuthHeaders || askAgentApiKeys
+
+    /** Per-field AND of two selections. Used by the restore preview to
+     *  clamp the user's requested selection against what's actually in
+     *  the ZIP (`requested and available`). One source of truth so a
+     *  future field addition only updates [BackupSelection.kt] instead of
+     *  having to also touch `BackupViewModel.clamp` / `allSelected` / etc. */
+    infix fun and(other: BackupSelection): BackupSelection = BackupSelection(
+        notes = notes && other.notes,
+        tasks = tasks && other.tasks,
+        conversations = conversations && other.conversations,
+        reminders = reminders && other.reminders,
+        nluLearned = nluLearned && other.nluLearned,
+        appAliases = appAliases && other.appAliases,
+        contactAliases = contactAliases && other.contactAliases,
+        audioRecordings = audioRecordings && other.audioRecordings,
+        appPreferences = appPreferences && other.appPreferences,
+        weatherSettings = weatherSettings && other.weatherSettings,
+        mcpServers = mcpServers && other.mcpServers,
+        askAgentSetup = askAgentSetup && other.askAgentSetup,
+        weatherApiKey = weatherApiKey && other.weatherApiKey,
+        mcpAuthHeaders = mcpAuthHeaders && other.mcpAuthHeaders,
+        askAgentApiKeys = askAgentApiKeys && other.askAgentApiKeys,
+    )
 
     companion object {
         /** Every category on — what the master "Select all" produces. */
@@ -74,7 +108,21 @@ data class BackupSelection(
 
         /** Older ZIPs (schema < 2) didn't carry a selection field — treat
          *  them as if everything WAS selected (matching the pre-feature
-         *  "everything in the ZIP" behaviour). */
-        val LEGACY_FULL = ALL
+         *  "everything in the ZIP" behaviour).
+         *
+         *  Spelled out as an explicit literal rather than `= ALL` so that
+         *  if the "Select all" UX ever changes (e.g. ALL stops including
+         *  secrets), schema-1 restore semantics don't silently shift —
+         *  schema-1 ZIPs predate the secrets split and DID contain
+         *  whatever was in the user's backup, so we always treat them as
+         *  fully-available regardless of how ALL evolves. */
+        val LEGACY_FULL = BackupSelection(
+            notes = true, tasks = true, conversations = true, reminders = true,
+            nluLearned = true, appAliases = true, contactAliases = true,
+            audioRecordings = true,
+            appPreferences = true, weatherSettings = true, mcpServers = true,
+            askAgentSetup = true,
+            weatherApiKey = true, mcpAuthHeaders = true, askAgentApiKeys = true,
+        )
     }
 }

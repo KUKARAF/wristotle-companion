@@ -24,9 +24,6 @@ private const val DATA_ENTRY_MCP_SERVERS = "data/mcp_servers.json"
 private const val AUDIO_NOTES_PREFIX = "audio/notes/"
 private const val AUDIO_CONVERSATIONS_PREFIX = "audio/conversation/"
 
-/** Pre-export estimate of audio inclusion's cost — shown in the export dialog. */
-data class AudioInventory(val files: Int, val bytes: Long)
-
 /**
  * Result of a successful export — surfaced to the UI so the snackbar can
  * report what landed in the ZIP.
@@ -67,24 +64,14 @@ data class BackupExportResult(
 class BackupExporter(private val app: WristotleApplication) {
 
     /**
-     * Counts files + summed bytes under both audio directories. Cheap (one
-     * listFiles per dir) so the UI can call it on dialog open to render
-     * "Include audio recordings (N files, M MB)". Filenames not matching
-     * `*.wav` are skipped so a stray non-audio file in the dir doesn't get
-     * counted in the user-visible total.
-     */
-    suspend fun audioInventory(): AudioInventory = withContext(Dispatchers.IO) {
-        val files = audioFiles()
-        AudioInventory(files = files.size, bytes = files.sumOf { it.length() })
-    }
-
-    /**
      * Cheap per-category snapshot for the export checkbox tree. Uses
      * COUNT(*) queries (not full row reads) — safe to call on dialog
-     * open without blocking the UI.
+     * open without blocking the UI. The audio directories are walked
+     * once here (filtered to `*.wav` so stray files don't inflate the
+     * user-visible total) for both the file count and total bytes.
      */
     suspend fun countAll(): BackupCounts = withContext(Dispatchers.IO) {
-        val audio = audioInventory()
+        val audio = audioFiles()
         BackupCounts(
             notes = app.notesDb.noteDao().count(),
             tasks = app.tasksDb.taskDao().count(),
@@ -93,8 +80,8 @@ class BackupExporter(private val app: WristotleApplication) {
             nluLearned = app.nluDb.exampleDao().countLearned(),
             appAliases = app.aliasStore.all().size,
             contactAliases = app.contactAliasStore.all().size,
-            audioRecordings = audio.files,
-            audioBytes = audio.bytes,
+            audioRecordings = audio.size,
+            audioBytes = audio.sumOf { it.length() },
             mcpServers = app.mcpServerRepository.count(),
         )
     }
@@ -103,22 +90,19 @@ class BackupExporter(private val app: WristotleApplication) {
      * Runs the export.
      *
      * @param destination SAF URI to stream the final ZIP into.
-     * @param selection   Per-category opt-in. Categories with `false` are
-     *                    omitted from the ZIP entirely (no data file, no
-     *                    stats, no prefs block). Secret-categories with
-     *                    `false` strip their fields even when the parent
-     *                    category is included.
-     * @param password    When non-null + non-empty, the ZIP is AES-256-
-     *                    encrypted with this passphrase; otherwise plain.
-     *                    Caller is responsible for confirming + erasing.
+     * @param options Per-category opt-in + optional encryption password.
+     *   See [BackupOptions]. Categories with `false` are omitted from the
+     *   ZIP entirely (no data file, no stats, no prefs block); secret-
+     *   categories with `false` strip their fields even when the parent
+     *   category is included.
      */
     suspend fun export(
         destination: Uri,
-        selection: BackupSelection = BackupSelection(),
-        password: String? = null,
+        options: BackupOptions = BackupOptions(),
     ): BackupExportResult = withContext(Dispatchers.IO) {
+        val selection = options.selection
         val ctx: Context = app.applicationContext
-        val encryptPassword = password?.takeIf { it.isNotEmpty() }
+        val encryptPassword = options.password?.takeIf { it.isNotEmpty() }
 
         // Per-category collection. Empty lists when the category isn't
         // selected — downstream encoders skip empty lists rather than
@@ -294,87 +278,74 @@ class BackupExporter(private val app: WristotleApplication) {
 
     /**
      * Reads the PrefsBlock from live app state, honouring per-section
-     * selection. Reminder / Weather / AskAgent blocks are null when the
-     * matching category isn't selected (decoder treats null as "no
-     * change" on restore). The legacy non-sensitive blocks (Notes,
-     * Conversation, NLU, Diagnostics, ModelPrefs) are gated by the
-     * [BackupSelection.appPreferences] bundle — checking that one off
-     * skips them all together.
+     * selection. Each sub-block is null when its category isn't ticked —
+     * the codec then omits it from the JSON entirely and the importer
+     * treats absence as "no change on restore."
+     *
+     * `appPreferences` is the umbrella for the historical non-sensitive
+     * prefs bundle (Notes / Conversation / NLU / Diagnostics / model
+     * prefs / Reminder); each of `weatherSettings` / `askAgentSetup`
+     * has its own gate, and their secret sub-fields ride only when the
+     * matching secret checkbox is ticked.
      */
-    private fun readPrefsBlock(sel: BackupSelection): BackupManifest.PrefsBlock {
-        // App-preferences bundle is the single "non-sensitive prefs"
-        // gate. When it's off, every sub-pref ends up as its existing
-        // default value on restore — fine, the user explicitly opted
-        // out. We still emit the block (PrefsBlock is non-null in the
-        // manifest) but the values match defaults so a restore is a
-        // no-op for those fields.
-        val notesPrefs = if (sel.appPreferences) BackupManifest.NotesPrefs(
-            keepLast = app.noteSettings.keepLast.value,
-            appendAudioMode = app.noteSettings.appendAudioMode.value.name,
-        ) else BackupManifest.NotesPrefs(keepLast = 0, appendAudioMode = "MERGE")
-        val convPrefs = if (sel.appPreferences) BackupManifest.ConversationPrefs(
-            retentionDays = app.conversationSettings.retentionDays.value,
-        ) else BackupManifest.ConversationPrefs(retentionDays = 10)
-        val convAudio = if (sel.appPreferences) BackupManifest.ConversationAudioPrefs(
-            captureEnabled = app.conversationAudioSettings.captureEnabled.value,
-        ) else BackupManifest.ConversationAudioPrefs(captureEnabled = false)
-        val nluPrefs = if (sel.appPreferences) BackupManifest.NluPrefs(
-            learningEnabled = app.nluSettings.learningEnabled.value,
-        ) else BackupManifest.NluPrefs(learningEnabled = true)
-        val diagPrefs = if (sel.appPreferences) BackupManifest.DiagnosticsPrefs(
-            redactPii = app.diagnosticsSettings.redactPii.value,
-            includeAudio = app.diagnosticsSettings.includeAudio.value,
-        ) else BackupManifest.DiagnosticsPrefs(redactPii = true, includeAudio = false)
-        val whisperModels = BackupManifest.ModelPrefs(
-            activeModelId = if (sel.appPreferences) app.modelStorage.activeModelId else null,
+    private fun readPrefsBlock(sel: BackupSelection): BackupManifest.PrefsBlock =
+        BackupManifest.PrefsBlock(
+            notes = if (sel.appPreferences) BackupManifest.NotesPrefs(
+                keepLast = app.noteSettings.keepLast.value,
+                appendAudioMode = app.noteSettings.appendAudioMode.value.name,
+            ) else null,
+            conversationSettings = if (sel.appPreferences) BackupManifest.ConversationPrefs(
+                retentionDays = app.conversationSettings.retentionDays.value,
+            ) else null,
+            conversationAudio = if (sel.appPreferences) BackupManifest.ConversationAudioPrefs(
+                captureEnabled = app.conversationAudioSettings.captureEnabled.value,
+            ) else null,
+            nluSettings = if (sel.appPreferences) BackupManifest.NluPrefs(
+                learningEnabled = app.nluSettings.learningEnabled.value,
+            ) else null,
+            diagnostics = if (sel.appPreferences) BackupManifest.DiagnosticsPrefs(
+                redactPii = app.diagnosticsSettings.redactPii.value,
+                includeAudio = app.diagnosticsSettings.includeAudio.value,
+            ) else null,
+            whisperModels = if (sel.appPreferences) BackupManifest.ModelPrefs(
+                activeModelId = app.modelStorage.activeModelId,
+            ) else null,
+            nluModels = if (sel.appPreferences) BackupManifest.ModelPrefs(
+                activeModelId = app.nluModelStorage.activeModelId,
+            ) else null,
+            reminder = if (sel.appPreferences) BackupManifest.ReminderPrefs(
+                defaultOffsetMin = app.reminderSettings.defaultOffsetMin.value,
+            ) else null,
+            weather = if (sel.weatherSettings) BackupManifest.WeatherPrefs(
+                unit = app.weatherSettings.unit.value.name,
+                provider = app.weatherSettings.provider.value.name,
+                apiKey = app.weatherSettings.apiKey.value
+                    .takeIf { sel.weatherApiKey && it.isNotEmpty() },
+            ) else null,
+            askAgent = if (sel.askAgentSetup) BackupManifest.AskAgentPrefs(
+                provider = app.askAgentSettings.provider.value.name,
+                anthropicModel = app.askAgentSettings.anthropicModel.value,
+                openaiEndpoint = app.askAgentSettings.openaiEndpoint.value,
+                openaiModel = app.askAgentSettings.openaiModel.value,
+                systemPrompt = app.askAgentSettings.systemPrompt.value,
+                anthropicApiKey = app.askAgentSettings.anthropicApiKey.value
+                    .takeIf { sel.askAgentApiKeys && it.isNotEmpty() },
+                openaiApiKey = app.askAgentSettings.openaiApiKey.value
+                    .takeIf { sel.askAgentApiKeys && it.isNotEmpty() },
+            ) else null,
         )
-        val nluModels = BackupManifest.ModelPrefs(
-            activeModelId = if (sel.appPreferences) app.nluModelStorage.activeModelId else null,
-        )
-
-        // Schema-2 additions — each emitted only when its category is
-        // selected. Secrets ride only when the corresponding secret
-        // checkbox is ticked.
-        val reminderPrefs = if (sel.appPreferences) BackupManifest.ReminderPrefs(
-            defaultOffsetMin = app.reminderSettings.defaultOffsetMin.value,
-        ) else null
-        val weatherPrefs = if (sel.weatherSettings) BackupManifest.WeatherPrefs(
-            unit = app.weatherSettings.unit.value.name,
-            provider = app.weatherSettings.provider.value.name,
-            apiKey = app.weatherSettings.apiKey.value
-                .takeIf { sel.weatherApiKey && it.isNotEmpty() },
-        ) else null
-        val askAgentPrefs = if (sel.askAgentSetup) BackupManifest.AskAgentPrefs(
-            provider = app.askAgentSettings.provider.value.name,
-            anthropicModel = app.askAgentSettings.anthropicModel.value,
-            openaiEndpoint = app.askAgentSettings.openaiEndpoint.value,
-            openaiModel = app.askAgentSettings.openaiModel.value,
-            systemPrompt = app.askAgentSettings.systemPrompt.value,
-            anthropicApiKey = app.askAgentSettings.anthropicApiKey.value
-                .takeIf { sel.askAgentApiKeys && it.isNotEmpty() },
-            openaiApiKey = app.askAgentSettings.openaiApiKey.value
-                .takeIf { sel.askAgentApiKeys && it.isNotEmpty() },
-        ) else null
-
-        return BackupManifest.PrefsBlock(
-            notes = notesPrefs,
-            conversationSettings = convPrefs,
-            conversationAudio = convAudio,
-            nluSettings = nluPrefs,
-            diagnostics = diagPrefs,
-            whisperModels = whisperModels,
-            nluModels = nluModels,
-            reminder = reminderPrefs,
-            weather = weatherPrefs,
-            askAgent = askAgentPrefs,
-        )
-    }
 }
 
 /**
  * Wraps a list of encoded rows into the canonical
  * `{ "schema": N, "rows": [ … ] }` shape that the importer expects.
  * Top-level on purpose so the per-entity files share one container shape.
+ *
+ * Compact (no `toString(2)` pretty-print) — these files are machine-read
+ * by [BackupImporter] and never edited by hand, so the ~30-50 % size +
+ * 2-3× encode-time tax of pretty-printing buys nothing. The manifest
+ * itself is still pretty-printed (in [BackupManifestCodec.encode]) since
+ * it's small and useful when debugging a malformed backup.
  */
 private inline fun <T> encodeRowsJson(
     schema: Int,
@@ -383,7 +354,7 @@ private inline fun <T> encodeRowsJson(
 ): String = JSONObject().apply {
     put("schema", schema)
     put("rows", JSONArray().also { arr -> rows.forEach { arr.put(encode(it)) } })
-}.toString(2)
+}.toString()
 
 /**
  * Writes [content] to <dir>/<relativePath>, creating parent directories
