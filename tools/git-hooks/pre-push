@@ -1,0 +1,80 @@
+#!/bin/sh
+# pre-push — refuse tag pushes that don't match this repo's expected version
+# series. Defends against the "tagged the wrong repo" mistake that produced
+# orphan v0.7.0 and v0.8.1 releases on the watch repo.
+#
+# This file is the canonical hook — checked into the repo so contributors
+# share it. Wire it into your clone once with:
+#
+#   git config core.hooksPath tools/git-hooks
+#
+# After that, edits to this file take effect on the next push (no need to
+# also copy into .git/hooks/). See README → "Git hooks" for setup.
+#
+# Bumping the major/minor: update ALLOWED below in the SAME commit as the
+# release, then push the new tag. The patch series stays open.
+#
+# To bypass for a one-off (e.g. tagging an emergency hotfix outside the
+# series): git push --no-verify origin <tag>
+
+set -e
+
+# Tag pattern allowed for this (companion) repo. Current series: v0.16.x.
+ALLOWED='^v0\.16\.[0-9]+$'
+
+remote="$1"
+url="$2"
+
+HELP_CONTENT="app/src/main/java/com/lazydevs/wristotle/help/HelpContent.kt"
+
+while read local_ref local_sha remote_ref remote_sha; do
+    case "$remote_ref" in
+        refs/tags/*)
+            tag_name=${remote_ref#refs/tags/}
+            case "$tag_name" in
+                v[0-9]*.[0-9]*.[0-9]*)
+                    if ! echo "$tag_name" | grep -qE "$ALLOWED"; then
+                        cat >&2 <<EOF
+
+✗ pre-push: refusing to push tag '$tag_name' to $url
+  This repo (companion) accepts tags matching $ALLOWED
+  Likely cause: tagged the wrong repo. Tag landed in the companion
+  repo but the watch or some other repo was probably intended.
+
+  If this is a legitimate series bump, edit ALLOWED in:
+    .git/hooks/pre-push
+  to match the new pattern.
+
+  To bypass for a one-off: git push --no-verify origin $tag_name
+
+EOF
+                        exit 1
+                    fi
+
+                    # Soft warning: tag has no corresponding FeatureEntry in
+                    # HelpContent.kt. Internals-only releases (refactor /
+                    # tests / CI / build) intentionally don't get one — read
+                    # the warning and decide. Doesn't block the push; the
+                    # `memory/feedback_helpcontent_sync_before_tag` rule
+                    # spells out the decision criteria.
+                    if [ -f "$HELP_CONTENT" ] && ! grep -q "version = \"$tag_name\"" "$HELP_CONTENT"; then
+                        cat >&2 <<EOF
+
+⚠ pre-push: tag '$tag_name' is not listed in $HELP_CONTENT
+  Decide:
+    - User-facing release? Cancel the push (Ctrl-C), add a FeatureEntry
+      to the timeline list (newest first), commit, then re-tag at the
+      new commit and push.
+    - Internals-only release (refactor / tests / CI / build / fix)?
+      Ignore — the editorial filter is the whole point of the page.
+  See memory/feedback_helpcontent_sync_before_tag for the convention.
+
+EOF
+                    fi
+                    ;;
+            esac
+            ;;
+    esac
+done
+
+exit 0

@@ -220,6 +220,18 @@ Build just the speech-recognition library:
 ./gradlew :speech-whisper:assembleDebug
 ```
 
+### Git hooks
+
+This repo ships a shared pre-push hook under `tools/git-hooks/`. It rejects tag pushes that don't match the current version series (defends against the "tagged the wrong repo" mistake) and warns when a release tag has no matching entry in [`HelpContent.kt`](app/src/main/java/com/lazydevs/wristotle/help/HelpContent.kt) — so user-facing releases don't ship with a stale in-app Help page.
+
+Wire it into your clone once:
+
+```bash
+git config core.hooksPath tools/git-hooks
+```
+
+After that, edits to `tools/git-hooks/pre-push` take effect on the next push — no need to copy into `.git/hooks/`. To bypass for a one-off (emergency hotfix outside the current series): `git push --no-verify origin <tag>`.
+
 ### Modules
 
 | Module            | Role                                                                                   |
