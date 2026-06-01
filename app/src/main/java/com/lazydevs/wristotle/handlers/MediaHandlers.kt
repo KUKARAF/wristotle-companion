@@ -35,7 +35,7 @@ class MediaPlayHandler(
     private val media: ActiveMediaSession,
     private val appIndex: AppIndex,
 ) : ActionHandler {
-    override val tag = "media.play"
+    override val tag = TAG
     override val intent = Intent.MediaPlay
 
     override suspend fun handle(result: IntentResult): String {
@@ -58,6 +58,13 @@ class MediaPlayHandler(
         if (!launchApp(context, packageId)) return "Couldn't launch ${packageLabel(context, packageId)}"
         media.playForPackage(packageId)
         return "Playing ${packageLabel(context, packageId)}"
+    }
+
+    companion object {
+        /** Persisted in ConversationEntry.handler. Referenced from the
+         *  Conversation chip-routing code in `ui/` — keep in sync if
+         *  you ever rename the tag (would require a data migration). */
+        const val TAG = "media.play"
     }
 }
 

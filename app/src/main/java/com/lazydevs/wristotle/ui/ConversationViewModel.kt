@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.apps.InstalledApp
+import com.lazydevs.wristotle.handlers.MediaPlayHandler
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.history.ConversationSettings
 import com.lazydevs.wristotle.nlu.slots.MediaPlaySlots
@@ -111,7 +112,7 @@ class ConversationViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun beginAlias(entry: ConversationEntry) {
         viewModelScope.launch {
-            val extractor = if (entry.handler == "media.play") mediaPlaySlots else openAppSlots
+            val extractor = if (entry.handler == MediaPlayHandler.TAG) mediaPlaySlots else openAppSlots
             val phrase = (extractor.extract(entry.userQuery)["app"] as? String).orEmpty()
             _aliasDraft.value = AliasDraft(phrase, appIndex.installedApps())
         }

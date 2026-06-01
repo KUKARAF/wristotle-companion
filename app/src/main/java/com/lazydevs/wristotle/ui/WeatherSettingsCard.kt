@@ -8,21 +8,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.handlers.TempUnit
 import com.lazydevs.wristotle.settings.WeatherProviderId
 import com.lazydevs.wristotle.settings.WeatherSettings
+import com.lazydevs.wristotle.ui.components.PasswordField
 
 /**
  * Settings card for the Weather feature — three controls:
@@ -90,14 +87,10 @@ fun WeatherSettingsCard(settings: WeatherSettings) {
             // ── OpenWeather API key (conditional) ──────────────────────────
             if (provider == WeatherProviderId.OPEN_WEATHER) {
                 Spacer(Modifier.height(4.dp))
-                OutlinedTextField(
+                PasswordField(
                     value = apiKey,
-                    onValueChange = settings::setApiKey,
-                    label = { Text(stringResource(R.string.weather_settings_api_key_label)) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
-                    modifier = Modifier.fillMaxWidth(),
+                    onChange = settings::setApiKey,
+                    label = stringResource(R.string.weather_settings_api_key_label),
                 )
                 Text(
                     stringResource(R.string.weather_settings_api_key_hint),

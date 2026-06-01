@@ -7,9 +7,14 @@ import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.speech.model.DownloadStreamEvent
 import com.lazydevs.wristotle.speech.model.ModelFileStorage
 import com.lazydevs.wristotle.speech.model.ResumableDownloader
+import com.lazydevs.wristotle.ui.components.WHILE_SUBSCRIBED_MS
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
@@ -66,6 +71,23 @@ abstract class ModelsViewModel<InfoT>(app: Application) : AndroidViewModel(app) 
 
     private val _models: MutableStateFlow<List<ModelUiState<InfoT>>> = MutableStateFlow(emptyList())
     val models: StateFlow<List<ModelUiState<InfoT>>> = _models
+
+    /**
+     * True when this family needs user attention — no model downloaded
+     * OR no model activated. Derived from [_models] with
+     * `distinctUntilChanged` so a download-progress tick (which churns
+     * the list on every ~1% chunk) only re-emits the boolean when it
+     * actually flips. Lets the app-shell badge subscribe without
+     * recomposing on every byte downloaded.
+     */
+    val attentionNeeded: StateFlow<Boolean> = _models
+        .map { it.none { m -> m.isDownloaded } || it.none { m -> m.isActive } }
+        .distinctUntilChanged()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(WHILE_SUBSCRIBED_MS),
+            initialValue = true,
+        )
 
     /**
      * Per-model download jobs. Concurrent because writes happen from two

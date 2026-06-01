@@ -18,11 +18,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.agent.AskAgentSettings
 import com.lazydevs.wristotle.agent.LlmProvider
+import com.lazydevs.wristotle.ui.components.PasswordField
 
 /**
  * Settings → ✨ Ask Agent card. Picks the LLM provider for the
@@ -111,14 +111,10 @@ private fun AnthropicFields(settings: AskAgentSettings) {
     val apiKey by settings.anthropicApiKey.collectAsState()
     val model by settings.anthropicModel.collectAsState()
 
-    OutlinedTextField(
+    PasswordField(
         value = apiKey,
-        onValueChange = settings::setAnthropicApiKey,
-        label = { Text(stringResource(R.string.settings_askagent_anthropic_key_label)) },
-        singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
-        modifier = Modifier.fillMaxWidth(),
+        onChange = settings::setAnthropicApiKey,
+        label = stringResource(R.string.settings_askagent_anthropic_key_label),
     )
     Text(
         stringResource(R.string.settings_askagent_anthropic_key_hint),
@@ -153,14 +149,10 @@ private fun OpenAiFields(settings: AskAgentSettings) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    OutlinedTextField(
+    PasswordField(
         value = apiKey,
-        onValueChange = settings::setOpenAiApiKey,
-        label = { Text(stringResource(R.string.settings_askagent_openai_key_label)) },
-        singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
-        modifier = Modifier.fillMaxWidth(),
+        onChange = settings::setOpenAiApiKey,
+        label = stringResource(R.string.settings_askagent_openai_key_label),
     )
     OutlinedTextField(
         value = model,

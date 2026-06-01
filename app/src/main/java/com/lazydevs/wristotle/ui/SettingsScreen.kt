@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.handlers.ReminderSettings
+import com.lazydevs.wristotle.ui.components.ConfirmDialog
 import kotlinx.coroutines.launch
 
 /**
@@ -107,19 +108,15 @@ fun SettingsScreen(
     mcpServersVm: McpServersViewModel,
     attentionByCategory: Map<SettingsCategory, Boolean> = emptyMap(),
 ) {
-    val retentionDays by conversationVm.retentionDays.collectAsState()
-    val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
-    val learningEnabled by nluSettingsVm.learningEnabled.collectAsState()
-    // Reminder defaults — read straight off the app-scoped singleton.
-    // Single int knob doesn't warrant a dedicated VM.
-    val reminderSettings = (LocalContext.current.applicationContext as WristotleApplication).reminderSettings
-    val reminderDefaultMinutes by reminderSettings.defaultOffsetMin.collectAsState()
-    val weatherSettings = (LocalContext.current.applicationContext as WristotleApplication).weatherSettings
-    val askAgentSettings = (LocalContext.current.applicationContext as WristotleApplication).askAgentSettings
-    // Audio capture only works when Wristotle's Whisper recognizer is in the
-    // dictation path (microPebble). Under Core Devices the audio never reaches
-    // us, so the toggle would be a no-op — hide it.
-    val companion by conversationVm.pebbleCompanion.collectAsState()
+    // Reminder / Weather / AskAgent settings are app-scoped singletons,
+    // not StateFlows — cheap to read here and pass down. The actual
+    // StateFlow collection for each category's values happens inside its
+    // own branch in SettingsCategoryContent so a flow update outside the
+    // current category doesn't recompose the whole screen.
+    val app = LocalContext.current.applicationContext as WristotleApplication
+    val reminderSettings = app.reminderSettings
+    val weatherSettings = app.weatherSettings
+    val askAgentSettings = app.askAgentSettings
     val scope = rememberCoroutineScope()
 
     // A rescan can prune aliases whose target was uninstalled; the alias card's
@@ -166,18 +163,14 @@ fun SettingsScreen(
                 watchSettingsVm = watchSettingsVm,
                 backupVm = backupVm,
                 mcpServersVm = mcpServersVm,
-                retentionDays = retentionDays,
-                audioCaptureEnabled = audioCaptureEnabled,
-                learningEnabled = learningEnabled,
-                companion = companion,
-                reminderDefaultMinutes = reminderDefaultMinutes,
                 reminderSettings = reminderSettings,
                 weatherSettings = weatherSettings,
                 askAgentSettings = askAgentSettings,
                 onShowClearLearnedConfirm = { showClearLearnedConfirm = true },
                 onShowClearAudioConfirm = { showClearAudioConfirm = true },
                 onShrinkRequest = { newDays ->
-                    if (newDays >= retentionDays) {
+                    val currentDays = conversationVm.retentionDays.value
+                    if (newDays >= currentDays) {
                         conversationVm.setRetentionDays(newDays)
                     } else {
                         scope.launch {
@@ -203,40 +196,28 @@ fun SettingsScreen(
     }
 
     if (showClearLearnedConfirm) {
-        AlertDialog(
-            onDismissRequest = { showClearLearnedConfirm = false },
-            title = { Text(stringResource(R.string.settings_learning_clear_title)) },
-            text = { Text(stringResource(R.string.settings_learning_clear_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    nluSettingsVm.clearLearned()
-                    showClearLearnedConfirm = false
-                }) { Text(stringResource(R.string.settings_learning_clear_apply)) }
+        ConfirmDialog(
+            title = stringResource(R.string.settings_learning_clear_title),
+            message = stringResource(R.string.settings_learning_clear_message),
+            confirmLabel = stringResource(R.string.settings_learning_clear_apply),
+            onConfirm = {
+                nluSettingsVm.clearLearned()
+                showClearLearnedConfirm = false
             },
-            dismissButton = {
-                TextButton(onClick = { showClearLearnedConfirm = false }) {
-                    Text(stringResource(R.string.dialog_cancel))
-                }
-            },
+            onDismiss = { showClearLearnedConfirm = false },
         )
     }
 
     if (showClearAudioConfirm) {
-        AlertDialog(
-            onDismissRequest = { showClearAudioConfirm = false },
-            title = { Text(stringResource(R.string.settings_audio_clear_title)) },
-            text = { Text(stringResource(R.string.settings_audio_clear_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    conversationVm.deleteAllAudio()
-                    showClearAudioConfirm = false
-                }) { Text(stringResource(R.string.settings_audio_clear_apply)) }
+        ConfirmDialog(
+            title = stringResource(R.string.settings_audio_clear_title),
+            message = stringResource(R.string.settings_audio_clear_message),
+            confirmLabel = stringResource(R.string.settings_audio_clear_apply),
+            onConfirm = {
+                conversationVm.deleteAllAudio()
+                showClearAudioConfirm = false
             },
-            dismissButton = {
-                TextButton(onClick = { showClearAudioConfirm = false }) {
-                    Text(stringResource(R.string.dialog_cancel))
-                }
-            },
+            onDismiss = { showClearAudioConfirm = false },
         )
     }
 }
@@ -334,11 +315,6 @@ private fun SettingsCategoryContent(
     watchSettingsVm: WatchSettingsViewModel,
     backupVm: BackupViewModel,
     mcpServersVm: McpServersViewModel,
-    retentionDays: Int,
-    audioCaptureEnabled: Boolean,
-    learningEnabled: Boolean,
-    companion: com.lazydevs.wristotle.transport.PebbleCompanionDetector.State,
-    reminderDefaultMinutes: Int,
     reminderSettings: ReminderSettings,
     weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings,
     askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings,
@@ -347,17 +323,27 @@ private fun SettingsCategoryContent(
     onShrinkRequest: (Int) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Each branch collects the flows it actually uses — when the user
+        // is on, say, the Backup category, the Conversation / Reminder /
+        // Learning flows aren't subscribed, so their updates don't
+        // recompose this surface.
         when (category) {
             SettingsCategory.Watch ->
                 WatchSettingsCard(vm = watchSettingsVm)
 
             SettingsCategory.Conversation -> {
+                val retentionDays by conversationVm.retentionDays.collectAsState()
+                val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
+                val companion by conversationVm.pebbleCompanion.collectAsState()
                 HistoryRetentionCard(
                     selectedDays = retentionDays,
                     options = conversationVm.retentionOptions,
                     onSelect = onShrinkRequest,
                     onClear = conversationVm::clearAll,
                 )
+                // Audio capture only works when Wristotle's Whisper recognizer
+                // is in the dictation path (microPebble). Under Core Devices
+                // the audio never reaches us, so the toggle would be a no-op.
                 if (companion.whisperAppliesToWatchDictation) {
                     AudioCaptureCard(
                         enabled = audioCaptureEnabled,
@@ -370,12 +356,14 @@ private fun SettingsCategoryContent(
             SettingsCategory.Notes ->
                 NotesSettingsCard(vm = notesVm)
 
-            SettingsCategory.Reminders ->
+            SettingsCategory.Reminders -> {
+                val reminderDefaultMinutes by reminderSettings.defaultOffsetMin.collectAsState()
                 ReminderSettingsCard(
                     selectedMinutes = reminderDefaultMinutes,
                     options = ReminderSettings.ALLOWED_OFFSET_MIN,
                     onSelect = reminderSettings::setDefaultOffsetMin,
                 )
+            }
 
             SettingsCategory.Weather ->
                 WeatherSettingsCard(settings = weatherSettings)
@@ -390,6 +378,7 @@ private fun SettingsCategoryContent(
                 AppAliasesCard(vm = appAliasesVm)
                 ContactAliasesCard(vm = contactAliasesVm)
                 val learnedExamples by nluSettingsVm.learnedExamples.collectAsState()
+                val learningEnabled by nluSettingsVm.learningEnabled.collectAsState()
                 IntentLearningCard(
                     learningEnabled = learningEnabled,
                     learnedExamples = learnedExamples,
@@ -623,16 +612,26 @@ private fun LearnedPhrasesDialog(
 
 /**
  * Map a stored `Intent.name` string to a user-friendly label for the
- * learned-phrases dialog. Falls back to the enum name if an intent is
- * added without a label entry here — better than crashing.
+ * learned-phrases dialog. Round-trips through the [Intent] enum so a
+ * rename in the enum becomes a compile error at the `when` here, not
+ * a silent fall-through. Unknown / pre-rename strings show the raw
+ * value rather than crashing.
  */
-private fun prettyIntentLabel(intent: String): String = when (intent) {
-    "Call" -> "Call"
-    "SendMessage" -> "Send message"
-    "Reminder" -> "Reminder"
-    "Cancel" -> "Cancel reminder"
-    "FindPhone" -> "Find phone"
-    else -> intent
+private fun prettyIntentLabel(intentName: String): String {
+    val intent = runCatching { com.lazydevs.wristotle.speech.nlu.Intent.valueOf(intentName) }
+        .getOrNull()
+        ?: return intentName
+    return when (intent) {
+        com.lazydevs.wristotle.speech.nlu.Intent.Call -> "Call"
+        com.lazydevs.wristotle.speech.nlu.Intent.SendMessage -> "Send message"
+        com.lazydevs.wristotle.speech.nlu.Intent.Reminder -> "Reminder"
+        com.lazydevs.wristotle.speech.nlu.Intent.Cancel -> "Cancel reminder"
+        com.lazydevs.wristotle.speech.nlu.Intent.FindPhone -> "Find phone"
+        // Default for the rest — the learning surface only really
+        // matters for the handful above, so we show enum name rather
+        // than maintaining a full table.
+        else -> intent.name
+    }
 }
 
 private data class PendingShrink(val newDays: Int, val entriesToDelete: Int)
@@ -809,19 +808,11 @@ private fun ReminderSettingsCard(
 
 @Composable
 private fun ClearConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.conversation_clear_confirm_title)) },
-        text = { Text(stringResource(R.string.conversation_clear_confirm_message)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.conversation_clear_all))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.dialog_cancel))
-            }
-        },
+    ConfirmDialog(
+        title = stringResource(R.string.conversation_clear_confirm_title),
+        message = stringResource(R.string.conversation_clear_confirm_message),
+        confirmLabel = stringResource(R.string.conversation_clear_all),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
     )
 }

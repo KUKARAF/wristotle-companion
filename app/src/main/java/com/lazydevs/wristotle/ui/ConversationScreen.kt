@@ -25,6 +25,9 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,6 +49,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.handlers.MediaPlayHandler
+import com.lazydevs.wristotle.handlers.OpenAppHandler
 import com.lazydevs.wristotle.history.ConversationEntry
 import java.io.File
 import java.text.DateFormat
@@ -113,8 +118,14 @@ fun ConversationScreen(vm: ConversationViewModel) {
             items(entries, key = { it.id }) { entry ->
                 // File may have been pruned by the 5-file cap even though
                 // the row still references it — render the button only if
-                // the file still exists on disk.
-                val audioFile = entry.audioFilePath?.let(::File)?.takeIf { it.exists() }
+                // the file still exists on disk. Hoisted off the main
+                // thread via produceState so a long history doesn't pay
+                // for N synchronous stat() calls per recomposition.
+                val audioFile by produceState<File?>(initialValue = null, entry.audioFilePath) {
+                    value = withContext(Dispatchers.IO) {
+                        entry.audioFilePath?.let(::File)?.takeIf { it.exists() }
+                    }
+                }
                 val isPlaying = playingId == entry.id
                 EntryCard(
                     entry = entry,
@@ -291,7 +302,7 @@ private fun EntryCard(
                 // none) can be pinned to the right one without leaving for
                 // the Settings tab. Both resolve the spoken name through the
                 // alias-aware AppIndex lookup.
-                if (entry.handler == "open_app" || entry.handler == "media.play") {
+                if (entry.handler == OpenAppHandler.TAG || entry.handler == MediaPlayHandler.TAG) {
                     AssistChip(
                         onClick = onAddAlias,
                         label = { Text(stringResource(R.string.app_aliases_add)) },
@@ -367,8 +378,17 @@ private fun MessageBubble(
  * Locale-aware short date+time. Could swap for prettytime later for "5 min ago"
  * style — keeping this simple for v1 so the screen is testable without extra deps.
  */
+/** Cached, reused across rows — `DateFormat.getDateTimeInstance(…)`
+ *  pays for ICU locale resolution per call and there's no benefit to
+ *  reallocating on every entry render. Locale changes don't happen
+ *  without an Activity recreate, which discards the file-level
+ *  state anyway. */
+private val SHORT_DATE_FORMAT: DateFormat by lazy {
+    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+}
+
 private fun formatTimestamp(epochMs: Long): String =
-    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(epochMs))
+    SHORT_DATE_FORMAT.format(Date(epochMs))
 
 /**
  * One-time notice surfaced at the top of the conversation tab when

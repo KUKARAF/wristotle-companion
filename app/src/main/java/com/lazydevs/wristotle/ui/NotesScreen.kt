@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -49,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.notes.Note
+import com.lazydevs.wristotle.ui.components.ConfirmDialog
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -105,9 +105,16 @@ fun NotesScreen(vm: NotesViewModel) {
 
     DisposableEffect(Unit) { onDispose { stopPlayback() } }
 
+    // Box is right here, not Scaffold — MainScreen already wraps the whole
+    // app in a Scaffold (TopAppBar + bottom NavigationBar). Nesting a
+    // second Scaffold inside duplicates the inset handling and yields
+    // a layout that's off (extra top padding, FAB clipped by the bottom
+    // nav).
     Box(modifier = Modifier.fillMaxSize()) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(stringResource(R.string.notes_header), style = MaterialTheme.typography.titleLarge)
@@ -166,22 +173,17 @@ fun NotesScreen(vm: NotesViewModel) {
     }
 
     if (pendingDeleteAll) {
-        AlertDialog(
-            onDismissRequest = { pendingDeleteAll = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    stopPlayback()
-                    vm.deleteAll()
-                    pendingDeleteAll = false
-                }) { Text(stringResource(R.string.notes_delete_all_confirm)) }
+        ConfirmDialog(
+            title = stringResource(R.string.notes_delete_all),
+            message = stringResource(R.string.notes_delete_all_warning),
+            confirmLabel = stringResource(R.string.notes_delete_all_confirm),
+            dismissLabel = stringResource(R.string.cancel),
+            onConfirm = {
+                stopPlayback()
+                vm.deleteAll()
+                pendingDeleteAll = false
             },
-            dismissButton = {
-                TextButton(onClick = { pendingDeleteAll = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-            title = { Text(stringResource(R.string.notes_delete_all)) },
-            text = { Text(stringResource(R.string.notes_delete_all_warning)) },
+            onDismiss = { pendingDeleteAll = false },
         )
     }
 
@@ -320,5 +322,10 @@ private fun AudioClipControls(
     }
 }
 
+/** See ConversationScreen's twin — same rationale. */
+private val SHORT_DATE_FORMAT: DateFormat by lazy {
+    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+}
+
 private fun formatTimestamp(epochMs: Long): String =
-    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(epochMs))
+    SHORT_DATE_FORMAT.format(Date(epochMs))

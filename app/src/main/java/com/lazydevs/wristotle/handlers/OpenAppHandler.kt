@@ -24,7 +24,7 @@ class OpenAppHandler(
     private val appIndex: AppIndex,
 ) : ActionHandler {
 
-    override val tag = "open_app"
+    override val tag = TAG
     override val intent = Intent.OpenApp
 
     override suspend fun handle(result: IntentResult): String {
@@ -41,5 +41,12 @@ class OpenAppHandler(
         }
         return if (launchApp(context, pkg)) "Opening ${packageLabel(context, pkg)}"
         else "Couldn't launch ${packageLabel(context, pkg)}"
+    }
+
+    companion object {
+        /** Persisted in ConversationEntry.handler. Referenced from the
+         *  Conversation chip-routing code in `ui/` — keep in sync if
+         *  you ever rename the tag (would require a data migration). */
+        const val TAG = "open_app"
     }
 }

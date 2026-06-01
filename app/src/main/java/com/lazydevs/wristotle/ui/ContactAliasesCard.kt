@@ -39,6 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.ui.components.AliasRowsDialog
+import com.lazydevs.wristotle.ui.components.SecondaryLine
 import kotlinx.coroutines.launch
 
 /**
@@ -117,44 +119,19 @@ private fun ContactAliasesDialog(
     onDelete: (phrase: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.contact_aliases_done))
-            }
+    val notFoundFmt = stringResource(R.string.contact_aliases_not_found)
+    AliasRowsDialog(
+        title = stringResource(R.string.contact_aliases_header),
+        rows = aliases,
+        primaryOf = { it.phrase },
+        secondaryOf = { row ->
+            if (row.foundInContacts) SecondaryLine(row.displayName)
+            else SecondaryLine(String.format(notFoundFmt, row.displayName), warn = true)
         },
-        title = { Text(stringResource(R.string.contact_aliases_header)) },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-            ) {
-                aliases.forEach { row ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("“${row.phrase}”", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                if (row.foundInContacts) row.displayName
-                                else stringResource(R.string.contact_aliases_not_found, row.displayName),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        IconButton(onClick = { onDelete(row.phrase) }) {
-                            Icon(
-                                Icons.Default.DeleteOutline,
-                                contentDescription = stringResource(R.string.contact_aliases_delete),
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        }
-                    }
-                }
-            }
-        },
+        deleteContentDescription = stringResource(R.string.contact_aliases_delete),
+        doneLabel = stringResource(R.string.contact_aliases_done),
+        onDelete = { onDelete(it.phrase) },
+        onDismiss = onDismiss,
     )
 }
 

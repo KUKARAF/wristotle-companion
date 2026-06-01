@@ -42,13 +42,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import com.lazydevs.wristotle.ui.nav.Screen
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.tasks.TaskEntity
+import com.lazydevs.wristotle.ui.components.ConfirmDialog
 
 /**
  * The Tasks tab. Three sections, top-to-bottom:
@@ -170,21 +171,15 @@ fun TasksScreen(vm: TasksViewModel) {
     }
 
     if (showClearAllDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearAllDialog = false },
-            title = { Text(stringResource(R.string.tasks_clear_all_title)) },
-            text = { Text(stringResource(R.string.tasks_clear_all_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    vm.deleteAll()
-                    showClearAllDialog = false
-                }) { Text(stringResource(R.string.tasks_clear_all_apply)) }
+        ConfirmDialog(
+            title = stringResource(R.string.tasks_clear_all_title),
+            message = stringResource(R.string.tasks_clear_all_message),
+            confirmLabel = stringResource(R.string.tasks_clear_all_apply),
+            onConfirm = {
+                vm.deleteAll()
+                showClearAllDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showClearAllDialog = false }) {
-                    Text(stringResource(R.string.dialog_cancel))
-                }
-            },
+            onDismiss = { showClearAllDialog = false },
         )
     }
 }
@@ -287,7 +282,7 @@ private fun PendingEmptyState() {
             modifier = Modifier
                 .size(64.dp)
                 .background(
-                    color = Color(0xFF14B8A6).copy(alpha = 0.12f),
+                    color = Screen.Tasks.tint.copy(alpha = 0.12f),
                     shape = RoundedCornerShape(32.dp),
                 ),
             contentAlignment = Alignment.Center,
@@ -295,7 +290,7 @@ private fun PendingEmptyState() {
             Icon(
                 Icons.Default.CheckCircle,
                 contentDescription = null,
-                tint = Color(0xFF14B8A6),
+                tint = Screen.Tasks.tint,
             )
         }
         Spacer(Modifier.height(12.dp))

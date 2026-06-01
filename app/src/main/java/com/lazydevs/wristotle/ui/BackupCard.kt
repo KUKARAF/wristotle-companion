@@ -11,20 +11,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,14 +31,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.backup.BackupCounts
 import com.lazydevs.wristotle.backup.BackupExportResult
 import com.lazydevs.wristotle.backup.BackupManifest
 import com.lazydevs.wristotle.backup.BackupSelection
+import com.lazydevs.wristotle.ui.components.ConfirmDialog
+import com.lazydevs.wristotle.ui.components.InfoDialog
+import com.lazydevs.wristotle.ui.components.PasswordField
 
 /**
  * Settings card for the backup / restore feature.
@@ -412,11 +407,11 @@ private fun ExportOptionsDialog(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                 PasswordField(
-                    password = password,
+                    value = password,
                     onChange = { password = it },
+                    label = stringResource(R.string.settings_backup_password_label),
                     visible = passwordVisible,
                     onToggleVisible = { passwordVisible = !passwordVisible },
-                    label = stringResource(R.string.settings_backup_password_label),
                 )
                 Text(
                     stringResource(R.string.settings_backup_password_helper),
@@ -517,11 +512,11 @@ private fun RestorePasswordDialog(
                     )
                 }
                 PasswordField(
-                    password = password,
+                    value = password,
                     onChange = { password = it },
+                    label = stringResource(R.string.settings_backup_password_label),
                     visible = visible,
                     onToggleVisible = { visible = !visible },
-                    label = stringResource(R.string.settings_backup_password_label),
                 )
             }
         },
@@ -613,64 +608,33 @@ private fun ExportSuccessDialog(result: BackupExportResult, onDismiss: () -> Uni
     val kb = (result.bytes / 1024L).coerceAtLeast(1L)
     val titleRes = if (result.encrypted) R.string.settings_backup_export_success_title_encrypted
                    else R.string.settings_backup_export_success_title
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(titleRes)) },
-        text = {
-            Text(
-                stringResource(
-                    R.string.settings_backup_export_success_body,
-                    result.notes,
-                    result.tasks,
-                    result.conversations,
-                    result.nluLearned,
-                    result.audioFiles,
-                    result.reminders,
-                    result.aliases,
-                    result.contactAliases,
-                    result.mcpServers,
-                    kb,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_ok)) }
-        },
+    InfoDialog(
+        title = stringResource(titleRes),
+        message = stringResource(
+            R.string.settings_backup_export_success_body,
+            result.notes, result.tasks, result.conversations, result.nluLearned,
+            result.audioFiles, result.reminders, result.aliases,
+            result.contactAliases, result.mcpServers, kb,
+        ),
+        onDismiss = onDismiss,
     )
 }
 
 @Composable
 private fun ExportFailureDialog(message: String, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_backup_export_failed_title)) },
-        text = {
-            Text(
-                stringResource(R.string.settings_backup_export_failed_body, message),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_ok)) }
-        },
+    InfoDialog(
+        title = stringResource(R.string.settings_backup_export_failed_title),
+        message = stringResource(R.string.settings_backup_export_failed_body, message),
+        onDismiss = onDismiss,
     )
 }
 
 @Composable
 private fun RestoreFailureDialog(message: String, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_backup_import_failed_title)) },
-        text = {
-            Text(
-                stringResource(R.string.settings_backup_import_failed_body, message),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_ok)) }
-        },
+    InfoDialog(
+        title = stringResource(R.string.settings_backup_import_failed_title),
+        message = stringResource(R.string.settings_backup_import_failed_body, message),
+        onDismiss = onDismiss,
     )
 }
 
@@ -679,56 +643,11 @@ private fun PlaintextSecretsConfirmDialog(
     onProceed: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onCancel,
-        title = { Text(stringResource(R.string.settings_backup_plaintext_secrets_title)) },
-        text = {
-            Text(
-                stringResource(R.string.settings_backup_plaintext_secrets_body),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onProceed) {
-                Text(stringResource(R.string.settings_backup_plaintext_secrets_proceed))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancel) {
-                Text(stringResource(R.string.dialog_cancel))
-            }
-        },
-    )
-}
-
-/** Reusable masked-text field with show/hide eye toggle. */
-@Composable
-private fun PasswordField(
-    password: String,
-    onChange: (String) -> Unit,
-    visible: Boolean,
-    onToggleVisible: () -> Unit,
-    label: String,
-) {
-    OutlinedTextField(
-        value = password,
-        onValueChange = onChange,
-        label = { Text(label) },
-        singleLine = true,
-        visualTransformation = if (visible) VisualTransformation.None
-                               else PasswordVisualTransformation(),
-        trailingIcon = {
-            IconButton(onClick = onToggleVisible) {
-                Icon(
-                    imageVector = if (visible) Icons.Filled.VisibilityOff
-                                  else Icons.Filled.Visibility,
-                    contentDescription = stringResource(
-                        if (visible) R.string.settings_backup_password_hide
-                        else R.string.settings_backup_password_show
-                    ),
-                )
-            }
-        },
-        modifier = Modifier.fillMaxWidth(),
+    ConfirmDialog(
+        title = stringResource(R.string.settings_backup_plaintext_secrets_title),
+        message = stringResource(R.string.settings_backup_plaintext_secrets_body),
+        confirmLabel = stringResource(R.string.settings_backup_plaintext_secrets_proceed),
+        onConfirm = onProceed,
+        onDismiss = onCancel,
     )
 }

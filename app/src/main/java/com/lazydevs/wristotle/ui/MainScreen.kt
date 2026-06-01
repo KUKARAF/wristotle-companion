@@ -66,7 +66,10 @@ fun MainScreen(
     val navController = rememberNavController()
     val perms by vm.permissions.collectAsState()
     val isDefaultVoiceProvider by vm.isDefaultVoiceProvider.collectAsState()
-    val models by modelsVm.models.collectAsState()
+    // Only the boolean — see ModelsViewModel.attentionNeeded for why we don't
+    // collect the full models list here (download progress would recompose
+    // the whole shell every ~100 ms during a 244 MB Whisper download).
+    val modelsAttention by modelsVm.attentionNeeded.collectAsState()
     val companion by vm.pebbleCompanion.collectAsState()
 
     // Permissions tab badges if any of the watch perms (Contacts/Phone/SMS),
@@ -90,10 +93,7 @@ fun MainScreen(
     // the user has no reason to install a model, so the dot would otherwise
     // be a permanent false-positive.
     val settingsAttentionByCategory: Map<SettingsCategory, Boolean> = mapOf(
-        SettingsCategory.Models to (
-            companion.whisperAppliesToWatchDictation &&
-                (models.none { it.isDownloaded } || models.none { it.isActive })
-        ),
+        SettingsCategory.Models to (companion.whisperAppliesToWatchDictation && modelsAttention),
     )
     val settingsAttention = settingsAttentionByCategory.values.any { it }
 

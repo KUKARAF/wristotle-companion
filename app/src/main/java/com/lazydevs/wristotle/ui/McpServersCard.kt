@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import com.lazydevs.wristotle.ui.components.PasswordField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -161,12 +162,10 @@ private fun AddMcpServerForm(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        OutlinedTextField(
+        PasswordField(
             value = authHeader,
-            onValueChange = { authHeader = it },
-            label = { Text(stringResource(R.string.settings_mcp_auth_label)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            onChange = { authHeader = it },
+            label = stringResource(R.string.settings_mcp_auth_label),
         )
         Row(
             verticalAlignment = Alignment.CenterVertically,
