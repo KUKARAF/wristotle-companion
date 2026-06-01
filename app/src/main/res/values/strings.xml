@@ -196,8 +196,9 @@
     <string name="settings_askagent_openai_endpoint_label">Endpoint URL (full /chat/completions)</string>
     <string name="settings_askagent_openai_endpoint_hint">e.g. https://api.openai.com/v1/chat/completions, https://openrouter.ai/api/v1/chat/completions, http://&lt;your-server&gt;/v1/chat/completions</string>
     <string name="settings_askagent_openai_key_label">API key (leave blank for local servers)</string>
-    <string name="settings_askagent_system_prompt_label">System prompt (optional)</string>
-    <string name="settings_askagent_system_prompt_hint">Prepended to every AskAgent query. Useful for "keep answers under 2 sentences" or "answer plainly, no markdown".</string>
+    <string name="settings_askagent_system_prompt_label">System prompt</string>
+    <string name="settings_askagent_system_prompt_hint">Sent with every AskAgent query. Pre-populated with a watch-friendly baseline that keeps responses short + plain-text. Edit freely; clear it entirely to send NO system prompt (the LLM may produce verbose markdown the watch can\'t render).</string>
+    <string name="settings_askagent_system_prompt_reset">Reset to default</string>
 
     <!-- MCP servers card (phase A) -->
     <string name="settings_mcp_header">MCP servers</string>

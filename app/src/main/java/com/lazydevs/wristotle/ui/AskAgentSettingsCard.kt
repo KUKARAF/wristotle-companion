@@ -11,6 +11,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -78,7 +79,10 @@ fun AskAgentSettingsCard(settings: AskAgentSettings) {
 
             Spacer(Modifier.height(8.dp))
 
-            // ── System prompt (optional, both providers) ────────────────────
+            // ── System prompt (both providers) ──────────────────────────────
+            // Pre-populated with the watch-friendly baseline so the user
+            // sees what's actually being sent (no hidden prepend); editable
+            // freely, with a one-tap reset if they want the baseline back.
             val systemPrompt by settings.systemPrompt.collectAsState()
             OutlinedTextField(
                 value = systemPrompt,
@@ -92,6 +96,12 @@ fun AskAgentSettingsCard(settings: AskAgentSettings) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            TextButton(
+                onClick = settings::resetSystemPromptToDefault,
+                enabled = systemPrompt != AskAgentSettings.DEFAULT_SYSTEM_PROMPT,
+            ) {
+                Text(stringResource(R.string.settings_askagent_system_prompt_reset))
+            }
         }
     }
 }

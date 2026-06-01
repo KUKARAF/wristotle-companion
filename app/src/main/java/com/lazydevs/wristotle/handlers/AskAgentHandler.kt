@@ -40,7 +40,11 @@ class AskAgentHandler(
     override suspend fun handle(result: IntentResult): String {
         val query = (result.slots["query"] as? String)?.trim().orEmpty()
         if (query.isEmpty()) return NO_QUERY_HINT
-        val systemPrompt = composedSystemPrompt(settings.systemPrompt.value)
+        // System prompt is the user-visible value from Settings (default
+        // is the watch-friendly baseline; user can edit or clear it via
+        // the card's "Reset to default" button). No hidden prepend —
+        // what you see in Settings is what gets sent.
+        val systemPrompt = settings.systemPrompt.value.takeIf { it.isNotBlank() }
         val client = settings.activeClient()
 
         val enabled = mcpServers.listEnabled()
@@ -53,13 +57,16 @@ class AskAgentHandler(
             userQuery = query,
             systemPrompt = systemPrompt,
             servers = enabled,
-            // Per-round status to the watch is DISABLED for phase B2 — the
-            // watch's chat surface only renders one bubble per query, so
-            // an intermediate "🛠 tool" send blocks the final answer from
-            // displaying. Per-round visibility now lives in Logcat only;
-            // proper watch-side status surfacing needs a new AppMessage
-            // key + watch UI change (see TODO).
-            onStatus = { /* no-op */ },
+            // Per-round watch status (B3): goes to the hint-bar slot via
+            // sendAgentStatus, NOT sendResponse. The chat surface only
+            // renders one bubble per query — using the response key here
+            // would drop the final answer (see
+            // feedback_watch_chat_single_bubble memory).
+            onStatus = { status ->
+                if (status is AgentLoop.Status.CallingTool) {
+                    runCatching { transport.sendAgentStatus("→ ${friendly(status.toolName)}") }
+                }
+            },
         )
         return when (outcome) {
             is AgentLoop.Outcome.Done -> outcome.text
@@ -69,23 +76,19 @@ class AskAgentHandler(
         }.trimForWatch()
     }
 
-    /**
-     * Baseline system prompt steers the LLM toward Pebble-friendly output:
-     * the watch's chat surface shows a handful of lines of plain text — no
-     * markdown rendering, no tables, no bullets. Concatenated with the
-     * user's optional override so their tone/persona instructions
-     * compose on top.
-     */
-    private fun composedSystemPrompt(userOverride: String): String {
-        val base = WATCH_SYSTEM_PROMPT
-        return if (userOverride.isBlank()) base else "$base\n\n$userOverride"
-    }
-
     /** Last-line defence: a verbose LLM still gets truncated before it
      *  exceeds the watch's AppMessage text buffer / chat-line budget. */
     private fun String.trimForWatch(): String =
         if (length <= WATCH_MAX_CHARS) this
         else take(WATCH_MAX_CHARS - 1).trimEnd() + "…"
+
+    /** Convert an LlmTool wireName (`integration__tool`) to a display
+     *  form (`integration.tool`) for the watch's hint-bar status line.
+     *  Falls back to the raw wireName when the prefix isn't present. */
+    private fun friendly(wireName: String): String =
+        com.lazydevs.wristotle.agent.LlmTool.parseWireName(wireName)
+            ?.let { (integration, tool) -> "$integration.$tool" }
+            ?: wireName
 
     private fun renderComplete(r: LlmResult): String = when (r) {
         is LlmResult.Success -> r.text
@@ -101,11 +104,6 @@ class AskAgentHandler(
             "Ask what?\nTry \"ask agent what's the capital of France\"."
         const val NO_KEY_HINT =
             "No agent key set.\nSettings → ✨ Ask Agent → paste your API key."
-
-        const val WATCH_SYSTEM_PROMPT =
-            "Reply in 1–2 short plain-text sentences. Your response is shown on a tiny smartwatch chat surface. " +
-                "Do NOT use markdown, tables, bullet points, headers, or emoji. " +
-                "No code blocks. No bold or italics. Plain text only, under 200 characters when possible."
 
         /** Soft cap chosen to keep one reply within ~4–5 lines on a 144-px Pebble
          *  chat surface; well under the AppMessage Text payload limit. */

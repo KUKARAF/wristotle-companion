@@ -40,7 +40,14 @@ class AskAgentSettings(context: Context) {
     )
     val openaiModel: StateFlow<String> = _openaiModel
 
-    private val _systemPrompt = MutableStateFlow(prefs.getString(KEY_SYSTEM_PROMPT, "").orEmpty())
+    // On first install (key absent) the watch-friendly baseline lands
+    // as the actual visible default in the Settings card — so what the
+    // user sees in the field IS what gets sent. An empty value is
+    // respected (user explicitly cleared it); resetSystemPromptToDefault()
+    // brings the baseline back.
+    private val _systemPrompt = MutableStateFlow(
+        prefs.getString(KEY_SYSTEM_PROMPT, null) ?: DEFAULT_SYSTEM_PROMPT,
+    )
     val systemPrompt: StateFlow<String> = _systemPrompt
 
     fun setProvider(value: LlmProvider) {
@@ -54,6 +61,7 @@ class AskAgentSettings(context: Context) {
     fun setOpenAiApiKey(value: String) = write(KEY_OPENAI_API_KEY, value.trim(), _openaiApiKey)
     fun setOpenAiModel(value: String) = write(KEY_OPENAI_MODEL, value.trim(), _openaiModel)
     fun setSystemPrompt(value: String) = write(KEY_SYSTEM_PROMPT, value, _systemPrompt)
+    fun resetSystemPromptToDefault() = setSystemPrompt(DEFAULT_SYSTEM_PROMPT)
 
     /**
      * Built per call (not cached) so a settings edit takes effect on
@@ -98,5 +106,19 @@ class AskAgentSettings(context: Context) {
         // input so any provider's model id works.
         const val DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6"
         const val DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+
+        /**
+         * Watch-friendly baseline that lands as the visible default in
+         * the Settings card. Steers the LLM toward short plain-text
+         * answers — without it, models default to verbose markdown
+         * (tables, **bold**, bullets) that renders as raw characters
+         * on the Pebble's tiny chat surface. The user can edit or
+         * fully clear it.
+         */
+        const val DEFAULT_SYSTEM_PROMPT =
+            "Reply in 1-2 short plain-text sentences. Your response is shown " +
+                "on a tiny smartwatch chat surface. Do NOT use markdown, tables, " +
+                "bullet points, headers, or emoji. No code blocks. No bold or " +
+                "italics. Plain text only, under 200 characters when possible."
     }
 }

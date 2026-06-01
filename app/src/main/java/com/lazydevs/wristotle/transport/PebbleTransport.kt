@@ -64,6 +64,15 @@ class PebbleTransport(context: Context) : java.io.Closeable {
         mapOf(MessageKeys.CONFIRM_PROMPT to PebbleDictionaryItem.Text(text))
     )
 
+    /** Mid-query agent-loop status (AskAgent B3) — short text shown in the
+     *  watch's hint bar so the user sees which tool is in flight without
+     *  it clobbering the eventual chat answer. The watch's
+     *  [chat_ui_set_thinking(false)] on response arrival restores the
+     *  normal hint, clearing the status automatically. */
+    suspend fun sendAgentStatus(text: String) = sendWithNackRetry(
+        mapOf(MessageKeys.AGENT_STATUS to PebbleDictionaryItem.Text(text))
+    )
+
     suspend fun insertReminder(pin: TimelinePin): TimelineResult =
         sender.insertTimelinePin(AppConstants.PEBBLE_UUID, pin)
 

@@ -150,6 +150,16 @@ object MessageKeys {
     val TASK_COMPLETE_REQUEST: UInt  = 10039u
     val TASK_COMPLETE_RESPONSE: UInt = 10040u
 
+    /** Mid-query status from AskAgent's MCP tool-calling loop. CSTRING
+     *  payload like *"→ github.get_me"*. Routed to the watch's hint-bar
+     *  status slot (NOT the chat surface — the chat renders one bubble
+     *  per voice query, so intermediate sendResponse() drops the final
+     *  answer; see feedback_watch_chat_single_bubble memory). Cleared
+     *  automatically when the final response arrives — the watch's
+     *  chat_ui_set_thinking(false) on response restores the normal
+     *  "SELECT to speak" hint. */
+    val AGENT_STATUS: UInt = 10041u
+
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE].
      *  Stays under Pebble's AppMessage outbox budget (~636 bytes) minus
      *  tuple framing. */
