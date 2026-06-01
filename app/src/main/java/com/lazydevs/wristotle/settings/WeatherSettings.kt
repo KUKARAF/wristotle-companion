@@ -38,17 +38,20 @@ class WeatherSettings(context: Context) {
     val apiKey: StateFlow<String> = _apiKey
 
     fun setUnit(value: TempUnit) {
+        if (_unit.value == value) return
         prefs.edit().putString(KEY_UNIT, value.name).apply()
         _unit.value = value
     }
 
     fun setProvider(value: WeatherProviderId) {
+        if (_provider.value == value) return
         prefs.edit().putString(KEY_PROVIDER, value.name).apply()
         _provider.value = value
     }
 
     fun setApiKey(value: String) {
         val trimmed = value.trim()
+        if (_apiKey.value == trimmed) return
         prefs.edit().putString(KEY_API_KEY, trimmed).apply()
         _apiKey.value = trimmed
     }
