@@ -3,6 +3,7 @@ package com.lazydevs.wristotle.nlu.pipeline
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.RankedIntent
 
 /**
  * Test classifier that lets each row drive the pipeline's refiner without
@@ -30,15 +31,23 @@ class FakeIntentClassifier(
         )
 }
 
-/** Convenience: build an [IntentResult] for the classifier to return. */
+/**
+ * Convenience: build an [IntentResult] for the classifier to return.
+ *
+ * Pass [runnerUp] to model the "tight margin" path in
+ * [com.lazydevs.wristotle.nlu.WatchHintRefiner.refineUnhinted] — the
+ * runner-up sits in `alternates[0]` and triggers a PrefixHints rescue
+ * when `confidence - runnerUp < ROUTE_MARGIN` (0.10).
+ */
 fun classified(
     intent: Intent,
     confidence: Float,
     query: String = "",
+    runnerUp: Pair<Intent, Float>? = null,
 ): IntentResult = IntentResult(
     intent = intent,
     slots = emptyMap(),
     confidence = confidence,
-    alternates = emptyList(),
+    alternates = runnerUp?.let { listOf(RankedIntent(it.first, it.second)) } ?: emptyList(),
     rawQuery = query,
 )
