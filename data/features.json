@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "help-page",
+      "date": "2026-06-01",
+      "companion_version": "v0.16.2",
+      "watch_version": null,
+      "title": "In-app Help page",
+      "description": "Settings → ❓ Help. Searchable feature history (newest first), discovery tips, deep-links into the docs. Shows watch versions alongside companion versions for paired releases.",
+      "sample_query": null,
+      "docs_path": "features/#settings-tab-whats-in-each-category"
+    },
+    {
       "id": "custom-ask-agent-triggers",
       "date": "2026-06-01",
       "companion_version": "v0.16.0",

@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "help-page",
+            date = "2026-06-01",
+            companionVersion = "v0.16.2",
+            watchVersion = null,
+            title = "In-app Help page",
+            description = "Settings → ❓ Help. Searchable feature history (newest first), discovery tips, deep-links into the docs. Shows watch versions alongside companion versions for paired releases.",
+            sampleQuery = null,
+            docsPath = "features/#settings-tab-whats-in-each-category",
+        ),
+        FeatureEntry(
             id = "custom-ask-agent-triggers",
             date = "2026-06-01",
             companionVersion = "v0.16.0",
