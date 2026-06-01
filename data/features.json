@@ -1,0 +1,205 @@
+{
+  "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
+  "features": [
+    {
+      "id": "custom-ask-agent-triggers",
+      "date": "2026-06-01",
+      "companion_version": "v0.16.0",
+      "watch_version": null,
+      "title": "Custom Ask Agent trigger words",
+      "description": "Add your own wake words for Ask Agent — works as a verb (\"ask jarvis …\") or bare (\"Jarvis, …\").",
+      "sample_query": "Jarvis, what's the weather?",
+      "docs_path": "voice-commands/#ask-agent-llm-passthrough"
+    },
+    {
+      "id": "whisper-q4-ram-hint",
+      "date": "2026-06-01",
+      "companion_version": "v0.15.6",
+      "watch_version": null,
+      "title": "Faster Whisper models + RAM hint",
+      "description": "New q4_0 quantised Tiny / Base / Small variants. Each model row now shows the approximate RAM cost.",
+      "sample_query": null,
+      "docs_path": "features/#models-optional"
+    },
+    {
+      "id": "backup-per-category-selection",
+      "date": "2026-05-31",
+      "companion_version": "v0.15.0",
+      "watch_version": null,
+      "title": "Per-category backup selection",
+      "description": "Pick exactly what your backup includes. Sensitive items (API keys, headers) default to OFF.",
+      "sample_query": null,
+      "docs_path": "features/#companion-side-features"
+    },
+    {
+      "id": "ask-agent",
+      "date": "2026-05-31",
+      "companion_version": "v0.14.0",
+      "watch_version": "v0.8.0",
+      "title": "Ask Agent (LLM + MCP tools)",
+      "description": "Route voice queries to any LLM you configure. Optional MCP tool calling lets the LLM take live actions.",
+      "sample_query": "ask agent what's the capital of France",
+      "docs_path": "voice-commands/#ask-agent-llm-passthrough"
+    },
+    {
+      "id": "weather",
+      "date": "2026-05-31",
+      "companion_version": "v0.13.0",
+      "watch_version": "v0.7.1",
+      "title": "Weather",
+      "description": "Voice weather for any city or your current location. open-meteo by default, OpenWeather optional.",
+      "sample_query": "weather in Tokyo",
+      "docs_path": "voice-commands/#weather"
+    },
+    {
+      "id": "world-clock-calculator",
+      "date": "2026-05-29",
+      "companion_version": "v0.12.0",
+      "watch_version": "v0.7.0",
+      "title": "World clock & calculator",
+      "description": "Time in any city, plus on-device arithmetic with spoken operators. Both fully offline.",
+      "sample_query": "what time is it in Tokyo",
+      "docs_path": "voice-commands/#world-clock"
+    },
+    {
+      "id": "alarms-timers",
+      "date": "2026-05-28",
+      "companion_version": "v0.11.0",
+      "watch_version": "v0.6.1",
+      "title": "Alarms & timers",
+      "description": "Set alarms and countdown timers by voice. The system Clock app handles the ring.",
+      "sample_query": "set a timer for 5 minutes",
+      "docs_path": "voice-commands/#alarms-timers"
+    },
+    {
+      "id": "view-learned-phrases",
+      "date": "2026-05-25",
+      "companion_version": "v0.10.1",
+      "watch_version": null,
+      "title": "See and prune learned phrases",
+      "description": "View — and individually delete — phrases Wristotle has learned from your voice commands.",
+      "sample_query": null,
+      "docs_path": "features/#settings-tab-whats-in-each-category"
+    },
+    {
+      "id": "contact-aliases",
+      "date": "2026-05-25",
+      "companion_version": "v0.10.0",
+      "watch_version": null,
+      "title": "Contact aliases",
+      "description": "Map a spoken phrase to the right contact — fixes the \"Whisper mishears my friend's name\" problem.",
+      "sample_query": null,
+      "docs_path": "features/#settings-tab-whats-in-each-category"
+    },
+    {
+      "id": "tasks",
+      "date": "2026-05-24",
+      "companion_version": "v0.9.0",
+      "watch_version": "v0.6.0",
+      "title": "Tasks",
+      "description": "Voice-controlled checklist with on-watch picker and a companion Tasks tab. Included in backups.",
+      "sample_query": "add task call mom",
+      "docs_path": "voice-commands/#tasks"
+    },
+    {
+      "id": "messaging-apps",
+      "date": "2026-05-24",
+      "companion_version": "v0.8.5",
+      "watch_version": null,
+      "title": "WhatsApp / Telegram / Signal messaging",
+      "description": "Voice messaging across SMS plus three third-party apps via one intent. (Third-party apps need a tap to send.)",
+      "sample_query": "WhatsApp mom on my way",
+      "docs_path": "voice-commands/#sms-and-other-messaging-apps"
+    },
+    {
+      "id": "open-app-reliable",
+      "date": "2026-05-24",
+      "companion_version": "v0.8.3",
+      "watch_version": null,
+      "title": "Reliable \"open <app>\" from the watch",
+      "description": "Cold-start launch of any installed app from the watch (needs Display over other apps).",
+      "sample_query": "open Spotify",
+      "docs_path": "voice-commands/#open-any-app"
+    },
+    {
+      "id": "settings-drill-down",
+      "date": "2026-05-23",
+      "companion_version": "v0.8.0",
+      "watch_version": null,
+      "title": "Settings drill-down navigation",
+      "description": "Settings reorganised into focused sub-screens you reach with one tap from a landing list.",
+      "sample_query": null,
+      "docs_path": "features/#settings-tab-whats-in-each-category"
+    },
+    {
+      "id": "confirm-before-dispatch",
+      "date": "2026-05-23",
+      "companion_version": "v0.7.0",
+      "watch_version": "v0.5.0",
+      "title": "Confirm before dispatch",
+      "description": "Optional watch prompt before destructive actions (call, text, alarm). Configurable timeout + default.",
+      "sample_query": null,
+      "docs_path": "features/#settings-tab-whats-in-each-category"
+    },
+    {
+      "id": "backup-restore",
+      "date": "2026-05-23",
+      "companion_version": "v0.6.0",
+      "watch_version": null,
+      "title": "Backup & Restore",
+      "description": "Export your data to a single ZIP and import it on a fresh install. AES-256 encryption optional.",
+      "sample_query": null,
+      "docs_path": "features/#companion-side-features"
+    },
+    {
+      "id": "notes-quicklaunch-aliases",
+      "date": "2026-05-22",
+      "companion_version": "v0.5.0",
+      "watch_version": "v0.4.0",
+      "title": "Voice notes, Quick Launch, App aliases",
+      "description": "Take voice notes, jump to dictation with a single watch press, and alias app names you call things differently.",
+      "sample_query": "take a note buy milk",
+      "docs_path": "voice-commands/#notes"
+    },
+    {
+      "id": "reminder-list-reschedule",
+      "date": "2026-05-21",
+      "companion_version": "v0.4.0",
+      "watch_version": "v0.3.1",
+      "title": "Reminder list & reschedule",
+      "description": "Ask what's pending; push a reminder to a new time. The watch hint routes cleanly into list / set / reschedule.",
+      "sample_query": "is there a reminder at 2pm",
+      "docs_path": "voice-commands/#list-reminders"
+    },
+    {
+      "id": "voice-calendar",
+      "date": "2026-05-19",
+      "companion_version": "v0.3.0",
+      "watch_version": null,
+      "title": "Voice calendar",
+      "description": "Schedule events and ask what's coming up. Reads your default calendar.",
+      "sample_query": "schedule a meeting with Alex at 3pm",
+      "docs_path": "voice-commands/#calendar"
+    },
+    {
+      "id": "watch-settings-from-phone",
+      "date": "2026-05-19",
+      "companion_version": "v0.2.0",
+      "watch_version": null,
+      "title": "Watch settings from the phone",
+      "description": "Configure watch-side toggles (font sizes, hints, defaults) from the companion app.",
+      "sample_query": null,
+      "docs_path": "features/#settings-sync"
+    },
+    {
+      "id": "initial-release",
+      "date": "2026-05-18",
+      "companion_version": "v0.1.0",
+      "watch_version": null,
+      "title": "Initial release",
+      "description": "Calls, SMS, time-based reminders, media play / pause / next / previous / seek, find phone. All on-device.",
+      "sample_query": "call mom",
+      "docs_path": "voice-commands/"
+    }
+  ]
+}

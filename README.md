@@ -222,7 +222,7 @@ Build just the speech-recognition library:
 
 ### Git hooks
 
-This repo ships a shared pre-push hook under `tools/git-hooks/`. It rejects tag pushes that don't match the current version series (defends against the "tagged the wrong repo" mistake) and warns when a release tag has no matching entry in [`HelpContent.kt`](app/src/main/java/com/lazydevs/wristotle/help/HelpContent.kt) — so user-facing releases don't ship with a stale in-app Help page.
+This repo ships a shared pre-push hook under `tools/git-hooks/`. It rejects tag pushes that don't match the current version series (defends against the "tagged the wrong repo" mistake), warns when a release tag has no matching entry in [`HelpTimeline.kt`](app/src/main/java/com/lazydevs/wristotle/help/HelpTimeline.kt), and refuses to push when [`HelpTimeline.kt`](app/src/main/java/com/lazydevs/wristotle/help/HelpTimeline.kt) is out of sync with [`data/features.json`](data/features.json) (someone edited the JSON without re-running the codegen).
 
 Wire it into your clone once:
 
@@ -231,6 +231,33 @@ git config core.hooksPath tools/git-hooks
 ```
 
 After that, edits to `tools/git-hooks/pre-push` take effect on the next push — no need to copy into `.git/hooks/`. To bypass for a one-off (emergency hotfix outside the current series): `git push --no-verify origin <tag>`.
+
+### Help page content flow
+
+The in-app Help page (Settings → ❓ Help) is fed by [`data/features.json`](data/features.json), a synced snapshot of `wristotle-docs/data/features.json` (the canonical source). When you ship a user-facing release:
+
+```bash
+# 1. Edit the canonical features list in the docs repo.
+vim ../wristotle-docs/data/features.json
+
+# 2. Sync into this repo + regenerate the Kotlin source.
+tools/sync_features.sh
+python3 tools/regenerate_help_timeline.py
+
+# 3. Commit data/features.json + the regenerated HelpTimeline.kt.
+```
+
+`HelpTimeline.kt` is auto-generated and marked DO NOT EDIT — every change goes through `features.json`. Tips (the action-oriented pointers at the top of the Help card) stay hand-edited in [`HelpContent.kt`](app/src/main/java/com/lazydevs/wristotle/help/HelpContent.kt) — they're discovery hints that aren't release-tied.
+
+Internals-only releases (tests / refactor / CI / build / fix) intentionally skip `features.json` — the editorial filter is the whole point of the Help page.
+
+**Drift is enforced at three layers** so a stale `HelpTimeline.kt` can't slip into a release:
+
+| Layer | Where | Behaviour |
+|---|---|---|
+| `:app:verifyHelpTimeline` Gradle task | `app/build.gradle.kts` | Hard-fails `:app:assembleRelease` / `:app:bundleRelease` when codegen output would differ. Catches drift in CI (which doesn't run git hooks). Skipped on debug builds so the dev loop stays fast. |
+| Pre-push hook | `tools/git-hooks/pre-push` | Hard-fails on `git push` if `HelpTimeline.kt` is out of sync. Catches drift before the push reaches the remote. |
+| Pre-push hook (soft warning) | same | Warns when the tag being pushed has no matching entry in `HelpTimeline.kt` — internals-only releases ignore, user-facing releases cancel + add. |
 
 ### Modules
 

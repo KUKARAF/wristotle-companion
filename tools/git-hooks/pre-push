@@ -25,7 +25,8 @@ ALLOWED='^v0\.16\.[0-9]+$'
 remote="$1"
 url="$2"
 
-HELP_CONTENT="app/src/main/java/com/lazydevs/wristotle/help/HelpContent.kt"
+HELP_CONTENT="app/src/main/java/com/lazydevs/wristotle/help/HelpTimeline.kt"
+FEATURES_JSON="data/features.json"
 
 while read local_ref local_sha remote_ref remote_sha; do
     case "$remote_ref" in
@@ -51,25 +52,50 @@ EOF
                         exit 1
                     fi
 
-                    # Soft warning: tag has no corresponding FeatureEntry in
-                    # HelpContent.kt. Internals-only releases (refactor /
-                    # tests / CI / build) intentionally don't get one — read
-                    # the warning and decide. Doesn't block the push; the
+                    # Soft warning: tag has no corresponding feature in the
+                    # generated HelpTimeline.kt (sourced from data/features.json).
+                    # Internals-only releases (refactor / tests / CI / build)
+                    # intentionally don't get one — read the warning and
+                    # decide. Doesn't block the push; the
                     # `memory/feedback_helpcontent_sync_before_tag` rule
                     # spells out the decision criteria.
-                    if [ -f "$HELP_CONTENT" ] && ! grep -q "version = \"$tag_name\"" "$HELP_CONTENT"; then
+                    if [ -f "$HELP_CONTENT" ] && ! grep -q "Version = \"$tag_name\"" "$HELP_CONTENT"; then
                         cat >&2 <<EOF
 
 ⚠ pre-push: tag '$tag_name' is not listed in $HELP_CONTENT
   Decide:
-    - User-facing release? Cancel the push (Ctrl-C), add a FeatureEntry
-      to the timeline list (newest first), commit, then re-tag at the
-      new commit and push.
+    - User-facing release? Cancel the push (Ctrl-C), then:
+        1. Add an entry to wristotle-docs/data/features.json (newest first).
+        2. Run: tools/sync_features.sh && python3 tools/regenerate_help_timeline.py
+        3. Commit features.json + the regenerated HelpTimeline.kt.
+        4. Re-tag at the new commit and push.
     - Internals-only release (refactor / tests / CI / build / fix)?
       Ignore — the editorial filter is the whole point of the page.
   See memory/feedback_helpcontent_sync_before_tag for the convention.
 
 EOF
+                    fi
+
+                    # Freshness check: HelpTimeline.kt MUST match what
+                    # the codegen would produce from data/features.json.
+                    # Stale Kotlin = wrong Help page in the next build,
+                    # and the regen is one deterministic command. Hard
+                    # refusal — there's no legitimate "yes, ship this
+                    # stale on purpose" state. Bypass with --no-verify
+                    # only if python3 is unavailable on the host.
+                    if [ -f "$FEATURES_JSON" ] && command -v python3 >/dev/null 2>&1; then
+                        if ! python3 tools/regenerate_help_timeline.py --check >/dev/null 2>&1; then
+                            cat >&2 <<EOF
+
+✗ pre-push: $HELP_CONTENT is out of sync with $FEATURES_JSON
+  Run: python3 tools/regenerate_help_timeline.py
+  Then commit the regenerated file and push again.
+
+  To bypass (e.g. python3 unavailable): git push --no-verify
+
+EOF
+                            exit 1
+                        fi
                     fi
                     ;;
             esac

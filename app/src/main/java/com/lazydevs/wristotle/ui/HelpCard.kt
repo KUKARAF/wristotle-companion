@@ -166,9 +166,11 @@ private fun TipRow(tip: Tip, context: Context) {
 private fun FeatureRow(entry: FeatureEntry, context: Context) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // Version + date as the meta line — small + muted so the title
-        // gets the visual weight.
+        // gets the visual weight. Companion + watch versions render
+        // together when both shipped (e.g. "v0.14.0 + Watch v0.8.0 ·
+        // 2026-05-31"); single-side releases show just that side.
         Text(
-            "${entry.version}  ·  ${entry.date}",
+            "${formatVersions(entry)}  ·  ${entry.date}",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -216,6 +218,27 @@ private fun openUrl(context: Context, url: String) {
 }
 
 /**
+ * Render the version meta line for one feature, matching the changelog
+ * convention so users see the same shape in-app and on the docs site:
+ *  - both sides shipped     → `"v0.14.0 + Watch v0.8.0"`
+ *  - companion only         → `"v0.16.0"`
+ *  - watch only             → `"Watch v0.6.1"`
+ *
+ * features.json validates at codegen time that at least one of the
+ * two version fields is set, so the "both null" case is unreachable.
+ */
+private fun formatVersions(entry: FeatureEntry): String {
+    val c = entry.companionVersion
+    val w = entry.watchVersion
+    return when {
+        c != null && w != null -> "$c + Watch $w"
+        c != null -> c
+        w != null -> "Watch $w"
+        else -> entry.date   // unreachable per features.json validation
+    }
+}
+
+/**
  * Case-insensitive substring filter — empty query returns the list
  * unchanged. Matches across every text field that's actually visible
  * to the user so search behaviour matches their mental model.
@@ -226,7 +249,8 @@ private fun List<FeatureEntry>.filteredBy(query: String): List<FeatureEntry> {
     return filter { entry ->
         entry.title.lowercase().contains(needle) ||
             entry.description.lowercase().contains(needle) ||
-            entry.version.lowercase().contains(needle) ||
+            (entry.companionVersion?.lowercase()?.contains(needle) == true) ||
+            (entry.watchVersion?.lowercase()?.contains(needle) == true) ||
             (entry.sampleQuery?.lowercase()?.contains(needle) == true)
     }
 }

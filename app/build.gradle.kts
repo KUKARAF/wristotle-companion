@@ -167,6 +167,57 @@ configurations.all {
     exclude(group = "org.slf4j", module = "slf4j-api")
 }
 
+// Verify that HelpTimeline.kt is in sync with data/features.json — i.e.
+// running the codegen would not change the file. The pre-push git hook
+// already catches drift before a tag push lands on Codeberg, but CI
+// doesn't run hooks, so this Gradle task is the CI-side enforcement.
+//
+// Gated to release builds only:
+//   - debug builds (dev loop) skip the check, so an in-progress
+//     features.json edit doesn't break `./gradlew :app:installDebug`
+//   - assembleRelease (used by release.yml + release-prebuilts.yml)
+//     hard-fails if the maintainer pushed features.json without
+//     running the codegen.
+//
+// Requires `python3` on PATH. CI runners (codeberg-medium, Debian-
+// derived) ship with it; if you're building release locally on a
+// machine without python3, the task fails with a clear error.
+val verifyHelpTimeline = tasks.register("verifyHelpTimeline") {
+    description = "Verifies app/.../HelpTimeline.kt is in sync with data/features.json."
+    group = "verification"
+    doLast {
+        val repoRoot = rootProject.projectDir
+        // Skip cleanly if python3 isn't on PATH — same posture as the
+        // pre-push hook. CI runners have it; non-Linux maintainer boxes
+        // mostly do too. If yours doesn't, you get a clear hint instead
+        // of a confusing "command not found".
+        val process = try {
+            ProcessBuilder("python3", "tools/regenerate_help_timeline.py", "--check")
+                .directory(repoRoot)
+                .redirectErrorStream(true)
+                .start()
+        } catch (e: Exception) {
+            throw GradleException(
+                "verifyHelpTimeline: cannot start python3 — install Python 3 " +
+                    "or pass -x verifyHelpTimeline to skip this check.\n" +
+                    "Underlying error: ${e.message}",
+            )
+        }
+        val output = process.inputStream.bufferedReader().readText()
+        val exit = process.waitFor()
+        if (exit != 0) {
+            throw GradleException(
+                "verifyHelpTimeline failed:\n${output.trim()}\n\n" +
+                    "Fix: python3 tools/regenerate_help_timeline.py — then commit the regenerated file.",
+            )
+        }
+    }
+}
+
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+    dependsOn(verifyHelpTimeline)
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
