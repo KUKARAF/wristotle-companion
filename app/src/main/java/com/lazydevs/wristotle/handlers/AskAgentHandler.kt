@@ -62,10 +62,21 @@ class AskAgentHandler(
             // renders one bubble per query — using the response key here
             // would drop the final answer (see
             // feedback_watch_chat_single_bubble memory).
+            //
+            // Thinking AND CallingTool both emit so the watch's 15 s
+            // response timer is re-armed at the start of each LLM round
+            // (otherwise a pure-text call taking >15 s leaves the watch
+            // silent until it times out — companion's eventual response
+            // would land too late to render).
             onStatus = { status ->
-                if (status is AgentLoop.Status.CallingTool) {
-                    runCatching { transport.sendAgentStatus("→ ${friendly(status.toolName)}") }
+                val line = when (status) {
+                    is AgentLoop.Status.Thinking ->
+                        if (status.round == 1) "→ thinking…"
+                        else "→ thinking (round ${status.round})…"
+                    is AgentLoop.Status.CallingTool -> "→ ${friendly(status.toolName)}"
+                    is AgentLoop.Status.ToolDone -> null
                 }
+                if (line != null) runCatching { transport.sendAgentStatus(line) }
             },
         )
         return when (outcome) {

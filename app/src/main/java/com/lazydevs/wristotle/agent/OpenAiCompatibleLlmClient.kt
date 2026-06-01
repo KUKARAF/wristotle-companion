@@ -226,13 +226,16 @@ class OpenAiCompatibleLlmClient(
             if (apiKey.isNotBlank()) put("Authorization", "Bearer $apiKey")
         },
         body = body,
-        readTimeoutMs = 30_000,
+        // See AnthropicLlmClient.READ_TIMEOUT_MS for the rationale —
+        // cap under the watch's 15 s response ceiling.
+        readTimeoutMs = READ_TIMEOUT_MS,
     )
 
     companion object {
         private const val TAG = "OpenAiCompatibleLlmClient"
         const val DEFAULT_MAX_TOKENS = 1024
         const val DEFAULT_ENDPOINT_URL = "https://api.openai.com/v1/chat/completions"
+        private const val READ_TIMEOUT_MS = 14_000
 
         private val EMPTY_OBJECT_SCHEMA: JsonObject = buildJsonObject {
             put("type", "object")

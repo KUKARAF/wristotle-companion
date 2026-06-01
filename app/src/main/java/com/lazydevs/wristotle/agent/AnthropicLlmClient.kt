@@ -245,7 +245,12 @@ class AnthropicLlmClient(
             "anthropic-version" to ANTHROPIC_VERSION,
         ),
         body = body,
-        readTimeoutMs = 30_000,
+        // Cap under the watch's PROCESSOR_TIMEOUT_MS (15 s in
+        // input/processor.c) so a slow LLM round produces a real failure
+        // message in time for the watch to render it, instead of leaving
+        // the watch silent past its own ceiling. The AskAgent loop also
+        // emits agent_status on Status.Thinking which re-arms that timer.
+        readTimeoutMs = READ_TIMEOUT_MS,
     )
 
     companion object {
@@ -253,6 +258,7 @@ class AnthropicLlmClient(
         private const val ENDPOINT = "https://api.anthropic.com/v1/messages"
         private const val ANTHROPIC_VERSION = "2023-06-01"
         const val DEFAULT_MAX_TOKENS = 1024
+        private const val READ_TIMEOUT_MS = 14_000
 
         /** Anthropic rejects tool definitions whose input_schema is missing;
          *  a parameterless tool needs an explicit empty-object schema. */
