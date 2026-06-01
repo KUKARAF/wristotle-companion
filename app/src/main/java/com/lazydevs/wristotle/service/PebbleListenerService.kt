@@ -32,12 +32,11 @@ import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.nlu.LearningCollector
 import com.lazydevs.wristotle.nlu.NluSettings
-import com.lazydevs.wristotle.nlu.WatchHintRefiner
+import com.lazydevs.wristotle.nlu.VoicePipeline
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.settings.WatchSettingsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
-import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
@@ -78,8 +77,7 @@ class PebbleListenerService : BasePebbleListenerService() {
     private lateinit var transport: PebbleTransport
     private lateinit var conversationRepository: ConversationRepository
     private lateinit var registry: HandlerRegistry
-    private lateinit var intentClassifier: IntentClassifier
-    private lateinit var slotExtractors: SlotExtractorRegistry
+    private lateinit var voicePipeline: VoicePipeline
     private lateinit var nluSettings: NluSettings
     private lateinit var learningCollector: LearningCollector
     private lateinit var watchSettingsRepository: WatchSettingsRepository
@@ -127,8 +125,11 @@ class PebbleListenerService : BasePebbleListenerService() {
         app = application as WristotleApplication
         transport = app.transport
         conversationRepository = app.conversationRepository
-        intentClassifier = IntentClassifiers.provider(this)
-        slotExtractors = app.slotExtractors
+        voicePipeline = VoicePipeline(
+            classifier = IntentClassifiers.provider(this),
+            slotExtractors = app.slotExtractors,
+            askAgentSubjects = { app.askAgentSettings.customTriggers.value },
+        )
         nluSettings = app.nluSettings
         learningCollector = app.learningCollector
         watchSettingsRepository = app.watchSettingsRepository
@@ -292,11 +293,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         // Phase A3 will actually intercept destructive intents on a true flag.
         val confirmRequested = data.boolFlag(MessageKeys.SETTING_CONFIRM_BEFORE_SEND)
         Log.d(TAG, "Classifying query: $query (watchHint=$watchHint confirmRequested=$confirmRequested)")
-        val classified = runCatching { intentClassifier.classify(query) }
-            .onFailure { Log.w(TAG, "classify failed", it) }
-            .getOrNull()
-
-        val routedRaw = resolveIntent(classified, watchHint, query)
+        val (routedRaw, classified) = voicePipeline.route(query, watchHint)
         // Enrich Call / SendMessage with the resolved contact's display
         // name from ContactsRepository. The slot extractors only keep
         // the spoken candidate (e.g. "mom"); the confirm prompt needs
@@ -360,7 +357,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         // actionable instead of silent failure.
         val noNluModel = routed.intent == Intent.Unknown &&
             watchHint == null &&
-            intentClassifier.isStub
+            voicePipeline.isStubClassifier
         val dispatchResult = if (noNluModel) {
             com.lazydevs.wristotle.handlers.HandlerResult(
                 response = getString(R.string.nlu_model_missing_response),
@@ -444,14 +441,6 @@ class PebbleListenerService : BasePebbleListenerService() {
     }
 
     /**
-     * Pick the intent to actually dispatch on. Watch-hinted queries win
-     * (preserves today's behaviour even if the classifier disagrees) — except
-     * a `Reminder` hint may be refined *within the reminder family* (see below).
-     * For unhinted queries, apply the confidence + margin thresholds — sub-
-     * threshold predictions become [Intent.Unknown]. Always populates slots
-     * for the chosen intent via [slotExtractors].
-     */
-    /**
      * Resolve the spoken contact name (slots["contact"]) to the actual
      * contact's display name via [ContactsRepository], stashed as
      * `slots["resolvedContact"]`. Only enriches Call + SendMessage —
@@ -483,37 +472,6 @@ class PebbleListenerService : BasePebbleListenerService() {
         // population, a spoken-equals-resolved pair would skip the
         // confirm prompt incorrectly.
         return routed.copy(slots = routed.slots + (SlotKeys.ResolvedContact to match.name))
-    }
-
-    /**
-     * Pick the final intent (via [WatchHintRefiner]'s pure-NLU policy) and
-     * populate slots for it. Returns an [IntentResult] either derived from
-     * the classifier pick (preserving confidence/alternates for downstream
-     * logging) or freshly assembled when no classifier ran.
-     */
-    private suspend fun resolveIntent(
-        classified: IntentResult?,
-        watchHint: Intent?,
-        query: String,
-    ): IntentResult {
-        val refined = WatchHintRefiner.refine(
-            classified = classified,
-            watchHint = watchHint,
-            query = query,
-            routeThreshold = NluSettings.ROUTE_THRESHOLD,
-            routeMargin = NluSettings.ROUTE_MARGIN,
-            customAskAgentSubjects = app.askAgentSettings.customTriggers.value,
-        )
-        val intent = refined ?: Intent.Unknown
-        val slots = if (intent == Intent.Unknown) emptyMap() else slotExtractors.extract(intent, query)
-        return classified?.copy(intent = intent, slots = slots)
-            ?: IntentResult(
-                intent = intent,
-                slots = slots,
-                confidence = if (refined != null) 1f else 0f,
-                alternates = emptyList(),
-                rawQuery = query,
-            )
     }
 
     /**
