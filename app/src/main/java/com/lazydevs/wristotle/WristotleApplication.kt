@@ -476,8 +476,8 @@ class WristotleApplication : Application() {
 
             Log.d(TAG, "creating intent classifier for active model: $path")
             val tokenizer = Tokenizer.fromContext(this, com.lazydevs.wristotle.speech.nlu.R.raw.minilm_vocab)
-            val embedder = MiniLmEmbedder(modelPath = path)
-            val classifier = EmbeddingIntentClassifier(embedder, tokenizer, nluBank)
+            val embedder = MiniLmEmbedder(modelPath = path, tokenizer = tokenizer)
+            val classifier = EmbeddingIntentClassifier(embedder, nluBank)
             cachedClassifier = path to classifier
             classifier
         }

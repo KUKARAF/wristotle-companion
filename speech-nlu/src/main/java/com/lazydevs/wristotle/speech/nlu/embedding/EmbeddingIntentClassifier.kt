@@ -36,9 +36,9 @@ private const val TAG = "EmbeddingIntentClassifier"
  * For Phase 2 (shadow mode) [classify] returns `slots = emptyMap()`.
  */
 class EmbeddingIntentClassifier(
-    private val embedder: MiniLmEmbedder,
-    private val tokenizer: Tokenizer,
+    private val embedder: Embedder,
     private val bank: ExampleBank,
+    private val seeds: List<Pair<Intent, String>> = SeedExamples.all,
 ) : IntentClassifier, Closeable {
 
     override val tag: String = "embedding"
@@ -59,34 +59,33 @@ class EmbeddingIntentClassifier(
         mutex.withLock {
             if (examples.isNotEmpty()) return@withLock
             examples = withContext(Dispatchers.Default) {
-                val seedEmbeds = SeedExamples.all.map { (intent, text) ->
-                    Embedded(intent, embedder.embed(text, tokenizer))
+                val seedEmbeds = seeds.map { (intent, text) ->
+                    Embedded(intent, embedder.embed(text))
                 }
                 val learnedEmbeds = bank.learnedExamples().mapNotNull { entry ->
                     runCatching {
-                        Embedded(Intent.fromName(entry.intent), embedder.embed(entry.rawText, tokenizer))
+                        Embedded(Intent.fromName(entry.intent), embedder.embed(entry.rawText))
                     }.onFailure { Log.w(TAG, "skip learned entry ${entry.id}: ${it.message}") }
                         .getOrNull()
                 }
                 seedEmbeds + learnedEmbeds
             }
-            Log.d(TAG, "warmUp: ${examples.size} embedded (${SeedExamples.all.size} seed)")
+            Log.d(TAG, "warmUp: ${examples.size} embedded (${seeds.size} seed)")
         }
     }
 
     override suspend fun rebuild() {
         mutex.withLock {
             // Re-embed the learned rows; seed embeddings stay cached.
-            val seedSize = SeedExamples.all.size
-            val seeds = examples.take(seedSize)
+            val cachedSeeds = examples.take(seeds.size)
             val learned = withContext(Dispatchers.Default) {
                 bank.learnedExamples().mapNotNull { entry ->
                     runCatching {
-                        Embedded(Intent.fromName(entry.intent), embedder.embed(entry.rawText, tokenizer))
+                        Embedded(Intent.fromName(entry.intent), embedder.embed(entry.rawText))
                     }.getOrNull()
                 }
             }
-            examples = seeds + learned
+            examples = cachedSeeds + learned
             Log.d(TAG, "rebuild: ${examples.size} embedded (${learned.size} learned)")
         }
     }
@@ -95,7 +94,7 @@ class EmbeddingIntentClassifier(
         if (query.isBlank()) return unknown(query)
         if (examples.isEmpty()) warmUp()
 
-        val queryEmb = withContext(Dispatchers.Default) { embedder.embed(query, tokenizer) }
+        val queryEmb = withContext(Dispatchers.Default) { embedder.embed(query) }
 
         // Per-intent top-K mean. K=3 trades stability vs over-smoothing.
         val byIntent = examples.groupBy { it.intent }

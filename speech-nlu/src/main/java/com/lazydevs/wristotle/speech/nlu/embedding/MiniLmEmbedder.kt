@@ -4,7 +4,6 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.util.Log
-import java.io.Closeable
 import java.nio.LongBuffer
 
 private const val TAG = "MiniLmEmbedder"
@@ -20,7 +19,10 @@ private const val TAG = "MiniLmEmbedder"
  * Construction is heavy (~200–600 ms cold-start) so the embedder should be
  * cached at Application scope. [close] releases the native session.
  */
-class MiniLmEmbedder(modelPath: String) : Closeable {
+class MiniLmEmbedder(
+    modelPath: String,
+    private val tokenizer: Tokenizer,
+) : Embedder {
 
     private val env: OrtEnvironment = OrtEnvironment.getEnvironment()
     private val session: OrtSession = run {
@@ -31,14 +33,8 @@ class MiniLmEmbedder(modelPath: String) : Closeable {
         env.createSession(modelPath, opts)
     }
 
-    private val tokenizer = ThreadLocal<Tokenizer>()
-
-    /**
-     * Embed [text] using [tokenizer]. Returns a normalized 384-dim vector.
-     * Caller should hold the tokenizer instance and pass it in (it's
-     * mutable-free and reentrant but allocations during encode are small).
-     */
-    fun embed(text: String, tokenizer: Tokenizer): FloatArray {
+    /** Tokenize, run the MiniLM session, mean-pool, L2-normalize. */
+    override fun embed(text: String): FloatArray {
         val encoded = tokenizer.encode(text)
         val inputShape = longArrayOf(1L, encoded.length.toLong())
 
