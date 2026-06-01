@@ -17,7 +17,7 @@ class NoteSlots : SlotExtractor {
     override suspend fun extract(query: String): Map<String, Any> {
         val body = query.replace(STRIP_PREFIXES, "").trim()
             .replaceFirstChar { it.uppercaseChar() }
-        return if (body.isBlank()) emptyMap() else mapOf("body" to body)
+        return if (body.isBlank()) emptyMap() else mapOf(SlotKeys.Body to body)
     }
 
     private companion object {

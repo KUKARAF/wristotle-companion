@@ -26,6 +26,6 @@ class SetAlarmSlots : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
         val date: Date = parseTime(query)?.date ?: return emptyMap()
-        return mapOf("time" to date)
+        return mapOf(SlotKeys.Time to date)
     }
 }

@@ -21,7 +21,7 @@ class AskAgentSlots : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
         val body = query.replace(STRIP_PREFIXES, "").trim()
-        return if (body.isBlank()) emptyMap() else mapOf("query" to body)
+        return if (body.isBlank()) emptyMap() else mapOf(SlotKeys.Query to body)
     }
 
     private companion object {

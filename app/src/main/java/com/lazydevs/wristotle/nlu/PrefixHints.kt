@@ -14,10 +14,29 @@ import com.lazydevs.wristotle.speech.nlu.Intent
  * Not a primary router — the embedding classifier is the main signal;
  * this just rescues the cases where the embedder is uncertain.
  *
- * Order matters: rules are tried top-down and the first match wins.
- * Put more-specific patterns above more-general ones (e.g. the seek
- * variants before the bare `previous/back` rule that would otherwise
- * swallow "back ten seconds").
+ * # Ordering
+ *
+ * Rules are tried top-down and the first match wins. The list below
+ * has several **anti-rules** where the placement of A above B is the
+ * only thing keeping a phrase from routing to the wrong intent. The
+ * known ones are pinned by sentinel cases in `PrefixHintsTest`'s
+ * "ordering anti-rules" section — flipping any of these pairs makes
+ * those tests fail:
+ *
+ * | Anti-rule (A above B)          | Driver phrase                                            |
+ * | ------------------------------ | -------------------------------------------------------- |
+ * | MediaSeek above MediaPrevious  | *"back ten seconds"* — bare-`back` would swallow it      |
+ * | AppendNote above Note          | *"append ..."* shares the note vocabulary                |
+ * | AppendNote above Reminder      | *"add to my note ..."* contains "add" + "to"             |
+ * | AddTask above CreateEvent      | *"call my task to ..."* — `call` belongs to Calendar     |
+ * | ListReminders above Reminder   | *"list my reminders"* — bare `list` wouldn't hit a verb  |
+ * | ListTasks-filter above Complete| *"list completed tasks"* — Complete owns the noun        |
+ * | DeleteTask above Cancel        | *"cancel my task"* — Cancel owns the verb                |
+ * | Reschedule above Reminder      | *"reschedule my dentist appointment"*                    |
+ * | SetAlarm/Timer above Cancel    | *"kill the alarm"* — alarm noun is more specific         |
+ *
+ * Add new anti-rule rows here AND a regression case in the test file
+ * when you introduce a rule that requires precedence to be correct.
  */
 internal object PrefixHints {
 

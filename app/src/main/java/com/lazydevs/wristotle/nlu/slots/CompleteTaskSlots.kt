@@ -31,7 +31,7 @@ class CompleteTaskSlots : SlotExtractor {
             .trim()
             .trim('.', ',', ':', ';', '!', '?', '-')
             .trim()
-        return if (target.isBlank()) emptyMap() else mapOf("target" to target)
+        return if (target.isBlank()) emptyMap() else mapOf(SlotKeys.Target to target)
     }
 
     private companion object {

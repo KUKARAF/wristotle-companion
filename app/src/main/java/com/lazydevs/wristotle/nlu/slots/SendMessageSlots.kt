@@ -87,9 +87,9 @@ class SendMessageSlots(
             val body = afterOn.trim()
             if (contact.isNotEmpty() && body.isNotEmpty()) {
                 return mapOf(
-                    "app" to target.displayName,
-                    "contact" to contact,
-                    "body" to body,
+                    SlotKeys.App to target.displayName,
+                    SlotKeys.Contact to contact,
+                    SlotKeys.Body to body,
                 )
             }
         }
@@ -97,10 +97,12 @@ class SendMessageSlots(
         // Shape 4: no explicit app named → default to SMS. Inlined from
         // the original SmsSlots class (removed in Phase A3); see
         // [extractSmsLike] for the greedy-contact-lookup +
-        // conjunction-split + single-space-fallback logic.
-        val smsResult = extractSmsLike(query)
+        // conjunction-split + single-space-fallback logic. Pass the
+        // already-lowered `normalised` through so Shape 4 doesn't redo
+        // the lowercase + comma-strip work this method already did.
+        val smsResult = extractSmsLike(normalised)
         if (smsResult.isNotEmpty()) {
-            return mapOf("app" to MessagingTargets.Sms.displayName) + smsResult
+            return mapOf(SlotKeys.App to MessagingTargets.Sms.displayName) + smsResult
         }
 
         return emptyMap()
@@ -129,6 +131,10 @@ class SendMessageSlots(
      *     *something* to react to.
      */
     private suspend fun extractSmsLike(query: String): Map<String, Any> {
+        // Caller (`extract`) already lowercased + comma-normalised; the
+        // legacy SmsSlots-style tests pass the raw query in, so accept
+        // either by re-running idempotent normalisation. Both passes are
+        // cheap regex hits that do nothing when the input is already clean.
         val lower = query.lowercase().trim()
         val normalised = lower.replaceFirst(LEADING_COMMA_AFTER_VERB, "$1 ")
 
@@ -143,27 +149,27 @@ class SendMessageSlots(
             val contact = stripTrailingEmphasis(rest.substring(0, conjMatch.range.first).trim())
             val body = rest.substring(conjMatch.range.last + 1).trim()
             if (contact.isNotEmpty() && body.isNotEmpty()) {
-                return mapOf("contact" to contact, "body" to body)
+                return mapOf(SlotKeys.Contact to contact, SlotKeys.Body to body)
             }
         }
 
-        val words = rest.split(Regex("\\s+")).map(::cleanNameToken).filter { it.isNotEmpty() }
+        val words = rest.split(MULTI_WHITESPACE).map(::cleanNameToken).filter { it.isNotEmpty() }
         for (n in minOf(MAX_NAME_WORDS, words.size) downTo 1) {
             val candidate = words.subList(0, n).joinToString(" ")
             if (findContact(candidate) != null) {
                 val body = if (n < words.size) words.subList(n, words.size).joinToString(" ").trim() else ""
                 if (body.isNotEmpty()) {
-                    return mapOf("contact" to candidate, "body" to body)
+                    return mapOf(SlotKeys.Contact to candidate, SlotKeys.Body to body)
                 }
             }
         }
 
         val spaceIdx = rest.indexOf(' ')
-        if (spaceIdx < 0) return mapOf("contact" to rest)
+        if (spaceIdx < 0) return mapOf(SlotKeys.Contact to rest)
         val contact = rest.substring(0, spaceIdx).trim()
         val body = rest.substring(spaceIdx + 1).trim()
-        return if (body.isEmpty()) mapOf("contact" to contact)
-               else mapOf("contact" to contact, "body" to body)
+        return if (body.isEmpty()) mapOf(SlotKeys.Contact to contact)
+               else mapOf(SlotKeys.Contact to contact, SlotKeys.Body to body)
     }
 
     /**
@@ -181,7 +187,7 @@ class SendMessageSlots(
      */
     private fun matchVerbPrefixNamingApp(text: String): Pair<MessagingTarget, String>? {
         for (target in MessagingTargets.NAMED) {
-            for (alias in target.spokenAliases.sortedByDescending { it.length }) {
+            for (alias in target.aliasesByLengthDesc) {
                 for (template in VERB_PREFIX_WITH_APP_TEMPLATES) {
                     val prefix = template.replace("<app>", alias)
                     if (text.startsWith(prefix)) {
@@ -210,9 +216,9 @@ class SendMessageSlots(
         // "send a WhatsApp message to Mom on my way" works after the
         // verb-strip already removed "send a whatsapp message".
         val cleaned = rest.replaceFirst(LEADING_CONNECTOR, "").trim()
-        if (cleaned.isEmpty()) return mapOf("app" to appDisplay)
+        if (cleaned.isEmpty()) return mapOf(SlotKeys.App to appDisplay)
 
-        val words = cleaned.split(Regex("\\s+")).map(::cleanNameToken).filter { it.isNotEmpty() }
+        val words = cleaned.split(MULTI_WHITESPACE).map(::cleanNameToken).filter { it.isNotEmpty() }
 
         // Greedy contact-name lookup — try the longest N-word prefix
         // first; the longest prefix that resolves wins, remainder is
@@ -224,9 +230,9 @@ class SendMessageSlots(
                     words.subList(n, words.size).joinToString(" ").trim()
                 else ""
                 return if (body.isNotEmpty())
-                    mapOf("app" to appDisplay, "contact" to candidate, "body" to body)
+                    mapOf(SlotKeys.App to appDisplay, SlotKeys.Contact to candidate, SlotKeys.Body to body)
                 else
-                    mapOf("app" to appDisplay, "contact" to candidate)
+                    mapOf(SlotKeys.App to appDisplay, SlotKeys.Contact to candidate)
             }
         }
 
@@ -236,13 +242,13 @@ class SendMessageSlots(
         // return "Contact not found: X" rather than the misleading
         // "didn't catch that".
         val spaceIdx = cleaned.indexOf(' ')
-        if (spaceIdx < 0) return mapOf("app" to appDisplay, "contact" to cleaned)
+        if (spaceIdx < 0) return mapOf(SlotKeys.App to appDisplay, SlotKeys.Contact to cleaned)
         val contact = cleaned.substring(0, spaceIdx).trim()
         val body = cleaned.substring(spaceIdx + 1).trim()
         return if (body.isEmpty())
-            mapOf("app" to appDisplay, "contact" to contact)
+            mapOf(SlotKeys.App to appDisplay, SlotKeys.Contact to contact)
         else
-            mapOf("app" to appDisplay, "contact" to contact, "body" to body)
+            mapOf(SlotKeys.App to appDisplay, SlotKeys.Contact to contact, SlotKeys.Body to body)
     }
 
     /**
@@ -256,7 +262,7 @@ class SendMessageSlots(
         for (target in MessagingTargets.NAMED) {
             // Sort by length descending so the longer alias matches
             // first when one is a prefix of another.
-            for (alias in target.spokenAliases.sortedByDescending { it.length }) {
+            for (alias in target.aliasesByLengthDesc) {
                 if (text.startsWith("$alias ")) {
                     return target to text.substring(alias.length + 1)
                 }
@@ -272,7 +278,7 @@ class SendMessageSlots(
      */
     private fun matchOnApp(text: String): Triple<MessagingTarget, String, String>? {
         for (target in MessagingTargets.NAMED) {
-            for (alias in target.spokenAliases.sortedByDescending { it.length }) {
+            for (alias in target.aliasesByLengthDesc) {
                 val needle = " on $alias "
                 val idx = text.indexOf(needle)
                 if (idx >= 0) {
@@ -303,12 +309,20 @@ class SendMessageSlots(
         // normalisation the original SmsSlots used.
         val LEADING_COMMA_AFTER_VERB = Regex("^([a-z]+)\\s*,\\s*")
 
-        // SMS-style verb prefixes used by [extractSmsLike]. Longest
-        // first so multi-word matches win (formerly SmsSlots.PREFIXES).
-        val SMS_LIKE_PREFIXES = listOf(
+        // Verb prefixes shared between Shape 3 ([stripLeadingMessagingVerb])
+        // and Shape 4 ([extractSmsLike]) — keeping one source of truth so a
+        // future "shoot " / "ping " addition lands in both. Order matters
+        // (longest first) so multi-word forms win against their own prefixes.
+        private val BASE_VERB_PREFIXES = listOf(
             "send a message to ", "send message to ", "send a message ", "send message ",
-            "send sms to ", "send sms ",
-            "text ", "tell ", "message ", "let ",
+            "text ", "tell ", "message ",
+        )
+
+        // SMS-style verb prefixes used by [extractSmsLike]. Adds the bare
+        // "send sms" forms and the legacy "let " prefix the original
+        // SmsSlots class accepted.
+        val SMS_LIKE_PREFIXES = BASE_VERB_PREFIXES + listOf(
+            "send sms to ", "send sms ", "let ",
         )
 
         // SMS-style conjunctions for the contact/body split (formerly
@@ -316,14 +330,12 @@ class SendMessageSlots(
         val SMS_LIKE_CONJUNCTIONS = Regex("(?i)\\b(saying|that|telling (them|him|her))\\b")
 
         // Verb prefixes used by [stripLeadingMessagingVerb] (Shape 3's
-        // pre-strip for the "<verb> contact on <app> body" form).
-        // Longest first.
-        val VERB_PREFIXES = listOf(
-            "send a message to ", "send message to ", "send a message ", "send message ",
+        // pre-strip for the "<verb> contact on <app> body" form). Adds the
+        // app-naming verb variants (WhatsApp / Telegram / Signal).
+        val VERB_PREFIXES = BASE_VERB_PREFIXES + listOf(
             "send a whatsapp message to ", "send a telegram message to ", "send a signal message to ",
             "send a whatsapp to ", "send a telegram to ", "send a signal to ",
             "send whatsapp to ", "send telegram to ", "send signal to ",
-            "text ", "tell ", "message ",
         )
 
         // Connectors that may appear right after the app name + before

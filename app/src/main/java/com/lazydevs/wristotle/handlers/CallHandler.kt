@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.telecom.TelecomManager
 import android.util.Log
 import com.lazydevs.wristotle.phone.ContactsRepository
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.util.hasPermission
@@ -15,7 +16,7 @@ private const val TAG = "CallHandler"
 
 /**
  * Handles [Intent.Call] — places a phone call via [TelecomManager] to the
- * contact named in `slots["contact"]`. Requires READ_CONTACTS and CALL_PHONE
+ * contact named in `slots[SlotKeys.Contact]`. Requires READ_CONTACTS and CALL_PHONE
  * permissions.
  *
  * Slot extractor (`CallSlots`) strips call/dial/phone/ring trigger words +
@@ -34,7 +35,7 @@ class CallHandler(
         if (!contacts.hasPermission()) return "Contacts permission not granted"
         if (!context.hasPermission(Manifest.permission.CALL_PHONE)) return "Call permission not granted"
 
-        val contactName = (result.slots["contact"] as? String)?.trim().orEmpty()
+        val contactName = (result.slots[SlotKeys.Contact] as? String)?.trim().orEmpty()
         if (contactName.isEmpty()) return "No contact specified"
 
         val contact = contacts.findContact(contactName)

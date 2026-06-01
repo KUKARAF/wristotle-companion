@@ -1,5 +1,6 @@
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import java.text.SimpleDateFormat
@@ -38,10 +39,10 @@ object ConfirmSummaryBuilder {
         // SendMessage but the slot extractor didn't populate the app
         // field.
         Intent.SendMessage   -> {
-            val app = (r.slots["app"] as? String)?.takeIf { it.isNotEmpty() } ?: "message"
+            val app = (r.slots[SlotKeys.App] as? String)?.takeIf { it.isNotEmpty() } ?: "message"
             val verb = if (app.equals("SMS", ignoreCase = true)) "text" else app.lowercase()
             val to = contactName(r)
-            val body = (r.slots["body"] as? String)?.take(80)?.takeIf { it.isNotEmpty() }
+            val body = (r.slots[SlotKeys.Body] as? String)?.take(MAX_BODY_PREVIEW)?.takeIf { it.isNotEmpty() }
             if (body == null) "action: $verb\ndetails: $to"
             else              "action: $verb\ndetails: $to $body"
         }
@@ -59,24 +60,24 @@ object ConfirmSummaryBuilder {
         // "schedule" reads more naturally than "create-event" — matches the
         // verb the user said ("schedule a meeting").
         Intent.CreateEvent   -> "action: schedule\ndetails: ${titleWithTime(r, defaultTitle = "Meeting")}"
-        Intent.OpenApp       -> "action: open\ndetails: ${slot(r, "app")}"
-        Intent.MediaPlay     -> "action: play\ndetails: ${slot(r, "app")}"
-        Intent.MediaPause    -> "action: pause\ndetails: ${slotOrDash(r, "app")}"
-        Intent.MediaPlayPause -> "action: play-pause\ndetails: ${slotOrDash(r, "app")}"
-        Intent.MediaNext     -> "action: next\ndetails: ${slotOrDash(r, "app")}"
-        Intent.MediaPrevious -> "action: previous\ndetails: ${slotOrDash(r, "app")}"
+        Intent.OpenApp       -> "action: open\ndetails: ${slot(r, SlotKeys.App)}"
+        Intent.MediaPlay     -> "action: play\ndetails: ${slot(r, SlotKeys.App)}"
+        Intent.MediaPause    -> "action: pause\ndetails: ${slotOrDash(r, SlotKeys.App)}"
+        Intent.MediaPlayPause -> "action: play-pause\ndetails: ${slotOrDash(r, SlotKeys.App)}"
+        Intent.MediaNext     -> "action: next\ndetails: ${slotOrDash(r, SlotKeys.App)}"
+        Intent.MediaPrevious -> "action: previous\ndetails: ${slotOrDash(r, SlotKeys.App)}"
         Intent.MediaSeekForward,
-        Intent.MediaSeekBackward -> "action: seek\ndetails: ${slotOrDash(r, "seconds")}s"
-        Intent.Note          -> "action: note\ndetails: ${slot(r, "body")}"
-        Intent.AppendNote    -> "action: append-note\ndetails: ${slot(r, "body")}"
-        Intent.AddTask       -> "action: add-task\ndetails: ${slot(r, "body")}"
+        Intent.MediaSeekBackward -> "action: seek\ndetails: ${slotOrDash(r, SlotKeys.Seconds)}s"
+        Intent.Note          -> "action: note\ndetails: ${slot(r, SlotKeys.Body)}"
+        Intent.AppendNote    -> "action: append-note\ndetails: ${slot(r, SlotKeys.Body)}"
+        Intent.AddTask       -> "action: add-task\ndetails: ${slot(r, SlotKeys.Body)}"
         Intent.ListTasks     -> "action: list-tasks\ndetails: -"
         // Complete / Delete render the `target` (what the user named).
         // The actual matching to a stored task happens at dispatch —
         // the confirm prompt shows the spoken term so the user can
         // catch a mis-target before the action runs.
-        Intent.CompleteTask  -> "action: complete\ndetails: ${slot(r, "target")}"
-        Intent.DeleteTask    -> "action: delete-task\ndetails: ${slot(r, "target")}"
+        Intent.CompleteTask  -> "action: complete\ndetails: ${slot(r, SlotKeys.Target)}"
+        Intent.DeleteTask    -> "action: delete-task\ndetails: ${slot(r, SlotKeys.Target)}"
         // SetAlarm shows just the wall-clock time ("7:00 AM") — the date
         // portion of the slot is irrelevant to an alarm. SetTimer shows a
         // compact duration ("10m" / "1m 30s"). A misheard time/duration is
@@ -131,9 +132,9 @@ object ConfirmSummaryBuilder {
      *        phrase.
      */
     private fun contactName(r: IntentResult): String {
-        val resolved = (r.slots["resolvedContact"] as? String)?.takeIf { it.isNotEmpty() }
+        val resolved = (r.slots[SlotKeys.ResolvedContact] as? String)?.takeIf { it.isNotEmpty() }
         if (resolved != null) return "[$resolved]"
-        val spoken = (r.slots["contact"] as? String)?.takeIf { it.isNotEmpty() }
+        val spoken = (r.slots[SlotKeys.Contact] as? String)?.takeIf { it.isNotEmpty() }
         return if (spoken != null) "[NO_CONTACT] [$spoken]" else "[NO_NAME]"
     }
 
@@ -141,32 +142,42 @@ object ConfirmSummaryBuilder {
         (r.slots[key]?.toString())?.takeIf { it.isNotEmpty() } ?: "-"
 
     private fun targetOrLatest(r: IntentResult): String =
-        (r.slots["target"] as? String)?.takeIf { it.isNotEmpty() } ?: "latest reminder"
+        (r.slots[SlotKeys.Target] as? String)?.takeIf { it.isNotEmpty() } ?: "latest reminder"
 
     /**
-     * Format the title + time pair for Reminder / CreateEvent. The handler
-     * defaults a missing title to [defaultTitle], so we do the same so the
-     * confirm prompt accurately reflects what would land. Time is omitted
-     * when not parseable — the handler will fail with "Couldn't understand
+     * Format the title + time pair for Reminder / CreateEvent. Mirrors
+     * [com.lazydevs.wristotle.handlers.CreateEventHandler]'s title rules
+     * (explicit + attendee → "Title with Attendee"; attendee-only →
+     * "$defaultTitle with Attendee") so the confirm prompt shows the
+     * same string that will land on the calendar. Time is omitted when
+     * not parseable — the handler will fail with "Couldn't understand
      * the time" anyway, but at least the title surfaces.
      */
     private fun titleWithTime(r: IntentResult, defaultTitle: String): String {
-        val title = (r.slots["title"] as? String)?.takeIf { it.isNotEmpty() } ?: defaultTitle
-        val time = (r.slots["time"] as? Date)?.let { TIME_FMT.get()!!.format(it) }
+        val explicit = (r.slots[SlotKeys.Title] as? String)?.takeIf { it.isNotEmpty() }
+        val attendee = (r.slots[SlotKeys.Attendee] as? String)?.takeIf { it.isNotEmpty() }
+        val title = when {
+            explicit != null && attendee != null && !explicit.contains(attendee, ignoreCase = true) ->
+                "$explicit with $attendee"
+            explicit != null -> explicit
+            attendee != null -> "$defaultTitle with $attendee"
+            else -> defaultTitle
+        }
+        val time = (r.slots[SlotKeys.Time] as? Date)?.let { TIME_FMT.get()!!.format(it) }
         return if (time != null) "$title @ $time" else title
     }
 
     private fun timeOrDash(r: IntentResult): String =
-        (r.slots["time"] as? Date)?.let { TIME_FMT.get()!!.format(it) } ?: "-"
+        (r.slots[SlotKeys.Time] as? Date)?.let { TIME_FMT.get()!!.format(it) } ?: "-"
 
     /** Wall-clock time for SetAlarm — "7:00 AM". No day: an alarm is a
      *  time-of-day, not a dated event. */
     private fun alarmTime(r: IntentResult): String =
-        (r.slots["time"] as? Date)?.let { ALARM_FMT.get()!!.format(it) } ?: "?"
+        (r.slots[SlotKeys.Time] as? Date)?.let { ALARM_FMT.get()!!.format(it) } ?: "?"
 
     /** Compact duration for SetTimer — "10m" / "1m 30s" / "45s". */
     private fun timerDuration(r: IntentResult): String {
-        val secs = r.slots["seconds"] as? Int ?: return "?"
+        val secs = r.slots[SlotKeys.Seconds] as? Int ?: return "?"
         val m = secs / 60
         val s = secs % 60
         return when {
@@ -198,4 +209,10 @@ object ConfirmSummaryBuilder {
     private val ALARM_FMT: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
         override fun initialValue() = SimpleDateFormat("h:mm a", Locale.getDefault())
     }
+
+    /** Cap on the SendMessage body preview shown in the confirm prompt.
+     *  Sized so the prompt + verb + contact + body all fit on the watch's
+     *  ~5-line chat surface without truncation jank. Bump (and re-check
+     *  the prompt layout) if the watch chat surface grows. */
+    private const val MAX_BODY_PREVIEW = 80
 }

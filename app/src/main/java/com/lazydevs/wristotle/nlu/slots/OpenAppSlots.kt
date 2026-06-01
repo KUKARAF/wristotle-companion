@@ -11,7 +11,7 @@ class OpenAppSlots : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
         val body = stripVerbBody(query, VERBS, FILLERS)
-        return if (body.isEmpty()) emptyMap() else mapOf("app" to body)
+        return if (body.isEmpty()) emptyMap() else mapOf(SlotKeys.App to body)
     }
 
     private companion object {

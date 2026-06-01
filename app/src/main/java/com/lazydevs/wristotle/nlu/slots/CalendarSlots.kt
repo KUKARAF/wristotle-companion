@@ -22,10 +22,10 @@ class CalendarSlots : SlotExtractor {
         val out = mutableMapOf<String, Any>()
         val lower = query.lowercase()
 
-        extractCount(lower)?.let { out["count"] = it }
+        extractCount(lower)?.let { out[SlotKeys.Count] = it }
 
         if (DATE_HINT.containsMatchIn(lower)) {
-            parseTime(query)?.let { out["date"] = it.date }
+            parseTime(query)?.let { out[SlotKeys.Date] = it.date }
         }
         return out
     }
@@ -52,5 +52,5 @@ class CalendarSlots : SlotExtractor {
 }
 
 /** Type-safe slot reads for the Calendar handler. */
-fun Map<String, Any>.calendarCount(default: Int = 1): Int = (this["count"] as? Int) ?: default
-fun Map<String, Any>.calendarDate(): Date? = this["date"] as? Date
+fun Map<String, Any>.calendarCount(default: Int = 1): Int = (this[SlotKeys.Count] as? Int) ?: default
+fun Map<String, Any>.calendarDate(): Date? = this[SlotKeys.Date] as? Date

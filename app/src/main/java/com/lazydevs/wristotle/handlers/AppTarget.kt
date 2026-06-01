@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.apps.AppIndex
 import com.lazydevs.wristotle.apps.AppLookup
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 
 /**
@@ -33,7 +34,7 @@ internal const val EMPTY_INDEX_HINT =
     "App index is empty — open Settings → Learning → Installed apps and tap Scan."
 
 internal suspend fun IntentResult.resolveAppTarget(appIndex: AppIndex): AppTarget {
-    val appQuery = (slots["app"] as? String)?.trim()
+    val appQuery = (slots[SlotKeys.App] as? String)?.trim()
     if (appQuery.isNullOrEmpty()) return AppTarget.Fallback
     if (appIndex.count() == 0) return AppTarget.EmptyIndex
     return when (val lookup = appIndex.lookup(appQuery)) {

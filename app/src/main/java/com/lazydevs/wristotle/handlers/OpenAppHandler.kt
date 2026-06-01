@@ -5,6 +5,7 @@ import com.lazydevs.wristotle.apps.AppIndex
 import com.lazydevs.wristotle.apps.AppLookup
 import com.lazydevs.wristotle.apps.launchApp
 import com.lazydevs.wristotle.apps.packageLabel
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 
@@ -28,7 +29,7 @@ class OpenAppHandler(
     override val intent = Intent.OpenApp
 
     override suspend fun handle(result: IntentResult): String {
-        val name = (result.slots["app"] as? String)?.trim().orEmpty()
+        val name = (result.slots[SlotKeys.App] as? String)?.trim().orEmpty()
         if (name.isEmpty()) return "No app specified"
         if (appIndex.count() == 0) {
             return EMPTY_INDEX_HINT

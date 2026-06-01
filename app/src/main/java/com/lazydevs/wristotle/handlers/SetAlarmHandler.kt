@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent as AndroidIntent
 import android.provider.AlarmClock
 import android.util.Log
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import java.util.Calendar
@@ -33,7 +34,7 @@ class SetAlarmHandler(private val context: Context) : ActionHandler {
     override val intent: Intent = Intent.SetAlarm
 
     override suspend fun handle(result: IntentResult): String {
-        val time = result.slots["time"] as? Date
+        val time = result.slots[SlotKeys.Time] as? Date
             ?: return "Couldn't understand the time.\nTry \"set an alarm for 7am\"."
 
         val cal = Calendar.getInstance().apply { this.time = time }

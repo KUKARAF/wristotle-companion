@@ -27,7 +27,7 @@ class CreateEventSlots : SlotExtractor {
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
 
-        parseTime(query)?.let { out["time"] = it.date }
+        parseTime(query)?.let { out[SlotKeys.Time] = it.date }
 
         // Title/attendee are read off the raw query — both regexes are
         // keyword-anchored (called/titled/about, with), so a time phrase
@@ -36,16 +36,16 @@ class CreateEventSlots : SlotExtractor {
         // captured by `(.+)$`, so strip a trailing time clause back off.
         TITLE.find(query)?.groupValues?.getOrNull(2)
             ?.replace(TRAILING_TIME, "")
-            ?.let { cleanToken(it) }
+            ?.let { cleanTitleToken(it) }
             ?.takeIf { it.isNotBlank() }
-            ?.let { out["title"] = it.replaceFirstChar(Char::uppercaseChar) }
+            ?.let { out[SlotKeys.Title] = it.replaceFirstChar(Char::uppercaseChar) }
 
         ATTENDEE.find(query)?.groupValues?.getOrNull(1)
-            ?.let { cleanToken(it) }
+            ?.let { cleanTitleToken(it) }
             ?.takeIf { it.isNotBlank() }
-            ?.let { out["attendee"] = it.replaceFirstChar(Char::uppercaseChar) }
+            ?.let { out[SlotKeys.Attendee] = it.replaceFirstChar(Char::uppercaseChar) }
 
-        extractDuration(query.lowercase())?.let { out["durationMinutes"] = it }
+        extractDuration(query.lowercase())?.let { out[SlotKeys.DurationMinutes] = it }
 
         return out
     }
@@ -64,12 +64,6 @@ class CreateEventSlots : SlotExtractor {
         return null
     }
 
-    /** Drop leading/trailing filler ("the", "a", "an") and punctuation. */
-    private fun cleanToken(raw: String): String =
-        raw.trim().trim('.', ',', '!', '?')
-            .replace(LEADING_ARTICLE, "")
-            .trim()
-
     private companion object {
         // "… called standup" / "titled X" / "about X". Deliberately NOT
         // "for X" — "for tomorrow at 3" is a time clause, not a title.
@@ -77,7 +71,6 @@ class CreateEventSlots : SlotExtractor {
         // "with Alex" / "with the team" — stop before a trailing time/date
         // clause OR a title keyword ("with Alex called standup" → "Alex").
         val ATTENDEE = Regex("""(?i)\bwith\s+([A-Za-z][\w' ]*?)(?:\s+(?:on|at|tomorrow|today|tonight|next|this|called|titled|about)\b|$)""")
-        val LEADING_ARTICLE = Regex("""^(?i)(the|a|an)\s+""")
         // A trailing " at/on/… <rest>" clause to peel off a greedily-captured
         // title. The leading \s+ means a title-initial keyword ("next steps")
         // is left intact.
@@ -90,8 +83,8 @@ class CreateEventSlots : SlotExtractor {
 }
 
 /** Type-safe slot reads for the CreateEvent handler. */
-fun Map<String, Any>.eventTime(): Date? = this["time"] as? Date
-fun Map<String, Any>.eventTitle(): String? = this["title"] as? String
-fun Map<String, Any>.eventAttendee(): String? = this["attendee"] as? String
+fun Map<String, Any>.eventTime(): Date? = this[SlotKeys.Time] as? Date
+fun Map<String, Any>.eventTitle(): String? = this[SlotKeys.Title] as? String
+fun Map<String, Any>.eventAttendee(): String? = this[SlotKeys.Attendee] as? String
 fun Map<String, Any>.eventDurationMinutes(default: Int = 60): Int =
-    (this["durationMinutes"] as? Int) ?: default
+    (this[SlotKeys.DurationMinutes] as? Int) ?: default

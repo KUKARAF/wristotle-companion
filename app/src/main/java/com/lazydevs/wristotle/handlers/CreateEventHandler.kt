@@ -33,7 +33,10 @@ class CreateEventHandler(private val calendar: CalendarRepository) : ActionHandl
         val start = result.slots.eventTime()
             ?: return "Couldn't understand the time.\nTry \"meeting tomorrow at 3pm\"."
 
-        val title = result.slots.eventTitle() ?: defaultTitle(result.slots.eventAttendee())
+        val title = composeTitle(
+            explicit = result.slots.eventTitle(),
+            attendee = result.slots.eventAttendee(),
+        )
         val duration = result.slots.eventDurationMinutes()
 
         return when (val r = calendar.createEvent(title, start.time, duration)) {
@@ -46,6 +49,21 @@ class CreateEventHandler(private val calendar: CalendarRepository) : ActionHandl
         }
     }
 
-    private fun defaultTitle(attendee: String?): String =
-        if (attendee.isNullOrBlank()) "Meeting" else "Meeting with $attendee"
+    /**
+     * Title rules for the calendar event:
+     *  - Both spoken     → "<explicit> with <attendee>" (so "called standup
+     *    with alex" → "Standup with Alex"). Skip the append when the
+     *    explicit title already names the attendee — Whisper sometimes
+     *    captures the with-clause inside the title regex's greedy tail.
+     *  - Only explicit   → "<explicit>".
+     *  - Only attendee   → "Meeting with <attendee>".
+     *  - Neither         → "Meeting".
+     */
+    private fun composeTitle(explicit: String?, attendee: String?): String = when {
+        explicit != null && attendee != null && !explicit.contains(attendee, ignoreCase = true) ->
+            "$explicit with $attendee"
+        explicit != null -> explicit
+        !attendee.isNullOrBlank() -> "Meeting with $attendee"
+        else -> "Meeting"
+    }
 }

@@ -1,6 +1,7 @@
 package com.lazydevs.wristotle.handlers
 
 import android.content.Context
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import java.util.Date
@@ -24,7 +25,7 @@ class ListRemindersHandler(context: Context) : ActionHandler {
     override suspend fun handle(result: IntentResult): String {
         val now = System.currentTimeMillis()
         val all = pinStore.all()
-        val time = result.slots["time"] as? Date
+        val time = result.slots[SlotKeys.Time] as? Date
         return if (time != null) {
             ReminderListFormatter.formatAtTime(all, time.time, now)
         } else {

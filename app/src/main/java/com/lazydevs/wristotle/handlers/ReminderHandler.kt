@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.handlers
 
 import android.content.Context
 import android.util.Log
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.transport.PebbleTransport
@@ -18,7 +19,7 @@ private const val TAG = "ReminderHandler"
 
 /**
  * Handles [Intent.Reminder] — creates a Pebble timeline pin scheduled for
- * `slots["time"]` (a [Date]) with title `slots["title"]`. Both slots are
+ * `slots[SlotKeys.Time]` (a [Date]) with title `slots[SlotKeys.Title]`. Both slots are
  * populated by `ReminderSlots`, which wraps the legacy TimeParser + the
  * title-stripping regex from this file's history.
  */
@@ -34,8 +35,8 @@ class ReminderHandler(context: Context, private val transport: PebbleTransport) 
         // ReminderSlots always populates a time — defaults to now + 30 min
         // when no explicit time was spoken — so this cast won't fail in
         // practice. Defensive null-check stays for the type system only.
-        val time = result.slots["time"] as? Date ?: return "Couldn't set reminder"
-        val title = (result.slots["title"] as? String)?.takeIf { it.isNotBlank() }
+        val time = result.slots[SlotKeys.Time] as? Date ?: return "Couldn't set reminder"
+        val title = (result.slots[SlotKeys.Title] as? String)?.takeIf { it.isNotBlank() }
             ?: result.rawQuery.replaceFirstChar { it.uppercaseChar() }
 
         Log.d(TAG, "date=$time  title=$title")

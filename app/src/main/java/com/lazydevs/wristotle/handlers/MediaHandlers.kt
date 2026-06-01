@@ -5,6 +5,7 @@ import com.lazydevs.wristotle.apps.AppIndex
 import com.lazydevs.wristotle.apps.launchApp
 import com.lazydevs.wristotle.apps.packageLabel
 import com.lazydevs.wristotle.media.ActiveMediaSession
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 
@@ -157,7 +158,7 @@ class MediaSeekHandler(
 
     override suspend fun handle(result: IntentResult): String {
         if (!media.hasNotificationAccess()) return NEEDS_PERMISSION
-        val seconds = (result.slots["seconds"] as? Int) ?: defaultSeconds()
+        val seconds = (result.slots[SlotKeys.Seconds] as? Int) ?: defaultSeconds()
         val delta = if (intent == Intent.MediaSeekForward) seconds else -seconds
         if (!media.seekBy(delta)) return NOTHING_PLAYING
         val verb = if (delta > 0) "Forward" else "Back"

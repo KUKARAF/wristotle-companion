@@ -28,10 +28,10 @@ class ReminderSlots(
 
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
-        out["time"] = parseTime(query)?.date
+        out[SlotKeys.Time] = parseTime(query)?.date
             ?: Date(System.currentTimeMillis() + defaultOffsetMinProvider() * 60_000L)
         val title = buildTitle(query)
-        if (title.isNotBlank()) out["title"] = title
+        if (title.isNotBlank()) out[SlotKeys.Title] = title
         return out
     }
 

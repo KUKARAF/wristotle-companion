@@ -5,7 +5,7 @@ import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.ListTasks].
  *
- * Optional `filter` (String): `"completed"` or `"pending"`. Absent
+ * Optional `filter` (String): `SlotKeys.FilterCompleted` or `SlotKeys.FilterPending`. Absent
  * defaults to pending — the common case (*"what are my tasks"*,
  * *"list my tasks"*).
  *
@@ -25,27 +25,24 @@ class ListTasksSlots : SlotExtractor {
     override suspend fun extract(query: String): Map<String, Any> {
         val lower = query.lowercase()
         return when {
-            COMPLETED_KEYWORDS.any { lower.contains(it) } -> mapOf("filter" to "completed")
-            PENDING_KEYWORDS.any { lower.contains(it) }   -> mapOf("filter" to "pending")
+            COMPLETED_FILTER.containsMatchIn(lower) ->
+                mapOf(SlotKeys.Filter to SlotKeys.FilterCompleted)
+            PENDING_FILTER.containsMatchIn(lower) ->
+                mapOf(SlotKeys.Filter to SlotKeys.FilterPending)
             else -> emptyMap() // handler defaults to pending
         }
     }
 
     private companion object {
-        val COMPLETED_KEYWORDS = listOf(
-            "completed task", "completed tasks",
-            "done task", "done tasks",
-            "finished task", "finished tasks",
-            // Past-tense filler the user might say after the noun.
-            "tasks i've completed", "tasks i have completed",
-            "tasks i've done", "tasks i have done",
-            "tasks i've finished", "tasks i have finished",
+        // "completed task[s]" / "done task[s]" / "finished task[s]" /
+        // "tasks i('ve| have) completed|done|finished".
+        val COMPLETED_FILTER = Regex(
+            "(?i)(?:\\b(completed|done|finished)\\s+tasks?\\b|" +
+                "\\btasks?\\s+i(?:'ve| have)\\s+(?:completed|done|finished)\\b)"
         )
-        val PENDING_KEYWORDS = listOf(
-            "pending task", "pending tasks",
-            "open task", "open tasks",
-            "remaining task", "remaining tasks",
-            "outstanding task", "outstanding tasks",
+        // "pending|open|remaining|outstanding task[s]".
+        val PENDING_FILTER = Regex(
+            "(?i)\\b(pending|open|remaining|outstanding)\\s+tasks?\\b"
         )
     }
 }

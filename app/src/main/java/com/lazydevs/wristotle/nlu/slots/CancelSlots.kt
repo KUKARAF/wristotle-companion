@@ -16,7 +16,7 @@ class CancelSlots : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
         val target = stripVerbBody(query, CANCEL_VERBS, FILLERS)
-        return if (target.isBlank()) emptyMap() else mapOf("target" to target)
+        return if (target.isBlank()) emptyMap() else mapOf(SlotKeys.Target to target)
     }
 
     private companion object {

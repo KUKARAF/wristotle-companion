@@ -4,6 +4,7 @@ import com.lazydevs.wristotle.agent.AgentLoop
 import com.lazydevs.wristotle.agent.AskAgentSettings
 import com.lazydevs.wristotle.agent.LlmResult
 import com.lazydevs.wristotle.mcp.McpServerRepository
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.transport.PebbleTransport
@@ -38,7 +39,7 @@ class AskAgentHandler(
     override val intent: Intent = Intent.AskAgent
 
     override suspend fun handle(result: IntentResult): String {
-        val query = (result.slots["query"] as? String)?.trim().orEmpty()
+        val query = (result.slots[SlotKeys.Query] as? String)?.trim().orEmpty()
         if (query.isEmpty()) return NO_QUERY_HINT
         // System prompt is the user-visible value from Settings (default
         // is the watch-friendly baseline; user can edit or clear it via

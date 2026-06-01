@@ -4,6 +4,7 @@ import android.content.Context
 import com.lazydevs.wristotle.messaging.MessagingTargets
 import com.lazydevs.wristotle.messaging.isInstalled
 import com.lazydevs.wristotle.phone.ContactsRepository
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 
@@ -50,7 +51,7 @@ class SendMessageHandler(
     override val intent: Intent = Intent.SendMessage
 
     override suspend fun handle(result: IntentResult): String {
-        val appName = (result.slots["app"] as? String)?.trim().orEmpty()
+        val appName = (result.slots[SlotKeys.App] as? String)?.trim().orEmpty()
         if (appName.isEmpty()) return "Don't know that messaging app"
 
         val target = MessagingTargets.findByDisplayName(appName)
@@ -67,8 +68,8 @@ class SendMessageHandler(
 
         if (!contacts.hasPermission()) return "Contacts permission not granted"
 
-        val contactName = (result.slots["contact"] as? String)?.trim().orEmpty()
-        val body = (result.slots["body"] as? String)?.trim().orEmpty()
+        val contactName = (result.slots[SlotKeys.Contact] as? String)?.trim().orEmpty()
+        val body = (result.slots[SlotKeys.Body] as? String)?.trim().orEmpty()
         if (contactName.isEmpty()) return "No contact specified"
         if (body.isEmpty()) return "No message body"
 

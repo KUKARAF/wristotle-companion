@@ -34,7 +34,7 @@ class AddTaskSlots : SlotExtractor {
             .replace(STRIP_TRAILING_CONNECTOR, "")
             .trim()
             .replaceFirstChar { it.uppercaseChar() }
-        return if (body.isBlank()) emptyMap() else mapOf("body" to body)
+        return if (body.isBlank()) emptyMap() else mapOf(SlotKeys.Body to body)
     }
 
     private companion object {

@@ -21,29 +21,10 @@ import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
 class WorldTimeSlots : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
-        val lower = query.lowercase()
-        val match = LOCATION.find(lower) ?: return emptyMap()
-        var loc = match.groupValues[1].trim()
-        loc = TRAILING_FILLER.replace(loc, "").trim()
-        loc = cleanNameToken(loc)
-        if (loc.isEmpty() || loc in NON_LOCATIONS) return emptyMap()
-        return mapOf("location" to loc)
-    }
-
-    private companion object {
-        // Everything after the first standalone "in" / "at". The leading \b
-        // keeps "in"/"at" from matching inside "raining" / "what".
-        val LOCATION = Regex("(?i)\\b(?:in|at)\\s+(.+)$")
-        // Trailing conversational tails that aren't part of the place name.
-        val TRAILING_FILLER = Regex("(?i)\\b(right now|now|currently|at the moment|please|today|over there)\\b\\s*$")
-        // "in <X>" phrases where X is a time-of-day word, not a place.
-        val NON_LOCATIONS = setOf(
-            "the morning", "the afternoon", "the evening", "the night",
-            "morning", "afternoon", "evening", "night",
-            "a bit", "a moment", "a sec", "a second", "a minute",
-        )
+        val loc = extractInOrAtLocation(query) ?: return emptyMap()
+        return mapOf(SlotKeys.Location to loc)
     }
 }
 
 /** Typed read for the WorldTime `location` slot. */
-internal fun Map<String, Any>.worldTimeLocation(): String? = this["location"] as? String
+fun Map<String, Any>.worldTimeLocation(): String? = this[SlotKeys.Location] as? String

@@ -1,5 +1,6 @@
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.tasks.TaskMatching
@@ -25,7 +26,7 @@ class CompleteTaskHandler(
     override val intent: Intent = Intent.CompleteTask
 
     override suspend fun handle(result: IntentResult): String {
-        val target = (result.slots["target"] as? String)?.trim().orEmpty()
+        val target = (result.slots[SlotKeys.Target] as? String)?.trim().orEmpty()
         if (target.isEmpty()) return "Which task?"
 
         val match = TaskMatching.resolve(

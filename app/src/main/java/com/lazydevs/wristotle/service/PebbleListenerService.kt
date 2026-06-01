@@ -3,6 +3,7 @@ package com.lazydevs.wristotle.service
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.handlers.CalendarHandler
 import com.lazydevs.wristotle.handlers.CallHandler
@@ -373,7 +374,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             (routed.intent == Intent.Note || routed.intent == Intent.AppendNote)
             && audioPath != null
         ) {
-            routed.copy(slots = routed.slots + (NoteHandler.SLOT_AUDIO_PATH to audioPath))
+            routed.copy(slots = routed.slots + (SlotKeys.AudioPath to audioPath))
         } else routed
 
         // Confirm gate: when the user has the Watch toggle on AND the routed

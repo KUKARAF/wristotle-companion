@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent as AndroidIntent
 import android.provider.AlarmClock
 import android.util.Log
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 
@@ -23,7 +24,7 @@ class SetTimerHandler(private val context: Context) : ActionHandler {
     override val intent: Intent = Intent.SetTimer
 
     override suspend fun handle(result: IntentResult): String {
-        val seconds = result.slots["seconds"] as? Int
+        val seconds = result.slots[SlotKeys.Seconds] as? Int
             ?: return "Couldn't understand the duration.\nTry \"set a timer for 10 minutes\"."
 
         // Deliberately NOT EXTRA_SKIP_UI=true (unlike SetAlarmHandler).

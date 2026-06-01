@@ -446,4 +446,36 @@ class PrefixHintsTest {
     @Test fun `a timer is not Calculate`() {
         assertEquals(Intent.SetTimer, PrefixHints.hintFor("set a timer for 10 minutes"))
     }
+
+    // --- Ordering anti-rules --------------------------------------------
+    //
+    // Each test below pins a precedence relationship — moving the
+    // referenced rule will make the corresponding test fail. Add a row to
+    // the "Ordering" table in PrefixHints' KDoc when you add a regression
+    // case here.
+
+    @Test fun `seek above bare Previous - back ten seconds is a seek`() {
+        assertEquals(Intent.MediaSeekBackward, PrefixHints.hintFor("back ten seconds"))
+        assertEquals(Intent.MediaSeekBackward, PrefixHints.hintFor("go back 30 seconds"))
+    }
+
+    @Test fun `ListReminders above Reminder - list my reminders does not fire Reminder`() {
+        // If the bare-verb Reminder rule moved above ListReminders, this
+        // would mis-route as a fresh reminder creation.
+        assertEquals(Intent.ListReminders, PrefixHints.hintFor("list my reminders"))
+    }
+
+    @Test fun `DeleteTask above Cancel - delete task X is DeleteTask not Cancel`() {
+        // "delete X" alone routes to Cancel (reminder cancellation),
+        // but with the explicit task noun it must route to DeleteTask.
+        assertEquals(Intent.DeleteTask, PrefixHints.hintFor("delete the task buy milk"))
+        assertEquals(Intent.DeleteTask, PrefixHints.hintFor("remove task call dentist"))
+    }
+
+    @Test fun `Reschedule above Reminder`() {
+        assertEquals(
+            Intent.Reschedule,
+            PrefixHints.hintFor("reschedule my dentist appointment to 4pm"),
+        )
+    }
 }

@@ -24,7 +24,7 @@ class MediaSeekSlots : SlotExtractor {
     override suspend fun extract(query: String): Map<String, Any> {
         val lower = query.lowercase()
         val seconds = parseDuration(lower) ?: return emptyMap()
-        return mapOf("seconds" to seconds)
+        return mapOf(SlotKeys.Seconds to seconds)
     }
 
     private fun parseDuration(text: String): Int? {
@@ -52,21 +52,7 @@ class MediaSeekSlots : SlotExtractor {
     }
 
     private companion object {
-        // 30, 30s, 30 seconds, 2 minutes, etc.
-        val DIGIT_DURATION = Regex(
-            "(\\d+)\\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h)?\\b"
-        )
-        // "ten seconds", "a minute", "fifteen", etc.
-        val WORD_DURATION = Regex(
-            "\\b(a|an|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|forty-five|forty five|sixty|ninety)\\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)?\\b"
-        )
-        val WORD_NUMBERS: Map<String, Int> = mapOf(
-            "a" to 1, "an" to 1, "one" to 1,
-            "two" to 2, "three" to 3, "four" to 4, "five" to 5,
-            "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9,
-            "ten" to 10, "fifteen" to 15, "twenty" to 20, "thirty" to 30,
-            "forty" to 40, "forty-five" to 45, "forty five" to 45,
-            "sixty" to 60, "ninety" to 90,
-        )
+        val DIGIT_DURATION = Regex("(\\d+)\\s*($DURATION_UNIT_ALT)?\\b")
+        val WORD_DURATION = Regex("\\b($WORD_NUMBER_ALT)\\s*($DURATION_UNIT_ALT)?\\b")
     }
 }

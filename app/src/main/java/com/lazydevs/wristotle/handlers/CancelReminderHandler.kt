@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.handlers
 
 import android.content.Context
 import android.util.Log
+import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.transport.PebbleTransport
@@ -27,7 +28,7 @@ class CancelReminderHandler(context: Context, private val transport: PebbleTrans
     override val intent: Intent = Intent.Cancel
 
     override suspend fun handle(result: IntentResult): String {
-        val target = (result.slots["target"] as? String)?.trim().orEmpty()
+        val target = (result.slots[SlotKeys.Target] as? String)?.trim().orEmpty()
         Log.d(TAG, "cancel: ${result.rawQuery} (target='$target')")
 
         val record = if (target.isEmpty()) {

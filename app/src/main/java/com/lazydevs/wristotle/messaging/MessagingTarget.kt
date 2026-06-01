@@ -61,7 +61,16 @@ data class MessagingTarget(
      * string explaining the failure — never throw past the handler.
      */
     val deliver: suspend (context: Context, phone: String, body: String, contactName: String) -> String,
-)
+) {
+    /**
+     * Aliases ordered longest-first so a slot extractor can pick the most
+     * specific match before a shorter prefix would accidentally win
+     * (e.g. "telegram" before "tel"). Computed once at construction so
+     * the SendMessage slot's three matching shapes don't each pay a
+     * `sortedByDescending` per call.
+     */
+    val aliasesByLengthDesc: List<String> = spokenAliases.sortedByDescending { it.length }
+}
 
 /**
  * `true` if the target's package is installed on this device, or if the

@@ -18,9 +18,9 @@ class RescheduleSlots : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
-        parseTime(query)?.let { out["time"] = it.date }
+        parseTime(query)?.let { out[SlotKeys.Time] = it.date }
         val target = stripVerbBody(query.replace(STRIP_TIME_CLAUSE, ""), VERBS, FILLERS)
-        if (target.isNotBlank()) out["target"] = target
+        if (target.isNotBlank()) out[SlotKeys.Target] = target
         return out
     }
 
