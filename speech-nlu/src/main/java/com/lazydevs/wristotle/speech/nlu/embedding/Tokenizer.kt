@@ -17,7 +17,7 @@ import android.content.Context
  * commands. Cross-checked against the canonical Python `transformers`
  * tokenizer on a fixture of ~50 phrases before shipping.
  */
-class Tokenizer private constructor(
+class Tokenizer internal constructor(
     private val vocab: Map<String, Int>,
 ) {
     private val unkId = vocab[UNK] ?: error("vocab missing $UNK")

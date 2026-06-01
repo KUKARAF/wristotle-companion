@@ -16,6 +16,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    testOptions {
+        // No-op `android.util.Log` so pure-Kotlin code that happens to
+        // log (e.g. ExampleBank's cap-reached path) tests on the JVM
+        // without dragging in Robolectric. Mirrors :app.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -26,4 +33,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.android)
 }
