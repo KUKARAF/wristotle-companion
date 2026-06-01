@@ -4,8 +4,12 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.lazydevs.wristotle.WristotleApplication
+import com.lazydevs.wristotle.agent.LlmProvider
 import com.lazydevs.wristotle.handlers.PinStore
 import com.lazydevs.wristotle.handlers.ReminderRecord
+import com.lazydevs.wristotle.handlers.TempUnit
+import com.lazydevs.wristotle.mcp.McpServerEntity
+import com.lazydevs.wristotle.settings.WeatherProviderId
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.notes.AppendAudioMode
 import com.lazydevs.wristotle.notes.Note
@@ -74,37 +78,53 @@ class BackupImporter(private val app: WristotleApplication) {
      * Re-stages the ZIP (peek's staging dir is gone by now) and processes
      * every entry.
      */
+    /**
+     * @param selection Per-category opt-in (subset of what's in the ZIP).
+     *   Categories with `false` are skipped — no row writes, no pref
+     *   writes for that section. Defaults to everything the ZIP carries
+     *   (i.e. `manifest.selected`) so callers that don't pass a custom
+     *   selection get the "restore everything" behaviour.
+     */
     suspend fun import(
         source: Uri,
         password: String? = null,
         manifest: BackupManifest,
+        selection: BackupSelection = manifest.selected,
     ): BackupImportResult = withContext(Dispatchers.IO) {
         val staging = stage(source) ?: error("Could not stage incoming ZIP")
         try {
             val tempZip = File(staging, INCOMING_ZIP)
             val zip = if (password.isNullOrEmpty()) ZipFile(tempZip)
                      else ZipFile(tempZip, password.toCharArray())
-            // Extract everything (manifest already parsed, but harmless to
-            // re-extract; the audio path needs the extracts in place).
             val extractDir = File(staging, "extract").apply { mkdirs() }
             zip.extractAll(extractDir.absolutePath)
 
             val schemaSkips = mutableListOf<String>()
-            val audio = importAudio(extractDir, manifest.exportedAtMs)
-            val notes = importNotes(extractDir, audio.map, schemaSkips)
-            val tasks = importTasks(extractDir, schemaSkips)
-            val conversations = importConversations(extractDir, audio.map, schemaSkips)
-            val nlu = importNlu(extractDir, schemaSkips)
-            applyPrefs(manifest.prefs)
-            val pins = applyPins(manifest.reminderPins)
-            val aliases = applyAliases(manifest.appAliases)
-            val contactAliases = applyContactAliases(manifest.contactAliases)
+            val audio = if (selection.audioRecordings) importAudio(extractDir, manifest.exportedAtMs)
+                else AudioImportOutcome(emptyMap(), EntityStats())
+            val notes = if (selection.notes)
+                importNotes(extractDir, audio.map, schemaSkips) else EntityStats()
+            val tasks = if (selection.tasks)
+                importTasks(extractDir, schemaSkips) else EntityStats()
+            val conversations = if (selection.conversations)
+                importConversations(extractDir, audio.map, schemaSkips) else EntityStats()
+            val nlu = if (selection.nluLearned)
+                importNlu(extractDir, schemaSkips) else EntityStats()
+            val mcpServers = if (selection.mcpServers)
+                importMcpServers(extractDir, selection.mcpAuthHeaders, schemaSkips) else EntityStats()
+
+            applyPrefs(manifest.prefs, selection)
+            val pins = if (selection.reminders) applyPins(manifest.reminderPins) else EntityStats()
+            val aliases = if (selection.appAliases) applyAliases(manifest.appAliases) else EntityStats()
+            val contactAliases = if (selection.contactAliases)
+                applyContactAliases(manifest.contactAliases) else EntityStats()
 
             BackupImportResult(
                 notes = notes,
                 tasks = tasks,
                 conversations = conversations,
                 nlu = nlu,
+                mcpServers = mcpServers,
                 audio = audio.stats,
                 pins = pins,
                 aliases = aliases,
@@ -336,6 +356,40 @@ class BackupImporter(private val app: WristotleApplication) {
         return EntityStats(imported = imported, duplicates = duplicates, failed = failed)
     }
 
+    // ── MCP servers ───────────────────────────────────────────────────────
+
+    /**
+     * MCP server merge: dedupe by (name, url) — same server is the same
+     * server whether or not it was renamed locally. Existing rows are
+     * preserved (the local auth_header isn't clobbered by a backup row
+     * that lacks one). New rows insert with the auth_header stripped to
+     * null when [includeAuthHeaders] is false (the user opted out of
+     * the secret category).
+     */
+    private suspend fun importMcpServers(
+        extractDir: File,
+        includeAuthHeaders: Boolean,
+        schemaSkips: MutableList<String>,
+    ): EntityStats {
+        val rows = readRows(extractDir, "data/mcp_servers.json", McpServerJson.CURRENT_SCHEMA, "mcp_servers", schemaSkips)
+            { row, schema -> McpServerJson.decode(row, schema) }
+            ?: return EntityStats()
+        val sanitised: List<McpServerEntity> = if (includeAuthHeaders) rows
+            else rows.map { it.copy(authHeader = null) }
+        val repo = app.mcpServerRepository
+        val existing = repo.listAll()
+        val existingKeys = existing.map { it.name to it.url }.toSet()
+        val (skip, insert) = sanitised.partition { (it.name to it.url) in existingKeys }
+        var imported = 0
+        var failed = 0
+        for (row in insert) {
+            try { repo.add(row); imported++ } catch (t: Throwable) {
+                Log.w(TAG, "mcp server insert failed", t); failed++
+            }
+        }
+        return EntityStats(imported = imported, duplicates = skip.size, failed = failed)
+    }
+
     // ── JSON row reader ───────────────────────────────────────────────────
 
     /**
@@ -366,17 +420,56 @@ class BackupImporter(private val app: WristotleApplication) {
 
     // ── Prefs / pins / aliases ────────────────────────────────────────────
 
-    private fun applyPrefs(p: BackupManifest.PrefsBlock) {
-        app.noteSettings.setKeepLast(p.notes.keepLast)
-        runCatching { AppendAudioMode.valueOf(p.notes.appendAudioMode) }
-            .onSuccess { app.noteSettings.setAppendAudioMode(it) }
-        app.conversationSettings.setRetentionDays(p.conversationSettings.retentionDays)
-        app.conversationAudioSettings.setCaptureEnabled(p.conversationAudio.captureEnabled)
-        app.nluSettings.setLearningEnabled(p.nluSettings.learningEnabled)
-        app.diagnosticsSettings.setRedactPii(p.diagnostics.redactPii)
-        app.diagnosticsSettings.setIncludeAudio(p.diagnostics.includeAudio)
-        app.modelStorage.activeModelId = p.whisperModels.activeModelId
-        app.nluModelStorage.activeModelId = p.nluModels.activeModelId
+    /**
+     * Writes the prefs blocks the user opted into. Each top-level group
+     * is gated by its corresponding [BackupSelection] field. The
+     * non-secret legacy blocks (Notes / Conversation / NLU / Diagnostics
+     * / model prefs / Reminder) share the [BackupSelection.appPreferences]
+     * gate. Weather + AskAgent each have their own; their secret
+     * sub-fields (api keys) only restore when the matching secret
+     * checkbox is ticked.
+     */
+    private fun applyPrefs(p: BackupManifest.PrefsBlock, sel: BackupSelection) {
+        if (sel.appPreferences) {
+            app.noteSettings.setKeepLast(p.notes.keepLast)
+            runCatching { AppendAudioMode.valueOf(p.notes.appendAudioMode) }
+                .onSuccess { app.noteSettings.setAppendAudioMode(it) }
+            app.conversationSettings.setRetentionDays(p.conversationSettings.retentionDays)
+            app.conversationAudioSettings.setCaptureEnabled(p.conversationAudio.captureEnabled)
+            app.nluSettings.setLearningEnabled(p.nluSettings.learningEnabled)
+            app.diagnosticsSettings.setRedactPii(p.diagnostics.redactPii)
+            app.diagnosticsSettings.setIncludeAudio(p.diagnostics.includeAudio)
+            app.modelStorage.activeModelId = p.whisperModels.activeModelId
+            app.nluModelStorage.activeModelId = p.nluModels.activeModelId
+            p.reminder?.let { app.reminderSettings.setDefaultOffsetMin(it.defaultOffsetMin) }
+        }
+
+        if (sel.weatherSettings) {
+            p.weather?.let { w ->
+                runCatching { TempUnit.valueOf(w.unit) }
+                    .onSuccess { app.weatherSettings.setUnit(it) }
+                runCatching { WeatherProviderId.valueOf(w.provider) }
+                    .onSuccess { app.weatherSettings.setProvider(it) }
+                if (sel.weatherApiKey && w.apiKey != null) {
+                    app.weatherSettings.setApiKey(w.apiKey)
+                }
+            }
+        }
+
+        if (sel.askAgentSetup) {
+            p.askAgent?.let { a ->
+                runCatching { LlmProvider.valueOf(a.provider) }
+                    .onSuccess { app.askAgentSettings.setProvider(it) }
+                app.askAgentSettings.setAnthropicModel(a.anthropicModel)
+                app.askAgentSettings.setOpenAiEndpoint(a.openaiEndpoint)
+                app.askAgentSettings.setOpenAiModel(a.openaiModel)
+                app.askAgentSettings.setSystemPrompt(a.systemPrompt)
+                if (sel.askAgentApiKeys) {
+                    a.anthropicApiKey?.let { app.askAgentSettings.setAnthropicApiKey(it) }
+                    a.openaiApiKey?.let { app.askAgentSettings.setOpenAiApiKey(it) }
+                }
+            }
+        }
     }
 
     private fun applyPins(incoming: List<BackupManifest.PinRecord>): EntityStats {
@@ -514,6 +607,7 @@ data class BackupImportResult(
     val tasks: EntityStats,
     val conversations: EntityStats,
     val nlu: EntityStats,
+    val mcpServers: EntityStats,
     val audio: EntityStats,
     val pins: EntityStats,
     val aliases: EntityStats,

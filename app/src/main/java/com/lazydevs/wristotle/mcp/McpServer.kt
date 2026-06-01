@@ -38,6 +38,10 @@ interface McpServerDao {
     @Query("SELECT * FROM mcp_servers WHERE enabled = 1 ORDER BY id ASC")
     suspend fun listEnabled(): List<McpServerEntity>
 
+    /** Snapshot of every row including disabled ones — used by Backup. */
+    @Query("SELECT * FROM mcp_servers ORDER BY id ASC")
+    suspend fun listAll(): List<McpServerEntity>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(entity: McpServerEntity): Long
 

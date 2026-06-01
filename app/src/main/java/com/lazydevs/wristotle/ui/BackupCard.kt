@@ -1,27 +1,30 @@
 package com.lazydevs.wristotle.ui
 
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,18 +40,20 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
-import com.lazydevs.wristotle.backup.AudioInventory
 import com.lazydevs.wristotle.backup.BackupExportResult
 import com.lazydevs.wristotle.backup.BackupManifest
+import com.lazydevs.wristotle.backup.BackupSelection
 
 /**
  * Settings card for the backup / restore feature.
  *
- *   - **Export…** opens the options dialog (audio + optional password), then
- *     the system Save-As dialog. Phase A/B.
- *   - **Restore…** opens the system Open-Document dialog, then either a
- *     password prompt (encrypted ZIP) or a preview dialog (manifest stats +
- *     confirm). Phase C.
+ *   - **Export…** opens the options dialog (per-category checkboxes
+ *     for what to include + optional encryption password), then the
+ *     system Save-As dialog.
+ *   - **Restore…** opens the system Open-Document dialog, then either
+ *     a password prompt (encrypted ZIP) or a preview dialog with the
+ *     same per-category checkbox tree (ticks default to what's in the
+ *     ZIP; categories not in the ZIP are disabled).
  */
 @Composable
 fun BackupCard(vm: BackupViewModel) {
@@ -78,8 +83,6 @@ fun BackupCard(vm: BackupViewModel) {
                 description = stringResource(R.string.settings_backup_desc),
             )
 
-            // The restore flow is also disabled while loading so the user
-            // can't double-launch.
             val busy = isExporting || restore is RestoreState.Loading
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -95,9 +98,7 @@ fun BackupCard(vm: BackupViewModel) {
                 ) {
                     if (isExporting) {
                         CircularProgressIndicator(
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .size(16.dp),
+                            modifier = Modifier.padding(end = 8.dp).size(16.dp),
                             strokeWidth = 2.dp,
                         )
                     }
@@ -113,9 +114,7 @@ fun BackupCard(vm: BackupViewModel) {
                 ) {
                     if (restore is RestoreState.Loading) {
                         CircularProgressIndicator(
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .size(16.dp),
+                            modifier = Modifier.padding(end = 8.dp).size(16.dp),
                             strokeWidth = 2.dp,
                         )
                     }
@@ -126,12 +125,14 @@ fun BackupCard(vm: BackupViewModel) {
     }
 
     if (showExportDialog) {
-        val audioInventory by vm.audioInventory.collectAsState()
+        val selection by vm.exportSelection.collectAsState()
         ExportOptionsDialog(
-            audioInventory = audioInventory,
-            onConfirm = { includeAudio, password ->
+            selection = selection,
+            onSelectionChange = vm::setExportSelection,
+            onSelectAll = vm::toggleExportSelectAll,
+            onConfirm = { password ->
                 showExportDialog = false
-                vm.setPendingOptions(includeAudio = includeAudio, password = password)
+                vm.setPendingPassword(password)
                 createDocument.launch(vm.suggestedFilename())
             },
             onDismiss = { showExportDialog = false },
@@ -152,6 +153,10 @@ fun BackupCard(vm: BackupViewModel) {
         )
         is RestoreState.Preview -> RestorePreviewDialog(
             manifest = r.manifest,
+            available = r.available,
+            selection = r.restoreSelection,
+            onSelectionChange = vm::setRestoreSelection,
+            onSelectAll = vm::toggleRestoreSelectAll,
             onConfirm = vm::confirmRestore,
             onDismiss = vm::cancelRestore,
         )
@@ -167,6 +172,301 @@ fun BackupCard(vm: BackupViewModel) {
     }
 }
 
+// ── Selection editor (shared by export + restore) ────────────────────────────
+
+/**
+ * The per-category checkbox tree. Used twice:
+ *  - Export: every box editable, no `available` clamp.
+ *  - Restore: `available` populated from `manifest.selected`; categories
+ *    not in the ZIP are rendered disabled with a "— not in this backup"
+ *    suffix.
+ */
+@Composable
+private fun BackupSelectionEditor(
+    selection: BackupSelection,
+    available: BackupSelection?,
+    onChange: (BackupSelection) -> Unit,
+    onSelectAll: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        CheckRow(
+            label = stringResource(R.string.settings_backup_select_all),
+            checked = if (available == null) selection.allSelected else selection == available,
+            enabled = true,
+            onCheckedChange = { onSelectAll() },
+            isBold = true,
+        )
+
+        SectionHeader(stringResource(R.string.settings_backup_section_content))
+        CatRow(R.string.settings_backup_cat_notes, selection.notes, available?.notes) {
+            onChange(selection.copy(notes = it))
+        }
+        CatRow(R.string.settings_backup_cat_tasks, selection.tasks, available?.tasks) {
+            onChange(selection.copy(tasks = it))
+        }
+        CatRow(R.string.settings_backup_cat_conversations, selection.conversations, available?.conversations) {
+            onChange(selection.copy(conversations = it))
+        }
+        CatRow(R.string.settings_backup_cat_reminders, selection.reminders, available?.reminders) {
+            onChange(selection.copy(reminders = it))
+        }
+        CatRow(R.string.settings_backup_cat_nlu_learned, selection.nluLearned, available?.nluLearned) {
+            onChange(selection.copy(nluLearned = it))
+        }
+        CatRow(R.string.settings_backup_cat_app_aliases, selection.appAliases, available?.appAliases) {
+            onChange(selection.copy(appAliases = it))
+        }
+        CatRow(R.string.settings_backup_cat_contact_aliases, selection.contactAliases, available?.contactAliases) {
+            onChange(selection.copy(contactAliases = it))
+        }
+        CatRow(R.string.settings_backup_cat_audio_recordings, selection.audioRecordings, available?.audioRecordings) {
+            onChange(selection.copy(audioRecordings = it))
+        }
+
+        SectionHeader(stringResource(R.string.settings_backup_section_settings))
+        CatRow(R.string.settings_backup_cat_app_preferences, selection.appPreferences, available?.appPreferences) {
+            onChange(selection.copy(appPreferences = it))
+        }
+        CatRow(R.string.settings_backup_cat_weather_settings, selection.weatherSettings, available?.weatherSettings) {
+            onChange(selection.copy(weatherSettings = it))
+        }
+        CatRow(R.string.settings_backup_cat_mcp_servers, selection.mcpServers, available?.mcpServers) {
+            onChange(selection.copy(mcpServers = it))
+        }
+        CatRow(R.string.settings_backup_cat_ask_agent_setup, selection.askAgentSetup, available?.askAgentSetup) {
+            onChange(selection.copy(askAgentSetup = it))
+        }
+
+        SectionHeader(stringResource(R.string.settings_backup_section_secrets))
+        Text(
+            stringResource(R.string.settings_backup_section_secrets_warning),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(start = 12.dp, bottom = 4.dp),
+        )
+        CatRow(R.string.settings_backup_cat_weather_api_key, selection.weatherApiKey, available?.weatherApiKey) {
+            onChange(selection.copy(weatherApiKey = it))
+        }
+        CatRow(R.string.settings_backup_cat_mcp_auth_headers, selection.mcpAuthHeaders, available?.mcpAuthHeaders) {
+            onChange(selection.copy(mcpAuthHeaders = it))
+        }
+        CatRow(R.string.settings_backup_cat_ask_agent_api_keys, selection.askAgentApiKeys, available?.askAgentApiKeys) {
+            onChange(selection.copy(askAgentApiKeys = it))
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(label: String) {
+    Text(
+        label,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 10.dp, start = 4.dp, bottom = 2.dp),
+    )
+}
+
+/**
+ * One row in the checkbox tree. When `available` is non-null and false,
+ * the row is disabled (category isn't in the ZIP) and the label gets a
+ * "— not in this backup" suffix.
+ */
+@Composable
+private fun CatRow(
+    labelRes: Int,
+    checked: Boolean,
+    available: Boolean?,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val enabled = available ?: true
+    val label = if (available == false) {
+        stringResource(labelRes) + " " + stringResource(R.string.settings_backup_restore_unavailable)
+    } else {
+        stringResource(labelRes)
+    }
+    CheckRow(label = label, checked = checked && enabled, enabled = enabled, onCheckedChange = onCheckedChange)
+}
+
+@Composable
+private fun CheckRow(
+    label: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    isBold: Boolean = false,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }
+            .padding(start = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = checked, enabled = enabled, onCheckedChange = onCheckedChange)
+        Text(
+            label,
+            style = if (isBold) MaterialTheme.typography.bodyMedium
+                else MaterialTheme.typography.bodyMedium,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+// ── Export dialog ────────────────────────────────────────────────────────────
+
+@Composable
+private fun ExportOptionsDialog(
+    selection: BackupSelection,
+    onSelectionChange: (BackupSelection) -> Unit,
+    onSelectAll: () -> Unit,
+    onConfirm: (password: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_backup_dialog_title)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                BackupSelectionEditor(
+                    selection = selection,
+                    available = null,
+                    onChange = onSelectionChange,
+                    onSelectAll = onSelectAll,
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                PasswordField(
+                    password = password,
+                    onChange = { password = it },
+                    visible = passwordVisible,
+                    onToggleVisible = { passwordVisible = !passwordVisible },
+                    label = stringResource(R.string.settings_backup_password_label),
+                )
+                Text(
+                    stringResource(R.string.settings_backup_password_helper),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(password) },
+                enabled = !selection.noneSelected,
+            ) { Text(stringResource(R.string.settings_backup_dialog_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
+        },
+    )
+}
+
+// ── Restore dialogs ──────────────────────────────────────────────────────────
+
+@Composable
+private fun RestorePreviewDialog(
+    manifest: BackupManifest,
+    available: BackupSelection,
+    selection: BackupSelection,
+    onSelectionChange: (BackupSelection) -> Unit,
+    onSelectAll: () -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val s = manifest.stats
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_backup_restore_preview_title)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    stringResource(
+                        R.string.settings_backup_restore_preview_stats,
+                        s.notes, s.tasks, s.conversations, s.nluLearned, s.reminders, s.aliases,
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                BackupSelectionEditor(
+                    selection = selection,
+                    available = available,
+                    onChange = onSelectionChange,
+                    onSelectAll = onSelectAll,
+                )
+                Text(
+                    stringResource(R.string.settings_backup_restore_preview_explainer),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = !selection.noneSelected,
+            ) { Text(stringResource(R.string.settings_backup_restore_preview_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun RestorePasswordDialog(
+    wrongTried: Boolean,
+    onSubmit: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var password by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_backup_restore_password_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.settings_backup_restore_password_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (wrongTried) {
+                    Text(
+                        stringResource(R.string.settings_backup_restore_password_wrong),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                PasswordField(
+                    password = password,
+                    onChange = { password = it },
+                    visible = visible,
+                    onToggleVisible = { visible = !visible },
+                    label = stringResource(R.string.settings_backup_password_label),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSubmit(password) },
+                enabled = password.isNotEmpty(),
+            ) { Text(stringResource(R.string.settings_backup_restore_password_unlock)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
+        },
+    )
+}
+
 @Composable
 private fun RestoreSuccessDialog(
     result: com.lazydevs.wristotle.backup.BackupImportResult,
@@ -176,7 +476,10 @@ private fun RestoreSuccessDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_backup_import_success_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Text(
                     stringResource(R.string.settings_backup_import_table_header),
                     style = MaterialTheme.typography.labelSmall,
@@ -186,6 +489,7 @@ private fun RestoreSuccessDialog(
                 ResultRow(stringResource(R.string.settings_backup_import_row_tasks), result.tasks)
                 ResultRow(stringResource(R.string.settings_backup_import_row_conversations), result.conversations)
                 ResultRow(stringResource(R.string.settings_backup_import_row_nlu), result.nlu)
+                ResultRow(stringResource(R.string.settings_backup_import_row_mcp_servers), result.mcpServers)
                 ResultRow(stringResource(R.string.settings_backup_import_row_audio), result.audio)
                 ResultRow(stringResource(R.string.settings_backup_import_row_pins), result.pins)
                 ResultRow(stringResource(R.string.settings_backup_import_row_aliases), result.aliases)
@@ -208,9 +512,7 @@ private fun RestoreSuccessDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.dialog_ok))
-            }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_ok)) }
         },
     )
 }
@@ -296,168 +598,7 @@ private fun RestoreFailureDialog(message: String, onDismiss: () -> Unit) {
             )
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.dialog_ok))
-            }
-        },
-    )
-}
-
-@Composable
-private fun ExportOptionsDialog(
-    audioInventory: AudioInventory,
-    onConfirm: (includeAudio: Boolean, password: String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var includeAudio by remember { mutableStateOf(false) }
-    var password by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_backup_dialog_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val audioPresent = audioInventory.files > 0
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(
-                            stringResource(R.string.settings_backup_include_audio),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (audioPresent) MaterialTheme.colorScheme.onSurface
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            if (audioPresent) {
-                                val mb = audioInventory.bytes / 1024.0 / 1024.0
-                                stringResource(
-                                    R.string.settings_backup_audio_summary,
-                                    audioInventory.files, mb,
-                                )
-                            } else {
-                                stringResource(R.string.settings_backup_audio_none)
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = includeAudio && audioPresent,
-                        onCheckedChange = { includeAudio = it },
-                        enabled = audioPresent,
-                    )
-                }
-
-                PasswordField(
-                    password = password,
-                    onChange = { password = it },
-                    visible = passwordVisible,
-                    onToggleVisible = { passwordVisible = !passwordVisible },
-                    label = stringResource(R.string.settings_backup_password_label),
-                )
-                Text(
-                    stringResource(R.string.settings_backup_password_helper),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(includeAudio, password) }) {
-                Text(stringResource(R.string.settings_backup_dialog_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.dialog_cancel))
-            }
-        },
-    )
-}
-
-@Composable
-private fun RestorePasswordDialog(
-    wrongTried: Boolean,
-    onSubmit: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var password by remember { mutableStateOf("") }
-    var visible by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_backup_restore_password_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    stringResource(R.string.settings_backup_restore_password_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                if (wrongTried) {
-                    Text(
-                        stringResource(R.string.settings_backup_restore_password_wrong),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                PasswordField(
-                    password = password,
-                    onChange = { password = it },
-                    visible = visible,
-                    onToggleVisible = { visible = !visible },
-                    label = stringResource(R.string.settings_backup_password_label),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onSubmit(password) },
-                enabled = password.isNotEmpty(),
-            ) { Text(stringResource(R.string.settings_backup_restore_password_unlock)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
-        },
-    )
-}
-
-@Composable
-private fun RestorePreviewDialog(
-    manifest: BackupManifest,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val s = manifest.stats
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_backup_restore_preview_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    stringResource(
-                        R.string.settings_backup_restore_preview_stats,
-                        s.notes, s.tasks, s.conversations, s.nluLearned, s.reminders, s.aliases,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    stringResource(R.string.settings_backup_restore_preview_explainer),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.settings_backup_restore_preview_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.dialog_cancel))
-            }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_ok)) }
         },
     )
 }

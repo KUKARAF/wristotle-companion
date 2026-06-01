@@ -20,6 +20,7 @@ private const val DATA_ENTRY_NOTES = "data/notes.json"
 private const val DATA_ENTRY_CONVERSATIONS = "data/conversations.json"
 private const val DATA_ENTRY_NLU = "data/nlu.json"
 private const val DATA_ENTRY_TASKS = "data/tasks.json"
+private const val DATA_ENTRY_MCP_SERVERS = "data/mcp_servers.json"
 private const val AUDIO_NOTES_PREFIX = "audio/notes/"
 private const val AUDIO_CONVERSATIONS_PREFIX = "audio/conversation/"
 
@@ -38,24 +39,30 @@ data class BackupExportResult(
     val reminders: Int,
     val aliases: Int,
     val contactAliases: Int,
+    val mcpServers: Int,
     val audioFiles: Int,
     val encrypted: Boolean,
     val bytes: Long,
 )
 
 /**
- * Builds a backup ZIP containing manifest.json + three data/<name>.json row
- * dumps, one per entity, encoded through the per-entity *Json (en|de)coders.
+ * Builds a backup ZIP containing manifest.json + data/<name>.json row
+ * dumps per entity, encoded through the per-entity *Json (en|de)coders.
  *
- * Phase A scope: no audio, no encryption. The audio and password parameters
- * land in Phase B as part of [export]'s signature.
+ * Each entity is gated by a [BackupSelection] field — categories the
+ * user didn't tick produce neither a `data/<name>.json` file nor any
+ * stats. Secret fields (API keys, MCP auth headers) are stripped from
+ * the per-entity JSON when the user didn't tick their secret checkbox,
+ * even if the parent category IS selected.
  *
- * Why JSON, not raw .db files: the backup format is independent of Room's
- * SQLite layout, so a schema rename / column add / table split is absorbed
- * by the entity's *Json.decode version branch rather than by registering
- * Room Migration objects in two places. Each data file carries its own
- * "schema" integer — the per-entity wire-format version, NOT a Room DB
- * @Database(version). See [NoteJson] etc. for the per-entity contract.
+ * The manifest records the [BackupSelection] under `selected:` so the
+ * importer knows what's in the ZIP without sniffing each file.
+ *
+ * Why JSON, not raw .db files: the backup format is independent of
+ * Room's SQLite layout, so a schema rename / column add / table split
+ * is absorbed by the entity's *Json.decode version branch rather than
+ * by registering Room Migration objects in two places. See [NoteJson]
+ * etc. for the per-entity contract.
  */
 class BackupExporter(private val app: WristotleApplication) {
 
@@ -75,33 +82,38 @@ class BackupExporter(private val app: WristotleApplication) {
      * Runs the export.
      *
      * @param destination SAF URI to stream the final ZIP into.
-     * @param includeAudio When true, every .wav under notes-audio/ and
-     *                     conversation-audio/ is added under audio/notes/
-     *                     and audio/conversation/ in the ZIP.
+     * @param selection   Per-category opt-in. Categories with `false` are
+     *                    omitted from the ZIP entirely (no data file, no
+     *                    stats, no prefs block). Secret-categories with
+     *                    `false` strip their fields even when the parent
+     *                    category is included.
      * @param password    When non-null + non-empty, the ZIP is AES-256-
      *                    encrypted with this passphrase; otherwise plain.
      *                    Caller is responsible for confirming + erasing.
      */
     suspend fun export(
         destination: Uri,
-        includeAudio: Boolean = false,
+        selection: BackupSelection = BackupSelection(),
         password: String? = null,
     ): BackupExportResult = withContext(Dispatchers.IO) {
         val ctx: Context = app.applicationContext
         val encryptPassword = password?.takeIf { it.isNotEmpty() }
 
-        // Pull all rows through the existing DAOs. Suspending — runs on the
-        // IO dispatcher we're already on.
-        val notes = app.notesDb.noteDao().allForBackup()
-        val tasks = app.tasksDb.taskDao().allForBackup()
-        val conversations = app.conversationDb.conversationDao().allForBackup()
+        // Per-category collection. Empty lists when the category isn't
+        // selected — downstream encoders skip empty lists rather than
+        // writing an empty rows array, so the ZIP stays clean.
+        val notes = if (selection.notes) app.notesDb.noteDao().allForBackup() else emptyList()
+        val tasks = if (selection.tasks) app.tasksDb.taskDao().allForBackup() else emptyList()
+        val conversations = if (selection.conversations)
+            app.conversationDb.conversationDao().allForBackup() else emptyList()
         // ExampleDao.learned() — backups never contain seed rows (they ship
         // bundled with the app).
-        val nluLearned = app.nluDb.exampleDao().learned()
-        val pinRecords = readPinRecords()
-        val aliases = app.aliasStore.all()
-        val contactAliases = app.contactAliasStore.all()
-        val audioFiles = if (includeAudio) audioFiles() else emptyList()
+        val nluLearned = if (selection.nluLearned) app.nluDb.exampleDao().learned() else emptyList()
+        val pinRecords = if (selection.reminders) readPinRecords() else emptyList()
+        val aliases = if (selection.appAliases) app.aliasStore.all() else emptyMap()
+        val contactAliases = if (selection.contactAliases) app.contactAliasStore.all() else emptyMap()
+        val mcpServers = if (selection.mcpServers) app.mcpServerRepository.listAll() else emptyList()
+        val audioFiles = if (selection.audioRecordings) audioFiles() else emptyList()
 
         val manifest = BackupManifest(
             schema = BackupManifest.CURRENT_SCHEMA,
@@ -111,12 +123,13 @@ class BackupExporter(private val app: WristotleApplication) {
             androidSdk = Build.VERSION.SDK_INT,
             deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
             encrypted = encryptPassword != null,
-            includeAudio = includeAudio,
+            includeAudio = selection.audioRecordings,
             dataSchemas = BackupManifest.DataSchemas(
                 notes = NoteJson.CURRENT_SCHEMA,
                 tasks = TaskJson.CURRENT_SCHEMA,
                 conversations = ConversationEntryJson.CURRENT_SCHEMA,
                 nlu = ExampleEntryJson.CURRENT_SCHEMA,
+                mcpServers = if (selection.mcpServers) McpServerJson.CURRENT_SCHEMA else null,
             ),
             stats = BackupManifest.Stats(
                 notes = notes.size,
@@ -126,13 +139,15 @@ class BackupExporter(private val app: WristotleApplication) {
                 reminders = pinRecords.size,
                 aliases = aliases.size,
                 contactAliases = contactAliases.size,
+                mcpServers = mcpServers.size,
             ),
-            prefs = readPrefsBlock(),
+            prefs = readPrefsBlock(selection),
             reminderPins = pinRecords.map {
                 BackupManifest.PinRecord(it.id, it.title, it.timeMs)
             },
             appAliases = aliases,
             contactAliases = contactAliases,
+            selected = selection,
         )
 
         // Use cacheDir/backup-staging as zip4j's working dir; cleared before
@@ -154,9 +169,6 @@ class BackupExporter(private val app: WristotleApplication) {
                 ZipFile(stagingZip)
             }
             val params = ZipParameters().apply {
-                // JSON would compress well, but the ZIP is small and the audio
-                // blobs in Phase B are already-compressed-ish PCM. STORE keeps
-                // export fast and the implementation uniform across entries.
                 compressionMethod = CompressionMethod.STORE
                 if (encryptPassword != null) {
                     isEncryptFiles = true
@@ -166,26 +178,39 @@ class BackupExporter(private val app: WristotleApplication) {
             }
 
             writeText(stagingDir, BackupManifest.FILENAME, BackupManifestCodec.encode(manifest))
-            writeText(stagingDir, DATA_ENTRY_NOTES,
-                encodeRowsJson(NoteJson.CURRENT_SCHEMA, notes) { NoteJson.encode(it) })
-            writeText(stagingDir, DATA_ENTRY_TASKS,
-                encodeRowsJson(TaskJson.CURRENT_SCHEMA, tasks) { TaskJson.encode(it) })
-            writeText(stagingDir, DATA_ENTRY_CONVERSATIONS,
-                encodeRowsJson(ConversationEntryJson.CURRENT_SCHEMA, conversations) { ConversationEntryJson.encode(it) })
-            writeText(stagingDir, DATA_ENTRY_NLU,
-                encodeRowsJson(ExampleEntryJson.CURRENT_SCHEMA, nluLearned) { ExampleEntryJson.encode(it) })
-
             addToZip(zip, params, stagingDir, BackupManifest.FILENAME)
-            addToZip(zip, params, stagingDir, DATA_ENTRY_NOTES)
-            addToZip(zip, params, stagingDir, DATA_ENTRY_TASKS)
-            addToZip(zip, params, stagingDir, DATA_ENTRY_CONVERSATIONS)
-            addToZip(zip, params, stagingDir, DATA_ENTRY_NLU)
+
+            if (selection.notes) {
+                writeText(stagingDir, DATA_ENTRY_NOTES,
+                    encodeRowsJson(NoteJson.CURRENT_SCHEMA, notes) { NoteJson.encode(it) })
+                addToZip(zip, params, stagingDir, DATA_ENTRY_NOTES)
+            }
+            if (selection.tasks) {
+                writeText(stagingDir, DATA_ENTRY_TASKS,
+                    encodeRowsJson(TaskJson.CURRENT_SCHEMA, tasks) { TaskJson.encode(it) })
+                addToZip(zip, params, stagingDir, DATA_ENTRY_TASKS)
+            }
+            if (selection.conversations) {
+                writeText(stagingDir, DATA_ENTRY_CONVERSATIONS,
+                    encodeRowsJson(ConversationEntryJson.CURRENT_SCHEMA, conversations) { ConversationEntryJson.encode(it) })
+                addToZip(zip, params, stagingDir, DATA_ENTRY_CONVERSATIONS)
+            }
+            if (selection.nluLearned) {
+                writeText(stagingDir, DATA_ENTRY_NLU,
+                    encodeRowsJson(ExampleEntryJson.CURRENT_SCHEMA, nluLearned) { ExampleEntryJson.encode(it) })
+                addToZip(zip, params, stagingDir, DATA_ENTRY_NLU)
+            }
+            if (selection.mcpServers) {
+                writeText(stagingDir, DATA_ENTRY_MCP_SERVERS,
+                    encodeRowsJson(McpServerJson.CURRENT_SCHEMA, mcpServers) {
+                        McpServerJson.encode(it, includeAuthHeader = selection.mcpAuthHeaders)
+                    })
+                addToZip(zip, params, stagingDir, DATA_ENTRY_MCP_SERVERS)
+            }
 
             // Audio files: each .wav goes in at audio/notes/<basename> or
             // audio/conversation/<basename> — the importer reads them by
             // prefix and re-prefixes paths to the target filesDir on restore.
-            // Files are added directly from their source location (not via
-            // staging) — zip4j reads through, so we don't need to copy.
             for (audio in audioFiles) {
                 val entryName = audioEntryName(audio) ?: continue
                 addFileDirectlyToZip(zip, params, audio, entryName)
@@ -204,6 +229,7 @@ class BackupExporter(private val app: WristotleApplication) {
                 reminders = manifest.stats.reminders,
                 aliases = manifest.stats.aliases,
                 contactAliases = manifest.stats.contactAliases,
+                mcpServers = manifest.stats.mcpServers,
                 audioFiles = audioFiles.size,
                 encrypted = encryptPassword != null,
                 bytes = stagingZip.length(),
@@ -245,27 +271,83 @@ class BackupExporter(private val app: WristotleApplication) {
         return store.all()
     }
 
-    private fun readPrefsBlock(): BackupManifest.PrefsBlock = BackupManifest.PrefsBlock(
-        notes = BackupManifest.NotesPrefs(
+    /**
+     * Reads the PrefsBlock from live app state, honouring per-section
+     * selection. Reminder / Weather / AskAgent blocks are null when the
+     * matching category isn't selected (decoder treats null as "no
+     * change" on restore). The legacy non-sensitive blocks (Notes,
+     * Conversation, NLU, Diagnostics, ModelPrefs) are gated by the
+     * [BackupSelection.appPreferences] bundle — checking that one off
+     * skips them all together.
+     */
+    private fun readPrefsBlock(sel: BackupSelection): BackupManifest.PrefsBlock {
+        // App-preferences bundle is the single "non-sensitive prefs"
+        // gate. When it's off, every sub-pref ends up as its existing
+        // default value on restore — fine, the user explicitly opted
+        // out. We still emit the block (PrefsBlock is non-null in the
+        // manifest) but the values match defaults so a restore is a
+        // no-op for those fields.
+        val notesPrefs = if (sel.appPreferences) BackupManifest.NotesPrefs(
             keepLast = app.noteSettings.keepLast.value,
             appendAudioMode = app.noteSettings.appendAudioMode.value.name,
-        ),
-        conversationSettings = BackupManifest.ConversationPrefs(
+        ) else BackupManifest.NotesPrefs(keepLast = 0, appendAudioMode = "MERGE")
+        val convPrefs = if (sel.appPreferences) BackupManifest.ConversationPrefs(
             retentionDays = app.conversationSettings.retentionDays.value,
-        ),
-        conversationAudio = BackupManifest.ConversationAudioPrefs(
+        ) else BackupManifest.ConversationPrefs(retentionDays = 10)
+        val convAudio = if (sel.appPreferences) BackupManifest.ConversationAudioPrefs(
             captureEnabled = app.conversationAudioSettings.captureEnabled.value,
-        ),
-        nluSettings = BackupManifest.NluPrefs(
+        ) else BackupManifest.ConversationAudioPrefs(captureEnabled = false)
+        val nluPrefs = if (sel.appPreferences) BackupManifest.NluPrefs(
             learningEnabled = app.nluSettings.learningEnabled.value,
-        ),
-        diagnostics = BackupManifest.DiagnosticsPrefs(
+        ) else BackupManifest.NluPrefs(learningEnabled = true)
+        val diagPrefs = if (sel.appPreferences) BackupManifest.DiagnosticsPrefs(
             redactPii = app.diagnosticsSettings.redactPii.value,
             includeAudio = app.diagnosticsSettings.includeAudio.value,
-        ),
-        whisperModels = BackupManifest.ModelPrefs(activeModelId = app.modelStorage.activeModelId),
-        nluModels = BackupManifest.ModelPrefs(activeModelId = app.nluModelStorage.activeModelId),
-    )
+        ) else BackupManifest.DiagnosticsPrefs(redactPii = true, includeAudio = false)
+        val whisperModels = BackupManifest.ModelPrefs(
+            activeModelId = if (sel.appPreferences) app.modelStorage.activeModelId else null,
+        )
+        val nluModels = BackupManifest.ModelPrefs(
+            activeModelId = if (sel.appPreferences) app.nluModelStorage.activeModelId else null,
+        )
+
+        // Schema-2 additions — each emitted only when its category is
+        // selected. Secrets ride only when the corresponding secret
+        // checkbox is ticked.
+        val reminderPrefs = if (sel.appPreferences) BackupManifest.ReminderPrefs(
+            defaultOffsetMin = app.reminderSettings.defaultOffsetMin.value,
+        ) else null
+        val weatherPrefs = if (sel.weatherSettings) BackupManifest.WeatherPrefs(
+            unit = app.weatherSettings.unit.value.name,
+            provider = app.weatherSettings.provider.value.name,
+            apiKey = app.weatherSettings.apiKey.value
+                .takeIf { sel.weatherApiKey && it.isNotEmpty() },
+        ) else null
+        val askAgentPrefs = if (sel.askAgentSetup) BackupManifest.AskAgentPrefs(
+            provider = app.askAgentSettings.provider.value.name,
+            anthropicModel = app.askAgentSettings.anthropicModel.value,
+            openaiEndpoint = app.askAgentSettings.openaiEndpoint.value,
+            openaiModel = app.askAgentSettings.openaiModel.value,
+            systemPrompt = app.askAgentSettings.systemPrompt.value,
+            anthropicApiKey = app.askAgentSettings.anthropicApiKey.value
+                .takeIf { sel.askAgentApiKeys && it.isNotEmpty() },
+            openaiApiKey = app.askAgentSettings.openaiApiKey.value
+                .takeIf { sel.askAgentApiKeys && it.isNotEmpty() },
+        ) else null
+
+        return BackupManifest.PrefsBlock(
+            notes = notesPrefs,
+            conversationSettings = convPrefs,
+            conversationAudio = convAudio,
+            nluSettings = nluPrefs,
+            diagnostics = diagPrefs,
+            whisperModels = whisperModels,
+            nluModels = nluModels,
+            reminder = reminderPrefs,
+            weather = weatherPrefs,
+            askAgent = askAgentPrefs,
+        )
+    }
 }
 
 /**

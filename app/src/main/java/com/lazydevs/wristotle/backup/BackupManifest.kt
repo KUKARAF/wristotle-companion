@@ -33,6 +33,13 @@ data class BackupManifest(
     val reminderPins: List<PinRecord>,
     val appAliases: Map<String, String>,
     val contactAliases: Map<String, ContactRef>,
+    /**
+     * Records which categories were actually included in this ZIP.
+     * Drives the restore UI's "which categories are available to
+     * restore" toggle. Defaults to [BackupSelection.LEGACY_FULL] for
+     * older schema-1 ZIPs that didn't carry it.
+     */
+    val selected: BackupSelection = BackupSelection.LEGACY_FULL,
 ) {
     /**
      * Per-entity (NOT per-Room-DB) schema versions of the data files inside
@@ -54,6 +61,9 @@ data class BackupManifest(
         val tasks: Int?,
         val conversations: Int,
         val nlu: Int,
+        // Schema 2+. Nullable for the same reason `tasks` is: a backup
+        // exported before the field existed won't carry it.
+        val mcpServers: Int? = null,
     )
     data class Stats(
         val notes: Int,
@@ -68,6 +78,7 @@ data class BackupManifest(
         // falls back to 0 when the field is absent in pre-feature
         // backups.
         val contactAliases: Int = 0,
+        val mcpServers: Int = 0,
     )
 
     /**
@@ -84,6 +95,12 @@ data class BackupManifest(
         val diagnostics: DiagnosticsPrefs,
         val whisperModels: ModelPrefs,
         val nluModels: ModelPrefs,
+        // Added in schema 2. Nullable so reading a schema-1 backup
+        // doesn't fail — encoder writes them only when the matching
+        // category was selected; decoder defaults to null when absent.
+        val reminder: ReminderPrefs? = null,
+        val weather: WeatherPrefs? = null,
+        val askAgent: AskAgentPrefs? = null,
     )
     data class NotesPrefs(val keepLast: Int, val appendAudioMode: String)
     data class ConversationPrefs(val retentionDays: Int)
@@ -92,11 +109,46 @@ data class BackupManifest(
     data class DiagnosticsPrefs(val redactPii: Boolean, val includeAudio: Boolean)
     data class ModelPrefs(val activeModelId: String?)
 
+    /** Reminder feature prefs — single int, lives in its own SharedPrefs file. */
+    data class ReminderPrefs(val defaultOffsetMin: Int)
+
+    /** Weather feature prefs. `apiKey` rides only when the user ticks
+     *  the secret checkbox AND has set a key for the OpenWeather provider. */
+    data class WeatherPrefs(
+        val unit: String,
+        val provider: String,
+        val apiKey: String? = null,
+    )
+
+    /** AskAgent feature prefs. Per-provider API keys ride only when the
+     *  user ticks the secret checkbox. Endpoints/models/system-prompt
+     *  ride with the non-sensitive "askAgent setup" category. */
+    data class AskAgentPrefs(
+        val provider: String,
+        val anthropicModel: String,
+        val openaiEndpoint: String,
+        val openaiModel: String,
+        val systemPrompt: String,
+        val anthropicApiKey: String? = null,
+        val openaiApiKey: String? = null,
+    )
+
     /** Wire-format record matching the manifest JSON, not the Room/PinStore type. */
     data class PinRecord(val id: String, val title: String, val timeMs: Long?)
 
     companion object {
-        const val CURRENT_SCHEMA = 1
+        /**
+         * Backup manifest schema:
+         *
+         * - **1** — original release. No selection block; no per-category
+         *   filtering. Decoder assumes everything in the ZIP was wanted.
+         * - **2** (2026-05-31) — adds `selected: BackupSelection`, plus
+         *   `prefs.reminder` / `prefs.weather` / `prefs.askAgent`, plus
+         *   `data/mcp_servers.json` (referenced from `dataSchemas.mcpServers`).
+         *   Decoder defaults the new fields to null / LEGACY_FULL when
+         *   reading a schema-1 ZIP — backward compatible.
+         */
+        const val CURRENT_SCHEMA = 2
         const val FILENAME = "manifest.json"
     }
 }
@@ -126,6 +178,7 @@ object BackupManifestCodec {
             if (m.dataSchemas.tasks != null) put("tasks", m.dataSchemas.tasks)
             put("conversations", m.dataSchemas.conversations)
             put("nlu", m.dataSchemas.nlu)
+            if (m.dataSchemas.mcpServers != null) put("mcp_servers", m.dataSchemas.mcpServers)
         })
         put("stats", JSONObject().apply {
             put("notes", m.stats.notes)
@@ -135,6 +188,24 @@ object BackupManifestCodec {
             put("reminders", m.stats.reminders)
             put("aliases", m.stats.aliases)
             put("contact_aliases", m.stats.contactAliases)
+            put("mcp_servers", m.stats.mcpServers)
+        })
+        put("selected", JSONObject().apply {
+            put("notes", m.selected.notes)
+            put("tasks", m.selected.tasks)
+            put("conversations", m.selected.conversations)
+            put("reminders", m.selected.reminders)
+            put("nlu_learned", m.selected.nluLearned)
+            put("app_aliases", m.selected.appAliases)
+            put("contact_aliases", m.selected.contactAliases)
+            put("audio_recordings", m.selected.audioRecordings)
+            put("app_preferences", m.selected.appPreferences)
+            put("weather_settings", m.selected.weatherSettings)
+            put("mcp_servers", m.selected.mcpServers)
+            put("ask_agent_setup", m.selected.askAgentSetup)
+            put("weather_api_key", m.selected.weatherApiKey)
+            put("mcp_auth_headers", m.selected.mcpAuthHeaders)
+            put("ask_agent_api_keys", m.selected.askAgentApiKeys)
         })
         put("prefs", JSONObject().apply {
             put("wristotle_notes", JSONObject().apply {
@@ -144,7 +215,7 @@ object BackupManifestCodec {
             put("wristotle_conversation_settings", JSONObject().apply {
                 put("retention_days", m.prefs.conversationSettings.retentionDays)
             })
-            put("wristotle_conversation_audio", JSONObject().apply {
+            put("wristotle_audio_recordings", JSONObject().apply {
                 put("capture_enabled", m.prefs.conversationAudio.captureEnabled)
             })
             put("wristotle_nlu_settings", JSONObject().apply {
@@ -160,6 +231,33 @@ object BackupManifestCodec {
             put("nlu_models", JSONObject().apply {
                 m.prefs.nluModels.activeModelId?.let { put("active_model_id", it) }
             })
+            // Schema 2+. Each block is omitted entirely when null
+            // (category wasn't selected on export).
+            m.prefs.reminder?.let { r ->
+                put("wristotle_reminder_settings", JSONObject().apply {
+                    put("default_offset_min", r.defaultOffsetMin)
+                })
+            }
+            m.prefs.weather?.let { w ->
+                put("weather_settings", JSONObject().apply {
+                    put("unit", w.unit)
+                    put("provider", w.provider)
+                    // api_key only when the secret was selected — exporter
+                    // is responsible for not putting it on the block.
+                    if (w.apiKey != null) put("api_key", w.apiKey)
+                })
+            }
+            m.prefs.askAgent?.let { a ->
+                put("ask_agent_settings", JSONObject().apply {
+                    put("provider", a.provider)
+                    put("anthropic_model", a.anthropicModel)
+                    put("openai_endpoint", a.openaiEndpoint)
+                    put("openai_model", a.openaiModel)
+                    put("system_prompt", a.systemPrompt)
+                    if (a.anthropicApiKey != null) put("anthropic_api_key", a.anthropicApiKey)
+                    if (a.openaiApiKey != null) put("openai_api_key", a.openaiApiKey)
+                })
+            }
         })
         put("reminder_pins", JSONArray().apply {
             m.reminderPins.forEach { p ->
@@ -198,7 +296,7 @@ object BackupManifestCodec {
         val prefs = root.getJSONObject("prefs")
         val notesPrefs = prefs.getJSONObject("wristotle_notes")
         val convPrefs = prefs.getJSONObject("wristotle_conversation_settings")
-        val convAudio = prefs.getJSONObject("wristotle_conversation_audio")
+        val convAudio = prefs.getJSONObject("wristotle_audio_recordings")
         val nluPrefs = prefs.getJSONObject("wristotle_nlu_settings")
         val diagPrefs = prefs.getJSONObject("wristotle_diagnostics")
         val whisper = prefs.getJSONObject("whisper_models")
@@ -223,6 +321,7 @@ object BackupManifestCodec {
                 tasks = if (dataSchemas.has("tasks")) dataSchemas.getInt("tasks") else null,
                 conversations = dataSchemas.getInt("conversations"),
                 nlu = dataSchemas.getInt("nlu"),
+                mcpServers = if (dataSchemas.has("mcp_servers")) dataSchemas.getInt("mcp_servers") else null,
             ),
             stats = BackupManifest.Stats(
                 notes = stats.optInt("notes", 0),
@@ -232,6 +331,7 @@ object BackupManifestCodec {
                 reminders = stats.optInt("reminders", 0),
                 aliases = stats.optInt("aliases", 0),
                 contactAliases = stats.optInt("contact_aliases", 0),
+                mcpServers = stats.optInt("mcp_servers", 0),
             ),
             prefs = BackupManifest.PrefsBlock(
                 notes = BackupManifest.NotesPrefs(
@@ -257,6 +357,29 @@ object BackupManifestCodec {
                 nluModels = BackupManifest.ModelPrefs(
                     activeModelId = nluModels.optString("active_model_id").takeIf { it.isNotEmpty() },
                 ),
+                reminder = prefs.optJSONObject("wristotle_reminder_settings")?.let { r ->
+                    BackupManifest.ReminderPrefs(
+                        defaultOffsetMin = r.optInt("default_offset_min", 0),
+                    )
+                },
+                weather = prefs.optJSONObject("weather_settings")?.let { w ->
+                    BackupManifest.WeatherPrefs(
+                        unit = w.optString("unit", "CELSIUS"),
+                        provider = w.optString("provider", "OPEN_METEO"),
+                        apiKey = w.optString("api_key").takeIf { it.isNotEmpty() },
+                    )
+                },
+                askAgent = prefs.optJSONObject("ask_agent_settings")?.let { a ->
+                    BackupManifest.AskAgentPrefs(
+                        provider = a.optString("provider", "ANTHROPIC"),
+                        anthropicModel = a.optString("anthropic_model", ""),
+                        openaiEndpoint = a.optString("openai_endpoint", ""),
+                        openaiModel = a.optString("openai_model", ""),
+                        systemPrompt = a.optString("system_prompt", ""),
+                        anthropicApiKey = a.optString("anthropic_api_key").takeIf { it.isNotEmpty() },
+                        openaiApiKey = a.optString("openai_api_key").takeIf { it.isNotEmpty() },
+                    )
+                },
             ),
             reminderPins = (0 until pinsArr.length()).map { i ->
                 val p = pinsArr.getJSONObject(i)
@@ -281,6 +404,25 @@ object BackupManifestCodec {
                     numberSnapshot = number,
                 )
             }.toMap(),
+            selected = root.optJSONObject("selected")?.let { sel ->
+                BackupSelection(
+                    notes = sel.optBoolean("notes", true),
+                    tasks = sel.optBoolean("tasks", true),
+                    conversations = sel.optBoolean("conversations", true),
+                    reminders = sel.optBoolean("reminders", true),
+                    nluLearned = sel.optBoolean("nlu_learned", true),
+                    appAliases = sel.optBoolean("app_aliases", true),
+                    contactAliases = sel.optBoolean("contact_aliases", true),
+                    audioRecordings = sel.optBoolean("audio_recordings", true),
+                    appPreferences = sel.optBoolean("app_preferences", true),
+                    weatherSettings = sel.optBoolean("weather_settings", true),
+                    mcpServers = sel.optBoolean("mcp_servers", true),
+                    askAgentSetup = sel.optBoolean("ask_agent_setup", true),
+                    weatherApiKey = sel.optBoolean("weather_api_key", false),
+                    mcpAuthHeaders = sel.optBoolean("mcp_auth_headers", false),
+                    askAgentApiKeys = sel.optBoolean("ask_agent_api_keys", false),
+                )
+            } ?: BackupSelection.LEGACY_FULL,
         )
     }
 }
