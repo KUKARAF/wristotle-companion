@@ -48,8 +48,8 @@ object ModelCatalog {
 
     val all: List<ModelInfo> = listOf(
         // ── Recommended: one per tier, the curated default picker. ──
-        // Quantized (q5_1) variants — ~50–60% the disk + memory footprint of
-        // the full models with negligible accuracy loss on short commands.
+        // Quantized variants — ~50–60% the disk + memory footprint of the
+        // full models with negligible accuracy loss on short commands.
         ModelInfo(
             id = "tiny.en-q5_1",
             displayName = "Tiny (English)",
@@ -68,14 +68,76 @@ object ModelCatalog {
             tier = ModelTier.BALANCED,
             recommended = true,
         ),
+        // Recommended ACCURATE pick is the q5_1 small variant (~190 MB) —
+        // the full small.en at 466 MB is too RAM-hostile for most
+        // non-flagship phones to load without paging, so it stays
+        // available under "All models" but is not the default.
+        ModelInfo(
+            id = "small.en-q5_1",
+            displayName = "Small (English)",
+            approxSizeBytes = 190_000_000L,
+            languageLabel = "English",
+            url = "$HF_BASE/ggml-small.en-q5_1.bin",
+            tier = ModelTier.ACCURATE,
+            recommended = true,
+        ),
+
+        // ── q4_0 quantization — fastest format on memory-bandwidth-bound
+        //    CPUs (i.e. the ~2019-era ARM hardware that's our perf
+        //    target) per whisper.cpp's own benchmarks. Quality "identical
+        //    to higher bitrates" for ASR. Smaller download than q5_1. ──
+        ModelInfo(
+            id = "tiny.en-q4_0",
+            displayName = "Tiny (English, q4_0)",
+            approxSizeBytes = 25_000_000L,
+            languageLabel = "English",
+            url = "$HF_BASE/ggml-tiny.en-q4_0.bin",
+            tier = ModelTier.FAST,
+        ),
+        ModelInfo(
+            id = "base.en-q4_0",
+            displayName = "Base (English, q4_0)",
+            approxSizeBytes = 50_000_000L,
+            languageLabel = "English",
+            url = "$HF_BASE/ggml-base.en-q4_0.bin",
+            tier = ModelTier.BALANCED,
+        ),
+        ModelInfo(
+            id = "small.en-q4_0",
+            displayName = "Small (English, q4_0)",
+            approxSizeBytes = 145_000_000L,
+            languageLabel = "English",
+            url = "$HF_BASE/ggml-small.en-q4_0.bin",
+            tier = ModelTier.ACCURATE,
+        ),
+
+        // ── Heavier ACCURATE-tier entries for higher-RAM phones. Not
+        //    recommended (default picker stays at small.en-q5_1) — surfaced
+        //    only under "All models" for users who know what they're doing.
+        //    Memory hints in WhisperModelsCard set expectations. ──
         ModelInfo(
             id = "small.en",
-            displayName = "Small (English)",
+            displayName = "Small (English, full)",
             approxSizeBytes = 466_000_000L,
             languageLabel = "English",
             url = "$HF_BASE/ggml-small.en.bin",
             tier = ModelTier.ACCURATE,
-            recommended = true,
+        ),
+        ModelInfo(
+            id = "medium.en-q5_1",
+            displayName = "Medium (English, q5_1)",
+            approxSizeBytes = 514_000_000L,
+            languageLabel = "English",
+            url = "$HF_BASE/ggml-medium.en-q5_1.bin",
+            tier = ModelTier.ACCURATE,
+        ),
+        ModelInfo(
+            id = "large-v3-turbo-q5_0",
+            displayName = "Large v3 Turbo (q5_0)",
+            approxSizeBytes = 574_000_000L,
+            languageLabel = "Multilingual",
+            url = "$HF_BASE/ggml-large-v3-turbo-q5_0.bin",
+            tier = ModelTier.ACCURATE,
         ),
 
         // ── Advanced / power-user: full (non-quantized) + multilingual

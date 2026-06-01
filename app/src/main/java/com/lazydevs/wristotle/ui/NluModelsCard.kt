@@ -86,8 +86,9 @@ private fun NluModelRow(
                 )
                 Text(
                     stringResource(
-                        R.string.whisper_model_size_format,
+                        R.string.whisper_model_size_with_ram_format,
                         approxSizeMb(state.info.approxSizeBytes),
+                        approxRamMb(state.info.approxSizeBytes),
                         state.info.architectureLabel,
                     ),
                     style = MaterialTheme.typography.bodySmall,

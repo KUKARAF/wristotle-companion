@@ -21,6 +21,17 @@ import com.lazydevs.wristotle.R
 /** Round bytes to the nearest MB for display in model rows. */
 internal fun approxSizeMb(bytes: Long): Int = (bytes / 1_000_000L).toInt()
 
+/**
+ * Rough rule-of-thumb resident-RAM estimate for a model file. ASR /
+ * embedding models typically need ~3× their on-disk size in memory at
+ * runtime (weights mmap'd or fully loaded + KV cache + activation
+ * buffers + tokenizer state). Surfaced on each model row so users with
+ * 2-3 GB RAM phones can pick something their device can hold without
+ * paging — a 150 MB download that needs 450 MB RAM is a real wall.
+ */
+internal fun approxRamMb(diskBytes: Long): Int =
+    ((diskBytes * 3L) / 1_000_000L).toInt()
+
 /** Small "[Active]" badge shown on the currently-selected model row. */
 @Composable
 internal fun ActiveModelPill() {
