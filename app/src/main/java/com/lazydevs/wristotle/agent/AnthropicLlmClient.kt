@@ -1,6 +1,7 @@
 package com.lazydevs.wristotle.agent
 
 import android.util.Log
+import com.lazydevs.wristotle.util.SimpleHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -11,9 +12,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * Anthropic Messages API client.
@@ -237,31 +235,18 @@ class AnthropicLlmClient(
         else LlmResult.Success(text)
     }
 
-    private fun httpPost(body: String): Pair<Int, String?>? {
-        val conn = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            connectTimeout = 10_000
-            readTimeout = 30_000
-            doOutput = true
-            setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("x-api-key", apiKey)
-            setRequestProperty("anthropic-version", ANTHROPIC_VERSION)
-            setRequestProperty("User-Agent", "Wristotle/companion")
-        }
-        return try {
-            conn.outputStream.bufferedWriter().use { it.write(body) }
-            val code = conn.responseCode
-            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-            val resp = stream?.bufferedReader()?.use { it.readText() }
-            code to resp
-        } catch (e: IOException) {
-            Log.w(TAG, "POST $ENDPOINT failed: ${e.message}")
-            null
-        } finally {
-            conn.disconnect()
-        }
-    }
+    private fun httpPost(body: String): Pair<Int, String?>? = SimpleHttp.request(
+        url = ENDPOINT,
+        method = "POST",
+        headers = mapOf(
+            "Content-Type" to "application/json",
+            "Accept" to "application/json",
+            "x-api-key" to apiKey,
+            "anthropic-version" to ANTHROPIC_VERSION,
+        ),
+        body = body,
+        readTimeoutMs = 30_000,
+    )
 
     companion object {
         private const val TAG = "AnthropicLlmClient"

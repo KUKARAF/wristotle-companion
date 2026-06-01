@@ -1,6 +1,7 @@
 package com.lazydevs.wristotle.agent
 
 import android.util.Log
+import com.lazydevs.wristotle.util.SimpleHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -10,9 +11,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * OpenAI Chat Completions wire-shape client. Same protocol is spoken
@@ -217,30 +215,19 @@ class OpenAiCompatibleLlmClient(
         else LlmResult.Success(text)
     }
 
-    private fun httpPost(body: String): Pair<Int, String?>? {
-        val conn = (URL(endpointUrl).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            connectTimeout = 10_000
-            readTimeout = 30_000
-            doOutput = true
-            setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("Accept", "application/json")
-            if (apiKey.isNotBlank()) setRequestProperty("Authorization", "Bearer $apiKey")
-            setRequestProperty("User-Agent", "Wristotle/companion")
-        }
-        return try {
-            conn.outputStream.bufferedWriter().use { it.write(body) }
-            val code = conn.responseCode
-            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-            val resp = stream?.bufferedReader()?.use { it.readText() }
-            code to resp
-        } catch (e: IOException) {
-            Log.w(TAG, "POST $endpointUrl failed: ${e.message}")
-            null
-        } finally {
-            conn.disconnect()
-        }
-    }
+    private fun httpPost(body: String): Pair<Int, String?>? = SimpleHttp.request(
+        url = endpointUrl,
+        method = "POST",
+        headers = buildMap {
+            put("Content-Type", "application/json")
+            put("Accept", "application/json")
+            // Local self-hosted servers (Ollama, llama.cpp) work without auth;
+            // omit the header entirely when the key is blank.
+            if (apiKey.isNotBlank()) put("Authorization", "Bearer $apiKey")
+        },
+        body = body,
+        readTimeoutMs = 30_000,
+    )
 
     companion object {
         private const val TAG = "OpenAiCompatibleLlmClient"

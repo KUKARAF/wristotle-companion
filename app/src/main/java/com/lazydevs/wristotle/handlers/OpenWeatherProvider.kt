@@ -1,13 +1,12 @@
 package com.lazydevs.wristotle.handlers
 
 import android.util.Log
+import com.lazydevs.wristotle.util.SimpleHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 
 private const val TAG = "OpenWeatherProvider"
@@ -137,33 +136,18 @@ class OpenWeatherProvider(private val apiKey: String) : WeatherProvider {
         )
     }
 
-    // ── HTTP helpers ────────────────────────────────────────────────────────
-
-    /** GET → response body on 2xx, null on any other status. Used for the
+    /** GET → response body on 2xx, null otherwise. Used for the
      *  geocoding endpoint where we don't care about the specific status. */
-    private fun httpGet(url: String): String? = httpGetWithStatus(url)?.takeIf { it.first in 200..299 }?.second
+    private fun httpGet(url: String): String? =
+        httpGetWithStatus(url)?.takeIf { it.first in 200..299 }?.second
 
     /** GET that returns (status, body) so the caller can distinguish 401
-     *  (bad API key) from 5xx (network blip). Body may be null on read
-     *  failures, even with a 2xx. */
-    private fun httpGetWithStatus(url: String): Pair<Int, String?>? {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 8_000
-            readTimeout = 8_000
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "Wristotle/companion")
-        }
-        return try {
-            val code = conn.responseCode
-            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-            val body = stream?.bufferedReader()?.use { it.readText() }
-            code to body
-        } catch (e: IOException) {
-            Log.w(TAG, "HTTP $url failed: ${e.message}")
-            null
-        } finally {
-            conn.disconnect()
-        }
-    }
+     *  (bad API key) from 5xx (network blip). 8 s timeouts so the watch's
+     *  15 s response watchdog never fires before this returns. */
+    private fun httpGetWithStatus(url: String): Pair<Int, String?>? = SimpleHttp.request(
+        url = url,
+        headers = mapOf("Accept" to "application/json"),
+        connectTimeoutMs = 8_000,
+        readTimeoutMs = 8_000,
+    )
 }

@@ -1,13 +1,12 @@
 package com.lazydevs.wristotle.handlers
 
 import android.util.Log
+import com.lazydevs.wristotle.util.SimpleHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 
 private const val TAG = "OpenMeteoProvider"
@@ -146,28 +145,19 @@ class OpenMeteoProvider : WeatherProvider {
         )
     }
 
-    // ── HTTP helper ─────────────────────────────────────────────────────────
-
-    /** Tiny `HttpURLConnection` GET. Returns the response body on 2xx, null
-     *  otherwise. 8 s connect + read timeouts so the watch's 15 s response
-     *  watchdog never fires before this returns. */
+    /** 8 s timeouts so the watch's 15 s response watchdog never fires
+     *  before this returns. Non-2xx absorbed as a geocode/lookup miss. */
     private fun httpGet(url: String): String? {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 8_000
-            readTimeout = 8_000
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "Wristotle/companion")
+        val (status, body) = SimpleHttp.request(
+            url = url,
+            headers = mapOf("Accept" to "application/json"),
+            connectTimeoutMs = 8_000,
+            readTimeoutMs = 8_000,
+        ) ?: return null
+        if (status !in 200..299) {
+            Log.w(TAG, "HTTP $status from $url")
+            return null
         }
-        return try {
-            val code = conn.responseCode
-            if (code !in 200..299) {
-                Log.w(TAG, "HTTP $code from $url")
-                return null
-            }
-            conn.inputStream.bufferedReader().use { it.readText() }
-        } finally {
-            conn.disconnect()
-        }
+        return body
     }
 }
