@@ -502,6 +502,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             query = query,
             routeThreshold = NluSettings.ROUTE_THRESHOLD,
             routeMargin = NluSettings.ROUTE_MARGIN,
+            customAskAgentSubjects = app.askAgentSettings.customTriggers.value,
         )
         val intent = refined ?: Intent.Unknown
         val slots = if (intent == Intent.Unknown) emptyMap() else slotExtractors.extract(intent, query)

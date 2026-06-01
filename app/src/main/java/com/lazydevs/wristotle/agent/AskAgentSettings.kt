@@ -50,6 +50,18 @@ class AskAgentSettings(context: Context) {
     )
     val systemPrompt: StateFlow<String> = _systemPrompt
 
+    // User-supplied trigger words added on top of the built-in defaults
+    // ("agent", "claude", "ai", ...). Comma + newline separated on the
+    // wire so the UI can show one-per-line while we persist a compact
+    // string. Sanitised on every read so a hand-edited prefs file can't
+    // sneak regex metacharacters through.
+    private val _customTriggers = MutableStateFlow(
+        com.lazydevs.wristotle.nlu.slots.AskAgentTriggers.sanitise(
+            prefs.getString(KEY_CUSTOM_TRIGGERS, "").orEmpty(),
+        ),
+    )
+    val customTriggers: StateFlow<List<String>> = _customTriggers
+
     fun setProvider(value: LlmProvider) {
         prefs.edit().putString(KEY_PROVIDER, value.name).apply()
         _provider.value = value
@@ -62,6 +74,19 @@ class AskAgentSettings(context: Context) {
     fun setOpenAiModel(value: String) = write(KEY_OPENAI_MODEL, value.trim(), _openaiModel)
     fun setSystemPrompt(value: String) = write(KEY_SYSTEM_PROMPT, value, _systemPrompt)
     fun resetSystemPromptToDefault() = setSystemPrompt(DEFAULT_SYSTEM_PROMPT)
+
+    /**
+     * Update the custom trigger words from the raw text the user typed
+     * in Settings (one-per-line is the displayed convention; commas are
+     * also accepted). Sanitisation drops blanks + duplicates and
+     * lowercases — what we persist is what we'd run on the next query.
+     */
+    fun setCustomTriggers(rawText: String) {
+        val sanitised = com.lazydevs.wristotle.nlu.slots.AskAgentTriggers.sanitise(rawText)
+        if (sanitised == _customTriggers.value) return
+        prefs.edit().putString(KEY_CUSTOM_TRIGGERS, sanitised.joinToString("\n")).apply()
+        _customTriggers.value = sanitised
+    }
 
     /**
      * Built per call (not cached) so a settings edit takes effect on
@@ -100,6 +125,7 @@ class AskAgentSettings(context: Context) {
         private const val KEY_OPENAI_API_KEY = "openai_api_key"
         private const val KEY_OPENAI_MODEL = "openai_model"
         private const val KEY_SYSTEM_PROMPT = "system_prompt"
+        private const val KEY_CUSTOM_TRIGGERS = "custom_triggers"
 
         // Defaults: cheap + decent + broadly available. Users override
         // per-provider via the Settings card; field is a plain text

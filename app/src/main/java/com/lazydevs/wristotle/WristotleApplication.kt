@@ -336,7 +336,9 @@ class WristotleApplication : Application() {
             Intent.WorldTime to com.lazydevs.wristotle.nlu.slots.WorldTimeSlots(),
             Intent.Calculate to com.lazydevs.wristotle.nlu.slots.CalculateSlots(),
             Intent.Weather to com.lazydevs.wristotle.nlu.slots.WeatherSlots(),
-            Intent.AskAgent to com.lazydevs.wristotle.nlu.slots.AskAgentSlots(),
+            Intent.AskAgent to com.lazydevs.wristotle.nlu.slots.AskAgentSlots(
+                extrasProvider = { askAgentSettings.customTriggers.value },
+            ),
         ))
 
         learningCollector = LearningCollector(

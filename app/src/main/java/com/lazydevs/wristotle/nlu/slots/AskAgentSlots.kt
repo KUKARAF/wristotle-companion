@@ -4,36 +4,43 @@ import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.AskAgent]:
- *   - `query` — the question text, with the "ask agent" / "ask claude" /
- *     "ask the agent" lead-in stripped.
+ *   - `query` — the question text, with the "ask <subject>" / "hey
+ *     <subject>" lead-in stripped.
  *
- * Lead-ins covered:
- *   - "ask (the )?agent ..."
- *   - "ask claude ..."  (handy alias since the LLM may well be Claude)
- *   - "ask (the )?(ai|llm|assistant) ..."
- *   - "hey agent ..."   (less common but matches the wakeword shape some
- *                        users default to)
+ * Subject keywords come from [AskAgentTriggers.DEFAULT_SUBJECTS]
+ * (`agent` / `claude` / `ai` / `llm` / `assistant` / `bot` / `chatbot`
+ * / `chatgpt` / `gpt`) plus whatever the user added in
+ * Settings → Ask Agent → Custom trigger words (e.g. `"jarvis"`).
  *
  * Trailing punctuation right after the lead-in ("ask agent:", "ask
  * agent,") is consumed so the body doesn't start with a stray comma.
+ *
+ * @property extrasProvider Snapshot of the user's custom trigger words.
+ * Called on every `extract` so a Settings change takes effect on the
+ * next voice query — but we cache the compiled `Regex` keyed by the
+ * extras list, so equal snapshots reuse the same compiled regex
+ * (PrefixHints' anchored regex is the hot path; this one runs only
+ * for the AskAgent intent).
  */
-class AskAgentSlots : SlotExtractor {
+class AskAgentSlots(
+    private val extrasProvider: () -> List<String> = { emptyList() },
+) : SlotExtractor {
+
+    @Volatile private var cachedExtras: List<String> = emptyList()
+    @Volatile private var cachedRegex: Regex = AskAgentTriggers.stripRegex(emptyList())
 
     override suspend fun extract(query: String): Map<String, Any> {
-        val body = query.replace(STRIP_PREFIXES, "").trim()
+        val regex = currentRegex()
+        val body = query.replace(regex, "").trim()
         return if (body.isBlank()) emptyMap() else mapOf(SlotKeys.Query to body)
     }
 
-    private companion object {
-        val STRIP_PREFIXES = Regex(
-            """(?ix)
-            ^\s*
-            (
-              (ask|hey)\s+(the\s+)?(agent|claude|ai|llm|assistant|bot|chatbot|chat\s*gpt|gpt)\b
-            )
-            (\s*[:,.;!?\-])?
-            \s+
-            """,
-        )
+    private fun currentRegex(): Regex {
+        val extras = extrasProvider()
+        if (extras == cachedExtras) return cachedRegex
+        val rebuilt = AskAgentTriggers.stripRegex(extras)
+        cachedExtras = extras
+        cachedRegex = rebuilt
+        return rebuilt
     }
 }

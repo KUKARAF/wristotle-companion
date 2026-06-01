@@ -102,6 +102,29 @@ fun AskAgentSettingsCard(settings: AskAgentSettings) {
             ) {
                 Text(stringResource(R.string.settings_askagent_system_prompt_reset))
             }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── Custom trigger words ────────────────────────────────────────
+            // User-added subjects on top of the built-ins (agent / claude /
+            // ai / ...). One per line in the UI; persisted lower-cased and
+            // de-duplicated. Routing + slot extraction read the live list,
+            // so a Settings save takes effect on the next voice query.
+            val customTriggers by settings.customTriggers.collectAsState()
+            val triggerText = customTriggers.joinToString("\n")
+            OutlinedTextField(
+                value = triggerText,
+                onValueChange = settings::setCustomTriggers,
+                label = { Text(stringResource(R.string.settings_askagent_triggers_label)) },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2,
+            )
+            Text(
+                stringResource(R.string.settings_askagent_triggers_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

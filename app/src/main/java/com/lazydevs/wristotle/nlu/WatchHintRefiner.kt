@@ -44,10 +44,36 @@ object WatchHintRefiner {
         query: String,
         routeThreshold: Float,
         routeMargin: Float,
+        customAskAgentSubjects: List<String> = emptyList(),
     ): Intent? {
+        // User-supplied "ask jarvis …" triggers run BEFORE PrefixHints so a
+        // custom subject takes effect on every code path (watch-hinted and
+        // unhinted alike). Default subjects are already covered by the
+        // static PrefixHints rule; this pre-pass only kicks in when the
+        // user has actually added an extra word.
+        if (customAskAgentSubjects.isNotEmpty()) {
+            customAskAgentRegex(customAskAgentSubjects).find(query)?.let {
+                return Intent.AskAgent
+            }
+        }
         if (watchHint != null) return refineWatchHinted(classified, watchHint, query, routeThreshold)
         if (classified == null) return null
         return refineUnhinted(classified, query, routeThreshold, routeMargin)
+    }
+
+    /** Cache the route regex by extras-list identity so we don't recompile
+     *  on every query. The list is short (typically 1-5 entries) and
+     *  changes only when the user edits Settings. */
+    @Volatile private var cachedExtras: List<String> = emptyList()
+    @Volatile private var cachedRouteRegex: Regex =
+        com.lazydevs.wristotle.nlu.slots.AskAgentTriggers.routeRegex(emptyList())
+
+    private fun customAskAgentRegex(extras: List<String>): Regex {
+        if (extras == cachedExtras) return cachedRouteRegex
+        val rebuilt = com.lazydevs.wristotle.nlu.slots.AskAgentTriggers.routeRegex(extras)
+        cachedExtras = extras
+        cachedRouteRegex = rebuilt
+        return rebuilt
     }
 
     private fun refineWatchHinted(
