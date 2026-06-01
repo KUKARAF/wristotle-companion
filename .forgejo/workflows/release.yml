@@ -108,7 +108,7 @@ jobs:
         # subprocesses competing on a ~4 GB box trip the OOM killer.
         # v0.14.1 saw two consecutive daemon-disappeared failures here
         # before this was added; --no-daemon cleared it.
-        run: ./gradlew --no-daemon -Dorg.gradle.workers.max=2 :app:testDebugUnitTest :speech-whisper:testDebugUnitTest
+        run: ./gradlew --no-daemon -Dorg.gradle.workers.max=2 :app:testDebugUnitTest :speech-nlu:testDebugUnitTest :speech-whisper:testDebugUnitTest
 
       - name: Build release APK
         env:
