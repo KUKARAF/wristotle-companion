@@ -117,6 +117,16 @@ android {
         // Lets pure-function code that happens to log (e.g. AppIndex)
         // be unit-tested without dragging in Robolectric.
         unitTests.isReturnDefaultValues = true
+        // Cap the forked test JVM so the medium runner has headroom
+        // for AGP's on-demand build-tools install + the Gradle daemon
+        // + Kotlin daemon. Default is unbounded → cumulative
+        // (1.5 GB gradle daemon + 1 GB Kotlin daemon + ≥1 GB SDK
+        // install + ≥512 MB test JVM) overshoots ~4 GB on
+        // codeberg-medium and the kernel OOM-kills mid-build (v0.15.0
+        // hit this twice). 512 MB is plenty for our pure-JUnit cases.
+        unitTests.all { test ->
+            test.maxHeapSize = "512m"
+        }
     }
 }
 
