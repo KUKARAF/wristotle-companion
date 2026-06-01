@@ -104,11 +104,16 @@ class WristotleApplication : Application() {
     lateinit var tasksDb: com.lazydevs.wristotle.tasks.TasksDatabase
         private set
 
-    /** MCP client data layer (phase A — HTTP MCP server configs). */
-    lateinit var mcpDb: com.lazydevs.wristotle.mcp.McpDatabase
-        private set
-    lateinit var mcpServerRepository: com.lazydevs.wristotle.mcp.McpServerRepository
-        private set
+    /** MCP client data layer. Lazy so the Room DB build + first SharedPrefs
+     *  read are deferred from cold start to the first Settings-tap / first
+     *  AskAgent intent / first backup run — most users never open these
+     *  surfaces. Matches the perf-target-old-phones memory budget. */
+    val mcpDb: com.lazydevs.wristotle.mcp.McpDatabase by lazy {
+        com.lazydevs.wristotle.mcp.McpDatabase.build(this)
+    }
+    val mcpServerRepository: com.lazydevs.wristotle.mcp.McpServerRepository by lazy {
+        com.lazydevs.wristotle.mcp.McpServerRepository(mcpDb.mcpServerDao())
+    }
 
     /** Reminder feature preferences (default offset when no time is spoken). */
     lateinit var reminderSettings: com.lazydevs.wristotle.handlers.ReminderSettings
@@ -118,9 +123,12 @@ class WristotleApplication : Application() {
     lateinit var weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings
         private set
 
-    /** AskAgent (phase B1) preferences — LLM provider + API key + model. */
-    lateinit var askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings
-        private set
+    /** AskAgent preferences — LLM provider + API key + model. Lazy for
+     *  the same reason as [mcpDb]: only touched when the user opens the
+     *  Settings card, fires an AskAgent intent, or runs a backup. */
+    val askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings by lazy {
+        com.lazydevs.wristotle.agent.AskAgentSettings(this)
+    }
 
     /** Room database singletons — exposed for the backup/restore feature so
      *  it can pull rows via the existing DAOs (`db.<entity>Dao().allForBackup()`)
@@ -190,9 +198,11 @@ class WristotleApplication : Application() {
     lateinit var appIndexer: AppIndexer
         private set
 
-    /** Diagnostics-export preferences (redact PII, include audio). */
-    lateinit var diagnosticsSettings: com.lazydevs.wristotle.diagnostics.DiagnosticsSettings
-        private set
+    /** Diagnostics-export preferences. Lazy — only consulted when the
+     *  user actually runs an export from the Settings card. */
+    val diagnosticsSettings: com.lazydevs.wristotle.diagnostics.DiagnosticsSettings by lazy {
+        com.lazydevs.wristotle.diagnostics.DiagnosticsSettings(this)
+    }
 
     /** Which BLE companion is paired (rePebble / microPebble / unknown).
      *  Updated lazily in [PebbleListenerService.onBind] from
@@ -262,13 +272,11 @@ class WristotleApplication : Application() {
         tasksDb = com.lazydevs.wristotle.tasks.TasksDatabase.build(this)
         taskRepository = com.lazydevs.wristotle.tasks.TaskRepository(tasksDb.taskDao())
 
-        // MCP — separate Room DB, user-typed HTTP server configs.
-        mcpDb = com.lazydevs.wristotle.mcp.McpDatabase.build(this)
-        mcpServerRepository = com.lazydevs.wristotle.mcp.McpServerRepository(mcpDb.mcpServerDao())
+        // mcpDb / mcpServerRepository / askAgentSettings / diagnosticsSettings
+        // are `by lazy` — first access pays the init.
 
         reminderSettings = com.lazydevs.wristotle.handlers.ReminderSettings(this)
         weatherSettings = com.lazydevs.wristotle.settings.WeatherSettings(this)
-        askAgentSettings = com.lazydevs.wristotle.agent.AskAgentSettings(this)
 
         nluDb = NluDatabase.build(this)
         nluBank = ExampleBank(nluDb.exampleDao())
@@ -281,8 +289,6 @@ class WristotleApplication : Application() {
         contactAliasStore = com.lazydevs.wristotle.phone.ContactAliasStore(this)
         appIndex = AppIndex(appIndexDao, aliasResolver = aliasStore::resolve)
         appIndexer = AppIndexer(this, appIndexDao, aliasStore)
-
-        diagnosticsSettings = com.lazydevs.wristotle.diagnostics.DiagnosticsSettings(this)
 
         pebbleCompanionDetector =
             com.lazydevs.wristotle.transport.PebbleCompanionDetector(this)
