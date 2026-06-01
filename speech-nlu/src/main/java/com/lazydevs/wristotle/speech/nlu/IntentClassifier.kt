@@ -18,6 +18,16 @@ interface IntentClassifier {
     /** Short identifier for logging and conversation-history tagging. */
     val tag: String
 
+    /**
+     * True for the always-Unknown stub used when no NLU model is loaded.
+     * Consumers branch on this to surface a "download an NLU model" hint
+     * instead of the misleading "Unknown command: …" from the registry.
+     * Typed property rather than `tag == "stub"` so a rename in the stub
+     * implementation is a compile error, not a silently-lost hint.
+     */
+    val isStub: Boolean
+        get() = false
+
     /** Classify a raw user query into intent + slots + confidence. */
     suspend fun classify(query: String): IntentResult
 

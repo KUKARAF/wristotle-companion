@@ -10,6 +10,7 @@ package com.lazydevs.wristotle.speech.nlu
  */
 class StubIntentClassifier : IntentClassifier {
     override val tag: String = "stub"
+    override val isStub: Boolean = true
 
     override suspend fun classify(query: String): IntentResult = IntentResult(
         intent = Intent.Unknown,

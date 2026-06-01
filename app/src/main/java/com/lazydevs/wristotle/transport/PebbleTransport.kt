@@ -31,6 +31,20 @@ class PebbleTransport(context: Context) : java.io.Closeable {
         mapOf(MessageKeys.CANCEL_RESULT to PebbleDictionaryItem.Text(text))
     )
 
+    /**
+     * Route a dispatch response back over the channel the watch sent its
+     * query on so older firmware that distinguishes the reminder/cancel
+     * inboxes still routes the response right. Used by both the
+     * immediate-dispatch path and the post-confirm path in
+     * [com.lazydevs.wristotle.service.PebbleListenerService] — one
+     * source of truth for the watch-hint → channel mapping.
+     */
+    suspend fun sendForHint(hint: com.lazydevs.wristotle.speech.nlu.Intent?, text: String) = when (hint) {
+        com.lazydevs.wristotle.speech.nlu.Intent.Reminder -> sendReminderResult(text)
+        com.lazydevs.wristotle.speech.nlu.Intent.Cancel -> sendCancelResult(text)
+        else -> sendResponse(text)
+    }
+
     /** Notes-on-watch (Phase C): ship the joined notes payload back to the
      *  watch in response to a NOTES_REQUEST. */
     suspend fun sendNotesResponse(text: String) = sendWithNackRetry(
