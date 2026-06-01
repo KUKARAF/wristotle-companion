@@ -79,6 +79,27 @@ class BackupExporter(private val app: WristotleApplication) {
     }
 
     /**
+     * Cheap per-category snapshot for the export checkbox tree. Uses
+     * COUNT(*) queries (not full row reads) — safe to call on dialog
+     * open without blocking the UI.
+     */
+    suspend fun countAll(): BackupCounts = withContext(Dispatchers.IO) {
+        val audio = audioInventory()
+        BackupCounts(
+            notes = app.notesDb.noteDao().count(),
+            tasks = app.tasksDb.taskDao().count(),
+            conversations = app.conversationDb.conversationDao().count(),
+            reminders = readPinRecords().size,
+            nluLearned = app.nluDb.exampleDao().countLearned(),
+            appAliases = app.aliasStore.all().size,
+            contactAliases = app.contactAliasStore.all().size,
+            audioRecordings = audio.files,
+            audioBytes = audio.bytes,
+            mcpServers = app.mcpServerRepository.count(),
+        )
+    }
+
+    /**
      * Runs the export.
      *
      * @param destination SAF URI to stream the final ZIP into.

@@ -318,7 +318,12 @@
     <string name="settings_backup_cat_weather_api_key">Weather API key (OpenWeather)</string>
     <string name="settings_backup_cat_mcp_auth_headers">MCP server auth headers</string>
     <string name="settings_backup_cat_ask_agent_api_keys">Ask Agent API keys (Anthropic / OpenAI)</string>
+    <string name="settings_backup_plaintext_secrets_title">Secrets in plaintext?</string>
+    <string name="settings_backup_plaintext_secrets_body">You selected secret categories (API keys / auth headers) but didn\'t set a password. The ZIP will be plaintext — anyone who opens it can read the tokens.\n\nProceed anyway, or cancel to add a password?</string>
+    <string name="settings_backup_plaintext_secrets_proceed">Export plaintext</string>
     <string name="settings_backup_restore_unavailable">— not in this backup</string>
+    <string name="settings_backup_cat_count">%1$s (%2$d)</string>
+    <string name="settings_backup_cat_count_with_size">%1$s (%2$d · %3$.1f MB)</string>
     <string name="settings_backup_import_row_mcp_servers">MCP servers</string>
 
     <!-- Notes feature -->

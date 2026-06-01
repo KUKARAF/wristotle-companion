@@ -40,6 +40,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.backup.BackupCounts
 import com.lazydevs.wristotle.backup.BackupExportResult
 import com.lazydevs.wristotle.backup.BackupManifest
 import com.lazydevs.wristotle.backup.BackupSelection
@@ -91,6 +92,7 @@ fun BackupCard(vm: BackupViewModel) {
                 Button(
                     onClick = {
                         vm.refreshAudioInventory()
+                        vm.refreshExportCounts()
                         showExportDialog = true
                     },
                     enabled = !busy,
@@ -124,18 +126,44 @@ fun BackupCard(vm: BackupViewModel) {
         }
     }
 
+    // Two-stage commit on Export: the options dialog returns a (selection,
+    // password) pair, then — if secrets are ticked AND password is blank —
+    // a "plaintext secrets?" confirm dialog blocks the SAF launch until the
+    // user explicitly acknowledges the plaintext-leak risk.
+    var pendingPlaintextLaunch by remember { mutableStateOf<String?>(null) }
     if (showExportDialog) {
         val selection by vm.exportSelection.collectAsState()
+        val counts by vm.exportCounts.collectAsState()
         ExportOptionsDialog(
             selection = selection,
+            counts = counts,
             onSelectionChange = vm::setExportSelection,
             onSelectAll = vm::toggleExportSelectAll,
             onConfirm = { password ->
                 showExportDialog = false
-                vm.setPendingPassword(password)
-                createDocument.launch(vm.suggestedFilename())
+                if (selection.anySecretSelected && password.isBlank()) {
+                    // Stash the (empty) password until the user OKs the warning.
+                    pendingPlaintextLaunch = password
+                } else {
+                    vm.setPendingPassword(password)
+                    createDocument.launch(vm.suggestedFilename())
+                }
             },
             onDismiss = { showExportDialog = false },
+        )
+    }
+
+    pendingPlaintextLaunch?.let { pw ->
+        PlaintextSecretsConfirmDialog(
+            onProceed = {
+                pendingPlaintextLaunch = null
+                vm.setPendingPassword(pw)
+                createDocument.launch(vm.suggestedFilename())
+            },
+            onCancel = {
+                pendingPlaintextLaunch = null
+                showExportDialog = true   // back to the options dialog
+            },
         )
     }
 
@@ -185,6 +213,7 @@ fun BackupCard(vm: BackupViewModel) {
 private fun BackupSelectionEditor(
     selection: BackupSelection,
     available: BackupSelection?,
+    counts: BackupCounts,
     onChange: (BackupSelection) -> Unit,
     onSelectAll: () -> Unit,
 ) {
@@ -198,30 +227,35 @@ private fun BackupSelectionEditor(
         )
 
         SectionHeader(stringResource(R.string.settings_backup_section_content))
-        CatRow(R.string.settings_backup_cat_notes, selection.notes, available?.notes) {
+        CatRow(R.string.settings_backup_cat_notes, selection.notes, available?.notes, counts.notes) {
             onChange(selection.copy(notes = it))
         }
-        CatRow(R.string.settings_backup_cat_tasks, selection.tasks, available?.tasks) {
+        CatRow(R.string.settings_backup_cat_tasks, selection.tasks, available?.tasks, counts.tasks) {
             onChange(selection.copy(tasks = it))
         }
-        CatRow(R.string.settings_backup_cat_conversations, selection.conversations, available?.conversations) {
+        CatRow(R.string.settings_backup_cat_conversations, selection.conversations, available?.conversations, counts.conversations) {
             onChange(selection.copy(conversations = it))
         }
-        CatRow(R.string.settings_backup_cat_reminders, selection.reminders, available?.reminders) {
+        CatRow(R.string.settings_backup_cat_reminders, selection.reminders, available?.reminders, counts.reminders) {
             onChange(selection.copy(reminders = it))
         }
-        CatRow(R.string.settings_backup_cat_nlu_learned, selection.nluLearned, available?.nluLearned) {
+        CatRow(R.string.settings_backup_cat_nlu_learned, selection.nluLearned, available?.nluLearned, counts.nluLearned) {
             onChange(selection.copy(nluLearned = it))
         }
-        CatRow(R.string.settings_backup_cat_app_aliases, selection.appAliases, available?.appAliases) {
+        CatRow(R.string.settings_backup_cat_app_aliases, selection.appAliases, available?.appAliases, counts.appAliases) {
             onChange(selection.copy(appAliases = it))
         }
-        CatRow(R.string.settings_backup_cat_contact_aliases, selection.contactAliases, available?.contactAliases) {
+        CatRow(R.string.settings_backup_cat_contact_aliases, selection.contactAliases, available?.contactAliases, counts.contactAliases) {
             onChange(selection.copy(contactAliases = it))
         }
-        CatRow(R.string.settings_backup_cat_audio_recordings, selection.audioRecordings, available?.audioRecordings) {
-            onChange(selection.copy(audioRecordings = it))
-        }
+        CatRow(
+            labelRes = R.string.settings_backup_cat_audio_recordings,
+            checked = selection.audioRecordings,
+            available = available?.audioRecordings,
+            count = counts.audioRecordings,
+            audioBytes = counts.audioBytes,
+            onCheckedChange = { onChange(selection.copy(audioRecordings = it)) },
+        )
 
         SectionHeader(stringResource(R.string.settings_backup_section_settings))
         CatRow(R.string.settings_backup_cat_app_preferences, selection.appPreferences, available?.appPreferences) {
@@ -230,7 +264,7 @@ private fun BackupSelectionEditor(
         CatRow(R.string.settings_backup_cat_weather_settings, selection.weatherSettings, available?.weatherSettings) {
             onChange(selection.copy(weatherSettings = it))
         }
-        CatRow(R.string.settings_backup_cat_mcp_servers, selection.mcpServers, available?.mcpServers) {
+        CatRow(R.string.settings_backup_cat_mcp_servers, selection.mcpServers, available?.mcpServers, counts.mcpServers) {
             onChange(selection.copy(mcpServers = it))
         }
         CatRow(R.string.settings_backup_cat_ask_agent_setup, selection.askAgentSetup, available?.askAgentSetup) {
@@ -269,21 +303,32 @@ private fun SectionHeader(label: String) {
 /**
  * One row in the checkbox tree. When `available` is non-null and false,
  * the row is disabled (category isn't in the ZIP) and the label gets a
- * "— not in this backup" suffix.
+ * "— not in this backup" suffix. When [count] is non-null, the label is
+ * suffixed with "(N)"; when [audioBytes] is also non-null it becomes
+ * "(N · M.M MB)".
  */
 @Composable
 private fun CatRow(
     labelRes: Int,
     checked: Boolean,
     available: Boolean?,
+    count: Int? = null,
+    audioBytes: Long? = null,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val enabled = available ?: true
+    val base = stringResource(labelRes)
+    val withCount = if (count != null) {
+        if (audioBytes != null) {
+            val mb = audioBytes / 1024.0 / 1024.0
+            stringResource(R.string.settings_backup_cat_count_with_size, base, count, mb)
+        } else {
+            stringResource(R.string.settings_backup_cat_count, base, count)
+        }
+    } else base
     val label = if (available == false) {
-        stringResource(labelRes) + " " + stringResource(R.string.settings_backup_restore_unavailable)
-    } else {
-        stringResource(labelRes)
-    }
+        "$withCount " + stringResource(R.string.settings_backup_restore_unavailable)
+    } else withCount
     CheckRow(label = label, checked = checked && enabled, enabled = enabled, onCheckedChange = onCheckedChange)
 }
 
@@ -318,6 +363,7 @@ private fun CheckRow(
 @Composable
 private fun ExportOptionsDialog(
     selection: BackupSelection,
+    counts: BackupCounts,
     onSelectionChange: (BackupSelection) -> Unit,
     onSelectAll: () -> Unit,
     onConfirm: (password: String) -> Unit,
@@ -337,6 +383,7 @@ private fun ExportOptionsDialog(
                 BackupSelectionEditor(
                     selection = selection,
                     available = null,
+                    counts = counts,
                     onChange = onSelectionChange,
                     onSelectAll = onSelectAll,
                 )
@@ -401,6 +448,7 @@ private fun RestorePreviewDialog(
                 BackupSelectionEditor(
                     selection = selection,
                     available = available,
+                    counts = BackupCounts.fromManifestStats(manifest.stats),
                     onChange = onSelectionChange,
                     onSelectAll = onSelectAll,
                 )
@@ -601,6 +649,33 @@ private fun RestoreFailureDialog(message: String, onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_ok)) }
+        },
+    )
+}
+
+@Composable
+private fun PlaintextSecretsConfirmDialog(
+    onProceed: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text(stringResource(R.string.settings_backup_plaintext_secrets_title)) },
+        text = {
+            Text(
+                stringResource(R.string.settings_backup_plaintext_secrets_body),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onProceed) {
+                Text(stringResource(R.string.settings_backup_plaintext_secrets_proceed))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) {
+                Text(stringResource(R.string.dialog_cancel))
+            }
         },
     )
 }

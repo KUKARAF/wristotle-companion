@@ -37,4 +37,9 @@ interface ExampleDao {
 
     @Query("SELECT COUNT(*) FROM nlu_examples WHERE source = 'learned' AND intent = :intent")
     suspend fun countLearnedForIntent(intent: String): Int
+
+    /** Total learned-row count across all intents — used by the backup
+     *  card to show "Learned phrases (N)" without paging the full list. */
+    @Query("SELECT COUNT(*) FROM nlu_examples WHERE source = 'learned'")
+    suspend fun countLearned(): Int
 }

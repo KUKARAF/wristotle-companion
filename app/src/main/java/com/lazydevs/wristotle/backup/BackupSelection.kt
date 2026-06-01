@@ -50,6 +50,11 @@ data class BackupSelection(
             appPreferences || weatherSettings || mcpServers || askAgentSetup ||
             weatherApiKey || mcpAuthHeaders || askAgentApiKeys)
 
+    /** True when any secret category is ticked — used to gate the
+     *  "plaintext secrets?" confirm dialog when no password is set. */
+    val anySecretSelected: Boolean
+        get() = weatherApiKey || mcpAuthHeaders || askAgentApiKeys
+
     companion object {
         /** Every category on — what the master "Select all" produces. */
         val ALL = BackupSelection(

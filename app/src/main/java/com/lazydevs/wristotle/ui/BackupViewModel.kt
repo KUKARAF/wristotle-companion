@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.backup.AudioInventory
+import com.lazydevs.wristotle.backup.BackupCounts
 import com.lazydevs.wristotle.backup.BackupExportResult
 import com.lazydevs.wristotle.backup.BackupExporter
 import com.lazydevs.wristotle.backup.BackupImportResult
@@ -45,6 +46,10 @@ class BackupViewModel(app: Application) : AndroidViewModel(app) {
     private val _audioInventory = MutableStateFlow(AudioInventory(0, 0))
     val audioInventory: StateFlow<AudioInventory> = _audioInventory
 
+    /** Per-category counts loaded fresh when the export dialog opens. */
+    private val _exportCounts = MutableStateFlow(BackupCounts.EMPTY)
+    val exportCounts: StateFlow<BackupCounts> = _exportCounts
+
     /** Terminal export-flow state. Drives the export result dialog. */
     private val _exportResult = MutableStateFlow<ExportResultState>(ExportResultState.Idle)
     val exportResult: StateFlow<ExportResultState> = _exportResult
@@ -67,6 +72,13 @@ class BackupViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshAudioInventory() {
         viewModelScope.launch {
             _audioInventory.value = exporter.audioInventory()
+        }
+    }
+
+    /** Reloads per-category counts. Called when the export dialog opens. */
+    fun refreshExportCounts() {
+        viewModelScope.launch {
+            _exportCounts.value = exporter.countAll()
         }
     }
 

@@ -99,6 +99,175 @@ class BackupManifestCodecTest {
         assertNull(decoded.reminderPins[0].timeMs)
     }
 
+    // ── Schema 2: selection block ────────────────────────────────────────────
+
+    @Test fun selectionBlock_roundTrips() {
+        // A user who picked a non-default selection (some secrets on,
+        // some content off). Must come back exactly equal.
+        val original = sampleManifest().copy(
+            selected = BackupSelection(
+                notes = true,
+                tasks = false,
+                conversations = true,
+                reminders = false,
+                nluLearned = true,
+                appAliases = true,
+                contactAliases = false,
+                audioRecordings = true,
+                appPreferences = true,
+                weatherSettings = true,
+                mcpServers = true,
+                askAgentSetup = true,
+                weatherApiKey = true,
+                mcpAuthHeaders = false,
+                askAgentApiKeys = true,
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(original.selected, decoded.selected)
+    }
+
+    @Test fun schema1Backup_decodesAsLegacyFullSelection() {
+        // Schema-1 ZIPs predate the `selected` block entirely. The decoder
+        // must treat their absence as "everything was ticked" so older
+        // backups restore the same way they always did.
+        val text = BackupManifestCodec.encode(sampleManifest())
+        val schema1 = JSONObject(text).apply {
+            put("schema", 1)
+            remove("selected")
+        }.toString()
+        val decoded = BackupManifestCodec.decode(schema1)
+        assertEquals(BackupSelection.LEGACY_FULL, decoded.selected)
+        assertEquals(1, decoded.schema)
+    }
+
+    // ── Schema 2: new prefs blocks ───────────────────────────────────────────
+
+    @Test fun reminderPrefs_roundTrip() {
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                reminder = BackupManifest.ReminderPrefs(defaultOffsetMin = 45),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(45, decoded.prefs.reminder?.defaultOffsetMin)
+    }
+
+    @Test fun weatherPrefs_withApiKey_roundTrip() {
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                weather = BackupManifest.WeatherPrefs(
+                    unit = "FAHRENHEIT",
+                    provider = "OPEN_WEATHER",
+                    apiKey = "k_abc",
+                ),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(original.prefs.weather, decoded.prefs.weather)
+    }
+
+    @Test fun weatherPrefs_withoutApiKey_decodesNullKey() {
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                weather = BackupManifest.WeatherPrefs(
+                    unit = "CELSIUS",
+                    provider = "OPEN_METEO",
+                    apiKey = null,
+                ),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertNull(decoded.prefs.weather?.apiKey)
+        assertEquals("CELSIUS", decoded.prefs.weather?.unit)
+    }
+
+    @Test fun askAgentPrefs_withKeys_roundTrip() {
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                askAgent = BackupManifest.AskAgentPrefs(
+                    provider = "ANTHROPIC",
+                    anthropicModel = "claude-sonnet-4-6",
+                    openaiEndpoint = "https://api.openai.com/v1/chat/completions",
+                    openaiModel = "gpt-4o-mini",
+                    systemPrompt = "Be brief.",
+                    anthropicApiKey = "sk-ant-x",
+                    openaiApiKey = "sk-o-y",
+                ),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(original.prefs.askAgent, decoded.prefs.askAgent)
+    }
+
+    @Test fun askAgentPrefs_withoutKeys_decodesNullKeys() {
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                askAgent = BackupManifest.AskAgentPrefs(
+                    provider = "OPENAI_COMPATIBLE",
+                    anthropicModel = "claude-sonnet-4-6",
+                    openaiEndpoint = "https://api.openai.com/v1/chat/completions",
+                    openaiModel = "gpt-4o-mini",
+                    systemPrompt = "",
+                    anthropicApiKey = null,
+                    openaiApiKey = null,
+                ),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertNull(decoded.prefs.askAgent?.anthropicApiKey)
+        assertNull(decoded.prefs.askAgent?.openaiApiKey)
+        assertEquals("", decoded.prefs.askAgent?.systemPrompt)
+    }
+
+    @Test fun schema1Backup_decodesPrefsBlocksAsNull() {
+        // A schema-1 ZIP has no reminder/weather/askAgent prefs at all.
+        val text = BackupManifestCodec.encode(sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                reminder = BackupManifest.ReminderPrefs(99),
+                weather = BackupManifest.WeatherPrefs("X", "Y"),
+                askAgent = BackupManifest.AskAgentPrefs("X", "y", "z", "w", "p"),
+            ),
+        ))
+        // Strip the schema-2 blocks from the encoded JSON to mimic
+        // a schema-1 ZIP that doesn't have them.
+        val root = JSONObject(text)
+        val prefs = root.getJSONObject("prefs")
+        prefs.remove("wristotle_reminder_settings")
+        prefs.remove("weather_settings")
+        prefs.remove("ask_agent_settings")
+        root.put("schema", 1)
+        root.remove("selected")
+        val decoded = BackupManifestCodec.decode(root.toString())
+        assertNull(decoded.prefs.reminder)
+        assertNull(decoded.prefs.weather)
+        assertNull(decoded.prefs.askAgent)
+    }
+
+    // ── Schema 2: MCP servers in dataSchemas + stats ─────────────────────────
+
+    @Test fun mcpServersDataSchema_roundTrip() {
+        val original = sampleManifest().copy(
+            dataSchemas = sampleManifest().dataSchemas.copy(mcpServers = McpServerJson.CURRENT_SCHEMA),
+            stats = sampleManifest().stats.copy(mcpServers = 3),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(McpServerJson.CURRENT_SCHEMA, decoded.dataSchemas.mcpServers)
+        assertEquals(3, decoded.stats.mcpServers)
+    }
+
+    @Test fun schema1Backup_mcpServersStatAndDataSchema_default() {
+        val text = BackupManifestCodec.encode(sampleManifest())
+        val root = JSONObject(text)
+        root.put("schema", 1)
+        root.remove("selected")
+        root.getJSONObject("data_schemas").remove("mcp_servers")
+        root.getJSONObject("stats").remove("mcp_servers")
+        val decoded = BackupManifestCodec.decode(root.toString())
+        assertNull(decoded.dataSchemas.mcpServers)
+        assertEquals(0, decoded.stats.mcpServers)
+    }
+
     private fun sampleManifest() = BackupManifest(
         schema = BackupManifest.CURRENT_SCHEMA,
         exportedAtMs = 1_700_000_000_000L,

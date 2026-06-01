@@ -42,6 +42,10 @@ interface McpServerDao {
     @Query("SELECT * FROM mcp_servers ORDER BY id ASC")
     suspend fun listAll(): List<McpServerEntity>
 
+    /** Cheap row count for the backup card's "MCP servers (N)" label. */
+    @Query("SELECT COUNT(*) FROM mcp_servers")
+    suspend fun count(): Int
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(entity: McpServerEntity): Long
 
