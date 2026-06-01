@@ -247,6 +247,18 @@ class WhisperRecognizer(
             return
         }
         try {
+            // Large encoders (medium / large / large-v3-turbo, n_audio_state
+            // ≥ 1024) need the full 1500-frame context to produce correct
+            // output, which makes warm-up on 1 s of silence take minutes —
+            // blocking the app while the user waits for ready. Skip the
+            // prime call entirely for those; the first real dictation will
+            // be slow, but the app stops appearing stuck at startup.
+            val nAudioState = WhisperNative.nAudioState(activeHandle)
+            if (nAudioState >= 1024) {
+                Log.d(TAG, "warm-up skipped — large encoder (n_audio_state=$nAudioState)")
+                warmed = true
+                return
+            }
             val silence = ShortArray(16_000) // 1s @ 16 kHz mono
             transcribeMutex.withLock {
                 WhisperNative.transcribe(activeHandle, silence, language, WhisperNative.defaultThreadCount(), abortToken)

@@ -32,6 +32,15 @@ internal object WhisperNative {
     external fun loadModel(path: String): Long
 
     /**
+     * Returns the encoder hidden-state dimension of a loaded model:
+     * tiny=384, base=512, small=768, medium=1024, large=1280. Used by the
+     * recognizer to gate warm-up + skip the adaptive `audio_ctx`
+     * truncation — large encoders need the full 1500-frame context to
+     * produce correct output, so the truncation can't apply to them.
+     */
+    external fun nAudioState(handle: Long): Int
+
+    /**
      * Transcribes PCM-16 mono audio at 16 kHz to text.
      *
      * @param handle returned by [loadModel].

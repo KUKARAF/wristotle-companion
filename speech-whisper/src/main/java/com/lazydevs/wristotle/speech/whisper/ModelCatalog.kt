@@ -111,10 +111,10 @@ object ModelCatalog {
             tier = ModelTier.ACCURATE,
         ),
 
-        // ── Heavier ACCURATE-tier entries for higher-RAM phones. Not
-        //    recommended (default picker stays at small.en-q5_1) — surfaced
-        //    only under "All models" for users who know what they're doing.
-        //    Memory hints in WhisperModelsCard set expectations. ──
+        // ── Full unquantised small.en — the ACCURATE tier's heaviest
+        //    catalogued option, kept for users who want max accuracy on
+        //    a 4+ GB phone. Demoted from `recommended` in v0.15.6: too
+        //    RAM-hostile for typical 2-3 GB hardware. ──
         ModelInfo(
             id = "small.en",
             displayName = "Small (English, full)",
@@ -123,22 +123,14 @@ object ModelCatalog {
             url = "$HF_BASE/ggml-small.en.bin",
             tier = ModelTier.ACCURATE,
         ),
-        ModelInfo(
-            id = "medium.en-q5_1",
-            displayName = "Medium (English, q5_1)",
-            approxSizeBytes = 514_000_000L,
-            languageLabel = "English",
-            url = "$HF_BASE/ggml-medium.en-q5_1.bin",
-            tier = ModelTier.ACCURATE,
-        ),
-        ModelInfo(
-            id = "large-v3-turbo-q5_0",
-            displayName = "Large v3 Turbo (q5_0)",
-            approxSizeBytes = 574_000_000L,
-            languageLabel = "Multilingual",
-            url = "$HF_BASE/ggml-large-v3-turbo-q5_0.bin",
-            tier = ModelTier.ACCURATE,
-        ),
+        // Note: medium.en and large-v3-turbo were briefly catalogued in
+        // v0.15.6 but removed in v0.15.7. Inference on phone CPU took
+        // ~15-20 s for a 3-5 s clip even on Pixel 10a-class hardware,
+        // exceeding the watch's session timeout. The defence-in-depth
+        // checks in WhisperRecognizer (skip warm-up for n_audio_state ≥
+        // 1024) and wristotle_speech.cpp (disable audio_ctx truncation
+        // for n_audio_state > 768) still stand for any future catalog
+        // entry that lands above the small encoder size.
 
         // ── Advanced / power-user: full (non-quantized) + multilingual
         //    variants. Hidden behind "All models"; adding more here never

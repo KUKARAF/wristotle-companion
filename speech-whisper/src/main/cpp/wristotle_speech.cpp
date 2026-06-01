@@ -232,6 +232,13 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
     // actual audio length wastes encoder compute on silence padding, which
     // dominates inference cost on short utterances.
     //
+    // **Only safe for small encoders.** Tiny / base / small were trained with
+    // forgiving positional encodings; medium / large / large-v3-turbo use
+    // absolute position embeddings that depend on the full 1500-frame
+    // context — truncating produces garbled or empty output on them.
+    // Gate on encoder hidden-state size: tiny=384, base=512, small=768,
+    // medium=1024, large=1280. ≤768 is the safe boundary.
+    //
     // Tiered: each step picks the smallest frame count that still covers the
     // audio length with a safety margin. The previous single-threshold
     // (8 s → 768, else 0/1500) doubled inference cost for 8-15 s audio for
@@ -239,9 +246,13 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
     // inference → ~1.2 s on Pixel 10a + base.en.
     // Compute against the *trimmed* length so trimming can drop the tier
     // (e.g. 5.5 s with 0.8 s of leading silence becomes 4.7 s → tier 256).
+    const int  n_audio_state = whisper_model_n_audio_state(ctx);
+    const bool small_encoder = n_audio_state <= 768;
     const float audio_seconds = static_cast<float>(pcm_n) / 16000.0f;
     int audio_ctx;
-    if      (audio_seconds <=  5.0f) audio_ctx = 256;   // covers 5.12 s
+    if (!small_encoder) {
+        audio_ctx = 0;                              // full 1500 — medium/large need this
+    } else if (audio_seconds <=  5.0f) audio_ctx = 256;   // covers 5.12 s
     else if (audio_seconds <= 10.0f) audio_ctx = 512;   // covers 10.24 s
     else if (audio_seconds <= 15.0f) audio_ctx = 768;   // covers 15.36 s
     else if (audio_seconds <= 20.0f) audio_ctx = 1024;  // covers 20.48 s
@@ -257,8 +268,8 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
     wparams.abort_callback           = abort_cb;
     wparams.abort_callback_user_data = abort_flag;
 
-    LOGI("transcribe: %d samples, lang=%s, threads=%d, audio_ctx=%d",
-         pcm_n, lang.c_str(), wparams.n_threads, wparams.audio_ctx);
+    LOGI("transcribe: %d samples, lang=%s, threads=%d, audio_ctx=%d, n_audio_state=%d",
+         pcm_n, lang.c_str(), wparams.n_threads, wparams.audio_ctx, n_audio_state);
 
     // Reset so the timings struct reflects ONLY this call instead of the
     // cumulative numbers whisper.cpp would otherwise return.
@@ -305,6 +316,15 @@ Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_transcribe(
 
     LOGI("transcribe done: %d segments, %zu chars", n_seg, text.size());
     return env->NewStringUTF(text.c_str());
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_lazydevs_wristotle_speech_whisper_WhisperNative_nAudioState(
+    JNIEnv* /*env*/, jobject /*this*/, jlong handle) {
+
+    whisper_context* ctx = reinterpret_cast<whisper_context*>(handle);
+    if (ctx == nullptr) return 0;
+    return static_cast<jint>(whisper_model_n_audio_state(ctx));
 }
 
 extern "C" JNIEXPORT void JNICALL
