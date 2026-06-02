@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "configurable-chat-buttons",
+            date = "2026-06-01",
+            companionVersion = "v0.17.0",
+            watchVersion = "v0.9.0",
+            title = "Configurable chat-surface shortcuts",
+            description = "Bind SELECT, long-press UP, and long-press DOWN on the watch chat screen to any of Dictation, Quick menu (chooser), Notes, or Tasks. Defaults keep the existing muscle memory. Edit via Wristotle's gear-icon settings or the companion's Watch settings card.",
+            sampleQuery = null,
+            docsPath = "features/#on-watch-ui",
+        ),
+        FeatureEntry(
             id = "help-page",
             date = "2026-06-01",
             companionVersion = "v0.16.2",
