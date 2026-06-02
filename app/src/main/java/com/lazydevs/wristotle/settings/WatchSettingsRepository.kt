@@ -133,6 +133,9 @@ class WatchSettingsRepository(
             confirmBeforeSend         = data.boolSetting(MessageKeys.SETTING_CONFIRM_BEFORE_SEND)    ?: previous?.confirmBeforeSend         ?: false,
             confirmTimeoutSeconds     = data.intSetting (MessageKeys.SETTING_CONFIRM_TIMEOUT_SECONDS)?: previous?.confirmTimeoutSeconds     ?: 15,
             confirmDefaultSend        = data.boolSetting(MessageKeys.SETTING_CONFIRM_DEFAULT_SEND)   ?: previous?.confirmDefaultSend        ?: false,
+            longPressUpAction         = data.intSetting (MessageKeys.SETTING_LONG_PRESS_UP_ACTION)   ?: previous?.longPressUpAction         ?: MessageKeys.BUTTON_ACTION_MENU,
+            longPressDownAction       = data.intSetting (MessageKeys.SETTING_LONG_PRESS_DOWN_ACTION) ?: previous?.longPressDownAction       ?: MessageKeys.BUTTON_ACTION_TASKS,
+            selectAction              = data.intSetting (MessageKeys.SETTING_SELECT_ACTION)          ?: previous?.selectAction              ?: MessageKeys.BUTTON_ACTION_DICTATION,
         )
         _state.value = WatchSettingsState.Loaded(merged)
     }
@@ -187,6 +190,9 @@ class WatchSettingsRepository(
             bool(MessageKeys.SETTING_CONFIRM_BEFORE_SEND, baseline?.confirmBeforeSend, updated.confirmBeforeSend)
             int(MessageKeys.SETTING_CONFIRM_TIMEOUT_SECONDS, baseline?.confirmTimeoutSeconds, updated.confirmTimeoutSeconds)
             bool(MessageKeys.SETTING_CONFIRM_DEFAULT_SEND, baseline?.confirmDefaultSend, updated.confirmDefaultSend)
+            int(MessageKeys.SETTING_LONG_PRESS_UP_ACTION, baseline?.longPressUpAction, updated.longPressUpAction)
+            int(MessageKeys.SETTING_LONG_PRESS_DOWN_ACTION, baseline?.longPressDownAction, updated.longPressDownAction)
+            int(MessageKeys.SETTING_SELECT_ACTION, baseline?.selectAction, updated.selectAction)
         }
     }
 

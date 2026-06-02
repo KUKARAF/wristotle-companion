@@ -36,4 +36,10 @@ data class WatchSettings(
      *  when false (default) it cancels. Only meaningful when
      *  [confirmBeforeSend] is on. */
     val confirmDefaultSend: Boolean,
+    /** Chat-surface button shortcut bindings. Each Int holds a
+     *  [com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_*]
+     *  wire value. Defaults: UP/DOWN = MENU (0), SELECT = DICTATION (3). */
+    val longPressUpAction: Int,
+    val longPressDownAction: Int,
+    val selectAction: Int,
 )

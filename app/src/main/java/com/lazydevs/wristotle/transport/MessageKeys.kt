@@ -49,6 +49,24 @@ object MessageKeys {
     const val QUICK_LAUNCH_ACTION_NOTES: Int   = 1
     const val QUICK_LAUNCH_ACTION_MENU: Int    = 2
 
+    /** Chat-surface button shortcuts — each Int32 holds one [BUTTON_ACTION_*]
+     *  wire value. Long-press UP/DOWN default to the quick chooser
+     *  ([BUTTON_ACTION_MENU]); SELECT defaults to dictation
+     *  ([BUTTON_ACTION_DICTATION]) so the long-standing "press to talk"
+     *  muscle memory keeps working. Matches the LongPressAction enum in
+     *  the watch's config.h. */
+    val SETTING_LONG_PRESS_UP_ACTION: UInt   = 10042u
+    val SETTING_LONG_PRESS_DOWN_ACTION: UInt = 10043u
+    val SETTING_SELECT_ACTION: UInt          = 10044u
+
+    /** Chat-surface button-action wire values. Stable; persisted on the watch.
+     *  Every value is legal on every slot — the defaults differ by slot but
+     *  the user can bind anything to anything. */
+    const val BUTTON_ACTION_MENU: Int      = 0
+    const val BUTTON_ACTION_NOTES: Int     = 1
+    const val BUTTON_ACTION_TASKS: Int     = 2
+    const val BUTTON_ACTION_DICTATION: Int = 3
+
     /** Companion → watch: presence-only ping that asks the watch to ship back a
      *  snapshot containing every SETTING_* key + its current value. Added in
      *  watch app v0.X.Y; older watch apps ACK but don't respond, which the
@@ -204,6 +222,9 @@ object MessageKeys {
         SETTING_QUICK_LAUNCH_ACTION,
         SETTING_CONFIRM_TIMEOUT_SECONDS,
         SETTING_CONFIRM_DEFAULT_SEND,
+        SETTING_LONG_PRESS_UP_ACTION,
+        SETTING_LONG_PRESS_DOWN_ACTION,
+        SETTING_SELECT_ACTION,
     )
 
     /** Value of MSG_TARGET that means "this message is for the Android companion". */

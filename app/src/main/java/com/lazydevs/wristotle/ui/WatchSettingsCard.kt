@@ -171,6 +171,28 @@ private fun EditableBody(baseline: WatchSettings, onSave: (WatchSettings) -> Uni
             onChange = { draft = draft.copy(quickLaunchAction = it) },
         )
 
+        SectionDivider(stringResource(R.string.watch_settings_shortcuts_section))
+        Text(
+            stringResource(R.string.watch_settings_shortcuts_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ButtonActionDropdown(
+            label = stringResource(R.string.watch_settings_button_select),
+            value = draft.selectAction,
+            onChange = { draft = draft.copy(selectAction = it) },
+        )
+        ButtonActionDropdown(
+            label = stringResource(R.string.watch_settings_button_up),
+            value = draft.longPressUpAction,
+            onChange = { draft = draft.copy(longPressUpAction = it) },
+        )
+        ButtonActionDropdown(
+            label = stringResource(R.string.watch_settings_button_down),
+            value = draft.longPressDownAction,
+            onChange = { draft = draft.copy(longPressDownAction = it) },
+        )
+
         SectionDivider(stringResource(R.string.watch_settings_vibrate_section))
         SwitchRow(
             label = stringResource(R.string.watch_settings_vibrate_on_launch),
@@ -352,6 +374,41 @@ private fun QuickLaunchActionDropdown(value: Int, onChange: (Int) -> Unit) {
             onValueChange = {},
             readOnly = true,
             label = { Text(stringResource(R.string.watch_settings_quick_launch_action)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            choices.forEach { (v, text) ->
+                DropdownMenuItem(
+                    text = { Text(text) },
+                    onClick = { onChange(v); expanded = false },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ButtonActionDropdown(label: String, value: Int, onChange: (Int) -> Unit) {
+    val keys = com.lazydevs.wristotle.transport.MessageKeys
+    val choices = listOf(
+        keys.BUTTON_ACTION_DICTATION to stringResource(R.string.watch_settings_button_action_dictation),
+        keys.BUTTON_ACTION_MENU      to stringResource(R.string.watch_settings_button_action_menu),
+        keys.BUTTON_ACTION_NOTES     to stringResource(R.string.watch_settings_button_action_notes),
+        keys.BUTTON_ACTION_TASKS     to stringResource(R.string.watch_settings_button_action_tasks),
+    )
+    val display = choices.firstOrNull { it.first == value }?.second
+        ?: stringResource(R.string.watch_settings_button_action_menu)
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = display,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)

@@ -403,6 +403,15 @@
     <string name="watch_settings_quick_launch_action_dictate">Dictation</string>
     <string name="watch_settings_quick_launch_action_notes">Notes</string>
     <string name="watch_settings_quick_launch_action_menu">Show menu (Dictate / Notes)</string>
+    <string name="watch_settings_shortcuts_section">Chat-surface shortcuts</string>
+    <string name="watch_settings_shortcuts_hint">Each button on the chat surface opens one of: Dictation (start speaking), Quick menu (chooser), Notes, or Tasks.</string>
+    <string name="watch_settings_button_select">SELECT (single press)</string>
+    <string name="watch_settings_button_up">UP (long press)</string>
+    <string name="watch_settings_button_down">DOWN (long press)</string>
+    <string name="watch_settings_button_action_menu">Quick menu</string>
+    <string name="watch_settings_button_action_notes">Notes</string>
+    <string name="watch_settings_button_action_tasks">Tasks</string>
+    <string name="watch_settings_button_action_dictation">Dictation</string>
     <string name="watch_settings_vibrate_section">Vibration</string>
     <string name="watch_settings_vibrate_on_launch">On normal launch</string>
     <string name="watch_settings_vibrate_on_quick_launch">On quick launch</string>
