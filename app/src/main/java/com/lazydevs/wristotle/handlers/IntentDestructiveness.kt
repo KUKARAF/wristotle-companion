@@ -64,5 +64,6 @@ fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.Battery,
     Intent.Steps,
     Intent.Vibrate,
+    Intent.CancelAlarm,    // reversible — user re-enables in the companion Alarms card
     Intent.Unknown -> false
 }

@@ -104,6 +104,22 @@ class WristotleApplication : Application() {
     lateinit var tasksDb: com.lazydevs.wristotle.tasks.TasksDatabase
         private set
 
+    /** Alarms data layer (separate Room DB; per-alarm destination + watch-leg
+     *  wireEpoch). Lazy because a user with no alarms never opens the
+     *  surface; matches the perf-target-old-phones memory budget. */
+    val alarmsDb: com.lazydevs.wristotle.alarms.AlarmsDatabase by lazy {
+        com.lazydevs.wristotle.alarms.AlarmsDatabase.get(this)
+    }
+    val alarmRepository: com.lazydevs.wristotle.alarms.AlarmRepository by lazy {
+        com.lazydevs.wristotle.alarms.AlarmRepository(alarmsDb.alarmDao())
+    }
+    val alarmDispatcher: com.lazydevs.wristotle.alarms.AlarmDispatcher by lazy {
+        com.lazydevs.wristotle.alarms.AlarmDispatcher(this, transport, alarmRepository)
+    }
+    val alarmSettings: com.lazydevs.wristotle.alarms.AlarmSettings by lazy {
+        com.lazydevs.wristotle.alarms.AlarmSettings(this)
+    }
+
     /** MCP client data layer. Lazy so the Room DB build + first SharedPrefs
      *  read are deferred from cold start to the first Settings-tap / first
      *  AskAgent intent / first backup run — most users never open these
@@ -342,6 +358,7 @@ class WristotleApplication : Application() {
             // verbs; the handlers differ only in what they DO with the matched task.
             Intent.CompleteTask to com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots(),
             Intent.DeleteTask to com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots(),
+            Intent.CancelAlarm to com.lazydevs.wristotle.nlu.slots.CancelAlarmSlots(),
             Intent.SetAlarm to com.lazydevs.wristotle.nlu.slots.SetAlarmSlots(),
             Intent.SetTimer to com.lazydevs.wristotle.nlu.slots.SetTimerSlots(),
             Intent.WorldTime to com.lazydevs.wristotle.nlu.slots.WorldTimeSlots(),

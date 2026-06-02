@@ -359,6 +359,7 @@ private fun SettingsCategoryContent(
     helpHighlightVersion: String? = null,
     onHelpHighlightConsumed: () -> Unit = {},
 ) {
+    val app = LocalContext.current.applicationContext as WristotleApplication
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Each branch collects the flows it actually uses — when the user
         // is on, say, the Backup category, the Conversation / Reminder /
@@ -395,6 +396,11 @@ private fun SettingsCategoryContent(
 
             SettingsCategory.Reminders -> {
                 val reminderDefaultMinutes by reminderSettings.defaultOffsetMin.collectAsState()
+                AlarmsCard(
+                    repository = app.alarmRepository,
+                    dispatcher = app.alarmDispatcher,
+                    settings = app.alarmSettings,
+                )
                 ReminderSettingsCard(
                     selectedMinutes = reminderDefaultMinutes,
                     options = ReminderSettings.ALLOWED_OFFSET_MIN,

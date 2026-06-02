@@ -25,7 +25,7 @@ import com.lazydevs.wristotle.handlers.AppendNoteHandler
 import com.lazydevs.wristotle.handlers.NoteHandler
 import com.lazydevs.wristotle.handlers.OpenAppHandler
 import com.lazydevs.wristotle.handlers.ReminderHandler
-import com.lazydevs.wristotle.handlers.SetAlarmHandler
+import com.lazydevs.wristotle.handlers.CancelAlarmHandler
 import com.lazydevs.wristotle.handlers.SetTimerHandler
 import com.lazydevs.wristotle.handlers.RescheduleHandler
 import com.lazydevs.wristotle.history.ConversationEntry
@@ -163,7 +163,16 @@ class PebbleListenerService : BasePebbleListenerService() {
             com.lazydevs.wristotle.handlers.ListTasksHandler(app.taskRepository),
             com.lazydevs.wristotle.handlers.CompleteTaskHandler(app.taskRepository),
             com.lazydevs.wristotle.handlers.DeleteTaskHandler(app.taskRepository),
-            SetAlarmHandler(this),
+            CancelAlarmHandler(
+                transport = app.transport,
+                repository = app.alarmRepository,
+                dispatcher = app.alarmDispatcher,
+            ),
+            com.lazydevs.wristotle.handlers.SetAlarmHandler(
+                repository = app.alarmRepository,
+                dispatcher = app.alarmDispatcher,
+                settings = app.alarmSettings,
+            ),
             SetTimerHandler(this),
             com.lazydevs.wristotle.handlers.WorldTimeHandler(),
             com.lazydevs.wristotle.handlers.CalculateHandler(),

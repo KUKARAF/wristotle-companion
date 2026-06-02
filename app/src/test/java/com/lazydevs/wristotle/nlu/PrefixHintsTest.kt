@@ -320,14 +320,18 @@ class PrefixHintsTest {
         )
     }
 
-    // --- Alarm / Timer prefix hints (sit above Reminder) ----------------
+    // --- CancelAlarm + Timer prefix hints (sit above Reminder / Cancel) ----------
 
-    @Test fun `set an alarm maps to SetAlarm`() {
-        assertEquals(Intent.SetAlarm, PrefixHints.hintFor("set an alarm for 7am"))
+    @Test fun `cancel alarm maps to CancelAlarm`() {
+        assertEquals(Intent.CancelAlarm, PrefixHints.hintFor("cancel the alarm"))
     }
 
-    @Test fun `wake me maps to SetAlarm`() {
-        assertEquals(Intent.SetAlarm, PrefixHints.hintFor("wake me up at 6:30"))
+    @Test fun `stop the alarm maps to CancelAlarm`() {
+        assertEquals(Intent.CancelAlarm, PrefixHints.hintFor("stop the alarm"))
+    }
+
+    @Test fun `time-qualified cancel maps to CancelAlarm`() {
+        assertEquals(Intent.CancelAlarm, PrefixHints.hintFor("cancel the 7am alarm"))
     }
 
     @Test fun `set a timer maps to SetTimer`() {
@@ -336,43 +340,6 @@ class PrefixHintsTest {
 
     @Test fun `timer for maps to SetTimer`() {
         assertEquals(Intent.SetTimer, PrefixHints.hintFor("timer for 5 minutes"))
-    }
-
-    // --- refineAlarmTimer: deterministic post-classifier correction -----
-
-    @Test fun `duration forces SetTimer even when classifier said SetAlarm`() {
-        // The Whisper "timer"->"time" mishearing case: classifier lands on
-        // SetAlarm, but the relative duration must win.
-        assertEquals(
-            Intent.SetTimer,
-            PrefixHints.refineAlarmTimer("set a time for 10 minutes", Intent.SetAlarm),
-        )
-    }
-
-    @Test fun `clock time forces SetAlarm even when classifier said SetTimer`() {
-        assertEquals(
-            Intent.SetAlarm,
-            PrefixHints.refineAlarmTimer("set a timer for 7am", Intent.SetTimer),
-        )
-    }
-
-    @Test fun `ambiguous bare query keeps the classifier pick`() {
-        // No clock marker, no duration unit → trust the classifier.
-        assertEquals(
-            Intent.SetTimer,
-            PrefixHints.refineAlarmTimer("set a timer for five", Intent.SetTimer),
-        )
-    }
-
-    @Test fun `refine is a no-op for non-alarm-timer intents`() {
-        assertEquals(
-            Intent.Reminder,
-            PrefixHints.refineAlarmTimer("set a timer for 10 minutes", Intent.Reminder),
-        )
-        assertEquals(
-            Intent.Call,
-            PrefixHints.refineAlarmTimer("call mom at 7am", Intent.Call),
-        )
     }
 
     // --- WorldTime: prefix hint + refineWorldTime correction ------------

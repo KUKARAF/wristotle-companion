@@ -163,14 +163,23 @@ internal object PrefixHints {
         // prefix-route it and let the classifier seeds + slot extraction
         // decide.
         Regex("(?i)^\\s*(notes?[\\s.:,;!?\\-]|(make|take|save|store|keep|add)\\s+(a\\s+)?notes?\\b|(jot|write)\\s+(this|that|it)?\\s*down\\b|noted\\b|(for|to|add\\s+to)\\s+my\\s+notes?\\b|remember\\s+that\\b)") to Intent.Note,
-        // SetAlarm + SetTimer — sit ABOVE Reminder. The embedding confuses
-        // "wake me up at 7" / "set an alarm for 7" with "remind me at 7"
-        // (the time dominates the cosine), so the alarm / timer keyword is
-        // the deterministic discriminator. "wake me" has no keyword noun so
-        // it gets its own opener. These don't collide with the Cancel rule
-        // ("kill the alarm" / "delete the alarm" start with cancel verbs,
-        // not set/start, so they stay Cancel).
-        Regex("(?i)(^\\s*(set|start|put|create|new)\\b.*\\balarm\\b|\\balarm\\s+(for|at)\\b|^\\s*wake\\s+me\\b)") to Intent.SetAlarm,
+        // CancelAlarm — sits ABOVE the generic Cancel rule (which is
+        // reminder-only) AND above the SetAlarm redirect (cancel verbs
+        // should never be misread as creation). Two shapes covered:
+        // bare ("cancel alarm") + time-qualified ("cancel 7am alarm").
+        Regex("(?i)\\b(cancel|stop|turn\\s+off|kill|dismiss)\\b.*\\balarm") to Intent.CancelAlarm,
+        // SetAlarm — redirect path for creation phrasings. Routes to
+        // SetAlarmRedirectHandler which emits a one-line pointer at the
+        // companion UI (alarms-v2 made voice cancel-only; this rule
+        // exists so a user who speaks the old "set an alarm" phrasing
+        // gets actionable guidance instead of an Unknown response).
+        Regex("(?i)(^\\s*(set|setup|start|put|create|new|add)\\b.*\\balarm\\b|\\balarm\\s+(for|at)\\b|^\\s*wake\\s+me\\b)") to Intent.SetAlarm,
+        // SetTimer — sits ABOVE Reminder. The embedding confuses
+        // "set a timer for 10 min" with "remind me in 10 min" (the time
+        // dominates the cosine), so the timer keyword is the deterministic
+        // discriminator. SetAlarm voice creation was removed in alarms-v2
+        // — creation lives entirely in the companion's Alarms & Reminders
+        // settings card now.
         Regex("(?i)(^\\s*(set|start|put|create|new|countdown|give\\s+me)\\b.*\\btimer\\b|\\btimer\\s+for\\b)") to Intent.SetTimer,
         // WorldTime — a "time" / "clock" cue followed by a standalone "in
         // <place>". The bare "what time is it" form is answered on the watch
@@ -236,39 +245,6 @@ internal object PrefixHints {
     fun hintFor(query: String): Intent? =
         HINTS.firstOrNull { (re, _) -> re.containsMatchIn(query) }?.second
 
-    /**
-     * Deterministic SetAlarm ↔ SetTimer disambiguation, applied AFTER the
-     * classifier picks (overrides even a confident pick — unlike [hintFor],
-     * which the router only consults when the classifier is uncertain).
-     *
-     * The embedding confuses the two: both are "set a X for <time>", and
-     * Whisper routinely drops the distinguishing word ("timer" → "time"),
-     * which pushes a timer phrase toward the alarm centroid. A
-     * confident-but-wrong SetAlarm pick then runs the duration through
-     * prettytime (which resolves "10 minutes" to now+10min) and sets a
-     * bogus alarm — the exact "my timer set an alarm" bug.
-     *
-     * The signal is unambiguous, though:
-     *   - a RELATIVE DURATION ("for 10 minutes", "30 seconds", "an hour")
-     *     is always a timer;
-     *   - a CLOCK TIME ("7am", "6:30", "o'clock", "noon", "tonight") is
-     *     always an alarm.
-     *
-     * When exactly one signal is present we correct to it; when both or
-     * neither appear (genuinely ambiguous, e.g. a bare "set a timer for
-     * five") we trust the classifier's pick. No-ops for any intent
-     * outside the alarm/timer pair.
-     */
-    fun refineAlarmTimer(query: String, intent: Intent): Intent {
-        if (intent != Intent.SetAlarm && intent != Intent.SetTimer) return intent
-        val hasClock = CLOCK_MARKER.containsMatchIn(query)
-        val hasDuration = DURATION_UNIT.containsMatchIn(query)
-        return when {
-            hasDuration && !hasClock -> Intent.SetTimer
-            hasClock && !hasDuration -> Intent.SetAlarm
-            else -> intent
-        }
-    }
 
     /**
      * Deterministic Time → WorldTime correction, applied AFTER the classifier

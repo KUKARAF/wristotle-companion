@@ -176,21 +176,7 @@ class ConfirmSummaryBuilderTest {
         assertTrue(s.startsWith("action: reschedule\ndetails: latest reminder → "))
     }
 
-    // ── SetAlarm / SetTimer ───────────────────────────────────────────────
-
-    @Test fun setAlarmShowsWallClockTime() {
-        // 7:00 — the date portion of the slot is irrelevant; only h:mm a shows.
-        val cal = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 7)
-            set(java.util.Calendar.MINUTE, 0)
-        }
-        val s = ConfirmSummaryBuilder.summary(result(Intent.SetAlarm, "time" to cal.time))
-        assertEquals("action: alarm\ndetails: 7:00 AM", s)
-    }
-
-    @Test fun setAlarmMissingTimeShowsQuestionMark() {
-        assertEquals("action: alarm\ndetails: ?", ConfirmSummaryBuilder.summary(result(Intent.SetAlarm)))
-    }
+    // ── SetTimer ──────────────────────────────────────────────────────────
 
     @Test fun setTimerShowsCompactDuration() {
         assertEquals("action: timer\ndetails: 10m", ConfirmSummaryBuilder.summary(result(Intent.SetTimer, "seconds" to 600)))

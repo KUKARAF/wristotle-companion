@@ -78,11 +78,10 @@ object ConfirmSummaryBuilder {
         // catch a mis-target before the action runs.
         Intent.CompleteTask  -> "action: complete\ndetails: ${slot(r, SlotKeys.Target)}"
         Intent.DeleteTask    -> "action: delete-task\ndetails: ${slot(r, SlotKeys.Target)}"
-        // SetAlarm shows just the wall-clock time ("7:00 AM") — the date
-        // portion of the slot is irrelevant to an alarm. SetTimer shows a
-        // compact duration ("10m" / "1m 30s"). A misheard time/duration is
-        // exactly what the confirm prompt is here to catch.
-        Intent.SetAlarm      -> "action: alarm\ndetails: ${alarmTime(r)}"
+        // SetTimer shows a compact duration ("10m" / "1m 30s"). A misheard
+        // duration is exactly what the confirm prompt is here to catch.
+        // SetAlarm voice creation was removed in alarms-v2; CancelAlarm is
+        // non-destructive and isn't gated by this builder.
         Intent.SetTimer      -> "action: timer\ndetails: ${timerDuration(r)}"
         Intent.ListReminders -> "action: list-reminders\ndetails: -"
         Intent.Calendar      -> "action: calendar\ndetails: -"
@@ -99,6 +98,15 @@ object ConfirmSummaryBuilder {
         Intent.Battery       -> "action: battery\ndetails: -"
         Intent.Steps         -> "action: steps\ndetails: -"
         Intent.Vibrate       -> "action: vibrate\ndetails: -"
+        // CancelAlarm is not destructive (reversible — re-enable in the
+        // Alarms card) so the confirm prompt never fires; branch here for
+        // exhaustiveness + the same pre-dispatch debug-log line.
+        Intent.CancelAlarm   -> "action: cancel-alarm\ndetails: ${timeOrDash(r)}"
+        // SetAlarm shows the wall-clock time being scheduled — destination
+        // comes from AlarmSettings.defaultDestination (not in the result),
+        // so the prompt only previews the time. A misheard hour is the
+        // exact thing this confirm gate is here to catch.
+        Intent.SetAlarm      -> "action: alarm\ndetails: ${timeOrDash(r)}"
         Intent.Unknown       -> "action: unknown\ndetails: ${r.rawQuery}"
     }
 
@@ -170,11 +178,6 @@ object ConfirmSummaryBuilder {
     private fun timeOrDash(r: IntentResult): String =
         (r.slots[SlotKeys.Time] as? Date)?.let { TIME_FMT.get()!!.format(it) } ?: "-"
 
-    /** Wall-clock time for SetAlarm — "7:00 AM". No day: an alarm is a
-     *  time-of-day, not a dated event. */
-    private fun alarmTime(r: IntentResult): String =
-        (r.slots[SlotKeys.Time] as? Date)?.let { ALARM_FMT.get()!!.format(it) } ?: "?"
-
     /** Compact duration for SetTimer — "10m" / "1m 30s" / "45s". */
     private fun timerDuration(r: IntentResult): String {
         val secs = r.slots[SlotKeys.Seconds] as? Int ?: return "?"
@@ -202,12 +205,6 @@ object ConfirmSummaryBuilder {
      */
     private val TIME_FMT: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
         override fun initialValue() = SimpleDateFormat("EEE h:mm a", Locale.getDefault())
-    }
-
-    /** Time-of-day only (no day) for SetAlarm. Same ThreadLocal rationale
-     *  as [TIME_FMT]. */
-    private val ALARM_FMT: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue() = SimpleDateFormat("h:mm a", Locale.getDefault())
     }
 
     /** Cap on the SendMessage body preview shown in the confirm prompt.

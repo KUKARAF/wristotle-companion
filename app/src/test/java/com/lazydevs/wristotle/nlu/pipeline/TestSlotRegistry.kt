@@ -20,7 +20,7 @@ import com.lazydevs.wristotle.nlu.slots.OpenAppSlots
 import com.lazydevs.wristotle.nlu.slots.ReminderSlots
 import com.lazydevs.wristotle.nlu.slots.RescheduleSlots
 import com.lazydevs.wristotle.nlu.slots.SendMessageSlots
-import com.lazydevs.wristotle.nlu.slots.SetAlarmSlots
+import com.lazydevs.wristotle.nlu.slots.CancelAlarmSlots
 import com.lazydevs.wristotle.nlu.slots.SetTimerSlots
 import com.lazydevs.wristotle.nlu.slots.WeatherSlots
 import com.lazydevs.wristotle.nlu.slots.WorldTimeSlots
@@ -76,7 +76,7 @@ fun testSlotRegistry(
         Intent.ListTasks to ListTasksSlots(),
         Intent.CompleteTask to CompleteTaskSlots(),
         Intent.DeleteTask to CompleteTaskSlots(),
-        Intent.SetAlarm to SetAlarmSlots(),
+        Intent.CancelAlarm to CancelAlarmSlots(),
         Intent.SetTimer to SetTimerSlots(),
         Intent.WorldTime to WorldTimeSlots(),
         Intent.Calculate to CalculateSlots(),

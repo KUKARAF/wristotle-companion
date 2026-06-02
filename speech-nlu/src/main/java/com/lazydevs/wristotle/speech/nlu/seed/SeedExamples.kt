@@ -105,25 +105,42 @@ object SeedExamples {
             "tell me when it's three pm",
             "remind me later",
         ))
-        // ── SetAlarm ────────────────────────────────────────────────────
-        // Distinct from Reminder: an alarm makes the PHONE ring at a
-        // wall-clock time via the system clock app. The "alarm" / "wake
-        // me" keywords are the discriminator from "remind me".
+        // ── SetAlarm (redirect) ─────────────────────────────────────────
+        // Alarms-v2: voice creation moved to the companion's Alarms card.
+        // These seeds train the classifier to recognise creation
+        // phrasings so SetAlarmRedirectHandler can emit a useful pointer
+        // instead of falling through to Unknown.
         addAll(Intent.SetAlarm, listOf(
             "set an alarm for seven am",
-            "set an alarm for six thirty",
+            "setup alarm for six thirty",
             "wake me up at seven",
-            "wake me at six fifteen tomorrow",
             "set alarm for eight o'clock",
             "alarm for five thirty am",
             "can you set an alarm for nine",
-            "put an alarm on for ten thirty",
+            "create a new alarm at six am",
+            "add an alarm for ten thirty",
             "new alarm at six am",
-            "set my alarm for quarter past seven",
+            "put an alarm on for quarter past seven",
+        ))
+        // ── CancelAlarm ─────────────────────────────────────────────────
+        // Alarms-v2: voice is cancel-only; creation lives in the
+        // companion's Alarms settings card. Two grammar shapes covered:
+        // bare ("cancel the alarm") + time-qualified ("cancel 7am alarm").
+        addAll(Intent.CancelAlarm, listOf(
+            "cancel the alarm",
+            "cancel my alarm",
+            "cancel all my alarms",
+            "stop the alarm",
+            "turn off the alarm",
+            "dismiss the alarm",
+            "kill the alarm",
+            "cancel the seven am alarm",
+            "cancel my six thirty alarm",
+            "stop the alarm at eight",
         ))
         // ── SetTimer ────────────────────────────────────────────────────
         // A countdown via the system clock app. "timer" keyword + a
-        // duration. Distinct from SetAlarm (wall-clock time).
+        // duration. Distinct from a wall-clock cancel ("cancel 7am alarm").
         addAll(Intent.SetTimer, listOf(
             "set a timer for ten minutes",
             "set a timer for five minutes",
@@ -141,12 +158,10 @@ object SeedExamples {
             "cancel that reminder",
             "cancel my last reminder",
             "remove the reminder",
-            "delete the alarm I just set",
             "scratch that reminder",
             "never mind the reminder",
             "cancel it",
             "forget that reminder",
-            "kill the alarm",
             "drop the reminder",
             "undo that reminder",
             "scrap the last reminder",

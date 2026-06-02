@@ -66,6 +66,22 @@ object MessageKeys {
     const val BUTTON_ACTION_NOTES: Int     = 1
     const val BUTTON_ACTION_TASKS: Int     = 2
     const val BUTTON_ACTION_DICTATION: Int = 3
+    const val BUTTON_ACTION_ALARMS: Int    = 4
+
+    /** Alarms wire — companion → watch SET / CANCEL / LIST + watch → companion
+     *  result + presence-only SHOW_LIST trigger (used by voice ListAlarms + by
+     *  the on-watch Alarms button-action). The watch persists scheduled
+     *  alarms across reboots via its `wakeup_service` + `persist_*`. Cancel
+     *  with epoch == 0 = cancel ALL pending watch alarms; non-zero epoch =
+     *  cancel the slot whose epoch matches. */
+    val ALARM_SET_EPOCH: UInt      = 10045u
+    val ALARM_SET_LABEL: UInt      = 10046u
+    val ALARM_SET_RESULT: UInt     = 10047u
+    val ALARM_CANCEL_EPOCH: UInt   = 10048u
+    val ALARM_CANCEL_RESULT: UInt  = 10049u
+    val ALARMS_REQUEST: UInt       = 10050u
+    val ALARMS_RESPONSE: UInt      = 10051u
+    val ALARMS_SHOW_LIST: UInt     = 10052u
 
     /** Companion → watch: presence-only ping that asks the watch to ship back a
      *  snapshot containing every SETTING_* key + its current value. Added in

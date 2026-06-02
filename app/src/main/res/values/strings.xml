@@ -165,7 +165,31 @@
     <string name="settings_section_conversation">Conversation</string>
     <string name="settings_section_diagnostics">Diagnostics</string>
     <string name="settings_section_notes">Notes</string>
-    <string name="settings_section_reminders">Reminders</string>
+    <string name="settings_section_reminders">Alarms &amp; Reminders</string>
+
+    <!-- Alarms card (Settings → Alarms & Reminders → Alarms). The list lives
+         alongside the existing Reminders card, but each alarm is per-row
+         configurable for destination (Phone / Watch / Both), distinct from
+         reminders which always fire through the watch's timeline. -->
+    <string name="alarms_card_header">Alarms</string>
+    <string name="alarms_card_desc">Create one-shot alarms that ring on the phone, the watch, or both. The watch leg can be cancelled with the voice command "cancel alarm". Phone alarms have to be dismissed in the phone\'s clock app — Android doesn\'t expose an API to cancel them.</string>
+    <string name="alarms_default_destination_label">Default destination for voice alarms</string>
+    <string name="alarms_empty">No alarms yet — tap + Add alarm to create one.</string>
+    <string name="alarms_add_button">+ Add alarm</string>
+    <string name="alarms_destination_phone">Phone</string>
+    <string name="alarms_destination_watch">Watch</string>
+    <string name="alarms_destination_both">Phone + Watch</string>
+    <string name="alarms_dest_label_phone">Phone only</string>
+    <string name="alarms_dest_label_watch">Watch only</string>
+    <string name="alarms_dest_label_both">Phone + Watch</string>
+    <string name="alarms_delete_button">Delete</string>
+    <string name="alarms_editor_title">New alarm</string>
+    <string name="alarms_editor_label">Label (optional)</string>
+    <string name="alarms_editor_destination_header">Where this alarm fires</string>
+    <string name="alarms_editor_save">Save</string>
+    <string name="alarms_editor_cancel">Cancel</string>
+    <string name="alarms_save_partial">Saved with warnings:\n%1$s</string>
+    <string name="alarms_dismiss">OK</string>
     <string name="settings_section_weather">Weather</string>
     <string name="settings_section_watch">Watch</string>
 
@@ -412,6 +436,7 @@
     <string name="watch_settings_button_action_notes">Notes</string>
     <string name="watch_settings_button_action_tasks">Tasks</string>
     <string name="watch_settings_button_action_dictation">Dictation</string>
+    <string name="watch_settings_button_action_alarms">Alarms</string>
     <string name="watch_settings_vibrate_section">Vibration</string>
     <string name="watch_settings_vibrate_on_launch">On normal launch</string>
     <string name="watch_settings_vibrate_on_quick_launch">On quick launch</string>

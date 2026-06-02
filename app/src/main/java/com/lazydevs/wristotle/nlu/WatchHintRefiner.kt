@@ -20,8 +20,8 @@ private const val TAG = "WatchHintRefiner"
  *      the runner-up → check the prefix hints. An unambiguous opening
  *      verb beats the embedder's uncertain pick.
  *   3. The classifier is confidently above margin → trust it, with the
- *      deterministic SetAlarm↔SetTimer and Time↔WorldTime corrections
- *      applied to fix the embedding's known confusions.
+ *      deterministic Time↔WorldTime correction applied to fix the
+ *      embedding's known confusion when a location keyword is present.
  */
 object WatchHintRefiner {
 
@@ -131,19 +131,19 @@ object WatchHintRefiner {
             val why = if (below) "below-threshold" else "ambiguous"
             val hint = PrefixHints.hintFor(query)
             if (hint != null) {
-                val refined = PrefixHints.refineWorldTime(query, PrefixHints.refineAlarmTimer(query, hint))
+                val refined = PrefixHints.refineWorldTime(query, hint)
                 Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) → prefix hint $refined wins")
                 return refined
             }
             Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) and no prefix hint → Unknown")
             return Intent.Unknown
         }
-        // Confident classifier pick — trusted directly, EXCEPT for the
-        // deterministic SetAlarm↔SetTimer correction. The embedding
-        // confidently confuses the pair (and Whisper drops "timer"→"time"),
-        // so a relative duration vs. a clock time overrides the pick. No-op
-        // for every other intent.
-        val finalIntent = PrefixHints.refineWorldTime(query, PrefixHints.refineAlarmTimer(query, classified.intent))
+        // Confident classifier pick — trusted directly, with the only post-
+        // pick correction being Time → WorldTime when a location keyword
+        // is present (the bare time form is answered locally on the watch
+        // and never reaches us; a location-qualified query reaching the
+        // companion is unambiguously a world-clock lookup).
+        val finalIntent = PrefixHints.refineWorldTime(query, classified.intent)
         if (finalIntent != classified.intent) {
             Log.d(TAG, "intent refine: ${classified.intent} → $finalIntent for \"$query\"")
         }

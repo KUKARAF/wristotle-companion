@@ -140,12 +140,30 @@ enum class Intent {
      *  / "remove X" without that anchor stay with Cancel. Destructive. */
     DeleteTask,
 
-    /** Set a phone alarm via the system clock app ("set an alarm for 7am",
-     *  "wake me up at 6:30"). Slot: `time` (java.util.Date — hour + minute
-     *  are read off it). Handled by SetAlarmHandler firing
-     *  AlarmClock.ACTION_SET_ALARM with EXTRA_SKIP_UI. Set-only: Android
-     *  has no API to list or cancel a scheduled alarm. */
+    /** Voice alarm creation ("set an alarm for 7am", "wake me up at
+     *  6:30"). Slot: `time` (java.util.Date — hour + minute are read
+     *  off it). Routes through SetAlarmHandler → AlarmRepository +
+     *  AlarmDispatcher, the same pipeline the companion's UI editor
+     *  uses. Destination comes from `AlarmSettings.defaultDestination`
+     *  (Phone / Watch / Both; set in the Alarms card; default Phone).
+     *  Destructive — gated by the confirm-before-dispatch surface so a
+     *  misheard time gets a one-line preview first. */
     SetAlarm,
+
+    /** Cancel a pending alarm ("cancel alarm", "cancel 7am alarm",
+     *  "stop the alarm"). Slot: optional `time` (java.util.Date — hour +
+     *  minute parsed from the query; null for bare cancel).
+     *
+     *  Bare "cancel alarm" sends epoch=0 to the watch (cancel-all
+     *  semantic). Time-qualified "cancel 7am alarm" looks up the matching
+     *  Room row(s), grabs each row's currently-scheduled wireEpoch, and
+     *  sends per-row cancels. Phone-leg alarms can't be cancelled
+     *  programmatically (Android AlarmClock dead-end) — the response text
+     *  surfaces that constraint when phone-only or Both-destination
+     *  alarms are touched. CREATION lives in the companion's Alarms
+     *  Settings card (Settings → ⏰ Alarms & Reminders); voice is
+     *  cancel-only as of alarms-v2. */
+    CancelAlarm,
 
     /** Start a countdown timer via the system clock app ("set a timer for
      *  10 minutes", "timer for 5 min"). Slot: `seconds` (Int). Handled by

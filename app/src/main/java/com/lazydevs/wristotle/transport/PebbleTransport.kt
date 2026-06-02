@@ -98,6 +98,40 @@ class PebbleTransport(context: Context) : java.io.Closeable {
         mapOf(MessageKeys.REQUEST_SETTINGS to PebbleDictionaryItem.UInt8(1u))
     )
 
+    /** Schedule a watch-side alarm at [epochSeconds] with [label]. The watch
+     *  uses Pebble's `wakeup_service` — 30 s min lead time, ±60 s global
+     *  spacing across all apps, 8-alarm budget. Failures surface via the
+     *  ALARM_SET_RESULT response, not via this call's return value. */
+    suspend fun sendAlarmSet(epochSeconds: Long, label: String): Boolean = sendWithNackRetry(
+        mapOf(
+            MessageKeys.ALARM_SET_EPOCH to PebbleDictionaryItem.Int32(epochSeconds.toInt()),
+            MessageKeys.ALARM_SET_LABEL to PebbleDictionaryItem.Text(label),
+        )
+    )
+
+    /** Cancel a watch-side alarm. [epochSeconds] == 0 cancels ALL pending
+     *  watch alarms (used by the bare "cancel alarm" voice intent); non-zero
+     *  cancels the slot whose scheduled epoch matches (used by the
+     *  time-qualified "cancel 7am alarm" voice path + the companion list's
+     *  per-row delete). */
+    suspend fun sendAlarmCancel(epochSeconds: Long): Boolean = sendWithNackRetry(
+        mapOf(MessageKeys.ALARM_CANCEL_EPOCH to PebbleDictionaryItem.Int32(epochSeconds.toInt()))
+    )
+
+    /** Presence-only — the watch responds with [ALARMS_RESPONSE] carrying the
+     *  framed `<epoch>US<label>RS…` payload. */
+    suspend fun requestAlarmsList(): Boolean = sendWithNackRetry(
+        mapOf(MessageKeys.ALARMS_REQUEST to PebbleDictionaryItem.UInt8(1u))
+    )
+
+    /** Presence-only — tells the watch to push its on-wrist alarm-list
+     *  window. Used by the voice ListAlarms intent + by the on-watch Alarms
+     *  button-action (the watch can also bind to the action directly via
+     *  the configurable-buttons surface). */
+    suspend fun sendShowAlarmsList(): Boolean = sendWithNackRetry(
+        mapOf(MessageKeys.ALARMS_SHOW_LIST to PebbleDictionaryItem.UInt8(1u))
+    )
+
     /** Set a bool setting on the watch as a 4-byte int (0/1). The watch reads
      *  every settings tuple via `prv_tuple_as_int` → `t->value->int32`, i.e. it
      *  always reads 4 bytes; sending a 1-byte `UInt8` makes it read 3 bytes of
