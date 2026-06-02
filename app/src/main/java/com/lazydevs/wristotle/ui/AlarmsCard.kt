@@ -22,12 +22,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,6 +79,13 @@ fun AlarmsCard(
     var showEditor by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<List<String>?>(null) }
 
+    // One-time prune of any disabled rows left over from earlier sessions
+    // when cancel = disable. Cancel is delete now (one-shot alarms, no
+    // re-arm story), so anything sitting at enabled=false is dead state.
+    LaunchedEffect(Unit) {
+        repository.getAll().filter { !it.enabled }.forEach { repository.delete(it.id) }
+    }
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -101,25 +108,10 @@ fun AlarmsCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                alarms.forEachIndexed { index, alarm ->
+                alarms.filter { it.enabled }.forEachIndexed { index, alarm ->
                     if (index > 0) HorizontalDivider()
                     AlarmRow(
                         alarm = alarm,
-                        onToggle = { enable ->
-                            scope.launch {
-                                if (enable) {
-                                    val refreshed = alarm.copy(enabled = true)
-                                    repository.update(refreshed)
-                                    val result = dispatcher.schedule(refreshed)
-                                    if (result is DispatchResult.PartialFailure) {
-                                        feedback = result.errors
-                                    }
-                                } else {
-                                    dispatcher.cancelWatchLeg(alarm)
-                                    repository.update(alarm.copy(enabled = false, wireEpoch = null))
-                                }
-                            }
-                        },
                         onDelete = {
                             scope.launch {
                                 if (alarm.wireEpoch != null) dispatcher.cancelWatchLeg(alarm)
@@ -221,7 +213,6 @@ private fun DefaultDestinationDropdown(
 @Composable
 private fun AlarmRow(
     alarm: AlarmEntity,
-    onToggle: (Boolean) -> Unit,
     onDelete: () -> Unit,
 ) {
     Row(
@@ -243,8 +234,6 @@ private fun AlarmRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Switch(checked = alarm.enabled, onCheckedChange = onToggle)
-        Spacer(modifier = Modifier.width(4.dp))
         TextButton(onClick = onDelete) {
             Text(stringResource(R.string.alarms_delete_button))
         }

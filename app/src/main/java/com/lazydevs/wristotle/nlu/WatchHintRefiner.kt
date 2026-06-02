@@ -92,6 +92,11 @@ object WatchHintRefiner {
         //      reminder at X" from "remind me at X" because the time dominates
         //      the cosine, so the opening words are the reliable signal.
         //   2. Otherwise a confident classifier pick (catches Reschedule).
+        // The watch's keyword router also lumps every cancel-verb query into
+        // CANCEL_QUERY (watchHint == Cancel). A query like "cancel the alarm"
+        // therefore arrives with watchHint=Cancel even though the user wants
+        // CancelAlarm. PrefixHints.refineCancelAlarm upgrades Cancel →
+        // CancelAlarm whenever an `\balarm\b` token is present; no-op otherwise.
         val prefixHint = if (watchHint == Intent.Reminder) PrefixHints.hintFor(query) else null
         val refined = when {
             prefixHint != null && prefixHint in REMINDER_FAMILY -> prefixHint
@@ -99,6 +104,7 @@ object WatchHintRefiner {
                 classified != null &&
                 classified.intent in REMINDER_FAMILY &&
                 classified.confidence >= routeThreshold -> classified.intent
+            watchHint == Intent.Cancel -> PrefixHints.refineCancelAlarm(query, watchHint)
             else -> watchHint
         }
         if (refined != watchHint) {
@@ -138,12 +144,16 @@ object WatchHintRefiner {
             Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) and no prefix hint → Unknown")
             return Intent.Unknown
         }
-        // Confident classifier pick — trusted directly, with the only post-
-        // pick correction being Time → WorldTime when a location keyword
-        // is present (the bare time form is answered locally on the watch
-        // and never reaches us; a location-qualified query reaching the
-        // companion is unambiguously a world-clock lookup).
-        val finalIntent = PrefixHints.refineWorldTime(query, classified.intent)
+        // Confident classifier pick — trusted directly, with two post-pick
+        // corrections:
+        //   - Time → WorldTime when a location keyword is present (the bare
+        //     time form is answered locally on the watch and never reaches
+        //     us; a location-qualified query is unambiguously a world-clock
+        //     lookup).
+        //   - Cancel → CancelAlarm when the query has a whole-word "alarm"
+        //     (the classifier confidently picks Cancel for the cancel-verb
+        //     opener but Cancel's handler is reminder-only).
+        val finalIntent = PrefixHints.refineWorldTime(query, PrefixHints.refineCancelAlarm(query, classified.intent))
         if (finalIntent != classified.intent) {
             Log.d(TAG, "intent refine: ${classified.intent} → $finalIntent for \"$query\"")
         }

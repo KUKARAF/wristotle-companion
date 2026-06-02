@@ -58,62 +58,65 @@ class CancelAlarmHandler(
     }
 
     private suspend fun cancelAll(): String {
-        val all = repository.getAll()
+        val active = repository.getAll().filter { it.enabled }
+
         // Send the cancel-all to the watch regardless — even if Room is
         // empty, the watch might still have legacy slots from a previous
         // install. The watch handles a "no alarms to cancel" response
         // gracefully.
         runCatching { transport.sendAlarmCancel(0) }
-        all.filter { it.wireEpoch != null }.forEach {
-            repository.update(it.copy(wireEpoch = null, enabled = false))
-        }
+        // Cancel = delete in v1 (one-shot alarms; no recurring means
+        // disabling a row to re-arm later has no use case). The row
+        // disappears from the list; if it's a Both alarm, the response
+        // text warns the phone leg is still pending.
+        active.forEach { repository.delete(it.id) }
 
-        val phoneOnly = all.any { destOf(it) == AlarmDestination.Phone }
-        val both      = all.any { destOf(it) == AlarmDestination.Both }
-        val watchAny  = all.any { destOf(it) != AlarmDestination.Phone }
+        // Voice cancel always targets the watch leg — phone alarms are a
+        // programmatic dead-end (Android AlarmClock dead-end). The
+        // response talks about watch alarms only, and only mentions the
+        // phone leg when a Both alarm was actually cancelled (because
+        // its phone leg is still pending in the clock app).
+        val bothHits  = active.count { destOf(it) == AlarmDestination.Both }
+        val watchHits = active.count { destOf(it) == AlarmDestination.Watch }
+        val watchCancels = watchHits + bothHits
 
         return when {
-            !watchAny && phoneOnly ->
-                "Cancel via voice only supports watch alarms. Open the phone's clock to dismiss phone alarms."
-            both ->
-                "Watch alarm cancelled. Phone alarm needs to be dismissed in the phone's clock."
-            watchAny ->
-                "Watch alarms cancelled."
+            bothHits > 0 ->
+                "Watch alarm cancelled.\nPhone alarm still pending."
+            watchCancels > 0 ->
+                if (watchCancels == 1) "Watch alarm cancelled."
+                else                   "Watch alarms cancelled."
             else ->
                 "No watch alarms to cancel."
         }
     }
 
     private suspend fun cancelAtTime(hour: Int, minute: Int): String {
-        val matches = repository.getByHourMinute(hour, minute)
+        val matches = repository.getByHourMinute(hour, minute).filter { it.enabled }
         if (matches.isEmpty()) {
             return "No alarm at ${formatClock(hour, minute)}."
         }
 
         var watchCancels = 0
-        var phoneOnlyHits = 0
-        var bothHits = 0
+        var bothCancels = 0
         for (alarm in matches) {
-            when (destOf(alarm)) {
-                AlarmDestination.Phone -> phoneOnlyHits++
-                AlarmDestination.Watch -> {
-                    if (dispatcher.cancelWatchLeg(alarm)) watchCancels++
-                }
-                AlarmDestination.Both -> {
-                    bothHits++
-                    if (dispatcher.cancelWatchLeg(alarm)) watchCancels++
+            val dest = destOf(alarm)
+            if (dest == AlarmDestination.Watch || dest == AlarmDestination.Both) {
+                if (dispatcher.cancelWatchLeg(alarm)) {
+                    watchCancels++
+                    if (dest == AlarmDestination.Both) bothCancels++
                 }
             }
+            // Cancel = delete (one-shot alarms; no recurring re-arm).
+            repository.delete(alarm.id)
         }
 
         val time = formatClock(hour, minute)
         return when {
-            watchCancels > 0 && (phoneOnlyHits + bothHits) > 0 ->
-                "Watch alarm at $time cancelled. Phone alarm needs to be dismissed in the phone's clock."
+            bothCancels > 0 ->
+                "Watch alarm at $time cancelled.\nPhone alarm still pending."
             watchCancels > 0 ->
                 "Watch alarm at $time cancelled."
-            phoneOnlyHits > 0 || bothHits > 0 ->
-                "$time alarm is on the phone — open the phone's clock to dismiss."
             else ->
                 "No watch alarm at $time."
         }

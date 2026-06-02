@@ -247,6 +247,30 @@ internal object PrefixHints {
 
 
     /**
+     * Deterministic Cancel → CancelAlarm correction. The watch routes any
+     * query containing "cancel" / "stop" / "dismiss" / "kill" / "turn off"
+     * to CANCEL_QUERY (its keyword router is reminder-centric), so a query
+     * like "cancel the alarm" arrives at the companion with
+     * watchHint = Intent.Cancel + a confidently-Cancel classifier pick.
+     * Without this override, the reminder cancel handler answers "no
+     * reminder to cancel" — totally wrong for an alarm cancel.
+     *
+     * The signal is unambiguous though: a whole-word "alarm" in a cancel-
+     * verb query is always an alarm-cancel. Upgrades Cancel → CancelAlarm
+     * when ALARM_MARKER fires; no-op for any other intent.
+     *
+     * Applied in BOTH branches: the watch-hinted Cancel path and the
+     * confident-classifier-pick unhinted path.
+     */
+    fun refineCancelAlarm(query: String, intent: Intent): Intent {
+        if (intent != Intent.Cancel) return intent
+        return if (ALARM_MARKER.containsMatchIn(query)) Intent.CancelAlarm else intent
+    }
+
+    /** Whole-word "alarm" / "alarms" anywhere in the query. */
+    private val ALARM_MARKER = Regex("(?i)\\balarms?\\b")
+
+    /**
      * Deterministic Time → WorldTime correction, applied AFTER the classifier
      * picks (same shape as [refineAlarmTimer]). Only ever upgrades a [Time] or
      * [Unknown] pick — never touches a confident Calendar / Reminder / etc.
