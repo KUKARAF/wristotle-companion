@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "alarms-v2",
+      "date": "2026-06-02",
+      "companion_version": "v0.18.0",
+      "watch_version": "v0.10.0",
+      "title": "Alarms with phone / watch / both destinations",
+      "description": "Re-do of the alarm feature. Settings → ⏰ Alarms & Reminders → Alarms — create one-shot alarms via the editor (time + label + destination: Phone / Watch / Both) or by voice (\"set an alarm for 7am\" honours the default-destination dropdown). \"Cancel the alarm\" / \"cancel 7am alarm\" cancels watch alarms; phone alarms still have to be dismissed in the system clock. New BUTTON_ACTION_ALARMS = 4 lets you bind SELECT / long-press UP / long-press DOWN to the on-watch alarm list.",
+      "sample_query": "set an alarm for 7am",
+      "docs_path": "features/#on-watch-ui"
+    },
+    {
       "id": "configurable-chat-buttons",
       "date": "2026-06-01",
       "companion_version": "v0.17.0",

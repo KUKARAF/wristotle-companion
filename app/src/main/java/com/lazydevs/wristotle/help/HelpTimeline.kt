@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "alarms-v2",
+            date = "2026-06-02",
+            companionVersion = "v0.18.0",
+            watchVersion = "v0.10.0",
+            title = "Alarms with phone / watch / both destinations",
+            description = "Re-do of the alarm feature. Settings → ⏰ Alarms & Reminders → Alarms — create one-shot alarms via the editor (time + label + destination: Phone / Watch / Both) or by voice (\"set an alarm for 7am\" honours the default-destination dropdown). \"Cancel the alarm\" / \"cancel 7am alarm\" cancels watch alarms; phone alarms still have to be dismissed in the system clock. New BUTTON_ACTION_ALARMS = 4 lets you bind SELECT / long-press UP / long-press DOWN to the on-watch alarm list.",
+            sampleQuery = "set an alarm for 7am",
+            docsPath = "features/#on-watch-ui",
+        ),
+        FeatureEntry(
             id = "configurable-chat-buttons",
             date = "2026-06-01",
             companionVersion = "v0.17.0",
