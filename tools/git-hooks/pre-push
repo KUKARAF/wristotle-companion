@@ -19,8 +19,8 @@
 
 set -e
 
-# Tag pattern allowed for this (companion) repo. Current series: v0.16.x.
-ALLOWED='^v0\.16\.[0-9]+$'
+# Tag pattern allowed for this (companion) repo. Current series: v0.17.x.
+ALLOWED='^v0\.17\.[0-9]+$'
 
 remote="$1"
 url="$2"
