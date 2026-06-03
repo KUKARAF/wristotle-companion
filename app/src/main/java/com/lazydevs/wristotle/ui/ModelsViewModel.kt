@@ -79,8 +79,13 @@ abstract class ModelsViewModel<InfoT>(app: Application) : AndroidViewModel(app) 
      * the list on every ~1% chunk) only re-emits the boolean when it
      * actually flips. Lets the app-shell badge subscribe without
      * recomposing on every byte downloaded.
+     *
+     * Open so families with additional model sources (e.g. Whisper's
+     * imported `.bin` files) can OR-in their own state — the base check
+     * sees only the catalog and would otherwise show "needs attention"
+     * even when the user has imported and activated a custom model.
      */
-    val attentionNeeded: StateFlow<Boolean> = _models
+    open val attentionNeeded: StateFlow<Boolean> = _models
         .map { it.none { m -> m.isDownloaded } || it.none { m -> m.isActive } }
         .distinctUntilChanged()
         .stateIn(
@@ -102,8 +107,12 @@ abstract class ModelsViewModel<InfoT>(app: Application) : AndroidViewModel(app) 
      * aren't available at construction time, so we can't compute the
      * initial snapshot in the property initialiser. Callers (UI) call
      * refresh() in onResume anyway.
+     *
+     * Open so subclasses with their own per-family lists (e.g. Whisper's
+     * imported-models surface) can chain their own snapshots on top of
+     * the catalog snapshot.
      */
-    fun refresh() {
+    open fun refresh() {
         _models.value = snapshot()
     }
 

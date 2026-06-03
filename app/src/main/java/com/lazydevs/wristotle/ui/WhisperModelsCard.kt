@@ -1,5 +1,12 @@
 package com.lazydevs.wristotle.ui
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.OpenableColumns
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,19 +16,27 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,7 +48,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.speech.whisper.ModelInfo
@@ -60,6 +78,9 @@ fun WhisperModelsCard(
     modifier: Modifier = Modifier,
 ) {
     val models by vm.models.collectAsState()
+    val importedModels by vm.importedModels.collectAsState()
+    val importInProgress by vm.importInProgress.collectAsState()
+    val lastImportError by vm.lastImportError.collectAsState()
     val companion by vm.pebbleCompanion.collectAsState()
     val noticeDismissed by vm.noticeDismissed.collectAsState()
     val modelsRevealed by vm.modelsRevealedAnyway.collectAsState()
@@ -132,6 +153,23 @@ fun WhisperModelsCard(
                     }
                 }
 
+                // ── Imported models ────────────────────────────────────
+                // User-imported `.bin` files. Always present when the
+                // model rows are visible — gives a path for users with
+                // custom whisper.cpp variants (fine-tuned, language-
+                // specific, distilled) that aren't in the curated
+                // catalog. Empty when nothing's been imported yet; the
+                // Import button below is still rendered.
+                ImportedSection(
+                    rows = importedModels,
+                    inProgress = importInProgress,
+                    error = lastImportError,
+                    onImport = vm::importFromUri,
+                    onClearError = vm::clearImportError,
+                    onSetActive = vm::setActive,
+                    onDelete = vm::deleteImported,
+                )
+
                 // Inverse affordance for the cloud-dictation case: once
                 // the user has revealed the models they may decide they
                 // didn't actually want them on screen. Only meaningful
@@ -147,6 +185,233 @@ fun WhisperModelsCard(
         }
     }
 }
+
+@Composable
+private fun ImportedSection(
+    rows: List<ImportedModelUiState>,
+    inProgress: Boolean,
+    error: String?,
+    onImport: (Uri, String) -> Unit,
+    onClearError: () -> Unit,
+    onSetActive: (String) -> Unit,
+    onDelete: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    var pendingUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingName by remember { mutableStateOf("") }
+    var blurbExpanded by remember { mutableStateOf(false) }
+
+    // Storage Access Framework picker — accepts anything, since the
+    // magic-bytes check in [ModelStorage.importFromStream] is the real
+    // validation. Restricting mime types here would just push users to
+    // re-name files before picking.
+    val picker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            pendingUri = uri
+            pendingName = readDisplayName(context, uri)
+                .removeSuffix(".bin")
+                .ifBlank { "Imported model" }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+    // Sub-section header — title + info-icon expander, same pattern as
+    // CardTitleWithInfo but with titleSmall (sub-section weight) instead
+    // of titleMedium so it doesn't compete with the card's main title.
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(R.string.whisper_models_imported_header),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(
+            onClick = { blurbExpanded = !blurbExpanded },
+            modifier = Modifier.size(28.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = stringResource(
+                    if (blurbExpanded) R.string.card_info_hide else R.string.card_info_show,
+                ),
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    AnimatedVisibility(visible = blurbExpanded) {
+        Text(
+            stringResource(R.string.whisper_models_imported_blurb),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    // Browse link stays visible regardless of the blurb's expanded state
+    // — it's the most actionable affordance in this section (where do I
+    // even find a `.bin` to import?) and shouldn't be buried under an
+    // info icon.
+    Text(
+        stringResource(R.string.whisper_models_imported_browse_link),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.primary,
+        textDecoration = TextDecoration.Underline,
+        modifier = Modifier.clickable { openUrl(context, HUGGINGFACE_WHISPER_URL) },
+    )
+
+    if (rows.isEmpty()) {
+        Text(
+            stringResource(R.string.whisper_models_imported_empty),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    } else {
+        rows.forEach { row ->
+            ImportedRow(
+                row = row,
+                onSetActive = { onSetActive(row.id) },
+                onDelete = { onDelete(row.id) },
+            )
+        }
+    }
+
+    error?.let { msg ->
+        Text(
+            msg,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        TextButton(
+            onClick = onClearError,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
+        ) {
+            Text(stringResource(R.string.whisper_models_imported_dismiss_error))
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedButton(
+            onClick = { picker.launch(arrayOf("*/*")) },
+            enabled = !inProgress,
+        ) {
+            Icon(
+                Icons.Default.FileUpload,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 6.dp),
+            )
+            Text(stringResource(R.string.whisper_models_imported_pick))
+        }
+        if (inProgress) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+            )
+            Text(
+                stringResource(R.string.whisper_models_imported_copying),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    if (pendingUri != null) {
+        AlertDialog(
+            onDismissRequest = { pendingUri = null },
+            title = { Text(stringResource(R.string.whisper_models_imported_name_title)) },
+            text = {
+                OutlinedTextField(
+                    value = pendingName,
+                    onValueChange = { pendingName = it },
+                    label = { Text(stringResource(R.string.whisper_models_imported_name_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val u = pendingUri ?: return@Button
+                        onImport(u, pendingName)
+                        pendingUri = null
+                    },
+                ) { Text(stringResource(R.string.whisper_models_imported_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingUri = null }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun ImportedRow(
+    row: ImportedModelUiState,
+    onSetActive: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val rowModifier = if (!row.isActive) {
+        Modifier.fillMaxWidth().clickable(onClick = onSetActive).padding(vertical = 2.dp)
+    } else {
+        Modifier.fillMaxWidth().padding(vertical = 2.dp)
+    }
+    Row(
+        modifier = rowModifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(row.displayName, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                stringResource(R.string.whisper_models_imported_size_format, row.sizeBytes / 1024 / 1024),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (row.isActive) ActiveModelPill()
+        IconButton(onClick = onDelete) {
+            Icon(
+                Icons.Default.DeleteOutline,
+                contentDescription = stringResource(R.string.whisper_model_action_delete),
+                tint = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+/** HuggingFace search pre-filtered to the whisper.cpp library — surfaces
+ *  both ggerganov's official conversions and community fine-tunes /
+ *  language-specific / distilled variants suitable for sideloading. */
+private const val HUGGINGFACE_WHISPER_URL = "https://huggingface.co/models?library=whisper.cpp"
+
+private fun openUrl(context: android.content.Context, url: String) {
+    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (t: Throwable) {
+        Log.w("WhisperModelsCard", "no browser to open $url", t)
+    }
+}
+
+/** Reads `DISPLAY_NAME` from the SAF URI via ContentResolver — typically the
+ *  original filename the user picked. Returns empty string on any error
+ *  (e.g. provider doesn't expose OpenableColumns). */
+private fun readDisplayName(context: android.content.Context, uri: Uri): String =
+    runCatching {
+        context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null, null, null,
+        )?.use {
+            if (it.moveToFirst() && it.columnCount > 0) it.getString(0) ?: "" else ""
+        } ?: ""
+    }.getOrDefault("")
 
 @Composable
 private fun TierHeader(label: String, blurb: String) {
