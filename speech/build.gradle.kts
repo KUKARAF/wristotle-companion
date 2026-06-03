@@ -14,6 +14,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    testOptions {
+        // Stubbed Android framework methods (`Log.d`, `JSONObject`) return
+        // sensible defaults instead of throwing — needed for the recognizer
+        // unit tests to exercise code paths that log informationally.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
