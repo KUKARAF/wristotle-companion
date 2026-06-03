@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "whisper-import",
+            date = "2026-06-03",
+            companionVersion = "v0.19.0",
+            watchVersion = null,
+            title = "Import custom Whisper models",
+            description = "Settings → Speech → Imported models — sideload a whisper.cpp .bin from anywhere on your phone (fine-tuned, language-specific, distilled). First four bytes are validated against the ggml / GGUF header before the file is copied in, and the active imported model now counts toward the Settings-tab attention badge.",
+            sampleQuery = null,
+            docsPath = "features/#models-optional",
+        ),
+        FeatureEntry(
             id = "alarms-v2",
             date = "2026-06-02",
             companionVersion = "v0.18.0",

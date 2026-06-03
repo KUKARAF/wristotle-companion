@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "whisper-import",
+      "date": "2026-06-03",
+      "companion_version": "v0.19.0",
+      "watch_version": null,
+      "title": "Import custom Whisper models",
+      "description": "Settings → Speech → Imported models — sideload a whisper.cpp .bin from anywhere on your phone (fine-tuned, language-specific, distilled). First four bytes are validated against the ggml / GGUF header before the file is copied in, and the active imported model now counts toward the Settings-tab attention badge.",
+      "sample_query": null,
+      "docs_path": "features/#models-optional"
+    },
+    {
       "id": "alarms-v2",
       "date": "2026-06-02",
       "companion_version": "v0.18.0",
