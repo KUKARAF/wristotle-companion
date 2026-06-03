@@ -129,6 +129,17 @@
     <string name="whisper_models_show_all">Show all models (%1$d more)</string>
     <string name="whisper_models_show_fewer">Show fewer</string>
     <string name="whisper_models_all_header">All models</string>
+    <string name="whisper_models_imported_header">Imported models</string>
+    <string name="whisper_models_imported_blurb">Pick a `.bin` whisper.cpp model from anywhere on your phone — useful for fine-tuned, language-specific, or distilled variants that aren\'t in the list above. The first four bytes are checked for the ggml/GGUF header before the file is copied in.</string>
+    <string name="whisper_models_imported_browse_link">Browse whisper.cpp models on HuggingFace →</string>
+    <string name="whisper_models_imported_empty">No imported models yet.</string>
+    <string name="whisper_models_imported_pick">Import .bin file</string>
+    <string name="whisper_models_imported_copying">Copying…</string>
+    <string name="whisper_models_imported_name_title">Name this model</string>
+    <string name="whisper_models_imported_name_label">Display name</string>
+    <string name="whisper_models_imported_confirm">Import</string>
+    <string name="whisper_models_imported_dismiss_error">Dismiss</string>
+    <string name="whisper_models_imported_size_format">%1$d MB · imported</string>
 
     <!-- App aliases (Settings → Learning → Installed apps) -->
     <string name="app_aliases_header">App aliases</string>
