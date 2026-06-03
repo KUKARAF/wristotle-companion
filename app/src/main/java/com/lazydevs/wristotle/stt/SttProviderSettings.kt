@@ -74,16 +74,18 @@ class SttProviderSettings(context: Context) {
         private const val KEY_HTTP_API_KEY = "http_api_key"
         private const val KEY_HTTP_MODEL = "http_model"
 
-        /** Groq's OpenAI-compatible base — cheapest cloud option that
-         *  matches OpenAI's `/audio/transcriptions` shape and ~300ms
-         *  latency on a 5s clip. User can point at any compatible
-         *  endpoint (OpenAI, Cloudflare, self-hosted Speaches, etc.). */
-        const val DEFAULT_BASE_URL = "https://api.groq.com/openai/v1"
+        /** Empty by design — we don't pre-select a provider. The Settings
+         *  card surfaces a list of compatible shapes (OpenAI, Groq,
+         *  Cloudflare, self-hosted Speaches, whisper.cpp HTTP server, …)
+         *  via the hint text + placeholder, but the user picks one. */
+        const val DEFAULT_BASE_URL = ""
 
-        /** Groq's fastest Whisper variant. Users typing in a different
-         *  provider will need to change this too — kept as a plain text
-         *  field so any provider's model id works. */
-        const val DEFAULT_MODEL = "whisper-large-v3-turbo"
+        /** Empty by design — model ids are per-provider (Groq's
+         *  `whisper-large-v3-turbo`, OpenAI's `whisper-1`,
+         *  self-hosted Speaches' `Systran/faster-whisper-tiny.en`, …)
+         *  and pre-filling one would steer the user toward a provider
+         *  we haven't asked them to choose. */
+        const val DEFAULT_MODEL = ""
     }
 }
 

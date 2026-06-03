@@ -114,11 +114,17 @@ fun SttProviderCard(settings: SttProviderSettings) {
                         value = baseUrl,
                         onValueChange = settings::setHttpBaseUrl,
                         label = { Text(stringResource(R.string.settings_stt_provider_base_url_label)) },
+                        placeholder = { Text(stringResource(R.string.settings_stt_provider_base_url_placeholder)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
                         stringResource(R.string.settings_stt_provider_base_url_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        stringResource(R.string.settings_stt_provider_compatible_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -136,6 +142,7 @@ fun SttProviderCard(settings: SttProviderSettings) {
                         value = model,
                         onValueChange = settings::setHttpModel,
                         label = { Text(stringResource(R.string.settings_stt_provider_model_label)) },
+                        placeholder = { Text(stringResource(R.string.settings_stt_provider_model_placeholder)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )

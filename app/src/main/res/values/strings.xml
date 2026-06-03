@@ -127,10 +127,13 @@
     <string name="settings_stt_provider_mode_cloud_primary">Cloud primary, local fallback</string>
     <string name="settings_stt_provider_http_label">OpenAI-compatible endpoint</string>
     <string name="settings_stt_provider_base_url_label">Base URL</string>
+    <string name="settings_stt_provider_base_url_placeholder">https://your-provider.example/v1</string>
     <string name="settings_stt_provider_base_url_hint">Includes the /v1 suffix on most providers. /audio/transcriptions is appended automatically.</string>
+    <string name="settings_stt_provider_compatible_hint">Compatible with any provider that exposes OpenAI\'s /audio/transcriptions shape — OpenAI, Groq, Cloudflare Workers AI, Together AI, a Speaches or whisper.cpp HTTP server on your homelab, LiteLLM/LocalAI proxies, …</string>
     <string name="settings_stt_provider_api_key_label">API key</string>
     <string name="settings_stt_provider_api_key_hint">Leave blank for self-hosted servers behind a Tailnet without auth. Sent as a Bearer header.</string>
     <string name="settings_stt_provider_model_label">Model</string>
+    <string name="settings_stt_provider_model_placeholder">model-id-from-your-provider</string>
     <string name="settings_stt_provider_test_button">Test connection</string>
 
     <!-- Whisper Models section -->
@@ -382,9 +385,11 @@
     <string name="settings_backup_cat_weather_settings">Weather settings (unit + provider)</string>
     <string name="settings_backup_cat_mcp_servers">MCP server list (name + URL + transport)</string>
     <string name="settings_backup_cat_ask_agent_setup">Ask Agent setup (provider + model + system prompt)</string>
+    <string name="settings_backup_cat_stt_provider_setup">Speech provider setup (mode + endpoint + model)</string>
     <string name="settings_backup_cat_weather_api_key">Weather API key (OpenWeather)</string>
     <string name="settings_backup_cat_mcp_auth_headers">MCP server auth headers</string>
     <string name="settings_backup_cat_ask_agent_api_keys">Ask Agent API keys (Anthropic / OpenAI)</string>
+    <string name="settings_backup_cat_stt_provider_api_key">Speech provider API key</string>
     <string name="settings_backup_plaintext_secrets_title">Secrets in plaintext?</string>
     <string name="settings_backup_plaintext_secrets_body">You selected secret categories (API keys / auth headers) but didn\'t set a password. The ZIP will be plaintext — anyone who opens it can read the tokens.\n\nProceed anyway, or cancel to add a password?</string>
     <string name="settings_backup_plaintext_secrets_proceed">Export plaintext</string>

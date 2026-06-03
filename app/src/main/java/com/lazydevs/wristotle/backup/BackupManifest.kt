@@ -87,6 +87,7 @@ data class BackupManifest(
         val reminder: ReminderPrefs? = null,
         val weather: WeatherPrefs? = null,
         val askAgent: AskAgentPrefs? = null,
+        val sttProvider: SttProviderPrefs? = null,
     )
     data class NotesPrefs(val keepLast: Int, val appendAudioMode: String)
     data class ConversationPrefs(val retentionDays: Int)
@@ -115,6 +116,16 @@ data class BackupManifest(
         val systemPrompt: String,
         val anthropicApiKey: String? = null,
         val openaiApiKey: String? = null,
+    )
+
+    /** STT provider — mode + base URL + model travel with the
+     *  non-sensitive "STT provider setup" category. `apiKey` rides
+     *  only when the secret checkbox is ticked. */
+    data class SttProviderPrefs(
+        val mode: String,
+        val httpBaseUrl: String,
+        val httpModel: String,
+        val httpApiKey: String? = null,
     )
 
     /** Wire-format record matching the manifest JSON, not the Room/PinStore type. */
@@ -194,9 +205,11 @@ object BackupManifestCodec {
             put("weather_settings", m.selected.weatherSettings)
             put("mcp_servers", m.selected.mcpServers)
             put("ask_agent_setup", m.selected.askAgentSetup)
+            put("stt_provider_setup", m.selected.sttProviderSetup)
             put("weather_api_key", m.selected.weatherApiKey)
             put("mcp_auth_headers", m.selected.mcpAuthHeaders)
             put("ask_agent_api_keys", m.selected.askAgentApiKeys)
+            put("stt_provider_api_key", m.selected.sttProviderApiKey)
         })
         // Each block is omitted entirely when null (category wasn't
         // selected on export); the decoder treats absence as "no change
@@ -264,6 +277,14 @@ object BackupManifestCodec {
                     put("system_prompt", a.systemPrompt)
                     if (a.anthropicApiKey != null) put("anthropic_api_key", a.anthropicApiKey)
                     if (a.openaiApiKey != null) put("openai_api_key", a.openaiApiKey)
+                })
+            }
+            m.prefs.sttProvider?.let { s ->
+                put("stt_provider_settings", JSONObject().apply {
+                    put("mode", s.mode)
+                    put("http_base_url", s.httpBaseUrl)
+                    put("http_model", s.httpModel)
+                    if (s.httpApiKey != null) put("http_api_key", s.httpApiKey)
                 })
             }
         })
@@ -408,6 +429,14 @@ object BackupManifestCodec {
                         openaiApiKey = a.optString("openai_api_key").takeIf { it.isNotEmpty() },
                     )
                 },
+                sttProvider = prefs.optJSONObject("stt_provider_settings")?.let { s ->
+                    BackupManifest.SttProviderPrefs(
+                        mode = s.optString("mode", "LOCAL_ONLY"),
+                        httpBaseUrl = s.optString("http_base_url", ""),
+                        httpModel = s.optString("http_model", ""),
+                        httpApiKey = s.optString("http_api_key").takeIf { it.isNotEmpty() },
+                    )
+                },
             ),
             reminderPins = (0 until pinsArr.length()).map { i ->
                 val p = pinsArr.getJSONObject(i)
@@ -446,9 +475,11 @@ object BackupManifestCodec {
                     weatherSettings = sel.optBoolean("weather_settings", true),
                     mcpServers = sel.optBoolean("mcp_servers", true),
                     askAgentSetup = sel.optBoolean("ask_agent_setup", true),
+                    sttProviderSetup = sel.optBoolean("stt_provider_setup", true),
                     weatherApiKey = sel.optBoolean("weather_api_key", false),
                     mcpAuthHeaders = sel.optBoolean("mcp_auth_headers", false),
                     askAgentApiKeys = sel.optBoolean("ask_agent_api_keys", false),
+                    sttProviderApiKey = sel.optBoolean("stt_provider_api_key", false),
                 )
             } ?: BackupSelection.LEGACY_FULL,
         )

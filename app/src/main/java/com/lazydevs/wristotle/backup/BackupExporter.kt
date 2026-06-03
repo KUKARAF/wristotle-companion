@@ -333,6 +333,13 @@ class BackupExporter(private val app: WristotleApplication) {
                 openaiApiKey = app.askAgentSettings.openaiApiKey.value
                     .takeIf { sel.askAgentApiKeys && it.isNotEmpty() },
             ) else null,
+            sttProvider = if (sel.sttProviderSetup) BackupManifest.SttProviderPrefs(
+                mode = app.sttProviderSettings.mode.value.name,
+                httpBaseUrl = app.sttProviderSettings.httpBaseUrl.value,
+                httpModel = app.sttProviderSettings.httpModel.value,
+                httpApiKey = app.sttProviderSettings.httpApiKey.value
+                    .takeIf { sel.sttProviderApiKey && it.isNotEmpty() },
+            ) else null,
         )
 }
 

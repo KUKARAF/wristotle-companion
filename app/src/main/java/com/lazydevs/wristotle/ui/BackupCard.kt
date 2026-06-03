@@ -277,6 +277,9 @@ private fun BackupSelectionEditor(
         CatRow(R.string.settings_backup_cat_ask_agent_setup, selection.askAgentSetup, available?.askAgentSetup) {
             onChange(selection.copy(askAgentSetup = it))
         }
+        CatRow(R.string.settings_backup_cat_stt_provider_setup, selection.sttProviderSetup, available?.sttProviderSetup) {
+            onChange(selection.copy(sttProviderSetup = it))
+        }
 
         SectionHeader(stringResource(R.string.settings_backup_section_secrets))
         Text(
@@ -293,6 +296,9 @@ private fun BackupSelectionEditor(
         }
         CatRow(R.string.settings_backup_cat_ask_agent_api_keys, selection.askAgentApiKeys, available?.askAgentApiKeys) {
             onChange(selection.copy(askAgentApiKeys = it))
+        }
+        CatRow(R.string.settings_backup_cat_stt_provider_api_key, selection.sttProviderApiKey, available?.sttProviderApiKey) {
+            onChange(selection.copy(sttProviderApiKey = it))
         }
     }
 }
