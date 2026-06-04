@@ -69,6 +69,7 @@ import kotlinx.coroutines.launch
  * pulling in `material-icons-extended` symbols just for eight glyphs.
  */
 enum class SettingsCategory(@param:StringRes val labelRes: Int, val emoji: String) {
+    Setup(R.string.settings_section_setup, "🌟"),
     Watch(R.string.settings_section_watch, "⌚"),
     Conversation(R.string.settings_section_conversation, "💬"),
     Notes(R.string.settings_section_notes, "📝"),
@@ -194,6 +195,7 @@ fun SettingsScreen(
                 reminderSettings = reminderSettings,
                 weatherSettings = weatherSettings,
                 askAgentSettings = askAgentSettings,
+                onOpenCategory = { category = it },
                 onShowClearLearnedConfirm = { showClearLearnedConfirm = true },
                 onShowClearAudioConfirm = { showClearAudioConfirm = true },
                 helpHighlightVersion = capturedPrefill,
@@ -348,6 +350,10 @@ private fun SettingsCategoryContent(
     reminderSettings: ReminderSettings,
     weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings,
     askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings,
+    /** Lets the 🌟 Setup card's "Open" buttons jump directly into the
+     *  sub-screen for an action's [SettingsCategory] target instead of
+     *  bouncing the user back to the landing page. */
+    onOpenCategory: (SettingsCategory) -> Unit,
     onShowClearLearnedConfirm: () -> Unit,
     onShowClearAudioConfirm: () -> Unit,
     onShrinkRequest: (Int) -> Unit,
@@ -366,6 +372,12 @@ private fun SettingsCategoryContent(
         // Learning flows aren't subscribed, so their updates don't
         // recompose this surface.
         when (category) {
+            SettingsCategory.Setup ->
+                SetupCard(
+                    provider = app.setupHealthProvider,
+                    onOpenCategory = onOpenCategory,
+                )
+
             SettingsCategory.Watch ->
                 WatchSettingsCard(vm = watchSettingsVm)
 

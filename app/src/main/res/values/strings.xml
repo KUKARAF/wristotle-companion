@@ -195,6 +195,42 @@
     <string name="settings_section_diagnostics">Diagnostics</string>
     <string name="settings_section_notes">Notes</string>
     <string name="settings_section_reminders">Alarms &amp; Reminders</string>
+    <string name="settings_section_setup">Setup</string>
+
+    <!-- Settings → 🌟 Setup card. Persistent home for recommended setup
+         actions; same data backs the first-launch wizard (Phase B). Items
+         are derived live from device state — completed items fall out of
+         the list automatically. -->
+    <string name="setup_card_header">Recommended setup</string>
+    <string name="setup_card_desc">Get the most out of Wristotle. Each step is optional; you can come back here any time. We only list what\'s left to do — finished steps disappear from this list automatically.</string>
+    <string name="setup_card_all_done">✓ You\'re all set up. Anything you change later that needs attention will reappear here.</string>
+    <string name="setup_section_essentials">Essentials</string>
+    <string name="setup_section_quality">Optional improvements</string>
+    <string name="setup_action_open_button">Open</string>
+
+    <string name="setup_action_whisper_title">Download a Whisper model</string>
+    <string name="setup_action_whisper_rationale">Wristotle transcribes watch dictation locally with whisper.cpp. Pick a Fast / Balanced / Accurate model in Settings → Models. Free, no account, no audio leaves your phone.</string>
+
+    <string name="setup_action_nlu_title">Download the intent classifier</string>
+    <string name="setup_action_nlu_rationale">~23 MB MiniLM model that lets Wristotle recognise paraphrased commands (\"text mom on my way\" / \"shoot mom a quick message\"). Without it only the canonical openers (call/text/remind/open/play/…) match.</string>
+
+    <string name="setup_action_permissions_title">Grant required permissions</string>
+    <string name="setup_action_permissions_rationale">Wristotle needs Contacts, SMS, Phone, and Microphone permission to call, text, and transcribe. Each is asked for the first time you use the relevant feature, but granting them upfront avoids interruptions.</string>
+
+    <string name="setup_action_app_scan_title">Scan installed apps</string>
+    <string name="setup_action_app_scan_rationale">Builds the local index Wristotle uses to resolve \"open Spotify\" → the actual package. Runs once; re-runs are quick. Lives in Settings → Learning → Installed apps.</string>
+
+    <string name="setup_action_contact_alias_title">Add contact aliases</string>
+    <string name="setup_action_contact_alias_rationale">Map common mishears (\"call mum\" → Mom, \"text JK\" → John Kennedy) so Wristotle doesn\'t guess wrong. One-tap to add via Settings → Learning → Contact aliases.</string>
+
+    <string name="setup_action_app_alias_title">Add app aliases</string>
+    <string name="setup_action_app_alias_rationale">Same shape as contact aliases but for apps — \"play music\" → Spotify, \"open the bank\" → your specific banking app. Optional. Settings → Learning → App aliases.</string>
+
+    <string name="setup_action_speech_provider_title">Speech provider (cloud / self-hosted)</string>
+    <string name="setup_action_speech_provider_rationale">Optional: point Wristotle at an OpenAI-compatible /audio/transcriptions endpoint (Groq, OpenAI, self-hosted Speaches, …) for sub-second cloud transcription. Local Whisper stays available as a fallback.</string>
+
+    <string name="setup_action_ask_agent_title">Set up Ask Agent</string>
+    <string name="setup_action_ask_agent_rationale">Bring-your-own LLM key to enable \"ask agent &lt;question&gt;\" / \"ask claude &lt;question&gt;\" on the watch. Anthropic, OpenAI, OpenRouter, Ollama, llama.cpp — any provider with a Chat Completions endpoint.</string>
 
     <!-- Alarms card (Settings → Alarms & Reminders → Alarms). The list lives
          alongside the existing Reminders card, but each alarm is per-row

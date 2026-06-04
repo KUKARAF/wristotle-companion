@@ -154,6 +154,32 @@ class WristotleApplication : Application() {
         com.lazydevs.wristotle.stt.SttProviderSettings(this)
     }
 
+    /** Pending recommended-setup actions for the Settings → 🌟 Setup
+     *  card and (Phase B) the first-launch wizard. Lazy so users who
+     *  never open the surface don't pay the dependency cost on cold
+     *  start; the screen calls `refresh()` on first compose anyway. */
+    val setupHealthProvider: com.lazydevs.wristotle.setup.SetupHealthProvider by lazy {
+        com.lazydevs.wristotle.setup.SetupHealthProvider(
+            context = this,
+            scope = appScope,
+            whisperModelStorage = modelStorage,
+            nluModelStorage = nluModelStorage,
+            installedAppDao = appIndexDao,
+            pebbleCompanionDetector = pebbleCompanionDetector,
+            aliasStore = aliasStore,
+            contactAliasStore = contactAliasStore,
+            isSpeechProviderConfigured = {
+                sttProviderSettings.mode.value !=
+                    com.lazydevs.wristotle.stt.SttProviderMode.LOCAL_ONLY ||
+                    sttProviderSettings.httpBaseUrl.value.isNotEmpty()
+            },
+            isAskAgentConfigured = {
+                askAgentSettings.anthropicApiKey.value.isNotEmpty() ||
+                    askAgentSettings.openaiApiKey.value.isNotEmpty()
+            },
+        )
+    }
+
     /** Room database singletons — exposed for the backup/restore feature so
      *  it can pull rows via the existing DAOs (`db.<entity>Dao().allForBackup()`)
      *  and encode them through the per-entity `*Json` codecs. No PRAGMA / WAL
@@ -214,6 +240,12 @@ class WristotleApplication : Application() {
      *  branch of MediaPlayHandler. Populated on demand from the Settings
      *  "Scan installed apps" card; empty until the user first taps it. */
     lateinit var appIndex: AppIndex
+        private set
+
+    /** DAO behind [appIndex] — also consumed by [SetupHealthProvider]
+     *  to read the most-recent scan timestamp without going through
+     *  the indexer. */
+    lateinit var appIndexDao: com.lazydevs.wristotle.apps.InstalledAppDao
         private set
     lateinit var aliasStore: com.lazydevs.wristotle.apps.AliasStore
         private set
@@ -314,7 +346,7 @@ class WristotleApplication : Application() {
 
         activeMediaSession = ActiveMediaSession(this)
 
-        val appIndexDao = AppIndexDatabase.build(this).installedAppDao()
+        appIndexDao = AppIndexDatabase.build(this).installedAppDao()
         aliasStore = com.lazydevs.wristotle.apps.AliasStore(this)
         contactAliasStore = com.lazydevs.wristotle.phone.ContactAliasStore(this)
         appIndex = AppIndex(appIndexDao, aliasResolver = aliasStore::resolve)
