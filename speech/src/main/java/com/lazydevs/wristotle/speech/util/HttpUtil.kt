@@ -42,12 +42,20 @@ fun bucketFor(status: Int): HttpFailureBucket = when {
  * body. Tries `.error.message` (Anthropic + OpenAI shape), then a flat
  * `.error` string (some OpenAI-compat servers). Returns `null` on any
  * parse failure so callers can fall back to a generic message.
+ *
+ * The two shapes are dispatched on the actual type of `.error` —
+ * otherwise an `error` object with a blank `message` would fall through
+ * to the flat-string branch, where `optString("error")` stringifies the
+ * inner JSON object and surfaces e.g. `{"message":""}` as the "error
+ * message" displayed to the user.
  */
 fun String?.providerErrorMessage(): String? {
     if (this == null) return null
     return runCatching {
-        val obj = JSONObject(this)
-        obj.optJSONObject("error")?.optString("message")?.ifBlank { null }
-            ?: obj.optString("error").ifBlank { null }
+        when (val errorField = JSONObject(this).opt("error")) {
+            is JSONObject -> errorField.optString("message").ifBlank { null }
+            is String -> errorField.ifBlank { null }
+            else -> null
+        }
     }.getOrNull()
 }
