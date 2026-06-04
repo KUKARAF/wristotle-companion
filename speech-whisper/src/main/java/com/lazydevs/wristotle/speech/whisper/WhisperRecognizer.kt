@@ -3,6 +3,7 @@ package com.lazydevs.wristotle.speech.whisper
 import android.speech.SpeechRecognizer
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.speech.audio.AudioSource
+import com.lazydevs.wristotle.speech.audio.flatten
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.TranscriptionEvent
 import kotlinx.coroutines.CancellationException
@@ -37,17 +38,6 @@ private const val TAG = "WhisperRecognizer"
 class WhisperRecognizer(
     val modelPath: String,
     private val language: String = "en",
-    /**
-     * Optional sink for the raw PCM buffer that just went into Whisper.
-     * When set, the recognizer hands the samples (16 kHz mono PCM-16) to
-     * the lambda after every successful capture so a downstream owner can
-     * persist them for replay (e.g. the conversation-audio store).
-     * Failures swallow inside the sink — the recognition path is never
-     * affected.
-     *
-     * Null disables capture — zero overhead.
-     */
-    private val audioSink: ((ShortArray) -> Unit)? = null,
 ) : Recognizer {
 
     /**
@@ -161,20 +151,7 @@ class WhisperRecognizer(
 
             emit(TranscriptionEvent.SpeechEnded)
 
-            // Flatten the chunk list into a single ShortArray for the JNI call.
-            val flat = ShortArray(totalSamples)
-            var offset = 0
-            for (c in chunks) {
-                c.copyInto(flat, offset)
-                offset += c.size
-            }
-
-            // Hand the PCM buffer to the optional sink. Wrapped in runCatching so
-            // a misbehaving sink can't break the recognition path.
-            audioSink?.let { sink ->
-                runCatching { sink(flat) }
-                    .onFailure { Log.w(TAG, "audioSink threw — ignoring", it) }
-            }
+            val flat = chunks.flatten(totalSamples)
 
             val rawText = try {
                 val threads = WhisperNative.defaultThreadCount()

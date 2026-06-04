@@ -50,10 +50,7 @@ class CapturingAudioSource(
             throw t
         } finally {
             if (!threw && totalSamples > 0) {
-                val flat = ShortArray(totalSamples)
-                var off = 0
-                for (c in buffer) { c.copyInto(flat, off); off += c.size }
-                runCatching { onCaptured(flat) }
+                runCatching { onCaptured(buffer.flatten(totalSamples)) }
                     .onFailure { Log.w(TAG, "audio sink threw — ignoring", it) }
             }
         }

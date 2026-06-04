@@ -135,10 +135,6 @@ class CompositeRecognizer(
         secondary.requestAbort()
     }
 
-    /** Closes both wrapped recognizers. WhisperRecognizer's close() is
-     *  a no-op (the model handle is owned by the application cache),
-     *  HttpRecognizer's close() is also a no-op — but propagate anyway
-     *  so future recognizers that hold resources are cleaned up. */
     override fun close() {
         primary.close()
         secondary.close()

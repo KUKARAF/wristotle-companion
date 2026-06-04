@@ -30,3 +30,24 @@ interface AudioSource {
      */
     fun stop()
 }
+
+/**
+ * Flattens a list of PCM-16 chunks into a single ShortArray of
+ * `totalSamples` length. Caller supplies the count so the result is
+ * allocated once at the right size — `chunks.sumOf { it.size }` is
+ * already known by every call site (each chunk gets counted on the
+ * way in).
+ *
+ * Used by every recognizer that has to drain a [Flow]&lt;[ShortArray]&gt;
+ * before processing it as a single buffer (Whisper inference, HTTP
+ * upload, composite replay buffering).
+ */
+fun List<ShortArray>.flatten(totalSamples: Int): ShortArray {
+    val out = ShortArray(totalSamples)
+    var off = 0
+    for (c in this) {
+        c.copyInto(out, off)
+        off += c.size
+    }
+    return out
+}

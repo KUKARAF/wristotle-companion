@@ -132,7 +132,7 @@ class WhisperRecognitionService : RecognitionService() {
         // Recognizer ultimately runs (Whisper / Http / Composite). The
         // sink fires once per session, when the source's flow naturally
         // completes — see CapturingAudioSource for the contract.
-        val sink = AudioSinks.provider(this)
+        val sink = AudioSinks.provider()
         return if (sink != null) CapturingAudioSource(raw, sink) else raw
     }
 

@@ -42,6 +42,7 @@ class SttProviderSettings(context: Context) {
     val httpModel: StateFlow<String> = _httpModel
 
     fun setMode(value: SttProviderMode) {
+        if (_mode.value == value) return
         prefs.edit().putString(KEY_MODE, value.name).apply()
         _mode.value = value
     }
@@ -49,12 +50,6 @@ class SttProviderSettings(context: Context) {
     fun setHttpBaseUrl(value: String) = write(KEY_HTTP_BASE_URL, value.trim(), _httpBaseUrl)
     fun setHttpApiKey(value: String) = write(KEY_HTTP_API_KEY, value.trim(), _httpApiKey)
     fun setHttpModel(value: String) = write(KEY_HTTP_MODEL, value.trim(), _httpModel)
-
-    /** True when the HTTP recognizer would actually be tried for some
-     *  request given the current settings. Useful for "secrets attached"
-     *  state in backup + for hiding the HTTP config block when the mode
-     *  doesn't use it. */
-    fun httpInUse(): Boolean = _mode.value != SttProviderMode.LOCAL_ONLY
 
     private fun readMode(): SttProviderMode {
         val name = prefs.getString(KEY_MODE, null) ?: return SttProviderMode.LOCAL_ONLY
@@ -74,17 +69,10 @@ class SttProviderSettings(context: Context) {
         private const val KEY_HTTP_API_KEY = "http_api_key"
         private const val KEY_HTTP_MODEL = "http_model"
 
-        /** Empty by design — we don't pre-select a provider. The Settings
-         *  card surfaces a list of compatible shapes (OpenAI, Groq,
-         *  Cloudflare, self-hosted Speaches, whisper.cpp HTTP server, …)
-         *  via the hint text + placeholder, but the user picks one. */
+        /** Empty by design — see `feedback_no_prefilled_provider_defaults`. */
         const val DEFAULT_BASE_URL = ""
 
-        /** Empty by design — model ids are per-provider (Groq's
-         *  `whisper-large-v3-turbo`, OpenAI's `whisper-1`,
-         *  self-hosted Speaches' `Systran/faster-whisper-tiny.en`, …)
-         *  and pre-filling one would steer the user toward a provider
-         *  we haven't asked them to choose. */
+        /** Empty by design — see `feedback_no_prefilled_provider_defaults`. */
         const val DEFAULT_MODEL = ""
     }
 }

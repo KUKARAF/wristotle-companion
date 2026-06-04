@@ -149,11 +149,7 @@ class WristotleApplication : Application() {
         com.lazydevs.wristotle.agent.AskAgentSettings(this)
     }
 
-    /** STT-provider preferences — chooses on-device Whisper, an HTTP
-     *  endpoint, or a primary/fallback pair. Lazy so users who never
-     *  touch the feature don't pay the SharedPrefs read on cold start;
-     *  the recognizer factory below dereferences this on every
-     *  dictation session. */
+    /** STT-provider preferences. See `wristotle-companion/stt-providers.md`. */
     val sttProviderSettings: com.lazydevs.wristotle.stt.SttProviderSettings by lazy {
         com.lazydevs.wristotle.stt.SttProviderSettings(this)
     }
@@ -392,12 +388,10 @@ class WristotleApplication : Application() {
             buildRecognizerForSession()
         }
 
-        // Audio capture is wired one layer above the Recognizer, so it
-        // fires once per session regardless of which Recognizer (Whisper,
-        // HTTP, Composite) the factory returned. Without this the cloud
-        // STT path skipped capture entirely because only WhisperRecognizer
-        // had an audioSink. See AudioSinks + CapturingAudioSource.
-        com.lazydevs.wristotle.speech.AudioSinks.provider = sink@{ _ ->
+        // Audio capture is wired above the Recognizer so it fires once
+        // per session regardless of which inner recognizer ran. See
+        // wristotle-companion/stt-providers.md for the architecture.
+        com.lazydevs.wristotle.speech.AudioSinks.provider = sink@{
             if (!conversationAudioSettings.captureEnabled.value) return@sink null
             return@sink { samples ->
                 val saved = conversationAudioStore.save(samples, sampleRate = 16_000)
@@ -465,36 +459,24 @@ class WristotleApplication : Application() {
 
     /**
      * Resolves the right [Recognizer] for the current session based on
-     * [sttProviderSettings]. Called by [Recognizers.provider] on every
-     * dictation start so a setting change picks up without an app restart.
-     *
-     * - `LOCAL_ONLY` → cached Whisper for the active model, or
-     *   [StubRecognizer] if no model is downloaded yet (preserves the
-     *   pre-feature behaviour).
-     * - `LOCAL_PRIMARY` → composite with Whisper first, HTTP fallback.
-     *   When no Whisper model is active the HTTP recognizer is returned
-     *   directly — there's no "local" leg to try, so we skip the
-     *   composite overhead.
-     * - `CLOUD_PRIMARY` → composite with HTTP first, Whisper fallback.
-     *   When no Whisper model is active the HTTP recognizer is returned
-     *   directly (no usable fallback).
-     *
-     * HTTP recognizers are created fresh per session — they're
-     * stateless and cheap to construct; caching would tangle the
-     * lifecycle with config edits in the Settings card.
+     * [sttProviderSettings]. Called per dictation so a settings edit
+     * picks up without an app restart. HTTP recognizers are stateless
+     * + cheap to construct, so they're rebuilt each call rather than
+     * cached (keeps Settings edits live without invalidation).
      */
     private fun buildRecognizerForSession(): Recognizer {
-        val whisper: Recognizer? = modelStorage.activeModelPath()?.let { getOrCreateRecognizer(it) }
+        // Resolve Whisper lazily so CLOUD_PRIMARY without a fallback model
+        // doesn't pay the cache lookup + sync overhead.
+        fun whisper(): Recognizer? =
+            modelStorage.activeModelPath()?.let { getOrCreateRecognizer(it) }
         return when (sttProviderSettings.mode.value) {
-            SttProviderMode.LOCAL_ONLY -> whisper ?: StubRecognizer()
-            SttProviderMode.LOCAL_PRIMARY -> when {
-                whisper == null -> buildHttpRecognizer()
-                else -> CompositeRecognizer(primary = whisper, secondary = buildHttpRecognizer())
-            }
-            SttProviderMode.CLOUD_PRIMARY -> when {
-                whisper == null -> buildHttpRecognizer()
-                else -> CompositeRecognizer(primary = buildHttpRecognizer(), secondary = whisper)
-            }
+            SttProviderMode.LOCAL_ONLY -> whisper() ?: StubRecognizer()
+            SttProviderMode.LOCAL_PRIMARY -> whisper()?.let {
+                CompositeRecognizer(primary = it, secondary = buildHttpRecognizer())
+            } ?: buildHttpRecognizer()
+            SttProviderMode.CLOUD_PRIMARY -> whisper()?.let {
+                CompositeRecognizer(primary = buildHttpRecognizer(), secondary = it)
+            } ?: buildHttpRecognizer()
         }
     }
 
@@ -525,10 +507,6 @@ class WristotleApplication : Application() {
         }
         whisperRecognizers.getOrPut(path) {
             Log.d(TAG, "creating recognizer for active model: $path")
-            // Audio sink is wired on the AudioSource itself now via
-            // AudioSinks + CapturingAudioSource (see Recognizers.provider
-            // setup above). Keeping it off here means the cached Whisper
-            // doesn't accidentally double-save when wrapped in a composite.
             WhisperRecognizer(modelPath = path)
         }
     }

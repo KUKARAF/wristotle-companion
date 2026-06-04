@@ -3,6 +3,7 @@ package com.lazydevs.wristotle.speech.recognizer
 import android.speech.SpeechRecognizer
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.speech.audio.AudioSource
+import com.lazydevs.wristotle.speech.audio.flatten
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -100,14 +101,7 @@ class HttpRecognizer(
 
         emit(TranscriptionEvent.SpeechEnded)
 
-        // Flatten chunks into a single ShortArray for WAV encoding.
-        val flat = ShortArray(totalSamples)
-        var offset = 0
-        for (c in chunks) {
-            c.copyInto(flat, offset)
-            offset += c.size
-        }
-
+        val flat = chunks.flatten(totalSamples)
         val wav = WavEncoder.encode(flat, source.sampleRate)
 
         Log.d(TAG, "uploading ${wav.size} bytes (${totalSamples / 16_000.0}s) to $baseUrl (model=$model)")

@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
+import android.speech.SpeechRecognizer
 import com.lazydevs.wristotle.speech.audio.AudioSource
 import com.lazydevs.wristotle.speech.recognizer.HttpRecognizer
 import com.lazydevs.wristotle.speech.recognizer.TranscriptionEvent
@@ -97,12 +98,8 @@ fun SttProviderCard(settings: SttProviderSettings) {
                 onSelect = { settings.setMode(SttProviderMode.CLOUD_PRIMARY) },
             )
 
-            // ── HTTP config — only when the mode actually uses it ───────
-            // LOCAL_ONLY hides the whole block so a user who doesn't want
-            // anything to do with cloud STT doesn't have to look at the
-            // fields. Edits persist regardless — so toggling from
-            // LOCAL_PRIMARY → LOCAL_ONLY → LOCAL_PRIMARY doesn't lose
-            // the previously-typed key.
+            // Edits persist when collapsed — flipping LOCAL_PRIMARY →
+            // LOCAL_ONLY → LOCAL_PRIMARY won't lose the typed key.
             AnimatedVisibility(visible = mode != SttProviderMode.LOCAL_ONLY) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Spacer(Modifier.height(4.dp))
@@ -215,15 +212,13 @@ private suspend fun testConnection(baseUrl: String, apiKey: String, model: Strin
         is TranscriptionEvent.Final ->
             TestResult(ok = true, message = "OK — endpoint accepted the request.")
         is TranscriptionEvent.Error -> {
-            val msg = terminal.message ?: "request failed"
             // Empty-transcript on silence is success for our purposes —
             // the endpoint accepted the request shape + auth, the
-            // provider just returned no text. Don't surface this as a
-            // failure to the user.
-            if (msg.contains("empty transcript", ignoreCase = true)) {
+            // provider just returned no text.
+            if (terminal.code == SpeechRecognizer.ERROR_NO_MATCH) {
                 TestResult(ok = true, message = "OK — endpoint reachable (no transcript on silence).")
             } else {
-                TestResult(ok = false, message = msg)
+                TestResult(ok = false, message = terminal.message ?: "request failed")
             }
         }
         else -> TestResult(ok = false, message = "no terminal event from recognizer")
