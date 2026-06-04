@@ -1,0 +1,10 @@
+F-Droid build pipeline hardening.
+
+- AGP's git-commit bundling in the APK metadata is now disabled
+  so two clean builds produce byte-identical inner content.
+- CI hard-fails if the signing key rotates without the expected
+  fingerprint being updated in lockstep.
+- CI now publishes a sha256sums.txt alongside the APK on every
+  release page so downloads can be verified.
+
+Internals-only patch — no user-facing changes.
