@@ -1,7 +1,7 @@
 package com.lazydevs.wristotle.handlers
 
 import android.util.Log
-import com.lazydevs.wristotle.util.SimpleHttp
+import com.lazydevs.wristotle.speech.util.SimpleHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray

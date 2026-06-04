@@ -1,23 +1,24 @@
-package com.lazydevs.wristotle.util
+package com.lazydevs.wristotle.speech.util
 
-import android.util.Log
-import com.lazydevs.wristotle.speech.util.WRISTOTLE_USER_AGENT
+import com.lazydevs.wristotle.logging.WristotleLog as Log
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
+private const val TAG = "SimpleHttp"
+
 /**
- * One-shot HTTP helper for the four small JSON-API clients we have
- * (Anthropic + OpenAI-compat LLM, open-meteo + OpenWeather). Each used
- * to repeat the same `URL.openConnection() as HttpURLConnection` /
- * inputStream-vs-errorStream / `disconnect()` shape.
+ * One-shot HTTP helper for the small JSON-API clients in the project
+ * (LLM agent providers, weather providers, the speech-to-text
+ * `HttpRecognizer`'s multipart upload). Lives in `:speech` so both `:app`
+ * consumers and `HttpRecognizer` (which can't depend on `:app`) reach it
+ * through the same surface.
  *
  * Not a replacement for [com.lazydevs.wristotle.speech.model.ResumableDownloader]
  * — that's a different shape (Range, manual redirect following, streamed
  * to disk). Keep this helper deliberately small.
  */
 object SimpleHttp {
-    private const val TAG = "SimpleHttp"
 
     /**
      * Run one HTTP request and return `(status, body)`. `body` comes from
@@ -30,12 +31,17 @@ object SimpleHttp {
      *
      * `User-Agent` is set automatically; callers add provider-specific
      * headers (auth, content-type, accept) via [headers].
+     *
+     * @param body raw request body bytes, or `null` for GETs / bodyless
+     *        verbs. Callers serialising JSON use the String overload
+     *        below; multipart / binary uploaders pass the framed bytes
+     *        directly.
      */
     fun request(
         url: String,
         method: String = "GET",
         headers: Map<String, String> = emptyMap(),
-        body: String? = null,
+        body: ByteArray? = null,
         connectTimeoutMs: Int = 10_000,
         readTimeoutMs: Int = 30_000,
     ): Pair<Int, String?>? {
@@ -45,11 +51,18 @@ object SimpleHttp {
             readTimeout = readTimeoutMs
             setRequestProperty("User-Agent", WRISTOTLE_USER_AGENT)
             headers.forEach { (k, v) -> setRequestProperty(k, v) }
-            if (body != null) doOutput = true
+            if (body != null) {
+                doOutput = true
+                // Fixed-length streaming avoids chunked transfer-encoding,
+                // which some self-hosted reverse proxies (caddy, older
+                // nginx) reject on multipart uploads. No-op for small JSON
+                // bodies; matters for the speech-to-text WAV upload path.
+                setFixedLengthStreamingMode(body.size)
+            }
         }
         return try {
             if (body != null) {
-                conn.outputStream.bufferedWriter().use { it.write(body) }
+                conn.outputStream.use { it.write(body) }
             }
             val code = conn.responseCode
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
@@ -62,4 +75,24 @@ object SimpleHttp {
             conn.disconnect()
         }
     }
+
+    /**
+     * Convenience overload for JSON / text bodies. Encodes [body] as
+     * UTF-8 and delegates to the canonical [ByteArray] entry point.
+     */
+    fun request(
+        url: String,
+        method: String = "GET",
+        headers: Map<String, String> = emptyMap(),
+        body: String,
+        connectTimeoutMs: Int = 10_000,
+        readTimeoutMs: Int = 30_000,
+    ): Pair<Int, String?>? = request(
+        url = url,
+        method = method,
+        headers = headers,
+        body = body.toByteArray(Charsets.UTF_8),
+        connectTimeoutMs = connectTimeoutMs,
+        readTimeoutMs = readTimeoutMs,
+    )
 }

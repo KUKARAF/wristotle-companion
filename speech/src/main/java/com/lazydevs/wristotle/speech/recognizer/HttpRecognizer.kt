@@ -5,7 +5,7 @@ import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.speech.audio.AudioSource
 import com.lazydevs.wristotle.speech.audio.flatten
 import com.lazydevs.wristotle.speech.util.HttpFailureBucket
-import com.lazydevs.wristotle.speech.util.WRISTOTLE_USER_AGENT
+import com.lazydevs.wristotle.speech.util.SimpleHttp
 import com.lazydevs.wristotle.speech.util.bucketFor
 import com.lazydevs.wristotle.speech.util.providerErrorMessage
 import kotlinx.coroutines.CancellationException
@@ -15,9 +15,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.UUID
 
 private const val TAG = "HttpRecognizer"
@@ -149,50 +146,37 @@ class HttpRecognizer(
         if (baseUrl.isBlank()) {
             throw HttpRecognizerException(SpeechRecognizer.ERROR_CLIENT, "no base URL configured")
         }
-        val url = URL(joinUrl(baseUrl, "audio/transcriptions"))
         val boundary = "----WristotleHttpRecognizer-" + UUID.randomUUID().toString().replace("-", "")
         val body = buildMultipartBody(boundary, wavBytes)
 
-        val conn = (url.openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            connectTimeout = connectTimeoutMs
-            readTimeout = readTimeoutMs
-            doOutput = true
-            setRequestProperty("User-Agent", WRISTOTLE_USER_AGENT)
-            setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
-            setRequestProperty("Accept", "application/json")
-            if (apiKey.isNotBlank()) setRequestProperty("Authorization", "Bearer $apiKey")
-            // Setting fixed length avoids chunked transfer, which some
-            // self-hosted proxies (caddy, older nginx) don't handle on
-            // multipart uploads.
-            setFixedLengthStreamingMode(body.size)
+        val response = SimpleHttp.request(
+            url = joinUrl(baseUrl, "audio/transcriptions"),
+            method = "POST",
+            headers = buildMap {
+                put("Content-Type", "multipart/form-data; boundary=$boundary")
+                put("Accept", "application/json")
+                if (apiKey.isNotBlank()) put("Authorization", "Bearer $apiKey")
+            },
+            body = body,
+            connectTimeoutMs = connectTimeoutMs,
+            readTimeoutMs = readTimeoutMs,
+        ) ?: throw HttpRecognizerException(SpeechRecognizer.ERROR_NETWORK, "network failure")
+
+        if (abortRequested) {
+            throw HttpRecognizerException(SpeechRecognizer.ERROR_CLIENT, "aborted")
         }
 
-        return try {
-            conn.outputStream.use { it.write(body) }
-
-            if (abortRequested) {
-                throw HttpRecognizerException(SpeechRecognizer.ERROR_CLIENT, "aborted")
-            }
-
-            val status = conn.responseCode
-            val payload = readBody(conn, success = status in 200..299)
-            if (status in 200..299) {
-                parseSuccess(payload)
-            } else {
-                val providerMessage = payload.providerErrorMessage()
-                    ?: payload.trim().takeIf { it.isNotBlank() }?.take(200)
-                throw HttpRecognizerException(
-                    errorCode = bucketFor(status).toRecognizerErrorCode(),
-                    message = providerMessage ?: defaultMessageFor(status),
-                )
-            }
-        } catch (e: HttpRecognizerException) {
-            throw e
-        } catch (e: IOException) {
-            throw HttpRecognizerException(SpeechRecognizer.ERROR_NETWORK, e.message ?: "network failure")
-        } finally {
-            conn.disconnect()
+        val (status, payload) = response
+        val payloadOrEmpty = payload.orEmpty()
+        return if (status in 200..299) {
+            parseSuccess(payloadOrEmpty)
+        } else {
+            val providerMessage = payloadOrEmpty.providerErrorMessage()
+                ?: payloadOrEmpty.trim().takeIf { it.isNotBlank() }?.take(200)
+            throw HttpRecognizerException(
+                errorCode = bucketFor(status).toRecognizerErrorCode(),
+                message = providerMessage ?: defaultMessageFor(status),
+            )
         }
     }
 
@@ -230,11 +214,6 @@ class HttpRecognizer(
     /** Read the response body — `inputStream` on 2xx, `errorStream`
      *  otherwise. Either may be null (no body); returns empty string in
      *  that case so callers don't have to null-check downstream. */
-    private fun readBody(conn: HttpURLConnection, success: Boolean): String {
-        val stream = if (success) conn.inputStream else conn.errorStream
-        return stream?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()
-    }
-
     private fun parseSuccess(payload: String): String {
         if (payload.isBlank()) {
             throw HttpRecognizerException(SpeechRecognizer.ERROR_NETWORK, "empty response body")
