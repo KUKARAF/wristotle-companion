@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-0-0",
+            date = "2026-06-04",
+            companionVersion = "v1.0.0",
+            watchVersion = "v1.0.0",
+            title = "Leaving alpha — first-launch setup wizard",
+            description = "After six months of alpha, Wristotle is stable. v1.0.0 lands a multi-step welcome wizard on first launch that walks new users through the optional model downloads + permissions + app scan, plus a persistent Settings → 🌟 Setup card that surfaces the same checklist and adds quality-of-life nudges (contact aliases, Speech provider, Ask Agent). Steps are dynamic — Core Devices users skip the Whisper step, low-RAM phones skip the NLU step, power users see Welcome → Final and are done.",
+            sampleQuery = null,
+            docsPath = "features/#settings-tab-whats-in-each-category",
+        ),
+        FeatureEntry(
             id = "stt-providers",
             date = "2026-06-03",
             companionVersion = "v0.20.0",
