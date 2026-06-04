@@ -1,0 +1,5 @@
+v1.0.2 — internals only, no user-facing changes.
+
+Build-system prep for F-Droid: NDK reproducibility flags so whisper.cpp .so files don't embed per-build random IDs or absolute paths; Compose baseline-profile generation disabled; fastlane metadata directory for the eventual F-Droid listing. Two clean local builds now produce APKs with identical inner content.
+
+Full changelog: https://wristotle.codeberg.page/changelog/

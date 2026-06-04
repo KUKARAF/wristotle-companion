@@ -64,8 +64,8 @@ android {
         //
         // Whoever bumps the tag also bumps these two lines. The pre-push
         // hook nudges if it spots a mismatch.
-        versionCode = System.getenv("WRISTOTLE_VERSION_CODE")?.toIntOrNull() ?: 10001
-        versionName = System.getenv("WRISTOTLE_VERSION_NAME") ?: "1.0.1"
+        versionCode = System.getenv("WRISTOTLE_VERSION_CODE")?.toIntOrNull() ?: 10002
+        versionName = System.getenv("WRISTOTLE_VERSION_NAME") ?: "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
