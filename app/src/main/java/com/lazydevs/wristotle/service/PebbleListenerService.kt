@@ -462,25 +462,19 @@ class PebbleListenerService : BasePebbleListenerService() {
      * the prompt falls back to the spoken value and the dispatch will
      * fail honestly with *"Contact not found"*.
      *
-     * Why pre-confirm instead of inside the slot extractor: CallSlots
-     * doesn't currently take a `findContact` dep, and we don't want to
-     * change every contact-using slot extractor's constructor signature
-     * for a display-only concern. The lookup is cheap (one Contacts
-     * content-provider query) so doing it once here costs nothing.
+     * Short-circuits when the slot extractor already stashed a
+     * [ContactsRepository.Contact] (SendMessage's multi-word loop
+     * resolves the contact during extraction). For Call, CallSlots
+     * doesn't pre-resolve, so this still does the lookup.
      */
     private suspend fun enrichResolvedContact(routed: IntentResult): IntentResult {
         if (routed.intent != Intent.Call && routed.intent != Intent.SendMessage) return routed
+        if (routed.slots[SlotKeys.ResolvedContact] is ContactsRepository.Contact) return routed
         val spoken = (routed.slots[SlotKeys.Contact] as? String)?.trim().orEmpty()
         if (spoken.isEmpty()) return routed
         if (!contacts.hasPermission()) return routed
         val match = contacts.findContact(spoken) ?: return routed
-        // Always stash the resolved name when findContact succeeds, even
-        // when it happens to equal the spoken value. The confirm-gate
-        // check below uses `resolvedContact != null` as the
-        // "this dispatch can actually run" signal — without unconditional
-        // population, a spoken-equals-resolved pair would skip the
-        // confirm prompt incorrectly.
-        return routed.copy(slots = routed.slots + (SlotKeys.ResolvedContact to match.name))
+        return routed.copy(slots = routed.slots + (SlotKeys.ResolvedContact to match))
     }
 
     /**

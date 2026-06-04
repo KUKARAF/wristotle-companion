@@ -152,6 +152,35 @@ class SendMessageSlotsTest {
         assertEquals("i'll be late", s["body"])
     }
 
+    /**
+     * The slot extractor's findContact lookup is also stashed in
+     * SlotKeys.ResolvedContact so the handler + ConfirmSummaryBuilder
+     * + PebbleListenerService.enrichResolvedContact don't have to
+     * re-query the Contacts provider. Saves up to 2 cursor queries
+     * per SendMessage dictation.
+     */
+    @Test fun `multi-word lookup stashes resolved contact in slots`() {
+        val s = extract("text mom on my way")
+        val resolved = s["resolvedContact"] as? ContactsRepository.Contact
+        assertEquals("mom", resolved?.name)
+        assertEquals("555-0100", resolved?.number)
+    }
+
+    @Test fun `conjunction split stashes resolved contact in slots`() {
+        val s = extract("text dad saying running late")
+        val resolved = s["resolvedContact"] as? ContactsRepository.Contact
+        assertEquals("dad", resolved?.name)
+    }
+
+    @Test fun `space-split fallback does not stash resolvedContact`() {
+        // No known contact matches anywhere → the space-split fallback
+        // returns the raw first-word as the contact name, unverified.
+        // ResolvedContact is intentionally absent so the downstream
+        // pass can decide whether to do its own lookup.
+        val s = extract("text unknown person whatever", contacts = emptySet())
+        assertEquals(null, s["resolvedContact"])
+    }
+
     @Test fun `send sms to contact defaults to SMS`() {
         val s = extract("send sms to alex meeting at five")
         assertEquals("SMS", s["app"])

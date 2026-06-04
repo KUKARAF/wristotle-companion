@@ -1,5 +1,6 @@
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import org.junit.Assert.assertEquals
@@ -28,7 +29,7 @@ class ConfirmSummaryBuilderTest {
                 Intent.SendMessage,
                 "app" to "SMS",
                 "contact" to "x",
-                "resolvedContact" to "x",
+                "resolvedContact" to ContactsRepository.Contact("x", "555-0100"),
                 "body" to longBody,
             ),
         )
@@ -66,7 +67,7 @@ class ConfirmSummaryBuilderTest {
 
     @Test fun call() {
         val s = ConfirmSummaryBuilder.summary(
-            result(Intent.Call, "contact" to "alex", "resolvedContact" to "alex"),
+            result(Intent.Call, "contact" to "alex", "resolvedContact" to ContactsRepository.Contact("alex", "555-0100")),
         )
         assertEquals("action: call\ndetails: [alex]", s)
     }
@@ -76,7 +77,7 @@ class ConfirmSummaryBuilderTest {
         // confirm prompt shows the resolved display name so the user
         // sees who they're actually about to dial.
         val s = ConfirmSummaryBuilder.summary(
-            result(Intent.Call, "contact" to "alex", "resolvedContact" to "Alex Smith"),
+            result(Intent.Call, "contact" to "alex", "resolvedContact" to ContactsRepository.Contact("Alex Smith", "555-0100")),
         )
         assertEquals("action: call\ndetails: [Alex Smith]", s)
     }
@@ -237,7 +238,7 @@ class ConfirmSummaryBuilderTest {
                 Intent.SendMessage,
                 "app" to "WhatsApp",
                 "contact" to "mom",
-                "resolvedContact" to "mom",
+                "resolvedContact" to ContactsRepository.Contact("mom", "555-0100"),
                 "body" to "on my way",
             ),
         )
@@ -253,7 +254,7 @@ class ConfirmSummaryBuilderTest {
                 Intent.SendMessage,
                 "app" to "SMS",
                 "contact" to "mom",
-                "resolvedContact" to "mom",
+                "resolvedContact" to ContactsRepository.Contact("mom", "555-0100"),
                 "body" to "hi",
             ),
         )
@@ -266,7 +267,7 @@ class ConfirmSummaryBuilderTest {
                 Intent.SendMessage,
                 "app" to "WhatsApp",
                 "contact" to "mom",
-                "resolvedContact" to "mom",
+                "resolvedContact" to ContactsRepository.Contact("mom", "555-0100"),
             ),
         )
         assertEquals("action: whatsapp\ndetails: [mom]", s)
@@ -280,7 +281,7 @@ class ConfirmSummaryBuilderTest {
             result(
                 Intent.SendMessage,
                 "contact" to "mom",
-                "resolvedContact" to "mom",
+                "resolvedContact" to ContactsRepository.Contact("mom", "555-0100"),
                 "body" to "hi",
             ),
         )

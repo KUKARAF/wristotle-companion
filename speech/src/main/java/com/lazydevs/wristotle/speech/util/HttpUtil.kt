@@ -1,0 +1,53 @@
+package com.lazydevs.wristotle.speech.util
+
+import org.json.JSONObject
+
+/**
+ * Shared HTTP helpers for the small JSON-API clients in the project
+ * (LLM agent providers in `:app/agent`, the speech-to-text
+ * `HttpRecognizer` in `:speech`). Lives in `:speech` so both consumers
+ * can reach it without `:app` ↔ `:speech` cycles.
+ */
+
+/** User-Agent header value sent on every outbound HTTP request. */
+const val WRISTOTLE_USER_AGENT = "Wristotle/companion"
+
+/**
+ * Coarse failure classification for non-2xx HTTP responses, shared by
+ * every client that maps `HttpURLConnection` status codes onto its own
+ * typed failure shape. Each caller picks its own target type for the
+ * bucket — the LLM clients fan out to `LlmResult.Failure.*`, the speech
+ * client fans out to `SpeechRecognizer.ERROR_*`.
+ */
+enum class HttpFailureBucket {
+    /** 401 / 403 — bad or missing credentials. */
+    Auth,
+    /** 429 — provider asked us to back off. */
+    RateLimit,
+    /** 5xx — provider failed on its end. */
+    Server,
+    /** Anything else outside 2xx. */
+    Other,
+}
+
+fun bucketFor(status: Int): HttpFailureBucket = when {
+    status == 401 || status == 403 -> HttpFailureBucket.Auth
+    status == 429 -> HttpFailureBucket.RateLimit
+    status in 500..599 -> HttpFailureBucket.Server
+    else -> HttpFailureBucket.Other
+}
+
+/**
+ * Best-effort extraction of a provider's error message from a response
+ * body. Tries `.error.message` (Anthropic + OpenAI shape), then a flat
+ * `.error` string (some OpenAI-compat servers). Returns `null` on any
+ * parse failure so callers can fall back to a generic message.
+ */
+fun String?.providerErrorMessage(): String? {
+    if (this == null) return null
+    return runCatching {
+        val obj = JSONObject(this)
+        obj.optJSONObject("error")?.optString("message")?.ifBlank { null }
+            ?: obj.optString("error").ifBlank { null }
+    }.getOrNull()
+}

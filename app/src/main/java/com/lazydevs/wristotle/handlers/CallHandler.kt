@@ -38,7 +38,10 @@ class CallHandler(
         val contactName = (result.slots[SlotKeys.Contact] as? String)?.trim().orEmpty()
         if (contactName.isEmpty()) return "No contact specified"
 
-        val contact = contacts.findContact(contactName)
+        // PebbleListenerService.enrichResolvedContact already looked
+        // this name up before the confirm-gate; reuse that match.
+        val contact = (result.slots[SlotKeys.ResolvedContact] as? ContactsRepository.Contact)
+            ?: contacts.findContact(contactName)
             ?: return "Contact not found: $contactName"
 
         return try {

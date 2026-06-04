@@ -1,6 +1,7 @@
 package com.lazydevs.wristotle.util
 
 import android.util.Log
+import com.lazydevs.wristotle.speech.util.WRISTOTLE_USER_AGENT
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -17,7 +18,6 @@ import java.net.URL
  */
 object SimpleHttp {
     private const val TAG = "SimpleHttp"
-    private const val USER_AGENT = "Wristotle/companion"
 
     /**
      * Run one HTTP request and return `(status, body)`. `body` comes from
@@ -43,7 +43,7 @@ object SimpleHttp {
             requestMethod = method
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
-            setRequestProperty("User-Agent", USER_AGENT)
+            setRequestProperty("User-Agent", WRISTOTLE_USER_AGENT)
             headers.forEach { (k, v) -> setRequestProperty(k, v) }
             if (body != null) doOutput = true
         }

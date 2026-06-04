@@ -73,7 +73,10 @@ class SendMessageHandler(
         if (contactName.isEmpty()) return "No contact specified"
         if (body.isEmpty()) return "No message body"
 
-        val contact = contacts.findContact(contactName)
+        // Reuse the upstream resolution when present — the slot extractor
+        // already validated this name against the Contacts provider.
+        val contact = (result.slots[SlotKeys.ResolvedContact] as? ContactsRepository.Contact)
+            ?: contacts.findContact(contactName)
             ?: return "Contact not found: $contactName"
 
         return target.deliver(context, contact.number, body, contact.name)

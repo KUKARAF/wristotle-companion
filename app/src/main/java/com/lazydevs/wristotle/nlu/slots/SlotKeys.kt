@@ -49,10 +49,14 @@ object SlotKeys {
     const val FilterCompleted = "completed"
     const val FilterPending = "pending"
 
-    /** Resolved contact info — produced by the handler after the slot
-     *  extractor's spoken name has been matched against the address
-     *  book. Read by `ConfirmSummaryBuilder` so the prompt shows the
-     *  actual name + number being dialled, not just what the user said. */
+    /** Resolved contact match — held as a [com.lazydevs.wristotle.phone.ContactsRepository.Contact]
+     *  (name + number). Populated by whichever upstream pass first
+     *  matches the spoken name against the address book; either the
+     *  slot extractor (when it pre-validates while extracting, e.g.
+     *  [SendMessageSlots]'s multi-word loop) or
+     *  `PebbleListenerService.enrichResolvedContact` as a fallback.
+     *  Downstream handlers and `ConfirmSummaryBuilder` read it instead
+     *  of re-querying the Contacts provider. */
     const val ResolvedContact = "resolvedContact"
 
     /** Path to a captured audio clip — set by [NoteHandler] /

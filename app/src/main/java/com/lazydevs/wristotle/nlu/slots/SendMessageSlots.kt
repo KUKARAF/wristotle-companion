@@ -150,24 +150,30 @@ class SendMessageSlots(
             val body = rest.substring(conjMatch.range.last + 1).trim()
             // Only accept the conjunction split when the contact half
             // actually resolves. `that` in particular is too common in
-            // natural speech: a dictation like "text John hey we tested
-            // the package that we built" otherwise lets the regex match
-            // the "that" deep inside the body and we end up calling
-            // `findContact("john hey we tested the package")` — which
-            // can't find anything. Falling through here lets the
-            // multi-word loop below pick up the real "john" prefix.
-            if (contact.isNotEmpty() && body.isNotEmpty() && findContact(contact) != null) {
-                return mapOf(SlotKeys.Contact to contact, SlotKeys.Body to body)
+            // natural speech and otherwise greedy-matches deep into the
+            // body — fall through to the multi-word loop instead.
+            val resolved = if (contact.isNotEmpty() && body.isNotEmpty()) findContact(contact) else null
+            if (resolved != null) {
+                return mapOf(
+                    SlotKeys.Contact to contact,
+                    SlotKeys.Body to body,
+                    SlotKeys.ResolvedContact to resolved,
+                )
             }
         }
 
         val words = rest.split(MULTI_WHITESPACE).map(::cleanNameToken).filter { it.isNotEmpty() }
         for (n in minOf(MAX_NAME_WORDS, words.size) downTo 1) {
             val candidate = words.subList(0, n).joinToString(" ")
-            if (findContact(candidate) != null) {
+            val resolved = findContact(candidate)
+            if (resolved != null) {
                 val body = if (n < words.size) words.subList(n, words.size).joinToString(" ").trim() else ""
                 if (body.isNotEmpty()) {
-                    return mapOf(SlotKeys.Contact to candidate, SlotKeys.Body to body)
+                    return mapOf(
+                        SlotKeys.Contact to candidate,
+                        SlotKeys.Body to body,
+                        SlotKeys.ResolvedContact to resolved,
+                    )
                 }
             }
         }
@@ -233,14 +239,24 @@ class SendMessageSlots(
         // the body.
         for (n in minOf(MAX_NAME_WORDS, words.size) downTo 1) {
             val candidate = words.subList(0, n).joinToString(" ")
-            if (findContact(candidate) != null) {
+            val resolved = findContact(candidate)
+            if (resolved != null) {
                 val body = if (n < words.size)
                     words.subList(n, words.size).joinToString(" ").trim()
                 else ""
                 return if (body.isNotEmpty())
-                    mapOf(SlotKeys.App to appDisplay, SlotKeys.Contact to candidate, SlotKeys.Body to body)
+                    mapOf(
+                        SlotKeys.App to appDisplay,
+                        SlotKeys.Contact to candidate,
+                        SlotKeys.Body to body,
+                        SlotKeys.ResolvedContact to resolved,
+                    )
                 else
-                    mapOf(SlotKeys.App to appDisplay, SlotKeys.Contact to candidate)
+                    mapOf(
+                        SlotKeys.App to appDisplay,
+                        SlotKeys.Contact to candidate,
+                        SlotKeys.ResolvedContact to resolved,
+                    )
             }
         }
 

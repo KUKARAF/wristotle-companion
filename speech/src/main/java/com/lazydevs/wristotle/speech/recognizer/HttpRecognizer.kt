@@ -4,6 +4,10 @@ import android.speech.SpeechRecognizer
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.speech.audio.AudioSource
 import com.lazydevs.wristotle.speech.audio.flatten
+import com.lazydevs.wristotle.speech.util.HttpFailureBucket
+import com.lazydevs.wristotle.speech.util.WRISTOTLE_USER_AGENT
+import com.lazydevs.wristotle.speech.util.bucketFor
+import com.lazydevs.wristotle.speech.util.providerErrorMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -154,7 +158,7 @@ class HttpRecognizer(
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
             doOutput = true
-            setRequestProperty("User-Agent", USER_AGENT)
+            setRequestProperty("User-Agent", WRISTOTLE_USER_AGENT)
             setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
             setRequestProperty("Accept", "application/json")
             if (apiKey.isNotBlank()) setRequestProperty("Authorization", "Bearer $apiKey")
@@ -173,20 +177,14 @@ class HttpRecognizer(
 
             val status = conn.responseCode
             val payload = readBody(conn, success = status in 200..299)
-            when (status) {
-                in 200..299 -> parseSuccess(payload)
-                401 -> throw HttpRecognizerException(SpeechRecognizer.ERROR_CLIENT, "API key rejected (401)")
-                429 -> throw HttpRecognizerException(
-                    SpeechRecognizer.ERROR_NETWORK,
-                    extractProviderError(payload) ?: "rate-limited (429)",
-                )
-                in 500..599 -> throw HttpRecognizerException(
-                    SpeechRecognizer.ERROR_SERVER,
-                    extractProviderError(payload) ?: "server error ($status)",
-                )
-                else -> throw HttpRecognizerException(
-                    SpeechRecognizer.ERROR_NETWORK,
-                    extractProviderError(payload) ?: "HTTP $status",
+            if (status in 200..299) {
+                parseSuccess(payload)
+            } else {
+                val providerMessage = payload.providerErrorMessage()
+                    ?: payload.trim().takeIf { it.isNotBlank() }?.take(200)
+                throw HttpRecognizerException(
+                    errorCode = bucketFor(status).toRecognizerErrorCode(),
+                    message = providerMessage ?: defaultMessageFor(status),
                 )
             }
         } catch (e: HttpRecognizerException) {
@@ -251,19 +249,22 @@ class HttpRecognizer(
         }
     }
 
-    /** Pull a short error message out of a provider's JSON error body
-     *  if we can. Both OpenAI ({`error`: {`message`: …}}) and Groq
-     *  ({`error`: {`message`: …, `type`: …}}) use the same key. Falls
-     *  back to the raw body trimmed if the shape is unfamiliar. */
-    private fun extractProviderError(payload: String): String? {
-        if (payload.isBlank()) return null
-        return try {
-            val root = JSONObject(payload)
-            root.optJSONObject("error")?.optString("message", null)?.takeIf { it.isNotBlank() }
-                ?: payload.trim().take(200)
-        } catch (_: Throwable) {
-            payload.trim().take(200)
-        }
+    /** Map the coarse HTTP-failure bucket to the Android
+     *  `SpeechRecognizer.ERROR_*` constant the flow body translates to a
+     *  [TranscriptionEvent.Error]. Other STT clients (LLM agent providers)
+     *  fan the same buckets out to their own typed failure shapes. */
+    private fun HttpFailureBucket.toRecognizerErrorCode(): Int = when (this) {
+        HttpFailureBucket.Auth -> SpeechRecognizer.ERROR_CLIENT
+        HttpFailureBucket.RateLimit -> SpeechRecognizer.ERROR_NETWORK
+        HttpFailureBucket.Server -> SpeechRecognizer.ERROR_SERVER
+        HttpFailureBucket.Other -> SpeechRecognizer.ERROR_NETWORK
+    }
+
+    private fun defaultMessageFor(status: Int): String = when {
+        status == 401 -> "API key rejected (401)"
+        status == 429 -> "rate-limited (429)"
+        status in 500..599 -> "server error ($status)"
+        else -> "HTTP $status"
     }
 
     /** Join base + path tolerating a trailing slash on either side.
@@ -276,7 +277,6 @@ class HttpRecognizer(
     }
 
     companion object {
-        private const val USER_AGENT = "Wristotle/companion (HttpRecognizer)"
         private const val DEFAULT_CONNECT_TIMEOUT_MS = 10_000
         private const val DEFAULT_READ_TIMEOUT_MS = 30_000
     }

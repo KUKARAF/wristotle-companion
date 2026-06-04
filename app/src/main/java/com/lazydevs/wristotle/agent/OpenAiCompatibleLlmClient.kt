@@ -1,6 +1,7 @@
 package com.lazydevs.wristotle.agent
 
 import android.util.Log
+import com.lazydevs.wristotle.speech.util.providerErrorMessage
 import com.lazydevs.wristotle.util.SimpleHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

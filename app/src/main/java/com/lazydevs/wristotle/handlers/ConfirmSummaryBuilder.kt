@@ -1,6 +1,7 @@
 package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import java.text.SimpleDateFormat
@@ -140,7 +141,8 @@ object ConfirmSummaryBuilder {
      *        phrase.
      */
     private fun contactName(r: IntentResult): String {
-        val resolved = (r.slots[SlotKeys.ResolvedContact] as? String)?.takeIf { it.isNotEmpty() }
+        val resolved = (r.slots[SlotKeys.ResolvedContact] as? ContactsRepository.Contact)
+            ?.name?.takeIf { it.isNotEmpty() }
         if (resolved != null) return "[$resolved]"
         val spoken = (r.slots[SlotKeys.Contact] as? String)?.takeIf { it.isNotEmpty() }
         return if (spoken != null) "[NO_CONTACT] [$spoken]" else "[NO_NAME]"
