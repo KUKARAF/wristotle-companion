@@ -116,8 +116,8 @@ android {
             // load-bearing for anything we ship — it's metadata Google
             // Play uses, not anything Wristotle reads — and the embedded
             // SHA breaks reproducibility (every commit produces a
-            // different APK content). Disable. See
-            // [[fdroid-submission-plan]] § "v1.0.2 CI-vs-local diff".
+            // different APK content), which we want for the F-Droid
+            // distribution path.
             vcsInfo {
                 include = false
             }
@@ -131,7 +131,6 @@ android {
     // at build time), so the remaining PNG surface is just the launcher
     // and a couple of small assets — low risk. If F-Droid's reproducibility
     // verification later flags PNG handling, revisit with the Variant API.
-    // See [[fdroid-submission-plan]].
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -197,7 +196,6 @@ android {
 // don't ship one today (the perf win is minor for a UI-light app), so
 // disable the generation tasks entirely. Cheap, side-effect-free, and
 // keeps the F-Droid rebuild byte-identical to ours.
-// See [[fdroid-submission-plan]].
 tasks.matching { it.name.contains("ArtProfile") }.configureEach {
     enabled = false
 }

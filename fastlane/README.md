@@ -22,6 +22,3 @@ Workflow per release:
    https://wristotle.codeberg.page/changelog/" for fix-only releases).
 3. Tag the commit. CI publishes to Codeberg releases; F-Droid's scanner
    picks the tag up via `UpdateCheckMode: Tags`.
-
-See `claude_knowledge/pebble_dev/wristotle-companion/fdroid-submission-plan.md`
-for the full F-Droid submission strategy.

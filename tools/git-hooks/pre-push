@@ -105,8 +105,7 @@ EOF
                     # static value (no env vars available in their
                     # build environment), so a stale fallback means
                     # F-Droid would publish a stale version on the
-                    # next scan. The fdroid-submission-plan in
-                    # knowledge has the full rationale.
+                    # next scan.
                     #
                     # Same idea as the watch's package.json bump rule.
                     # Compare just the numeric part of the tag (`v1.0.1`
@@ -127,8 +126,6 @@ EOF
        scheme: $expected_name → $(echo "$expected_name" | awk -F. '{printf "%d%02d%02d", $1, $2, $3}'))
     2. Commit and re-tag at the new commit.
     3. Push.
-
-  See claude_knowledge/.../fdroid-submission-plan.md for context.
 
   Bypass for a one-off (non-F-Droid release): git push --no-verify origin $tag_name
 

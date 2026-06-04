@@ -31,8 +31,7 @@ android {
                 cmake {
                     cppFlags += "-std=c++17"
                     // Reproducible-build flags so the .so stays byte-identical
-                    // across rebuilds (required for F-Droid). See
-                    // [[fdroid-submission-plan]]:
+                    // across rebuilds (required for F-Droid):
                     //   - `-ffile-prefix-map=…=.` strips absolute build paths
                     //     from embedded debug strings.
                     //   - `-Wl,--build-id=none` (passed in `arguments` below as a
