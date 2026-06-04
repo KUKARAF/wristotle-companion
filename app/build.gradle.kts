@@ -110,6 +110,17 @@ android {
             // for quick checks. CI builds will always have it configured.
             signingConfig = signingConfigs.findByName("release")
                 ?: signingConfigs.getByName("debug")
+
+            // AGP 8.3+ embeds a `META-INF/version-control-info.textproto`
+            // containing the build's git commit SHA. The file isn't
+            // load-bearing for anything we ship — it's metadata Google
+            // Play uses, not anything Wristotle reads — and the embedded
+            // SHA breaks reproducibility (every commit produces a
+            // different APK content). Disable. See
+            // [[fdroid-submission-plan]] § "v1.0.2 CI-vs-local diff".
+            vcsInfo {
+                include = false
+            }
         }
     }
 
