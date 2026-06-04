@@ -41,8 +41,11 @@ import com.lazydevs.wristotle.speech.nlu.embedding.MiniLmEmbedder
 import com.lazydevs.wristotle.speech.nlu.embedding.Tokenizer
 import com.lazydevs.wristotle.speech.nlu.model.NluModelStorage
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
+import com.lazydevs.wristotle.speech.recognizer.CompositeRecognizer
+import com.lazydevs.wristotle.speech.recognizer.HttpRecognizer
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.StubRecognizer
+import com.lazydevs.wristotle.stt.SttProviderMode
 import com.lazydevs.wristotle.speech.whisper.ModelStorage
 import com.lazydevs.wristotle.speech.whisper.WhisperRecognizer
 import com.lazydevs.wristotle.transport.PebbleTransport
@@ -144,6 +147,15 @@ class WristotleApplication : Application() {
      *  Settings card, fires an AskAgent intent, or runs a backup. */
     val askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings by lazy {
         com.lazydevs.wristotle.agent.AskAgentSettings(this)
+    }
+
+    /** STT-provider preferences — chooses on-device Whisper, an HTTP
+     *  endpoint, or a primary/fallback pair. Lazy so users who never
+     *  touch the feature don't pay the SharedPrefs read on cold start;
+     *  the recognizer factory below dereferences this on every
+     *  dictation session. */
+    val sttProviderSettings: com.lazydevs.wristotle.stt.SttProviderSettings by lazy {
+        com.lazydevs.wristotle.stt.SttProviderSettings(this)
     }
 
     /** Room database singletons — exposed for the backup/restore feature so
@@ -377,9 +389,7 @@ class WristotleApplication : Application() {
         )
 
         Recognizers.provider = provider@{ _ ->
-            val path = modelStorage.activeModelPath()
-                ?: return@provider StubRecognizer()
-            getOrCreateRecognizer(path)
+            buildRecognizerForSession()
         }
 
         IntentClassifiers.provider = { _ -> getOrCreateClassifier() }
@@ -439,6 +449,52 @@ class WristotleApplication : Application() {
             }
         }
     }
+
+    /**
+     * Resolves the right [Recognizer] for the current session based on
+     * [sttProviderSettings]. Called by [Recognizers.provider] on every
+     * dictation start so a setting change picks up without an app restart.
+     *
+     * - `LOCAL_ONLY` → cached Whisper for the active model, or
+     *   [StubRecognizer] if no model is downloaded yet (preserves the
+     *   pre-feature behaviour).
+     * - `LOCAL_PRIMARY` → composite with Whisper first, HTTP fallback.
+     *   When no Whisper model is active the HTTP recognizer is returned
+     *   directly — there's no "local" leg to try, so we skip the
+     *   composite overhead.
+     * - `CLOUD_PRIMARY` → composite with HTTP first, Whisper fallback.
+     *   When no Whisper model is active the HTTP recognizer is returned
+     *   directly (no usable fallback).
+     *
+     * HTTP recognizers are created fresh per session — they're
+     * stateless and cheap to construct; caching would tangle the
+     * lifecycle with config edits in the Settings card.
+     */
+    private fun buildRecognizerForSession(): Recognizer {
+        val whisper: Recognizer? = modelStorage.activeModelPath()?.let { getOrCreateRecognizer(it) }
+        return when (sttProviderSettings.mode.value) {
+            SttProviderMode.LOCAL_ONLY -> whisper ?: StubRecognizer()
+            SttProviderMode.LOCAL_PRIMARY -> when {
+                whisper == null -> buildHttpRecognizer()
+                else -> CompositeRecognizer(primary = whisper, secondary = buildHttpRecognizer())
+            }
+            SttProviderMode.CLOUD_PRIMARY -> when {
+                whisper == null -> buildHttpRecognizer()
+                else -> CompositeRecognizer(primary = buildHttpRecognizer(), secondary = whisper)
+            }
+        }
+    }
+
+    /** Reads the current HTTP config straight from [sttProviderSettings]
+     *  and returns a fresh [HttpRecognizer]. Always returns a recognizer
+     *  even if the config is blank — the recognizer's own validation
+     *  surfaces a typed `ERROR_CLIENT` event, which the composite then
+     *  treats as a fallback trigger. */
+    private fun buildHttpRecognizer(): HttpRecognizer = HttpRecognizer(
+        baseUrl = sttProviderSettings.httpBaseUrl.value,
+        apiKey = sttProviderSettings.httpApiKey.value,
+        model = sttProviderSettings.httpModel.value,
+    )
 
     /**
      * Returns a cached [WhisperRecognizer] for [path], creating one if needed.

@@ -412,6 +412,7 @@ private fun SettingsCategoryContent(
                 WeatherSettingsCard(settings = weatherSettings)
 
             SettingsCategory.Models -> {
+                SttProviderCard(settings = app.sttProviderSettings)
                 WhisperModelsCard(vm = modelsVm)
                 NluModelsCard(vm = nluModelsVm)
             }

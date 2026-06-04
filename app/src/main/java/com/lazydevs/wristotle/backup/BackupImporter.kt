@@ -505,6 +505,18 @@ class BackupImporter(private val app: WristotleApplication) {
                 }
             }
         }
+
+        if (sel.sttProviderSetup) {
+            p.sttProvider?.let { s ->
+                runCatching { com.lazydevs.wristotle.stt.SttProviderMode.valueOf(s.mode) }
+                    .onSuccess { app.sttProviderSettings.setMode(it) }
+                app.sttProviderSettings.setHttpBaseUrl(s.httpBaseUrl)
+                app.sttProviderSettings.setHttpModel(s.httpModel)
+                if (sel.sttProviderApiKey) {
+                    s.httpApiKey?.let { app.sttProviderSettings.setHttpApiKey(it) }
+                }
+            }
+        }
     }
 
     private fun applyPins(incoming: List<BackupManifest.PinRecord>): EntityStats {
