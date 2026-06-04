@@ -391,6 +391,7 @@ private fun SettingsCategoryContent(
             SettingsCategory.Setup ->
                 SetupCard(
                     provider = app.setupHealthProvider,
+                    setupSettings = app.setupSettings,
                     onOpenCategory = onOpenCategory,
                 )
 

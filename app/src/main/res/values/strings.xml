@@ -249,6 +249,9 @@
 
     <!-- Re-show welcome button in the SetupCard, plus its confirmation. -->
     <string name="setup_card_show_welcome_again">Show welcome again</string>
+    <string name="setup_reset_confirm_title">Show welcome wizard?</string>
+    <string name="setup_reset_confirm_body">The welcome walkthrough will appear the next time you open Wristotle. You can skip it again from there.</string>
+    <string name="setup_reset_confirm_proceed">Show next launch</string>
 
     <!-- Alarms card (Settings → Alarms & Reminders → Alarms). The list lives
          alongside the existing Reminders card, but each alarm is per-row

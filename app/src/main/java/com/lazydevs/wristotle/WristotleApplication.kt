@@ -49,6 +49,7 @@ import com.lazydevs.wristotle.stt.SttProviderMode
 import com.lazydevs.wristotle.speech.whisper.ModelStorage
 import com.lazydevs.wristotle.speech.whisper.WhisperRecognizer
 import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.util.hasPermission
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -167,14 +168,15 @@ class WristotleApplication : Application() {
      *  screen calls `refresh()` on first compose anyway. */
     val setupHealthProvider: com.lazydevs.wristotle.setup.SetupHealthProvider by lazy {
         com.lazydevs.wristotle.setup.SetupHealthProvider(
-            context = this,
             scope = appScope,
-            whisperModelStorage = modelStorage,
-            nluModelStorage = nluModelStorage,
-            installedAppDao = appIndexDao,
-            pebbleCompanionDetector = pebbleCompanionDetector,
-            aliasStore = aliasStore,
-            contactAliasStore = contactAliasStore,
+            whisperActiveModelId = { modelStorage.activeModelId },
+            nluActiveModelId = { nluModelStorage.activeModelId },
+            latestAppScanAt = { appIndexDao.latestScanAt() },
+            whisperInWatchPath = {
+                pebbleCompanionDetector.state.value.whisperAppliesToWatchDictation
+            },
+            appAliasCount = { aliasStore.all().size },
+            contactAliasCount = { contactAliasStore.all().size },
             isSpeechProviderConfigured = {
                 sttProviderSettings.mode.value !=
                     com.lazydevs.wristotle.stt.SttProviderMode.LOCAL_ONLY ||
@@ -184,6 +186,13 @@ class WristotleApplication : Application() {
                 askAgentSettings.anthropicApiKey.value.isNotEmpty() ||
                     askAgentSettings.openaiApiKey.value.isNotEmpty()
             },
+            hasCorePermissions = {
+                this.hasPermission(android.Manifest.permission.READ_CONTACTS) &&
+                    this.hasPermission(android.Manifest.permission.SEND_SMS) &&
+                    this.hasPermission(android.Manifest.permission.CALL_PHONE) &&
+                    this.hasPermission(android.Manifest.permission.RECORD_AUDIO)
+            },
+            isLowRamDevice = { isLowRamDevice() },
         )
     }
 

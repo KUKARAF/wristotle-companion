@@ -1,23 +1,12 @@
 package com.lazydevs.wristotle.setup
 
-import android.Manifest
-import android.app.ActivityManager
-import android.content.Context
-import com.lazydevs.wristotle.apps.AliasStore
-import com.lazydevs.wristotle.apps.InstalledAppDao
-import com.lazydevs.wristotle.phone.ContactAliasStore
 import com.lazydevs.wristotle.R
-import com.lazydevs.wristotle.speech.model.ModelFileStorage
-import com.lazydevs.wristotle.transport.PebbleCompanionDetector
 import com.lazydevs.wristotle.ui.SettingsCategory
-import com.lazydevs.wristotle.util.hasPermission
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Derives the list of **pending** recommended setup actions from live
@@ -37,16 +26,26 @@ import kotlinx.coroutines.withContext
  * in each owning subsystem (ModelStorage, AppIndex, etc.).
  */
 class SetupHealthProvider(
-    private val context: Context,
     private val scope: CoroutineScope,
-    private val whisperModelStorage: ModelFileStorage,
-    private val nluModelStorage: ModelFileStorage,
-    private val installedAppDao: InstalledAppDao,
-    private val pebbleCompanionDetector: PebbleCompanionDetector,
-    private val aliasStore: AliasStore,
-    private val contactAliasStore: ContactAliasStore,
+    /** Reads `ModelFileStorage.activeModelId` for Whisper. */
+    private val whisperActiveModelId: () -> String?,
+    /** Reads `ModelFileStorage.activeModelId` for the NLU model. */
+    private val nluActiveModelId: () -> String?,
+    /** Reads `InstalledAppDao.latestScanAt()` — null when never scanned. */
+    private val latestAppScanAt: suspend () -> Long?,
+    /** Reads `PebbleCompanionDetector.state.value.whisperAppliesToWatchDictation`. */
+    private val whisperInWatchPath: () -> Boolean,
+    private val appAliasCount: () -> Int,
+    private val contactAliasCount: () -> Int,
     private val isSpeechProviderConfigured: () -> Boolean,
     private val isAskAgentConfigured: () -> Boolean,
+    /** True when all four runtime permissions Wristotle needs for the
+     *  headline flows (Contacts / SMS / Phone / Microphone) are granted. */
+    private val hasCorePermissions: () -> Boolean,
+    /** True on devices Android flags as memory-constrained — gates the
+     *  NLU recommendation (the embedder is the heaviest optional thing
+     *  on the menu). */
+    private val isLowRamDevice: () -> Boolean,
 ) {
 
     private val _actions = MutableStateFlow<List<RecommendedAction>>(emptyList())
@@ -69,19 +68,17 @@ class SetupHealthProvider(
      */
     fun refresh() {
         scope.launch {
-            _actions.value = withContext(Dispatchers.IO) { derive() }
+            _actions.value = derive()
         }
     }
 
     private suspend fun derive(): List<RecommendedAction> {
         val out = mutableListOf<RecommendedAction>()
-        val onMicroPebble = pebbleCompanionDetector.state.value.whisperAppliesToWatchDictation
-        val lowRam = isLowRamDevice()
 
         // ── Essentials ──────────────────────────────────────────────
         // Whisper: only nudge under microPebble — Core Devices runs
         // its own dictation pipeline, our Whisper isn't in the path.
-        if (onMicroPebble && whisperModelStorage.activeModelId == null) {
+        if (whisperInWatchPath() && whisperActiveModelId() == null) {
             out += RecommendedAction(
                 id = ActionId.DownloadWhisperModel,
                 titleRes = R.string.setup_action_whisper_title,
@@ -92,7 +89,7 @@ class SetupHealthProvider(
         }
         // NLU: skip on low-RAM devices — the classifier is gated out
         // there, so nudging the download is pointless.
-        if (!lowRam && nluModelStorage.activeModelId == null) {
+        if (!isLowRamDevice() && nluActiveModelId() == null) {
             out += RecommendedAction(
                 id = ActionId.DownloadNluModel,
                 titleRes = R.string.setup_action_nlu_title,
@@ -112,7 +109,7 @@ class SetupHealthProvider(
                 drillTarget = SettingsCategory.Diagnostics,
             )
         }
-        if (installedAppDao.latestScanAt() == null) {
+        if (latestAppScanAt() == null) {
             out += RecommendedAction(
                 id = ActionId.ScanInstalledApps,
                 titleRes = R.string.setup_action_app_scan_title,
@@ -123,7 +120,7 @@ class SetupHealthProvider(
         }
 
         // ── Quality wins ────────────────────────────────────────────
-        if (contactAliasStore.all().isEmpty()) {
+        if (contactAliasCount() == 0) {
             out += RecommendedAction(
                 id = ActionId.AddContactAlias,
                 titleRes = R.string.setup_action_contact_alias_title,
@@ -132,7 +129,7 @@ class SetupHealthProvider(
                 drillTarget = SettingsCategory.Learning,
             )
         }
-        if (aliasStore.all().isEmpty()) {
+        if (appAliasCount() == 0) {
             out += RecommendedAction(
                 id = ActionId.AddAppAlias,
                 titleRes = R.string.setup_action_app_alias_title,
@@ -163,20 +160,4 @@ class SetupHealthProvider(
         return out.sortedWith(compareBy({ it.priority.ordinal }, { it.id.ordinal }))
     }
 
-    /**
-     * Minimum permissions Wristotle needs for the headline flows
-     * (calls + texts). Notification access + the more niche grants are
-     * called out per-feature in their own cards, not here — the wizard
-     * shouldn't gate a fresh install on "grant accessibility shortcuts".
-     */
-    private fun hasCorePermissions(): Boolean =
-        context.hasPermission(Manifest.permission.READ_CONTACTS) &&
-            context.hasPermission(Manifest.permission.SEND_SMS) &&
-            context.hasPermission(Manifest.permission.CALL_PHONE) &&
-            context.hasPermission(Manifest.permission.RECORD_AUDIO)
-
-    private fun isLowRamDevice(): Boolean {
-        val am = context.getSystemService(ActivityManager::class.java)
-        return am?.isLowRamDevice == true
-    }
 }
