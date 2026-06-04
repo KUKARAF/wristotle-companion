@@ -48,24 +48,18 @@ android {
         applicationId = "com.lazydevs.wristotle"
         minSdk = 24
         targetSdk = 36
-        // Two callers read these:
+        // **Single source of truth for the released version.** Both
+        // Codeberg CI and F-Droid's metadata scanner build straight off
+        // these literals — no env-var override path — so the gradle file,
+        // the git tag, and the released APK can't drift apart. Whoever
+        // bumps the tag also bumps these two lines; the pre-push hook
+        // refuses to push a tag that doesn't match, and CI does the same
+        // check up front.
         //
-        // 1. **Codeberg CI** overrides via env vars from the tag name
-        //    (`v1.2.3` → versionName "1.2.3", versionCode 10203 via
-        //    2-digits-per-component) so the released APK on the releases
-        //    page reflects the tag.
-        //
-        // 2. **F-Droid's metadata scan** reads the static fallback values
-        //    here (no env vars available in their scanner). `UpdateCheckMode:
-        //    Tags` looks for the highest versionCode declared in this file
-        //    across all git tags. Keep the static fallback in lockstep with
-        //    the most recent released tag — bumped manually alongside each
-        //    `git tag` (same pattern as the watch's `package.json` bump).
-        //
-        // Whoever bumps the tag also bumps these two lines. The pre-push
-        // hook nudges if it spots a mismatch.
-        versionCode = System.getenv("WRISTOTLE_VERSION_CODE")?.toIntOrNull() ?: 10002
-        versionName = System.getenv("WRISTOTLE_VERSION_NAME") ?: "1.0.2"
+        // Bump scheme: versionCode is 2 digits per component (max 99.99.99).
+        // v1.2.3 → versionCode 1*10000 + 2*100 + 3 = 10203.
+        versionCode = 10002
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

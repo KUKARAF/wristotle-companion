@@ -31,20 +31,38 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Derive version from tag
+      - name: Verify version literals match tag
         id: version
         shell: bash
+        # Fail fast if app/build.gradle.kts's static versionCode /
+        # versionName literals don't match the tag being released. F-Droid
+        # builds the APK off those literals (no env-var override path), so
+        # a tag-vs-fallback mismatch would publish a stale version on the
+        # next F-Droid scan. Same check the local pre-push hook runs; this
+        # is the belt-and-braces version that survives a `--no-verify`.
         run: |
           set -eu
           TAG="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG#v}"
-          # versionCode = 2 digits per component (max 99.99.99). Bumps
-          # monotonically as long as the version string is well-formed.
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          EXPECTED_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+
+          ACTUAL_NAME=$(sed -nE 's/.*versionName\s*=\s*"([^"]+)".*/\1/p' app/build.gradle.kts | head -1)
+          ACTUAL_CODE=$(sed -nE 's/.*versionCode\s*=\s*([0-9]+).*/\1/p' app/build.gradle.kts | head -1)
+
+          echo "tag           = $TAG"
+          echo "expected name = $VERSION"
+          echo "expected code = $EXPECTED_CODE"
+          echo "actual   name = $ACTUAL_NAME"
+          echo "actual   code = $ACTUAL_CODE"
+
+          if [ "$VERSION" != "$ACTUAL_NAME" ] || [ "$EXPECTED_CODE" != "$ACTUAL_CODE" ]; then
+              echo "::error::tag $TAG does not match app/build.gradle.kts literals — bump the source file in the same commit as the tag and re-tag at the new commit."
+              exit 1
+          fi
+
           echo "name=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
-          echo "Resolved $TAG → versionName=$VERSION, versionCode=$VERSION_CODE"
+          echo "code=$EXPECTED_CODE" >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -116,20 +134,50 @@ jobs:
           WRISTOTLE_KEYSTORE_PASSWORD: ${{ secrets.WRISTOTLE_KEYSTORE_PASSWORD }}
           WRISTOTLE_KEY_ALIAS: ${{ secrets.WRISTOTLE_KEY_ALIAS }}
           WRISTOTLE_KEY_PASSWORD: ${{ secrets.WRISTOTLE_KEY_PASSWORD }}
-          WRISTOTLE_VERSION_NAME: ${{ steps.version.outputs.name }}
-          WRISTOTLE_VERSION_CODE: ${{ steps.version.outputs.code }}
-          # JVM heaps live in gradle.properties so the daemon actually
-          # honours them (CLI overrides reach the launcher only, not the
-          # daemon). What's left here is ninja's parallel-compile cap so
-          # whisper.cpp + ggml don't fork 4 g++ subprocesses on top of
-          # the ~3 GB of JVM heap and exceed the medium runner's budget.
+          # versionCode / versionName are not env-overridden — they live
+          # as static literals in app/build.gradle.kts and CI verified
+          # above that they match the tag. JVM heaps live in
+          # gradle.properties so the daemon actually honours them (CLI
+          # overrides reach the launcher only, not the daemon). What's
+          # left here is ninja's parallel-compile cap so whisper.cpp +
+          # ggml don't fork 4 g++ subprocesses on top of the ~3 GB of
+          # JVM heap and exceed the medium runner's budget.
           CMAKE_BUILD_PARALLEL_LEVEL: '2'
         run: ./gradlew --no-daemon -Dorg.gradle.workers.max=2 :app:assembleRelease
 
-      - name: Stage APK under a versioned name
+      - name: Verify signing cert
+        # Defence against accidental key rotation: every release MUST
+        # be signed by the same cert that v1.0.0 was signed by. F-Droid
+        # pins this fingerprint in AllowedAPKSigningKeys; a different
+        # key would also break the existing in-place upgrade path on
+        # users' phones. Hard-fails if the SHA-256 doesn't match.
         run: |
+          set -eu
+          EXPECTED=b2312ec6767a28db57eb4bf78033274d83df81fcdac7e968ebaaea5efb69aea5
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          ACTUAL=$("$APKSIGNER" verify --print-certs \
+                     app/build/outputs/apk/release/app-release.apk \
+                   | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
+          echo "expected = $EXPECTED"
+          echo "actual   = $ACTUAL"
+          if [ "$EXPECTED" != "$ACTUAL" ]; then
+              echo "::error::signing cert SHA-256 changed — refusing to publish. Confirm key rotation was intentional, then update the EXPECTED literal here + F-Droid's AllowedAPKSigningKeys + announce the key change to users."
+              exit 1
+          fi
+
+      - name: Stage APK + sha256 checksum under versioned names
+        # sha256sums.txt sits alongside the APK on the release page so
+        # users who download manually can verify the download integrity
+        # without trusting the page itself. F-Droid doesn't need it
+        # (they verify by signature), but it's standard sideload-trust
+        # hygiene.
+        run: |
+          set -eu
+          VERSION=${{ steps.version.outputs.name }}
           cp app/build/outputs/apk/release/app-release.apk \
-             wristotle-companion-${{ steps.version.outputs.name }}.apk
+             "wristotle-companion-${VERSION}.apk"
+          sha256sum "wristotle-companion-${VERSION}.apk" > sha256sums.txt
+          cat sha256sums.txt
 
       - name: Publish release + upload APK
         env:
@@ -205,23 +253,26 @@ jobs:
             exit 1
           fi
 
-          # If an asset with this name was already uploaded (re-run of the
-          # workflow on the same tag), delete it first — Codeberg's upload
-          # endpoint rejects duplicate filenames within a release.
+          # Fetch the asset list once; the per-asset loop below deletes
+          # any previously-uploaded copy (re-run of the workflow on the
+          # same tag — Codeberg's upload endpoint rejects duplicate
+          # filenames within a release).
           EXISTING_ASSETS=$(curl -fsS \
             "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets" \
             -H "Authorization: token ${CODEBERG_TOKEN}")
-          DUP_ID=$(echo "$EXISTING_ASSETS" | jq -r ".[] | select(.name == \"wristotle-companion-${VERSION}.apk\") | .id")
-          if [ -n "$DUP_ID" ] && [ "$DUP_ID" != "null" ]; then
-            echo "Removing previously-uploaded asset ${DUP_ID}."
-            curl -fsS -X DELETE \
-              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets/${DUP_ID}" \
-              -H "Authorization: token ${CODEBERG_TOKEN}"
-          fi
 
-          # Attach the APK as a release asset.
-          curl -fsS -X POST \
-            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets?name=wristotle-companion-${VERSION}.apk" \
-            -H "Authorization: token ${CODEBERG_TOKEN}" \
-            -F "attachment=@wristotle-companion-${VERSION}.apk"
-          echo "Published release ${RELEASE_ID} with APK attached."
+          # Attach the APK + sha256sums.txt as release assets.
+          for ASSET in "wristotle-companion-${VERSION}.apk" sha256sums.txt; do
+              DUP_ID=$(echo "$EXISTING_ASSETS" | jq -r ".[] | select(.name == \"${ASSET}\") | .id")
+              if [ -n "$DUP_ID" ] && [ "$DUP_ID" != "null" ]; then
+                  echo "Removing previously-uploaded ${ASSET} (asset ${DUP_ID})."
+                  curl -fsS -X DELETE \
+                    "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets/${DUP_ID}" \
+                    -H "Authorization: token ${CODEBERG_TOKEN}"
+              fi
+              curl -fsS -X POST \
+                "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets?name=${ASSET}" \
+                -H "Authorization: token ${CODEBERG_TOKEN}" \
+                -F "attachment=@${ASSET}"
+          done
+          echo "Published release ${RELEASE_ID} with APK + checksum attached."
