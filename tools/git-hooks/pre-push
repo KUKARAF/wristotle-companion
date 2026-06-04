@@ -97,6 +97,43 @@ EOF
                             exit 1
                         fi
                     fi
+
+                    # Soft warning: the static versionName in
+                    # app/build.gradle.kts (the fallback used when
+                    # WRISTOTLE_VERSION_NAME isn't set) MUST track the
+                    # tag being pushed. F-Droid's scanner reads this
+                    # static value (no env vars available in their
+                    # build environment), so a stale fallback means
+                    # F-Droid would publish a stale version on the
+                    # next scan. The fdroid-submission-plan in
+                    # knowledge has the full rationale.
+                    #
+                    # Same idea as the watch's package.json bump rule.
+                    # Compare just the numeric part of the tag (`v1.0.1`
+                    # → `1.0.1`) against the literal in build.gradle.kts.
+                    expected_name="${tag_name#v}"
+                    static_name=$(sed -n 's/.*WRISTOTLE_VERSION_NAME.*?: *"\([^"]*\)".*/\1/p' app/build.gradle.kts 2>/dev/null | head -1)
+                    if [ -n "$static_name" ] && [ "$static_name" != "$expected_name" ]; then
+                        cat >&2 <<EOF
+
+⚠ pre-push: tag '$tag_name' but app/build.gradle.kts versionName fallback is '$static_name'
+  F-Droid's scanner reads the static fallback value (not the CI env
+  override), so a mismatch means F-Droid would publish a stale
+  versionName on the next scan.
+
+  To fix:
+    1. Edit app/build.gradle.kts → versionName fallback to "$expected_name"
+       (and bump versionCode to match per the 2-digits-per-component
+       scheme: $expected_name → $(echo "$expected_name" | awk -F. '{printf "%d%02d%02d", $1, $2, $3}'))
+    2. Commit and re-tag at the new commit.
+    3. Push.
+
+  See claude_knowledge/.../fdroid-submission-plan.md for context.
+
+  Bypass for a one-off (non-F-Droid release): git push --no-verify origin $tag_name
+
+EOF
+                    fi
                     ;;
             esac
             ;;
