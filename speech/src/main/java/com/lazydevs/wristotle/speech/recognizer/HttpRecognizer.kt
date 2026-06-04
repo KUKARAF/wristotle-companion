@@ -110,8 +110,12 @@ class HttpRecognizer(
 
         val wav = WavEncoder.encode(flat, source.sampleRate)
 
+        Log.d(TAG, "uploading ${wav.size} bytes (${totalSamples / 16_000.0}s) to $baseUrl (model=$model)")
+        val startMs = System.currentTimeMillis()
         try {
             val text = withContext(Dispatchers.IO) { postTranscription(wav) }
+            val elapsedMs = System.currentTimeMillis() - startMs
+            Log.d(TAG, "transcribed in ${elapsedMs} ms: '$text'")
             if (text.isBlank()) {
                 emit(TranscriptionEvent.Error(SpeechRecognizer.ERROR_NO_MATCH, "empty transcript"))
                 return@flow
