@@ -392,6 +392,19 @@ class WristotleApplication : Application() {
             buildRecognizerForSession()
         }
 
+        // Audio capture is wired one layer above the Recognizer, so it
+        // fires once per session regardless of which Recognizer (Whisper,
+        // HTTP, Composite) the factory returned. Without this the cloud
+        // STT path skipped capture entirely because only WhisperRecognizer
+        // had an audioSink. See AudioSinks + CapturingAudioSource.
+        com.lazydevs.wristotle.speech.AudioSinks.provider = sink@{ _ ->
+            if (!conversationAudioSettings.captureEnabled.value) return@sink null
+            return@sink { samples ->
+                val saved = conversationAudioStore.save(samples, sampleRate = 16_000)
+                if (saved != null) lastCapturedAudioPath = saved.absolutePath
+            }
+        }
+
         IntentClassifiers.provider = { _ -> getOrCreateClassifier() }
 
         // Pre-warm only on devices Android doesn't flag as low-RAM. On
@@ -512,20 +525,11 @@ class WristotleApplication : Application() {
         }
         whisperRecognizers.getOrPut(path) {
             Log.d(TAG, "creating recognizer for active model: $path")
-            // Optional audio sink — only saves a .wav when the user has the
-            // capture toggle on. ConversationAudioStore caps the directory
-            // at ConversationAudioSettings.MAX_FILES, FIFO eviction. The
-            // saved path is published on lastCapturedAudioPath so the
-            // listener service can attach it to the matching ConversationEntry.
-            WhisperRecognizer(
-                modelPath = path,
-                audioSink = { samples ->
-                    if (conversationAudioSettings.captureEnabled.value) {
-                        val saved = conversationAudioStore.save(samples, sampleRate = 16_000)
-                        if (saved != null) lastCapturedAudioPath = saved.absolutePath
-                    }
-                },
-            )
+            // Audio sink is wired on the AudioSource itself now via
+            // AudioSinks + CapturingAudioSource (see Recognizers.provider
+            // setup above). Keeping it off here means the cached Whisper
+            // doesn't accidentally double-save when wrapped in a composite.
+            WhisperRecognizer(modelPath = path)
         }
     }
 

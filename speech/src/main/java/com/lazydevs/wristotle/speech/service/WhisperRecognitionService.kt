@@ -14,7 +14,9 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import com.lazydevs.wristotle.speech.Recognizers
+import com.lazydevs.wristotle.speech.AudioSinks
 import com.lazydevs.wristotle.speech.audio.AudioSource
+import com.lazydevs.wristotle.speech.audio.CapturingAudioSource
 import com.lazydevs.wristotle.speech.audio.MicAudioSource
 import com.lazydevs.wristotle.speech.audio.PipeAudioSource
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
@@ -110,19 +112,28 @@ class WhisperRecognitionService : RecognitionService() {
     }
 
     private fun buildSource(intent: Intent): AudioSource {
-        val pfd: ParcelFileDescriptor? = IntentCompat.getParcelableExtra(
-            intent, EXTRA_AUDIO_SOURCE, ParcelFileDescriptor::class.java,
-        )
-        if (pfd != null) {
-            val sampleRate = intent.getIntExtra(EXTRA_AUDIO_SOURCE_SAMPLING_RATE, 16_000)
-            val encoding = intent.getIntExtra(EXTRA_AUDIO_SOURCE_ENCODING, AudioFormat.ENCODING_PCM_16BIT)
-            val channels = intent.getIntExtra(EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
-            Log.d(TAG, "audio source = pipe (rate=$sampleRate ch=$channels enc=$encoding)")
-            return PipeAudioSource(pfd, sampleRate, channels, encoding)
+        val raw: AudioSource = run {
+            val pfd: ParcelFileDescriptor? = IntentCompat.getParcelableExtra(
+                intent, EXTRA_AUDIO_SOURCE, ParcelFileDescriptor::class.java,
+            )
+            if (pfd != null) {
+                val sampleRate = intent.getIntExtra(EXTRA_AUDIO_SOURCE_SAMPLING_RATE, 16_000)
+                val encoding = intent.getIntExtra(EXTRA_AUDIO_SOURCE_ENCODING, AudioFormat.ENCODING_PCM_16BIT)
+                val channels = intent.getIntExtra(EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
+                Log.d(TAG, "audio source = pipe (rate=$sampleRate ch=$channels enc=$encoding)")
+                PipeAudioSource(pfd, sampleRate, channels, encoding)
+            } else {
+                Log.d(TAG, "audio source = mic")
+                @SuppressLint("MissingPermission")  // checked above via hasRecordAudioPermission().
+                MicAudioSource()
+            }
         }
-        Log.d(TAG, "audio source = mic")
-        @SuppressLint("MissingPermission")  // checked above via hasRecordAudioPermission().
-        return MicAudioSource()
+        // Optionally wrap so audio is captured regardless of which
+        // Recognizer ultimately runs (Whisper / Http / Composite). The
+        // sink fires once per session, when the source's flow naturally
+        // completes — see CapturingAudioSource for the contract.
+        val sink = AudioSinks.provider(this)
+        return if (sink != null) CapturingAudioSource(raw, sink) else raw
     }
 
     private suspend fun runSession(source: AudioSource, recog: Recognizer, callback: Callback) {
