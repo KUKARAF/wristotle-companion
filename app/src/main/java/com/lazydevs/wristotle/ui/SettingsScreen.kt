@@ -120,6 +120,12 @@ fun SettingsScreen(
      *  one-shot trigger and we don't re-trigger on configuration changes
      *  / process recreates. */
     onWhatsNewConsumed: () -> Unit = {},
+    /** Non-null when the welcome wizard's "Open settings" button
+     *  triggered navigation here — auto-drill into this category's
+     *  sub-screen so the user lands exactly where the wizard told
+     *  them they would. Consumed once via [onInitialCategoryConsumed]. */
+    initialCategory: SettingsCategory? = null,
+    onInitialCategoryConsumed: () -> Unit = {},
 ) {
     // Reminder / Weather / AskAgent settings are app-scoped singletons,
     // not StateFlows — cheap to read here and pass down. The actual
@@ -160,6 +166,16 @@ fun SettingsScreen(
             capturedPrefill = whatsNewVersion
             category = SettingsCategory.Help
             onWhatsNewConsumed()
+        }
+    }
+
+    // Welcome-wizard handoff: when the wizard's "Open settings" landed
+    // us here, drill directly into the action's target category instead
+    // of dumping the user on the landing list.
+    LaunchedEffect(initialCategory) {
+        if (initialCategory != null) {
+            category = initialCategory
+            onInitialCategoryConsumed()
         }
     }
 

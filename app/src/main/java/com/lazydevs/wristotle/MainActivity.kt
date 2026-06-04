@@ -11,6 +11,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.lazydevs.wristotle.service.WatchMessageService
 import com.lazydevs.wristotle.ui.AppIndexViewModel
 import com.lazydevs.wristotle.ui.ConversationViewModel
@@ -79,6 +84,25 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             WristotleTheme {
+                val app = applicationContext as WristotleApplication
+
+                // Welcome wizard: shown on first launch (or after the
+                // user re-arms it via "Show welcome again"). Stays hidden
+                // when there are no essential pending actions — power
+                // users on Core Devices with everything granted don't
+                // see it at all.
+                val wizardDismissed by app.setupSettings.welcomeWizardDismissed
+                    .collectAsState()
+                val pendingActions by app.setupHealthProvider.actions.collectAsState()
+                val essentials = remember(pendingActions) {
+                    pendingActions.filter {
+                        it.priority == com.lazydevs.wristotle.setup.Priority.Essential
+                    }
+                }
+                var pendingSettingsCategory by remember {
+                    mutableStateOf<com.lazydevs.wristotle.ui.SettingsCategory?>(null)
+                }
+
                 MainScreen(
                     vm = vm,
                     modelsVm = modelsVm,
@@ -97,7 +121,21 @@ class MainActivity : ComponentActivity() {
                     onRequestWatchPermissions = ::requestWatchPermissions,
                     onRequestVoicePermissions = ::requestVoicePermissions,
                     onRequestLocationPermission = ::requestLocationPermission,
+                    initialSettingsCategory = pendingSettingsCategory,
+                    onInitialSettingsCategoryConsumed = { pendingSettingsCategory = null },
                 )
+
+                if (!wizardDismissed) {
+                    com.lazydevs.wristotle.ui.WelcomeWizard(
+                        essentialActions = essentials,
+                        onSkipWizard = { app.setupSettings.dismissWelcomeWizard() },
+                        onOpenCategory = { cat ->
+                            app.setupSettings.dismissWelcomeWizard()
+                            pendingSettingsCategory = cat
+                        },
+                        onFinish = { app.setupSettings.dismissWelcomeWizard() },
+                    )
+                }
             }
         }
 

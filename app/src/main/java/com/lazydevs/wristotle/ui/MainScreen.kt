@@ -68,9 +68,34 @@ fun MainScreen(
     onRequestWatchPermissions: () -> Unit,
     onRequestVoicePermissions: () -> Unit,
     onRequestLocationPermission: () -> Unit,
+    /** When non-null, navigate to the Settings tab on first compose AND
+     *  drill straight into this category's sub-screen. Used by the
+     *  first-launch wizard's "Open settings" path to drop the user
+     *  exactly where they need to be without re-tapping. Consumed
+     *  once via [onInitialSettingsCategoryConsumed] so it doesn't
+     *  re-fire on configuration changes. */
+    initialSettingsCategory: SettingsCategory? = null,
+    onInitialSettingsCategoryConsumed: () -> Unit = {},
 ) {
     val navController = rememberNavController()
     val perms by vm.permissions.collectAsState()
+
+    // Same one-shot pattern as whatsNewVersion below — capture into
+    // local state so the LaunchedEffect can clear the upstream caller's
+    // value the moment we navigate.
+    var pendingSettingsCategory by remember(initialSettingsCategory) {
+        mutableStateOf(initialSettingsCategory)
+    }
+    LaunchedEffect(pendingSettingsCategory) {
+        if (pendingSettingsCategory != null) {
+            navController.navigate(Screen.Settings.route) {
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+            onInitialSettingsCategoryConsumed()
+        }
+    }
 
     // Auto-open Settings → ❓ Help on the first launch after a fresh
     // install or a version upgrade. WhatsNewState.consumeOnce() returns
@@ -244,6 +269,8 @@ fun MainScreen(
                         attentionByCategory = settingsAttentionByCategory,
                         whatsNewVersion = whatsNewVersion,
                         onWhatsNewConsumed = { whatsNewVersion = null },
+                        initialCategory = pendingSettingsCategory,
+                        onInitialCategoryConsumed = { pendingSettingsCategory = null },
                     )
                 }
             }

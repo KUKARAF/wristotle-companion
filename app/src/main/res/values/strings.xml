@@ -232,6 +232,24 @@
     <string name="setup_action_ask_agent_title">Set up Ask Agent</string>
     <string name="setup_action_ask_agent_rationale">Bring-your-own LLM key to enable \"ask agent &lt;question&gt;\" / \"ask claude &lt;question&gt;\" on the watch. Anthropic, OpenAI, OpenRouter, Ollama, llama.cpp — any provider with a Chat Completions endpoint.</string>
 
+    <!-- First-launch welcome wizard. Multi-step flow that surfaces the
+         Essential recommended actions one screen at a time. -->
+    <string name="setup_wizard_welcome_title">Welcome to Wristotle</string>
+    <string name="setup_wizard_welcome_body">Wristotle works on a fresh install, but a few one-time setup steps unlock the full experience — local speech transcription, paraphrase recognition, contact lookups, and app launching by name.</string>
+    <string name="setup_wizard_welcome_count">We\'ll walk through %1$d short step(s). Skip any time.</string>
+    <string name="setup_wizard_welcome_nothing_pending">Everything\'s already set up — nothing to do. Tap below to dismiss.</string>
+    <string name="setup_wizard_welcome_get_started">Get started</string>
+    <string name="setup_wizard_skip_step">Skip this step</string>
+    <string name="setup_wizard_skip_all">Skip wizard</string>
+    <string name="setup_wizard_open_settings">Open settings</string>
+    <string name="setup_wizard_done">Done</string>
+    <string name="setup_wizard_final_title">You\'re all set</string>
+    <string name="setup_wizard_final_body">Anything you skipped is still available under Settings → 🌟 Setup. Voice commands work right away — try \"call Mom\" or \"what\'s the weather\".</string>
+    <string name="setup_wizard_final_return_hint">You can re-run this walkthrough from Settings → 🌟 Setup → Show welcome again.</string>
+
+    <!-- Re-show welcome button in the SetupCard, plus its confirmation. -->
+    <string name="setup_card_show_welcome_again">Show welcome again</string>
+
     <!-- Alarms card (Settings → Alarms & Reminders → Alarms). The list lives
          alongside the existing Reminders card, but each alarm is per-row
          configurable for destination (Phone / Watch / Both), distinct from

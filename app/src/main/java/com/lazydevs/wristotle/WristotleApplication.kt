@@ -154,10 +154,17 @@ class WristotleApplication : Application() {
         com.lazydevs.wristotle.stt.SttProviderSettings(this)
     }
 
+    /** First-launch wizard's dismissed flag + reactive surface. Lives
+     *  in its own SharedPrefs (`setup_state`) deliberately so it never
+     *  travels in backups — see `setup-flow.md`. */
+    val setupSettings: com.lazydevs.wristotle.setup.SetupSettings by lazy {
+        com.lazydevs.wristotle.setup.SetupSettings(this)
+    }
+
     /** Pending recommended-setup actions for the Settings → 🌟 Setup
-     *  card and (Phase B) the first-launch wizard. Lazy so users who
-     *  never open the surface don't pay the dependency cost on cold
-     *  start; the screen calls `refresh()` on first compose anyway. */
+     *  card and the first-launch wizard. Lazy so users who never open
+     *  the surface don't pay the dependency cost on cold start; the
+     *  screen calls `refresh()` on first compose anyway. */
     val setupHealthProvider: com.lazydevs.wristotle.setup.SetupHealthProvider by lazy {
         com.lazydevs.wristotle.setup.SetupHealthProvider(
             context = this,
