@@ -64,9 +64,15 @@ class DiagnosticsBuilder(
             appendLine()
             appendAppSection()
             appendDeviceSection()
+            appendPebbleCompanionSection()
             appendPermissionsSection()
             appendModelsSection()
+            appendSttProviderSection(redact)
+            appendAskAgentSection()
+            appendMcpServersSection(redact)
+            appendWatchSettingsSection()
             appendAppIndexSection()
+            appendConversationAudioSection(redact)
             appendConversationSection(recentEntries, redact)
             if (audioFiles.isNotEmpty()) appendAudioSection(audioFiles)
             appendLogSection(logDump)
@@ -115,12 +121,95 @@ class DiagnosticsBuilder(
         appendLine()
     }
 
+    private fun StringBuilder.appendPebbleCompanionSection() {
+        appendLine("### Pebble companion")
+        val state = app.pebbleCompanionDetector.state.value
+        appendLine("- Active: ${state.active}")
+        appendLine("- microPebble installed: ${yesNo(state.installed.micropebble)}")
+        appendLine("- Core Devices / rePebble installed: ${yesNo(state.installed.repebble)}")
+        appendLine("- Whisper applies to watch dictation: ${yesNo(state.whisperAppliesToWatchDictation)}")
+        appendLine()
+    }
+
     private fun StringBuilder.appendModelsSection() {
         appendLine("### Models")
         val whisper = app.modelStorage.activeModelId ?: "(none)"
         val nlu = app.nluModelStorage.activeModelId ?: "(none)"
+        val importedWhisper = app.modelStorage.importedIds().size
         appendLine("- Whisper (Speech): $whisper")
+        if (importedWhisper > 0) appendLine("- Imported Whisper models: $importedWhisper")
         appendLine("- MiniLM (Intent): $nlu")
+        appendLine()
+    }
+
+    private fun StringBuilder.appendSttProviderSection(redact: Boolean) {
+        appendLine("### Speech provider (STT)")
+        val s = app.sttProviderSettings
+        appendLine("- Mode: ${s.mode.value}")
+        appendLine("- HTTP base URL: ${urlOrSetState(s.httpBaseUrl.value, redact)}")
+        appendLine("- HTTP model: ${nonEmpty(s.httpModel.value)}")
+        appendLine("- HTTP key: ${setState(s.httpApiKey.value)}")
+        appendLine()
+    }
+
+    private fun StringBuilder.appendAskAgentSection() {
+        appendLine("### Ask Agent")
+        val s = app.askAgentSettings
+        appendLine("- Provider: ${s.provider.value}")
+        appendLine("- Anthropic key: ${setState(s.anthropicApiKey.value)}; model: ${nonEmpty(s.anthropicModel.value)}")
+        appendLine("- OpenAI-compat key: ${setState(s.openaiApiKey.value)}; model: ${nonEmpty(s.openaiModel.value)}")
+        appendLine("- Custom triggers: ${s.customTriggers.value.size}")
+        appendLine("- System prompt: ${s.systemPrompt.value.length} chars")
+        appendLine()
+    }
+
+    private suspend fun StringBuilder.appendMcpServersSection(redact: Boolean) {
+        appendLine("### MCP servers")
+        val all = app.mcpServerRepository.listAll()
+        val enabled = all.count { it.enabled }
+        appendLine("- Total: ${all.size} (enabled: $enabled)")
+        // Server names are user-chosen labels (could be "internal-corp-mcp"
+        // or "personal-todos") — redact under PII mode. URLs + keys are
+        // never included regardless of mode.
+        all.forEachIndexed { i, s ->
+            val label = if (redact) "Server #${i + 1}" else s.name
+            appendLine("- ${if (s.enabled) "✓" else "✗"} $label")
+        }
+        appendLine()
+    }
+
+    private fun StringBuilder.appendWatchSettingsSection() {
+        appendLine("### Watch settings (mirror)")
+        val ws = when (val st = app.watchSettingsRepository.state.value) {
+            is com.lazydevs.wristotle.settings.WatchSettingsState.Loaded -> st.settings
+            is com.lazydevs.wristotle.settings.WatchSettingsState.Stale -> st.last
+            else -> null
+        }
+        if (ws == null) {
+            appendLine("- (not yet requested from watch)")
+            appendLine()
+            return
+        }
+        appendLine("- Confirm before send: ${yesNo(ws.confirmBeforeSend)}")
+        appendLine("- Confirm timeout: ${ws.confirmTimeoutSeconds}s")
+        appendLine("- Confirm default action: ${if (ws.confirmDefaultSend) "send" else "cancel"}")
+        appendLine("- SELECT short-press: ${buttonActionLabel(ws.selectAction)}")
+        appendLine("- UP long-press: ${buttonActionLabel(ws.longPressUpAction)}")
+        appendLine("- DOWN long-press: ${buttonActionLabel(ws.longPressDownAction)}")
+        appendLine()
+    }
+
+    private fun StringBuilder.appendConversationAudioSection(redact: Boolean) {
+        appendLine("### Conversation audio")
+        val enabled = app.conversationAudioSettings.captureEnabled.value
+        val fileCount = app.conversationAudioStore.dir.listFiles { _, name -> name.endsWith(".wav") }?.size ?: 0
+        appendLine("- Capture: ${if (enabled) "enabled" else "disabled"}")
+        appendLine("- Stored files: $fileCount")
+        // Don't surface the file paths even with redact off — full paths
+        // include the device username via `/data/user/0/...` on multi-user
+        // setups. The audio section below (when the user opts in) shows
+        // them, gated by an explicit toggle.
+        @Suppress("UNUSED_PARAMETER") redact
         appendLine()
     }
 
@@ -179,6 +268,31 @@ class DiagnosticsBuilder(
     private fun grant(permission: String): String = yesNo(context.hasPermission(permission))
 
     private fun yesNo(b: Boolean): String = if (b) "granted" else "denied"
+
+    /** Shows the URL when redaction is off; "(set)" otherwise. Empty strings
+     *  surface as "(empty)" regardless — that's a setup state, not PII. */
+    private fun urlOrSetState(url: String, redact: Boolean): String = when {
+        url.isEmpty() -> "(empty)"
+        redact -> "(set)"
+        else -> url
+    }
+
+    /** Show "(set)" / "(empty)" — never expose the key. */
+    private fun setState(value: String): String = if (value.isEmpty()) "(empty)" else "(set)"
+
+    /** Show the value or "(empty)" — no redaction (used for model names). */
+    private fun nonEmpty(value: String): String = if (value.isEmpty()) "(empty)" else value
+
+    /** Map BUTTON_ACTION_* wire ints to their watch-side label so the
+     *  report shows "DICTATION" rather than "3". */
+    private fun buttonActionLabel(value: Int): String = when (value) {
+        com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_MENU      -> "MENU"
+        com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_NOTES     -> "NOTES"
+        com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_TASKS     -> "TASKS"
+        com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_DICTATION -> "DICTATION"
+        com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_ALARMS    -> "ALARMS"
+        else -> "UNKNOWN($value)"
+    }
 
     private fun hasNotificationAccess(): Boolean =
         NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
