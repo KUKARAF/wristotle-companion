@@ -48,11 +48,24 @@ android {
         applicationId = "com.lazydevs.wristotle"
         minSdk = 24
         targetSdk = 36
-        // CI overrides these from the tag name (e.g. v1.2.3 → versionName
-        // "1.2.3", versionCode = 10203 via the 2-digits-per-component scheme).
-        // Local builds use the fallback so manual debug installs always work.
-        versionCode = System.getenv("WRISTOTLE_VERSION_CODE")?.toIntOrNull() ?: 1
-        versionName = System.getenv("WRISTOTLE_VERSION_NAME") ?: "1.0"
+        // Two callers read these:
+        //
+        // 1. **Codeberg CI** overrides via env vars from the tag name
+        //    (`v1.2.3` → versionName "1.2.3", versionCode 10203 via
+        //    2-digits-per-component) so the released APK on the releases
+        //    page reflects the tag.
+        //
+        // 2. **F-Droid's metadata scan** reads the static fallback values
+        //    here (no env vars available in their scanner). `UpdateCheckMode:
+        //    Tags` looks for the highest versionCode declared in this file
+        //    across all git tags. Keep the static fallback in lockstep with
+        //    the most recent released tag — bumped manually alongside each
+        //    `git tag` (same pattern as the watch's `package.json` bump).
+        //
+        // Whoever bumps the tag also bumps these two lines. The pre-push
+        // hook nudges if it spots a mismatch.
+        versionCode = System.getenv("WRISTOTLE_VERSION_CODE")?.toIntOrNull() ?: 10001
+        versionName = System.getenv("WRISTOTLE_VERSION_NAME") ?: "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -99,6 +112,15 @@ android {
                 ?: signingConfigs.getByName("debug")
         }
     }
+
+    // PNG-crunch reproducibility was a real concern under aapt + AGP 7.
+    // AGP 8's aapt2 crunches deterministically by default and the legacy
+    // `aaptOptions.cruncherEnabled` toggle has been removed. We use
+    // `imageVector` Material icons throughout (pure-code, no rasterisation
+    // at build time), so the remaining PNG surface is just the launcher
+    // and a couple of small assets — low risk. If F-Droid's reproducibility
+    // verification later flags PNG handling, revisit with the Variant API.
+    // See [[fdroid-submission-plan]].
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -156,6 +178,17 @@ android {
             )
         }
     }
+}
+
+// Reproducible-build fix: Compose's baseline-profile generation
+// (`generateReleaseBaselineProfile…` / `ArtProfile…` tasks) embeds a
+// `baseline.profm` whose contents aren't deterministic across builds. We
+// don't ship one today (the perf win is minor for a UI-light app), so
+// disable the generation tasks entirely. Cheap, side-effect-free, and
+// keeps the F-Droid rebuild byte-identical to ours.
+// See [[fdroid-submission-plan]].
+tasks.matching { it.name.contains("ArtProfile") }.configureEach {
+    enabled = false
 }
 
 // Ktor (pulled in by the MCP client) brings slf4j-api 2.x, and

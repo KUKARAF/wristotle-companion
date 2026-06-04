@@ -1,0 +1,5 @@
+v1.0.0 — leaving alpha after six months of testing.
+
+Headline feature: first-launch welcome wizard walks new users through Whisper speech-model download, on-device intent classifier model, runtime permissions, and installed-app indexing. Same checklist lives in Settings → Setup; "Show welcome again" re-arms the wizard.
+
+Full changelog: https://wristotle.codeberg.page/changelog/

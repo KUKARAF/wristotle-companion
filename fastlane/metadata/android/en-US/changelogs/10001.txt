@@ -1,0 +1,3 @@
+v1.0.1 — diagnostics expansion.
+
+Settings → Bug reports → Build report now also covers active Pebble companion, STT-provider state, Ask-Agent provider state, MCP-server inventory, the watch-settings mirror, and conversation-audio capture state. API keys / URLs / wake words / system prompts / MCP URLs are never exposed; Redact PII additionally hides STT base URL and MCP server names.

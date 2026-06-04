@@ -1,0 +1,1 @@
+Voice control for Pebble watches — on-device by default, no account.

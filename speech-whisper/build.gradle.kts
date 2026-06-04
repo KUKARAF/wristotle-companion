@@ -30,9 +30,22 @@ android {
             externalNativeBuild {
                 cmake {
                     cppFlags += "-std=c++17"
+                    // Reproducible-build flags so the .so stays byte-identical
+                    // across rebuilds (required for F-Droid). See
+                    // [[fdroid-submission-plan]]:
+                    //   - `-ffile-prefix-map=…=.` strips absolute build paths
+                    //     from embedded debug strings.
+                    //   - `-Wl,--build-id=none` (passed in `arguments` below as a
+                    //     linker flag) drops the per-build random build-id that
+                    //     otherwise lands in every shared library.
+                    cppFlags += "-ffile-prefix-map=${rootDir}=."
+                    cppFlags += "-ffile-prefix-map=${projectDir}=."
                     arguments += listOf(
                         "-DANDROID_STL=c++_shared",
                         "-DANDROID_ARM_NEON=ON",
+                        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--build-id=none",
+                        "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,--build-id=none",
+                        "-DCMAKE_EXE_LINKER_FLAGS=-Wl,--build-id=none",
                     )
                 }
             }

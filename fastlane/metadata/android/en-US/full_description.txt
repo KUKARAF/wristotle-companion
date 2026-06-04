@@ -1,0 +1,39 @@
+Wristotle turns your Pebble watch's dictation button into a voice command surface on your phone — calls, texts, reminders, alarms, music control, notes, tasks, weather, world clock, calculator, and an Ask-Agent path that can hit any MCP server you configure.
+
+Everything runs on-device by default. Optional cloud Whisper / self-hosted speech-to-text endpoint and optional Anthropic or OpenAI-compatible LLM if you want them. Baseline doesn't phone home; no account, no tracking, MIT-licensed.
+
+Works with microPebble and Core Devices (rePebble).
+
+Voice commands (one-liners):
+
+* Calls — "call John"
+* Messages — "text Sarah I'll be late" / "whatsapp Mom dinner at 7"
+* Reminders — "remind me to take meds in 20 minutes"
+* Alarms — "set an alarm for 6:30 am" (phone / watch / both)
+* Timers — "set a timer for 10 minutes"
+* Music — "play Spotify" / "pause" / "next"
+* Apps — "open Maps" / "launch Audible"
+* Notes — "make a note buy milk" (text + audio)
+* Tasks — "add task pick up dry cleaning"
+* Weather — "weather in Tokyo" / "what's the weather"
+* World clock — "what time is it in Berlin"
+* Calculator — "what's 15% of 80"
+* Ask Agent — "ask agent what's on my calendar tomorrow"
+* Find phone — "find my phone"
+
+Headline 1.0 feature: a first-launch welcome wizard that walks new users through the optional setup that unlocks the full app — Whisper speech model download, on-device intent classifier model, runtime permissions, installed-app indexing.
+
+Other things worth knowing:
+
+* Confirm-before-send for destructive actions (toggle in settings or say "confirm" in your query) previews destination + body before any call / message goes out
+* Conversation history with optional audio capture
+* Contact aliases — "call dad" stores the mapping so it survives phonebook re-orders
+* App aliases — "play tunes" -> Spotify
+* Custom Ask-Agent triggers — "Jarvis, what's the weather"
+* STT providers — on-device Whisper, OpenAI-compatible HTTP endpoint (Groq, Cloudflare, Speaches, whisper.cpp-server, ...), or composite failover
+* Backup & Restore — per-entity JSON ZIP with optional AES-256
+* MCP client — Streaming-HTTP-by-default with SSE fallback; the Ask-Agent loop aggregates tools across enabled servers
+
+You'll need the Wristotle watch app on your Pebble too — install it from the Rebble appstore (microPebble) or the Core Devices appstore.
+
+Full feature list, install guide, and troubleshooting at https://wristotle.codeberg.page/
