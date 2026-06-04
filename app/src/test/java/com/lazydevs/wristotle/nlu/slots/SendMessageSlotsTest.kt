@@ -122,6 +122,36 @@ class SendMessageSlotsTest {
         assertEquals("about the demo", s["body"])
     }
 
+    /**
+     * Regression: the SMS_LIKE_CONJUNCTIONS regex includes "that" so
+     * shapes like "text dad that I'll be late" work. But "that" appears
+     * naturally in long dictated bodies — *"text John we tested the
+     * package that we built"* used to greedy-split there and call
+     * findContact("john we tested the package"), which obviously
+     * misses. The conjunction split now requires the contact-half to
+     * actually resolve before it's accepted, so this falls through to
+     * the multi-word loop and finds "john" at n=1.
+     */
+    @Test fun `text contact with that inside body falls through to multi-word lookup`() {
+        val s = extract(
+            "text john we tested the package that we built",
+            contacts = setOf("john"),
+        )
+        assertEquals("SMS", s["app"])
+        assertEquals("john", s["contact"])
+        assertEquals("we tested the package that we built", s["body"])
+    }
+
+    @Test fun `text contact that body still works when contact resolves`() {
+        // The classic "text dad that I'll be late" shape still uses
+        // the conjunction split because the contact half ("dad")
+        // resolves to a real contact.
+        val s = extract("text dad that I'll be late")
+        assertEquals("SMS", s["app"])
+        assertEquals("dad", s["contact"])
+        assertEquals("i'll be late", s["body"])
+    }
+
     @Test fun `send sms to contact defaults to SMS`() {
         val s = extract("send sms to alex meeting at five")
         assertEquals("SMS", s["app"])

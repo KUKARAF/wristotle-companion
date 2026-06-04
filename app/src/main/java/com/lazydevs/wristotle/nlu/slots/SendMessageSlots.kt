@@ -148,7 +148,15 @@ class SendMessageSlots(
             // body is meaningful payload, even if it's "yes yes yes".
             val contact = stripTrailingEmphasis(rest.substring(0, conjMatch.range.first).trim())
             val body = rest.substring(conjMatch.range.last + 1).trim()
-            if (contact.isNotEmpty() && body.isNotEmpty()) {
+            // Only accept the conjunction split when the contact half
+            // actually resolves. `that` in particular is too common in
+            // natural speech: a dictation like "text John hey we tested
+            // the package that we built" otherwise lets the regex match
+            // the "that" deep inside the body and we end up calling
+            // `findContact("john hey we tested the package")` — which
+            // can't find anything. Falling through here lets the
+            // multi-word loop below pick up the real "john" prefix.
+            if (contact.isNotEmpty() && body.isNotEmpty() && findContact(contact) != null) {
                 return mapOf(SlotKeys.Contact to contact, SlotKeys.Body to body)
             }
         }
