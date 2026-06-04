@@ -11,8 +11,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -93,6 +95,33 @@ class MainActivity : ComponentActivity() {
                 // see it at all.
                 val wizardDismissed by app.setupSettings.welcomeWizardDismissed
                     .collectAsState()
+                // Reactive setup-health refresh — mirrors how the
+                // "attention dot" on bottom-nav badges itself off
+                // [modelsVm.attentionNeeded] directly. Each of these
+                // StateFlows surfaces a piece of state that feeds
+                // SetupHealthProvider.derive(); observing them here
+                // (and re-deriving on any tick) means we don't have
+                // to remember to call refresh() at every state-mutation
+                // site — the imported-Whisper path was the canary for
+                // why per-site notifications are fragile.
+                val currentPerms by vm.permissions.collectAsState()
+                val whisperAttn by modelsVm.attentionNeeded.collectAsState()
+                val nluAttn by nluModelsVm.attentionNeeded.collectAsState()
+                val pebbleCompanion by vm.pebbleCompanion.collectAsState()
+                val appIndexState by appIndexVm.state.collectAsState()
+                val appAliases by appAliasesVm.aliases.collectAsState()
+                val contactAliases by contactAliasesVm.aliases.collectAsState()
+                LaunchedEffect(
+                    currentPerms,
+                    whisperAttn,
+                    nluAttn,
+                    pebbleCompanion,
+                    appIndexState.lastScannedAtMs,
+                    appAliases.size,
+                    contactAliases.size,
+                ) {
+                    app.setupHealthProvider.refresh()
+                }
                 val pendingActions by app.setupHealthProvider.actions.collectAsState()
                 val essentials = remember(pendingActions) {
                     pendingActions.filter {
@@ -102,6 +131,43 @@ class MainActivity : ComponentActivity() {
                 var pendingSettingsCategory by remember {
                     mutableStateOf<com.lazydevs.wristotle.ui.SettingsCategory?>(null)
                 }
+                // Same one-shot pattern as [pendingSettingsCategory] but
+                // for routes that aren't a Settings sub-category — today
+                // only [Screen.Permissions], used by the wizard's
+                // GrantPermissions action.
+                var pendingTopLevelTab by remember {
+                    mutableStateOf<com.lazydevs.wristotle.ui.nav.Screen?>(null)
+                }
+                // Wizard's "Open settings" sets this flag so the dialog
+                // stops blocking the underlying Settings sub-screen. The
+                // wizard is NOT dismissed (the persistent flag stays
+                // false) — auto-un-hides when (a) the essentials list
+                // shrinks (user just completed an action) or (b) the
+                // user navigates to a different top-level destination.
+                var wizardHidden by remember { mutableStateOf(false) }
+                // The wizard-triggered nav itself fires onNavDestinationChanged,
+                // which would immediately un-hide the wizard over the Settings
+                // sub-screen. Consume one nav-change tick on the way in so
+                // only the user's NEXT navigation un-hides.
+                var consumeNextNavChange by remember { mutableStateOf(false) }
+                // Track the size at the moment we hid the wizard. If
+                // it drops below this baseline (because the user
+                // completed the action), un-hide so the wizard
+                // visibly auto-advances to the next pending step
+                // without forcing the user to navigate elsewhere first.
+                var essentialsSizeAtHide by remember { mutableIntStateOf(essentials.size) }
+                LaunchedEffect(essentials.size, wizardHidden) {
+                    if (wizardHidden && essentials.size < essentialsSizeAtHide) {
+                        wizardHidden = false
+                    }
+                }
+                // Wizard step state is **hoisted** here so it survives
+                // the temporary hide/show cycle when the user taps
+                // "Open settings", does the action, and the wizard
+                // reappears. The composable inside WelcomeWizard would
+                // lose the index because its `remember` gets disposed
+                // when the wizard is removed from the tree.
+                var wizardStepIndex by remember { mutableIntStateOf(0) }
 
                 MainScreen(
                     vm = vm,
@@ -123,15 +189,55 @@ class MainActivity : ComponentActivity() {
                     onRequestLocationPermission = ::requestLocationPermission,
                     initialSettingsCategory = pendingSettingsCategory,
                     onInitialSettingsCategoryConsumed = { pendingSettingsCategory = null },
+                    initialTopLevelTab = pendingTopLevelTab,
+                    onInitialTopLevelTabConsumed = { pendingTopLevelTab = null },
+                    // Any time the top-level destination changes (user
+                    // taps a tab, system-back leaves a sub-screen, etc.)
+                    // un-hide the wizard so the user comes back to it.
+                    // When the action they just completed has dropped
+                    // from the essentials list, SetupHealthProvider has
+                    // already re-derived and the wizard's stepIndex
+                    // effectively points at the next pending action.
+                    //
+                    // Skip the FIRST nav change after `wizardHidden`
+                    // flipped to true — that's the wizard-triggered
+                    // navigation into Settings, not a user action.
+                    onNavDestinationChanged = {
+                        if (consumeNextNavChange) {
+                            consumeNextNavChange = false
+                        } else if (wizardHidden) {
+                            wizardHidden = false
+                        }
+                    },
                 )
 
-                if (!wizardDismissed) {
+                if (!wizardDismissed && !wizardHidden) {
                     com.lazydevs.wristotle.ui.WelcomeWizard(
                         essentialActions = essentials,
+                        stepIndex = wizardStepIndex,
+                        onStepIndexChange = { wizardStepIndex = it },
                         onSkipWizard = { app.setupSettings.dismissWelcomeWizard() },
                         onOpenCategory = { cat ->
-                            app.setupSettings.dismissWelcomeWizard()
+                            // Hide the wizard so its full-screen Dialog
+                            // stops blocking the Settings sub-screen,
+                            // but DO NOT set the persistent dismissed
+                            // flag. Auto-un-hides when essentials shrinks
+                            // (user completed the action) OR when the
+                            // user navigates away.
+                            wizardHidden = true
+                            consumeNextNavChange = true
+                            essentialsSizeAtHide = essentials.size
                             pendingSettingsCategory = cat
+                        },
+                        onOpenTopLevelTab = { screen ->
+                            // Same hide-but-don't-dismiss flow as
+                            // onOpenCategory, but the action's target
+                            // is a top-level tab (e.g. Permissions)
+                            // outside the Settings drill-down.
+                            wizardHidden = true
+                            consumeNextNavChange = true
+                            essentialsSizeAtHide = essentials.size
+                            pendingTopLevelTab = screen
                         },
                         onFinish = { app.setupSettings.dismissWelcomeWizard() },
                     )

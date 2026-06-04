@@ -18,10 +18,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -31,6 +27,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.setup.RecommendedAction
+import com.lazydevs.wristotle.setup.SetupDrillTarget
+import com.lazydevs.wristotle.ui.nav.Screen
 
 /**
  * Multi-step welcome wizard that surfaces the user's pending Essential
@@ -57,15 +55,27 @@ import com.lazydevs.wristotle.setup.RecommendedAction
 @Composable
 fun WelcomeWizard(
     essentialActions: List<RecommendedAction>,
+    /** Current step. **Hoisted to the caller** so the wizard's progress
+     *  survives temporary hide/show cycles — e.g. when the user taps
+     *  "Open settings", the wizard is removed from the tree while the
+     *  user finishes the action; when it re-appears, the caller keeps
+     *  the step they were on (or implicitly advances because the
+     *  essentials list shrunk). 0 = Welcome; 1..N = actions; N+1 = Final. */
+    stepIndex: Int,
+    onStepIndexChange: (Int) -> Unit,
     onSkipWizard: () -> Unit,
+    /** Drills into a Settings sub-category. */
     onOpenCategory: (SettingsCategory) -> Unit,
+    /** Switches to a top-level bottom-nav tab (today: only
+     *  [Screen.Permissions]). */
+    onOpenTopLevelTab: (Screen) -> Unit,
     onFinish: () -> Unit,
 ) {
     val totalSteps = essentialActions.size + 2 // welcome + actions + final
-    var stepIndex by remember { mutableIntStateOf(0) }
-    val isWelcome = stepIndex == 0
-    val isFinal = stepIndex == totalSteps - 1
-    val currentAction = if (!isWelcome && !isFinal) essentialActions[stepIndex - 1] else null
+    val clampedIndex = stepIndex.coerceAtMost(totalSteps - 1)
+    val isWelcome = clampedIndex == 0
+    val isFinal = clampedIndex == totalSteps - 1
+    val currentAction = if (!isWelcome && !isFinal) essentialActions[clampedIndex - 1] else null
 
     Dialog(
         onDismissRequest = { /* Disable accidental dismiss — user must use a button. */ },
@@ -94,7 +104,7 @@ fun WelcomeWizard(
                 // Hidden on the welcome screen (zero progress feels off).
                 if (!isWelcome) {
                     LinearProgressIndicator(
-                        progress = { (stepIndex.toFloat() / (totalSteps - 1).coerceAtLeast(1)).coerceIn(0f, 1f) },
+                        progress = { (clampedIndex.toFloat() / (totalSteps - 1).coerceAtLeast(1)).coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -106,7 +116,7 @@ fun WelcomeWizard(
                 ) {
                     when {
                         isWelcome -> WelcomeStep(pendingCount = essentialActions.size)
-                        isFinal -> FinalStep(skippedAny = stepIndex > totalSteps - 1)
+                        isFinal -> FinalStep(skippedAny = clampedIndex > totalSteps - 1)
                         currentAction != null -> ActionStep(action = currentAction)
                     }
                 }
@@ -114,16 +124,22 @@ fun WelcomeWizard(
                 WizardControls(
                     isWelcome = isWelcome,
                     isFinal = isFinal,
-                    onSkipStep = { stepIndex += 1 },
+                    onSkipStep = { onStepIndexChange(clampedIndex + 1) },
                     onOpenSettings = {
                         // The Open Settings button is only rendered on
                         // action steps, so currentAction is non-null
-                        // here. Drill into the action's target category.
-                        currentAction?.let { onOpenCategory(it.drillTarget) }
+                        // here. Drill into the action's target — either
+                        // a Settings sub-category or a top-level tab.
+                        currentAction?.let { action ->
+                            when (val target = action.drillTarget) {
+                                is SetupDrillTarget.SettingsSub -> onOpenCategory(target.category)
+                                is SetupDrillTarget.TopLevelTab -> onOpenTopLevelTab(target.screen)
+                            }
+                        }
                     },
                     onSkipWizard = onSkipWizard,
                     onAdvance = {
-                        if (stepIndex < totalSteps - 1) stepIndex += 1
+                        if (clampedIndex < totalSteps - 1) onStepIndexChange(clampedIndex + 1)
                         else onFinish()
                     },
                 )

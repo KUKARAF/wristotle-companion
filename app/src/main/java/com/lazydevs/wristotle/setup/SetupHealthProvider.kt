@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.setup
 
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.ui.SettingsCategory
+import com.lazydevs.wristotle.ui.nav.Screen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -84,18 +85,21 @@ class SetupHealthProvider(
                 titleRes = R.string.setup_action_whisper_title,
                 rationaleRes = R.string.setup_action_whisper_rationale,
                 priority = Priority.Essential,
-                drillTarget = SettingsCategory.Models,
+                drillTarget = SetupDrillTarget.SettingsSub(SettingsCategory.Models),
             )
         }
         // NLU: skip on low-RAM devices — the classifier is gated out
-        // there, so nudging the download is pointless.
+        // there, so nudging the download is pointless. Drill to
+        // Learning, where NluModelsCard lives alongside the other NLU
+        // controls (learning toggle, saved phrases) — landing on Models
+        // buries the NLU picker below WhisperModelsCard.
         if (!isLowRamDevice() && nluActiveModelId() == null) {
             out += RecommendedAction(
                 id = ActionId.DownloadNluModel,
                 titleRes = R.string.setup_action_nlu_title,
                 rationaleRes = R.string.setup_action_nlu_rationale,
                 priority = Priority.Essential,
-                drillTarget = SettingsCategory.Models,
+                drillTarget = SetupDrillTarget.SettingsSub(SettingsCategory.Learning),
             )
         }
         if (!hasCorePermissions()) {
@@ -104,9 +108,9 @@ class SetupHealthProvider(
                 titleRes = R.string.setup_action_permissions_title,
                 rationaleRes = R.string.setup_action_permissions_rationale,
                 priority = Priority.Essential,
-                // Permissions card lives under Diagnostics in the
-                // existing drill-down. If that moves, update here.
-                drillTarget = SettingsCategory.Diagnostics,
+                // Permissions has its own bottom-nav tab — not a
+                // Settings sub-category. Route there directly.
+                drillTarget = SetupDrillTarget.TopLevelTab(Screen.Permissions),
             )
         }
         if (latestAppScanAt() == null) {
@@ -115,7 +119,7 @@ class SetupHealthProvider(
                 titleRes = R.string.setup_action_app_scan_title,
                 rationaleRes = R.string.setup_action_app_scan_rationale,
                 priority = Priority.Essential,
-                drillTarget = SettingsCategory.Learning,
+                drillTarget = SetupDrillTarget.SettingsSub(SettingsCategory.Learning),
             )
         }
 
@@ -126,7 +130,7 @@ class SetupHealthProvider(
                 titleRes = R.string.setup_action_contact_alias_title,
                 rationaleRes = R.string.setup_action_contact_alias_rationale,
                 priority = Priority.Quality,
-                drillTarget = SettingsCategory.Learning,
+                drillTarget = SetupDrillTarget.SettingsSub(SettingsCategory.Learning),
             )
         }
         if (appAliasCount() == 0) {
@@ -135,7 +139,7 @@ class SetupHealthProvider(
                 titleRes = R.string.setup_action_app_alias_title,
                 rationaleRes = R.string.setup_action_app_alias_rationale,
                 priority = Priority.Quality,
-                drillTarget = SettingsCategory.Learning,
+                drillTarget = SetupDrillTarget.SettingsSub(SettingsCategory.Learning),
             )
         }
         if (!isSpeechProviderConfigured()) {
@@ -144,7 +148,7 @@ class SetupHealthProvider(
                 titleRes = R.string.setup_action_speech_provider_title,
                 rationaleRes = R.string.setup_action_speech_provider_rationale,
                 priority = Priority.Quality,
-                drillTarget = SettingsCategory.Models,
+                drillTarget = SetupDrillTarget.SettingsSub(SettingsCategory.Models),
             )
         }
         if (!isAskAgentConfigured()) {
@@ -153,7 +157,7 @@ class SetupHealthProvider(
                 titleRes = R.string.setup_action_ask_agent_title,
                 rationaleRes = R.string.setup_action_ask_agent_rationale,
                 priority = Priority.Quality,
-                drillTarget = SettingsCategory.AskAgent,
+                drillTarget = SetupDrillTarget.SettingsSub(SettingsCategory.AskAgent),
             )
         }
 

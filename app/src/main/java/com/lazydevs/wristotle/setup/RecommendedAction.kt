@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.setup
 
 import androidx.annotation.StringRes
 import com.lazydevs.wristotle.ui.SettingsCategory
+import com.lazydevs.wristotle.ui.nav.Screen
 
 /**
  * One recommended setup action surfaced by [SetupHealthProvider].
@@ -19,11 +20,24 @@ data class RecommendedAction(
     @param:StringRes val titleRes: Int,
     @param:StringRes val rationaleRes: Int,
     val priority: Priority,
-    /** Sub-screen the "Open" button drills into. The user does the
-     *  action with the existing familiar UI rather than a wizard re-skin
-     *  of the same controls. */
-    val drillTarget: SettingsCategory,
+    /** Where the "Open" button lands. Most actions point to a Settings
+     *  sub-category; a few (e.g. permissions) live on a top-level tab
+     *  outside the Settings drill-down. The user finishes the action
+     *  with the existing familiar UI rather than a wizard re-skin of
+     *  the same controls. */
+    val drillTarget: SetupDrillTarget,
 )
+
+/** Either a Settings sub-screen or a top-level bottom-nav tab.
+ *
+ *  Two variants because most recommended actions are exposed as cards
+ *  inside the Settings drill-down (Models, Learning, Weather…) — but
+ *  [Screen.Permissions] is its own top-level tab, so an action that
+ *  routes to it can't be expressed as a [SettingsCategory]. */
+sealed interface SetupDrillTarget {
+    data class SettingsSub(val category: SettingsCategory) : SetupDrillTarget
+    data class TopLevelTab(val screen: Screen) : SetupDrillTarget
+}
 
 /**
  * Stable identifier for each recommendation. Used as the persistence key

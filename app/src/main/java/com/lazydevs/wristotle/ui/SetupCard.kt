@@ -31,9 +31,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.setup.Priority
 import com.lazydevs.wristotle.setup.RecommendedAction
+import com.lazydevs.wristotle.setup.SetupDrillTarget
 import com.lazydevs.wristotle.setup.SetupHealthProvider
 import com.lazydevs.wristotle.setup.SetupSettings
 import com.lazydevs.wristotle.ui.components.ConfirmDialog
+import com.lazydevs.wristotle.ui.nav.Screen
 
 /**
  * Persistent checklist for Settings → 🌟 Setup. Renders whatever
@@ -49,7 +51,11 @@ import com.lazydevs.wristotle.ui.components.ConfirmDialog
 fun SetupCard(
     provider: SetupHealthProvider,
     setupSettings: SetupSettings,
+    /** Drills into a Settings sub-category (e.g. Models, Learning). */
     onOpenCategory: (com.lazydevs.wristotle.ui.SettingsCategory) -> Unit,
+    /** Switches to a top-level bottom-nav tab outside the Settings
+     *  drill-down (today: only [Screen.Permissions]). */
+    onOpenTopLevelTab: (Screen) -> Unit,
 ) {
     val actions by provider.actions.collectAsState()
     var showResetConfirm by remember { mutableStateOf(false) }
@@ -95,6 +101,7 @@ fun SetupCard(
                     titleRes = R.string.setup_section_essentials,
                     actions = essentials,
                     onOpenCategory = onOpenCategory,
+                    onOpenTopLevelTab = onOpenTopLevelTab,
                 )
             }
             if (quality.isNotEmpty()) {
@@ -103,6 +110,7 @@ fun SetupCard(
                     titleRes = R.string.setup_section_quality,
                     actions = quality,
                     onOpenCategory = onOpenCategory,
+                    onOpenTopLevelTab = onOpenTopLevelTab,
                 )
             }
 
@@ -136,6 +144,7 @@ private fun SetupSection(
     titleRes: Int,
     actions: List<RecommendedAction>,
     onOpenCategory: (com.lazydevs.wristotle.ui.SettingsCategory) -> Unit,
+    onOpenTopLevelTab: (Screen) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -144,7 +153,15 @@ private fun SetupSection(
             fontWeight = FontWeight.SemiBold,
         )
         actions.forEach { action ->
-            SetupRow(action = action, onOpen = { onOpenCategory(action.drillTarget) })
+            SetupRow(
+                action = action,
+                onOpen = {
+                    when (val target = action.drillTarget) {
+                        is SetupDrillTarget.SettingsSub -> onOpenCategory(target.category)
+                        is SetupDrillTarget.TopLevelTab -> onOpenTopLevelTab(target.screen)
+                    }
+                },
+            )
         }
     }
 }

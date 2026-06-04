@@ -126,6 +126,11 @@ fun SettingsScreen(
      *  them they would. Consumed once via [onInitialCategoryConsumed]. */
     initialCategory: SettingsCategory? = null,
     onInitialCategoryConsumed: () -> Unit = {},
+    /** Called when a Setup-card "Open" button targets a top-level
+     *  bottom-nav tab (today: only [com.lazydevs.wristotle.ui.nav.Screen.Permissions]).
+     *  Settings can't switch top-level tabs itself — it bubbles up to
+     *  MainScreen which owns the NavController. */
+    onOpenTopLevelTab: (com.lazydevs.wristotle.ui.nav.Screen) -> Unit = {},
 ) {
     // Reminder / Weather / AskAgent settings are app-scoped singletons,
     // not StateFlows — cheap to read here and pass down. The actual
@@ -179,11 +184,20 @@ fun SettingsScreen(
         }
     }
 
+    // One scroll state shared by landing + every sub-category. Reset
+    // to top on every category transition so drilling into a category
+    // doesn't inherit a scroll offset from wherever the user was on
+    // the landing list (or on the prior category — the SetupCard's
+    // "Open" buttons swap categories without recomposing the outer
+    // Column, so a scrolled Setup card would otherwise drop the user
+    // mid-page in the next category).
+    val scrollState = rememberScrollState()
+    LaunchedEffect(category) { scrollState.scrollTo(0) }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val current = category
@@ -212,6 +226,7 @@ fun SettingsScreen(
                 weatherSettings = weatherSettings,
                 askAgentSettings = askAgentSettings,
                 onOpenCategory = { category = it },
+                onOpenTopLevelTab = onOpenTopLevelTab,
                 onShowClearLearnedConfirm = { showClearLearnedConfirm = true },
                 onShowClearAudioConfirm = { showClearAudioConfirm = true },
                 helpHighlightVersion = capturedPrefill,
@@ -370,6 +385,9 @@ private fun SettingsCategoryContent(
      *  sub-screen for an action's [SettingsCategory] target instead of
      *  bouncing the user back to the landing page. */
     onOpenCategory: (SettingsCategory) -> Unit,
+    /** Forwards "open this top-level tab" requests from the 🌟 Setup
+     *  card up to MainScreen, which owns the bottom-nav controller. */
+    onOpenTopLevelTab: (com.lazydevs.wristotle.ui.nav.Screen) -> Unit,
     onShowClearLearnedConfirm: () -> Unit,
     onShowClearAudioConfirm: () -> Unit,
     onShrinkRequest: (Int) -> Unit,
@@ -393,6 +411,7 @@ private fun SettingsCategoryContent(
                     provider = app.setupHealthProvider,
                     setupSettings = app.setupSettings,
                     onOpenCategory = onOpenCategory,
+                    onOpenTopLevelTab = onOpenTopLevelTab,
                 )
 
             SettingsCategory.Watch ->
@@ -443,10 +462,10 @@ private fun SettingsCategoryContent(
             SettingsCategory.Models -> {
                 SttProviderCard(settings = app.sttProviderSettings)
                 WhisperModelsCard(vm = modelsVm)
-                NluModelsCard(vm = nluModelsVm)
             }
 
             SettingsCategory.Learning -> {
+                NluModelsCard(vm = nluModelsVm)
                 AppIndexCard(vm = appIndexVm)
                 AppAliasesCard(vm = appAliasesVm)
                 ContactAliasesCard(vm = contactAliasesVm)

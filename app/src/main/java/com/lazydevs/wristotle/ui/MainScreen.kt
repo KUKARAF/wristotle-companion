@@ -76,15 +76,49 @@ fun MainScreen(
      *  re-fire on configuration changes. */
     initialSettingsCategory: SettingsCategory? = null,
     onInitialSettingsCategoryConsumed: () -> Unit = {},
+    /** Same one-shot pattern as [initialSettingsCategory], but jumps to
+     *  a top-level bottom-nav tab outside Settings (today: only
+     *  [Screen.Permissions]). Used by the wizard's "Open settings" path
+     *  when the action targets the Permissions tab. */
+    initialTopLevelTab: Screen? = null,
+    onInitialTopLevelTabConsumed: () -> Unit = {},
+    /** Fires whenever the top-level NavHost destination changes (user
+     *  taps a different tab, system-back leaves a sub-screen, etc.).
+     *  Used by MainActivity to un-hide a paused first-launch wizard so
+     *  the user comes back to it after completing an action in Settings. */
+    onNavDestinationChanged: () -> Unit = {},
 ) {
     val navController = rememberNavController()
     val perms by vm.permissions.collectAsState()
 
-    // Same one-shot pattern as whatsNewVersion below — capture into
-    // local state so the LaunchedEffect can clear the upstream caller's
-    // value the moment we navigate.
-    var pendingSettingsCategory by remember(initialSettingsCategory) {
-        mutableStateOf(initialSettingsCategory)
+    // Notify the host whenever the destination changes — covers tab
+    // taps, system back, and any programmatic navigation. The
+    // currentBackStackEntryAsState observation below already exists for
+    // the BottomNav selection; piggybacking on its updates avoids a
+    // separate listener.
+    val currentEntry by navController.currentBackStackEntryAsState()
+    LaunchedEffect(currentEntry?.destination?.route) {
+        onNavDestinationChanged()
+    }
+
+    // Captured pending-state holders. **Do NOT** key the remember on
+    // the upstream param — the LaunchedEffect below calls the consume
+    // callback as soon as it navigates, which nulls the host's state.
+    // Re-keying the remember would then reset the local copy too,
+    // **before** the NavHost mounts SettingsScreen for the first time,
+    // so SettingsScreen would land with initialCategory=null and dump
+    // the user on the landing list instead of the requested category.
+    //
+    // Same dance as the `capturedPrefill` pattern inside SettingsScreen
+    // for whatsNewVersion. The LaunchedEffect below copies the upstream
+    // value into the local state whenever it transitions to non-null,
+    // and SettingsScreen's onInitialCategoryConsumed callback is what
+    // clears the local state once SettingsScreen has captured it.
+    var pendingSettingsCategory by remember {
+        mutableStateOf<SettingsCategory?>(initialSettingsCategory)
+    }
+    LaunchedEffect(initialSettingsCategory) {
+        initialSettingsCategory?.let { pendingSettingsCategory = it }
     }
     LaunchedEffect(pendingSettingsCategory) {
         if (pendingSettingsCategory != null) {
@@ -94,6 +128,32 @@ fun MainScreen(
                 restoreState = true
             }
             onInitialSettingsCategoryConsumed()
+        }
+    }
+
+    // Setup-card / welcome-wizard "open a top-level tab" channel.
+    // Routes that aren't a Settings sub-category — today only
+    // [Screen.Permissions]. Same captured pattern as
+    // `pendingSettingsCategory` above so the local state survives the
+    // upstream caller nulling its value once the consume callback
+    // fires. SettingsScreen / the wizard never read this — the
+    // LaunchedEffect navigates and clears the local state on the same
+    // pass, so there's no consumer-side capture race.
+    var pendingTabSwitch by remember {
+        mutableStateOf<Screen?>(initialTopLevelTab)
+    }
+    LaunchedEffect(initialTopLevelTab) {
+        initialTopLevelTab?.let { pendingTabSwitch = it }
+    }
+    LaunchedEffect(pendingTabSwitch) {
+        pendingTabSwitch?.let { screen ->
+            navController.navigate(screen.route) {
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+            onInitialTopLevelTabConsumed()
+            pendingTabSwitch = null
         }
     }
 
@@ -271,6 +331,7 @@ fun MainScreen(
                         onWhatsNewConsumed = { whatsNewVersion = null },
                         initialCategory = pendingSettingsCategory,
                         onInitialCategoryConsumed = { pendingSettingsCategory = null },
+                        onOpenTopLevelTab = { pendingTabSwitch = it },
                     )
                 }
             }
