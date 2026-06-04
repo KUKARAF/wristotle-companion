@@ -565,11 +565,7 @@ private fun RestoreSuccessDialog(
                 ResultRow(stringResource(R.string.settings_backup_import_row_pins), result.pins)
                 ResultRow(stringResource(R.string.settings_backup_import_row_aliases), result.aliases)
                 ResultRow(stringResource(R.string.settings_backup_import_row_contact_aliases), result.contactAliases)
-                Text(
-                    stringResource(R.string.settings_backup_import_settings_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                BackupSelectionSections(selection = result.selection, isExport = false)
                 if (result.schemaSkipped.isNotEmpty()) {
                     Text(
                         stringResource(
@@ -614,15 +610,29 @@ private fun ExportSuccessDialog(result: BackupExportResult, onDismiss: () -> Uni
     val kb = (result.bytes / 1024L).coerceAtLeast(1L)
     val titleRes = if (result.encrypted) R.string.settings_backup_export_success_title_encrypted
                    else R.string.settings_backup_export_success_title
-    InfoDialog(
-        title = stringResource(titleRes),
-        message = stringResource(
-            R.string.settings_backup_export_success_body,
-            result.notes, result.tasks, result.conversations, result.nluLearned,
-            result.audioFiles, result.reminders, result.aliases,
-            result.contactAliases, result.mcpServers, kb,
-        ),
-        onDismiss = onDismiss,
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(titleRes)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    stringResource(
+                        R.string.settings_backup_export_success_body,
+                        result.notes, result.tasks, result.conversations, result.nluLearned,
+                        result.audioFiles, result.reminders, result.aliases,
+                        result.contactAliases, result.mcpServers, kb,
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                BackupSelectionSections(selection = result.selection, isExport = true)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_ok)) }
+        },
     )
 }
 
@@ -656,4 +666,63 @@ private fun PlaintextSecretsConfirmDialog(
         onConfirm = onProceed,
         onDismiss = onCancel,
     )
+}
+
+/**
+ * "Settings included / Settings applied" + optional "Secrets included /
+ * Secrets applied" sections for the export + restore summary dialogs.
+ * The entity rows above already cover Notes / Tasks / etc — this fills
+ * the gap for settings + secrets categories the user can't see in the
+ * count rows.
+ *
+ * Empty sections are dropped entirely so a user who unticked every
+ * settings category doesn't see a stray "Settings applied:" header.
+ */
+@Composable
+private fun BackupSelectionSections(selection: BackupSelection, isExport: Boolean) {
+    val settings = listOfNotNull(
+        if (selection.appPreferences) R.string.settings_backup_summary_cat_app_preferences else null,
+        if (selection.weatherSettings) R.string.settings_backup_summary_cat_weather_settings else null,
+        if (selection.mcpServers) R.string.settings_backup_summary_cat_mcp_servers else null,
+        if (selection.askAgentSetup) R.string.settings_backup_summary_cat_ask_agent_setup else null,
+        if (selection.sttProviderSetup) R.string.settings_backup_summary_cat_stt_provider_setup else null,
+    )
+    val secrets = listOfNotNull(
+        if (selection.weatherApiKey) R.string.settings_backup_summary_cat_weather_api_key else null,
+        if (selection.mcpAuthHeaders) R.string.settings_backup_summary_cat_mcp_auth_headers else null,
+        if (selection.askAgentApiKeys) R.string.settings_backup_summary_cat_ask_agent_api_keys else null,
+        if (selection.sttProviderApiKey) R.string.settings_backup_summary_cat_stt_provider_api_key else null,
+    )
+
+    if (settings.isNotEmpty()) {
+        SummarySection(
+            headerRes = if (isExport) R.string.settings_backup_summary_section_settings
+                        else R.string.settings_backup_summary_section_settings_applied,
+            items = settings,
+        )
+    }
+    if (secrets.isNotEmpty()) {
+        SummarySection(
+            headerRes = if (isExport) R.string.settings_backup_summary_section_secrets
+                        else R.string.settings_backup_summary_section_secrets_applied,
+            items = secrets,
+        )
+    }
+}
+
+@Composable
+private fun SummarySection(headerRes: Int, items: List<Int>) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            stringResource(headerRes),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        items.forEach { res ->
+            Text(
+                "• " + stringResource(res),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
 }

@@ -135,6 +135,7 @@ class BackupImporter(private val app: WristotleApplication) {
                 aliases = aliases,
                 contactAliases = contactAliases,
                 schemaSkipped = schemaSkips.toList(),
+                selection = selection,
             )
         } finally {
             staging.deleteRecursively()
@@ -663,4 +664,9 @@ data class BackupImportResult(
      *  higher than the current code knows how to decode (forward backup).
      *  Empty in the common case. */
     val schemaSkipped: List<String>,
+    /** Effective selection that drove the restore — user's ticked
+     *  categories AND-clamped to what's actually in the ZIP. Drives the
+     *  summary dialog's "settings + secrets applied" breakdown so the
+     *  user can see which non-entity categories were touched. */
+    val selection: BackupSelection,
 )

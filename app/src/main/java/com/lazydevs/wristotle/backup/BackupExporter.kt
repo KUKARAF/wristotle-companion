@@ -40,6 +40,11 @@ data class BackupExportResult(
     val audioFiles: Int,
     val encrypted: Boolean,
     val bytes: Long,
+    /** The selection that actually went into the ZIP — drives the summary
+     *  dialog's "settings + secrets included" breakdown so the user can
+     *  see which non-entity categories rode along (not just the row
+     *  counts). */
+    val selection: BackupSelection,
 )
 
 /**
@@ -238,6 +243,7 @@ class BackupExporter(private val app: WristotleApplication) {
                 audioFiles = audioFiles.size,
                 encrypted = encryptPassword != null,
                 bytes = stagingZip.length(),
+                selection = selection,
             )
         } finally {
             stagingDir.deleteRecursively()
