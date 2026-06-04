@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "stt-providers",
+            date = "2026-06-03",
+            companionVersion = "v0.20.0",
+            watchVersion = null,
+            title = "Cloud + self-hosted speech-to-text",
+            description = "Settings → Speech provider — choose between on-device Whisper, any OpenAI-compatible /audio/transcriptions endpoint (OpenAI, Groq, Cloudflare Workers AI, self-hosted Speaches or whisper.cpp HTTP server, …), or a primary + fallback pair. \"Test connection\" verifies your endpoint before the first real dictation; the active mode picks up on the next voice query without an app restart.",
+            sampleQuery = null,
+            docsPath = "features/#models-optional",
+        ),
+        FeatureEntry(
             id = "whisper-import",
             date = "2026-06-03",
             companionVersion = "v0.19.0",

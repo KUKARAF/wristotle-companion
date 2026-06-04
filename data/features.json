@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "stt-providers",
+      "date": "2026-06-03",
+      "companion_version": "v0.20.0",
+      "watch_version": null,
+      "title": "Cloud + self-hosted speech-to-text",
+      "description": "Settings → Speech provider — choose between on-device Whisper, any OpenAI-compatible /audio/transcriptions endpoint (OpenAI, Groq, Cloudflare Workers AI, self-hosted Speaches or whisper.cpp HTTP server, …), or a primary + fallback pair. \"Test connection\" verifies your endpoint before the first real dictation; the active mode picks up on the next voice query without an app restart.",
+      "sample_query": null,
+      "docs_path": "features/#models-optional"
+    },
+    {
       "id": "whisper-import",
       "date": "2026-06-03",
       "companion_version": "v0.19.0",
