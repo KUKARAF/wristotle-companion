@@ -161,7 +161,7 @@
 
     <!-- App aliases (Settings → Learning → Installed apps) -->
     <string name="app_aliases_header">App aliases</string>
-    <string name="app_aliases_desc">Pin a spoken phrase to a specific app, for when dictation mishears an app name (\"adobe\" for Audible) or you use a nickname (\"podcasts\" for Pocket Casts). Aliases win over the normal name matching.</string>
+    <string name="app_aliases_desc">Pin a spoken phrase to a specific app — useful when dictation mishears the app name (\"adobe\" for Audible), you prefer a nickname (\"podcasts\" for Pocket Casts), or the launcher label is awkward to say.\n\nHow to add one:\n1. Tap \"+ Add alias\" and type the phrase exactly as you\'d say it (lowercase, no punctuation; spaces are fine).\n2. Pick the target app from the search list.\n3. Save. The next \"open \&lt;phrase\&gt;\" / \"launch \&lt;phrase\&gt;\" voice command opens that app.\n\nAliases win over the normal name matching. Compound words are tolerated automatically — an alias stored as \"audiobook\" still matches when dictation transcribes \"audio book\" (and vice versa), so you don\'t need to add both spellings.</string>
     <string name="app_aliases_empty">No aliases yet. Add one below to fix a misheard or nicknamed app.</string>
     <string name="app_aliases_phrase_label">When I say…</string>
     <string name="app_aliases_app_label">Open this app</string>

@@ -45,8 +45,18 @@ class AliasStore(context: Context) {
         persist(map)
     }
 
-    /** Resolve an already-normalized phrase to a packageId, or null. */
-    fun resolve(normalizedPhrase: String): String? = synchronized(lock) { load()[normalizedPhrase] }
+    /**
+     * Resolve an already-normalized phrase to a packageId, or null.
+     *
+     * Direct map hit wins; failing that, falls back to a
+     * compound-word-tolerant lookup so "audiobook" ↔ "audio book"
+     * (and similar STT inconsistencies between adjacent compound
+     * words) resolve to the same alias regardless of which form was
+     * stored. See [resolveAliasWithCompoundFallback] for the order.
+     */
+    fun resolve(normalizedPhrase: String): String? = synchronized(lock) {
+        resolveAliasWithCompoundFallback(load(), normalizedPhrase)
+    }
 
     /** Drops aliases whose target is no longer installed. Call after an app
      *  re-scan so dangling aliases don't accumulate. */
