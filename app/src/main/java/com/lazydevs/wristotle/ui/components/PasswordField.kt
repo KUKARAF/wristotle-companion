@@ -37,6 +37,7 @@ fun PasswordField(
     onChange: (String) -> Unit,
     label: String,
     modifier: Modifier = Modifier.fillMaxWidth(),
+    placeholder: String? = null,
 ) {
     var visible by remember { mutableStateOf(false) }
     PasswordField(
@@ -46,6 +47,7 @@ fun PasswordField(
         visible = visible,
         onToggleVisible = { visible = !visible },
         modifier = modifier,
+        placeholder = placeholder,
     )
 }
 
@@ -58,11 +60,13 @@ fun PasswordField(
     visible: Boolean,
     onToggleVisible: () -> Unit,
     modifier: Modifier = Modifier.fillMaxWidth(),
+    placeholder: String? = null,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },
+        placeholder = placeholder?.let { { Text(it) } },
         singleLine = true,
         visualTransformation = if (visible) VisualTransformation.None
                                else PasswordVisualTransformation(),

@@ -1,13 +1,15 @@
 package com.lazydevs.wristotle.mcp
 
 import android.util.Log
+import com.lazydevs.wristotle.BuildConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.client.request.header
-import io.ktor.serialization.kotlinx.json.json
 import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.client.SseClientTransport
 import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpClientTransport
@@ -44,9 +46,38 @@ class HttpMcpIntegration(
     authHeader: String? = null,
 ) : McpIntegration {
 
+    // ContentNegotiation is intentionally NOT installed — the MCP SDK
+    // sets Content-Type and serialises JSON itself. Installing
+    // ContentNegotiation { json() } makes Ktor APPEND its own
+    // `Accept: application/json` on every request, which collides with
+    // the SDK's `Accept: application/json, text/event-stream` line and
+    // serialises as the malformed `application/json, text/event-stream;
+    // application/json` that strict MCP servers reject before the auth
+    // check.
     private val httpClient: HttpClient = HttpClient(OkHttp) {
         install(SSE)
-        install(ContentNegotiation) { json() }
+        if (BuildConfig.DEBUG) {
+            install(Logging) {
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        // Authorization header (and any other secret-looking headers)
+                        // gets redacted below so it doesn't leak into bug reports
+                        // pasted out of logcat.
+                        val redacted = message.lineSequence()
+                            .joinToString("\n") { line ->
+                                when {
+                                    line.startsWith("Authorization:", ignoreCase = true) ||
+                                        line.startsWith("-> Authorization:", ignoreCase = true) ->
+                                        line.substringBefore(":") + ": <redacted>"
+                                    else -> line
+                                }
+                            }
+                        Log.d(TAG, redacted)
+                    }
+                }
+                level = LogLevel.HEADERS
+            }
+        }
         if (authHeader != null) {
             defaultRequest { header("Authorization", authHeader) }
         }
@@ -77,13 +108,16 @@ class HttpMcpIntegration(
 
     // MUST close BOTH client (SDK) AND httpClient (Ktor engine) — the SDK
     // doesn't own the engine, so closing only the SDK leaks the OkHttp
-    // connection pool until GC.
+    // connection pool until GC. httpClient is created at construction
+    // time, so close() must always tear it down even when connect() never
+    // succeeded — otherwise a failed connect leaks the engine until GC.
     override suspend fun close() {
         connectMutex.withLock {
-            if (!connected) return
-            runCatching { client.close() }.onFailure { Log.w(TAG, "sdk close failed for $name", it) }
+            if (connected) {
+                runCatching { client.close() }.onFailure { Log.w(TAG, "sdk close failed for $name", it) }
+                connected = false
+            }
             runCatching { httpClient.close() }.onFailure { Log.w(TAG, "ktor close failed for $name", it) }
-            connected = false
         }
     }
 

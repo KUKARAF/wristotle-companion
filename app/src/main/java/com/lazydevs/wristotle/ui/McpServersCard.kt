@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,6 +50,7 @@ import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.mcp.McpServerEntity
 import com.lazydevs.wristotle.mcp.McpTool
 import com.lazydevs.wristotle.mcp.ToolCallResult
+import com.lazydevs.wristotle.mcp.looksLikeFullAuthHeader
 
 /**
  * One Card for the add-server form, plus one Card per configured
@@ -64,6 +67,7 @@ fun McpServersCard(vm: McpServersViewModel) {
     val callState by vm.callState.collectAsState()
 
     var openServer by remember { mutableStateOf<McpServerEntity?>(null) }
+    var editingServer by remember { mutableStateOf<McpServerEntity?>(null) }
     var pendingTool by remember { mutableStateOf<Pair<McpServerEntity, McpTool>?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -105,9 +109,21 @@ fun McpServersCard(vm: McpServersViewModel) {
                     openServer = server
                     vm.refreshTools(server)
                 },
+                onEdit = { editingServer = server },
                 onDelete = { vm.deleteServer(server.id) },
+                onToggleEnabled = { vm.setEnabled(server, it) },
             )
         }
+    }
+
+    editingServer?.let { server ->
+        EditMcpServerDialog(
+            server = server,
+            onSave = { name, url, streamable, authHeader ->
+                vm.editServer(server, name, url, streamable, authHeader)
+            },
+            onDismiss = { editingServer = null },
+        )
     }
 
     openServer?.let { server ->
@@ -146,6 +162,15 @@ private fun AddMcpServerForm(
     var url by remember { mutableStateOf("") }
     var streamable by remember { mutableStateOf(true) }
     var authHeader by remember { mutableStateOf("") }
+    var showSchemeWarning by remember { mutableStateOf(false) }
+
+    val commit = {
+        onAdd(name, url, streamable, authHeader.takeIf { it.isNotBlank() })
+        name = ""
+        url = ""
+        authHeader = ""
+        streamable = true
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
@@ -166,6 +191,7 @@ private fun AddMcpServerForm(
             value = authHeader,
             onChange = { authHeader = it },
             label = stringResource(R.string.settings_mcp_auth_label),
+            placeholder = stringResource(R.string.settings_mcp_auth_placeholder),
         )
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -180,17 +206,20 @@ private fun AddMcpServerForm(
         }
         Button(
             onClick = {
-                onAdd(name, url, streamable, authHeader.takeIf { it.isNotBlank() })
-                name = ""
-                url = ""
-                authHeader = ""
-                streamable = true
+                if (looksLikeFullAuthHeader(authHeader)) commit() else showSchemeWarning = true
             },
             enabled = name.isNotBlank() && url.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.settings_mcp_add_button))
         }
+    }
+
+    if (showSchemeWarning) {
+        AuthHeaderSchemeWarningDialog(
+            onConfirm = { showSchemeWarning = false; commit() },
+            onDismiss = { showSchemeWarning = false },
+        )
     }
 }
 
@@ -201,7 +230,9 @@ private fun McpServerCard(
     probeState: ServerProbeState,
     onOpen: () -> Unit,
     onRefresh: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onToggleEnabled: (Boolean) -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -211,7 +242,16 @@ private fun McpServerCard(
                 .padding(start = 16.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f).padding(vertical = 12.dp)) {
+            // Disabled rows dim the descriptive text but the Switch + icon
+            // strip stay full-opacity so re-enabling and deleting remain
+            // visually obvious.
+            val textAlpha = if (server.enabled) 1f else 0.38f
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = 12.dp)
+                    .alpha(textAlpha),
+            ) {
                 Text(server.name, style = MaterialTheme.typography.titleSmall)
                 Text(
                     server.url,
@@ -222,10 +262,21 @@ private fun McpServerCard(
                 )
                 ServerStatusLine(server, probeState)
             }
+            Switch(
+                checked = server.enabled,
+                onCheckedChange = onToggleEnabled,
+            )
             RefreshIconOrSpinner(
                 isLoading = probeState is ServerProbeState.Loading,
                 onClick = onRefresh,
+                enabled = server.enabled,
             )
+            IconButton(onClick = onEdit) {
+                Icon(
+                    Icons.Filled.Edit,
+                    contentDescription = stringResource(R.string.settings_mcp_edit),
+                )
+            }
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Filled.DeleteOutline,
@@ -234,6 +285,124 @@ private fun McpServerCard(
             }
         }
     }
+}
+
+/**
+ * Edit-existing-server dialog. Mirrors [AddMcpServerForm]'s fields
+ * (pre-filled from the entity) inside an AlertDialog. The ViewModel's
+ * [McpServersViewModel.editServer] evicts the cached integration so
+ * the next tools refresh picks up the new URL / auth without an app
+ * restart.
+ */
+@Composable
+private fun EditMcpServerDialog(
+    server: McpServerEntity,
+    onSave: (name: String, url: String, streamable: Boolean, authHeader: String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember { mutableStateOf(server.name) }
+    var url by remember { mutableStateOf(server.url) }
+    var streamable by remember { mutableStateOf(server.streamable) }
+    var authHeader by remember { mutableStateOf(server.authHeader.orEmpty()) }
+    var showSchemeWarning by remember { mutableStateOf(false) }
+
+    val commit = {
+        onSave(name, url, streamable, authHeader.takeIf { it.isNotBlank() })
+        onDismiss()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_mcp_edit_title)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.settings_mcp_name_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text(stringResource(R.string.settings_mcp_url_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                PasswordField(
+                    value = authHeader,
+                    onChange = { authHeader = it },
+                    label = stringResource(R.string.settings_mcp_auth_label),
+                    placeholder = stringResource(R.string.settings_mcp_auth_placeholder),
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(R.string.settings_mcp_streamable_label),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Switch(checked = streamable, onCheckedChange = { streamable = it })
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (looksLikeFullAuthHeader(authHeader)) commit() else showSchemeWarning = true
+                },
+                enabled = name.isNotBlank() && url.isNotBlank(),
+            ) {
+                Text(stringResource(R.string.settings_mcp_save_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_mcp_cancel_button))
+            }
+        },
+    )
+
+    if (showSchemeWarning) {
+        AuthHeaderSchemeWarningDialog(
+            onConfirm = { showSchemeWarning = false; commit() },
+            onDismiss = { showSchemeWarning = false },
+        )
+    }
+}
+
+/**
+ * Shared between Add + Edit flows. Fires when the user is about to save
+ * an Authorization value that doesn't start with a known scheme prefix
+ * (Bearer / Basic / Token / etc.) — the classic "I pasted a raw token"
+ * mistake that surfaces later as a confusing 401 from the server.
+ */
+@Composable
+private fun AuthHeaderSchemeWarningDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_mcp_auth_no_scheme_title)) },
+        text = { Text(stringResource(R.string.settings_mcp_auth_no_scheme_body)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.settings_mcp_save_anyway_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_mcp_cancel_button))
+            }
+        },
+    )
 }
 
 /** One-line status text under the URL: tool count / "not loaded" / error. */
@@ -325,8 +494,12 @@ private fun ToolsDialogBody(
 }
 
 @Composable
-private fun RefreshIconOrSpinner(isLoading: Boolean, onClick: () -> Unit) {
-    IconButton(onClick = onClick, enabled = !isLoading) {
+private fun RefreshIconOrSpinner(
+    isLoading: Boolean,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
+    IconButton(onClick = onClick, enabled = enabled && !isLoading) {
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),

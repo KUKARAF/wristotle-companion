@@ -73,11 +73,50 @@ class McpServersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun setEnabled(server: McpServerEntity, enabled: Boolean) {
+        if (server.enabled == enabled) return
+        viewModelScope.launch {
+            repo.update(server.copy(enabled = enabled))
+            if (!enabled) {
+                // Drop any open connection + stale probe state on disable;
+                // on re-enable the next refresh / agent query will open a
+                // fresh integration.
+                _probeStates.value = _probeStates.value - server.id
+                evict(server.id)
+            }
+        }
+    }
+
+    fun editServer(
+        server: McpServerEntity,
+        name: String,
+        url: String,
+        streamable: Boolean,
+        authHeader: String?,
+    ) {
+        if (name.isBlank() || url.isBlank()) return
+        viewModelScope.launch {
+            repo.update(
+                server.copy(
+                    name = name.trim(),
+                    url = url.trim(),
+                    streamable = streamable,
+                    authHeader = authHeader?.trim()?.takeIf { it.isNotEmpty() },
+                ),
+            )
+            // Cached integration was opened against the OLD URL/auth;
+            // evict so the next refresh re-opens with the new config and
+            // the stale probe state goes with it.
+            _probeStates.value = _probeStates.value - server.id
+            evict(server.id)
+        }
+    }
+
     fun refreshTools(server: McpServerEntity) {
         viewModelScope.launch {
             _probeStates.value = _probeStates.value + (server.id to ServerProbeState.Loading)
-            val integration = obtain(server)
             val nextState: ServerProbeState = try {
+                val integration = obtain(server)
                 integration.resetCache()
                 ServerProbeState.Tools(integration.listTools())
             } catch (t: Throwable) {
@@ -114,14 +153,21 @@ class McpServersViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun obtain(server: McpServerEntity): HttpMcpIntegration =
         integrationsMutex.withLock {
-            integrations.getOrPut(server.id) {
-                HttpMcpIntegration(
-                    name = server.name,
-                    url = server.url,
-                    streamable = server.streamable,
-                    authHeader = server.authHeader,
-                ).also { it.connect() }
+            integrations[server.id]?.let { return@withLock it }
+            val integration = HttpMcpIntegration(
+                name = server.name,
+                url = server.url,
+                streamable = server.streamable,
+                authHeader = server.authHeader,
+            )
+            try {
+                integration.connect()
+            } catch (t: Throwable) {
+                runCatching { integration.close() }
+                throw t
             }
+            integrations[server.id] = integration
+            integration
         }
 
     private suspend fun evict(id: Long) {

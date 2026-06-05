@@ -339,6 +339,14 @@
     <string name="settings_mcp_transport_streamable_short">Streaming HTTP</string>
     <string name="settings_mcp_transport_sse_short">SSE</string>
     <string name="settings_mcp_refresh">List / refresh tools</string>
+    <string name="settings_mcp_edit">Edit server</string>
+    <string name="settings_mcp_edit_title">Edit server</string>
+    <string name="settings_mcp_save_button">Save</string>
+    <string name="settings_mcp_auth_placeholder">e.g. Bearer sk-…</string>
+    <string name="settings_mcp_enabled">Enabled</string>
+    <string name="settings_mcp_auth_no_scheme_title">Looks like a raw token</string>
+    <string name="settings_mcp_auth_no_scheme_body">The Authorization value will be sent as-is. Most MCP servers expect a scheme prefix like \"Bearer &lt;token>\" — without it the server will likely return 401 Unauthorized.\n\nSave anyway?</string>
+    <string name="settings_mcp_save_anyway_button">Save anyway</string>
     <string name="settings_mcp_delete">Delete server</string>
     <string name="settings_mcp_loading">Connecting…</string>
     <string name="settings_mcp_probe_failed">Failed: %1$s</string>
