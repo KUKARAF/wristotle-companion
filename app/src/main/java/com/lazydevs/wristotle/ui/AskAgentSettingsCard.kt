@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -10,11 +11,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -133,6 +136,7 @@ fun AskAgentSettingsCard(settings: AskAgentSettings) {
 private fun AnthropicFields(settings: AskAgentSettings) {
     val apiKey by settings.anthropicApiKey.collectAsState()
     val model by settings.anthropicModel.collectAsState()
+    val webSearch by settings.anthropicWebSearch.collectAsState()
 
     PasswordField(
         value = apiKey,
@@ -150,6 +154,19 @@ private fun AnthropicFields(settings: AskAgentSettings) {
         label = { Text(stringResource(R.string.settings_askagent_model_label)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
+    )
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(
+            stringResource(R.string.settings_askagent_anthropic_web_search_label),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Switch(checked = webSearch, onCheckedChange = settings::setAnthropicWebSearch)
+    }
+    Text(
+        stringResource(R.string.settings_askagent_anthropic_web_search_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 

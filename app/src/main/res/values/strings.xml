@@ -318,6 +318,8 @@
     <string name="settings_askagent_model_label">Model</string>
     <string name="settings_askagent_anthropic_key_label">Anthropic API key</string>
     <string name="settings_askagent_anthropic_key_hint">Get a key at console.anthropic.com → API Keys. Stored locally; sent only with AskAgent requests.</string>
+    <string name="settings_askagent_anthropic_web_search_label">Web search (Claude built-in)</string>
+    <string name="settings_askagent_anthropic_web_search_hint">Lets Claude search the web mid-reply for fresh facts (news, sports, weather, today\'s prices). Billed by Anthropic at $10 per 1,000 searches on top of normal token costs. Off by default.</string>
     <string name="settings_askagent_openai_endpoint_label">Endpoint URL (full /chat/completions)</string>
     <string name="settings_askagent_openai_endpoint_hint">e.g. https://api.openai.com/v1/chat/completions, https://openrouter.ai/api/v1/chat/completions, http://&lt;your-server&gt;/v1/chat/completions</string>
     <string name="settings_askagent_openai_key_label">API key (leave blank for local servers)</string>

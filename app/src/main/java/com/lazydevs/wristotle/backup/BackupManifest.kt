@@ -116,6 +116,7 @@ data class BackupManifest(
         val systemPrompt: String,
         val anthropicApiKey: String? = null,
         val openaiApiKey: String? = null,
+        val anthropicWebSearch: Boolean = false,
     )
 
     /** STT provider — mode + base URL + model travel with the
@@ -275,6 +276,7 @@ object BackupManifestCodec {
                     put("openai_endpoint", a.openaiEndpoint)
                     put("openai_model", a.openaiModel)
                     put("system_prompt", a.systemPrompt)
+                    put("anthropic_web_search", a.anthropicWebSearch)
                     if (a.anthropicApiKey != null) put("anthropic_api_key", a.anthropicApiKey)
                     if (a.openaiApiKey != null) put("openai_api_key", a.openaiApiKey)
                 })
@@ -427,6 +429,7 @@ object BackupManifestCodec {
                         systemPrompt = a.optString("system_prompt", ""),
                         anthropicApiKey = a.optString("anthropic_api_key").takeIf { it.isNotEmpty() },
                         openaiApiKey = a.optString("openai_api_key").takeIf { it.isNotEmpty() },
+                        anthropicWebSearch = a.optBoolean("anthropic_web_search", false),
                     )
                 },
                 sttProvider = prefs.optJSONObject("stt_provider_settings")?.let { s ->

@@ -49,7 +49,11 @@ class AskAgentHandler(
         val client = settings.activeClient()
 
         val enabled = mcpServers.listEnabled()
-        if (enabled.isEmpty()) {
+        // The chat/tool path is needed when EITHER the user has MCP
+        // servers OR the active provider has built-in server tools the
+        // LLM should be able to invoke (today: Anthropic web_search).
+        // Otherwise the cheaper one-shot complete() suffices.
+        if (enabled.isEmpty() && !settings.activeProviderHasServerTools()) {
             return renderComplete(client.complete(query, systemPrompt)).trimForWatch()
         }
 

@@ -31,6 +31,14 @@ class AnthropicLlmClient(
     private val apiKey: String,
     private val model: String,
     private val maxTokens: Int = DEFAULT_MAX_TOKENS,
+    /**
+     * Opt-in: Anthropic's server-side `web_search_20250305` tool.
+     * Lets Claude search the web mid-reply for fresh facts (news /
+     * sports / weather / etc.). Billed per query on Anthropic's side;
+     * off by default. Toggle via Settings → ✨ Ask Agent. Only affects
+     * the [chat] code path — [complete] never sends tools.
+     */
+    private val webSearchEnabled: Boolean = false,
 ) : LlmClient {
 
     override suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult =
@@ -102,13 +110,26 @@ class AnthropicLlmClient(
             put("model", model)
             put("max_tokens", maxTokens)
             if (systemPrompt != null) put("system", systemPrompt)
-            if (tools.isNotEmpty()) put("tools", anthropicTools(tools))
+            if (tools.isNotEmpty() || webSearchEnabled) put("tools", anthropicTools(tools))
             put("messages", anthropicMessages(nonSystem))
         }
         return obj.toString()
     }
 
     private fun anthropicTools(tools: List<LlmTool>) = kotlinx.serialization.json.buildJsonArray {
+        // Anthropic's server-side web_search tool — opt-in via Settings.
+        // Listed first so Claude sees it before any user-provided tools.
+        // Version pin: bump WEB_SEARCH_TOOL_VERSION below when Anthropic
+        // ships a newer one; older versions keep working but new model
+        // features (e.g. dynamic filtering) ride on the latest version.
+        if (webSearchEnabled) {
+            add(
+                buildJsonObject {
+                    put("type", WEB_SEARCH_TOOL_VERSION)
+                    put("name", "web_search")
+                },
+            )
+        }
         tools.forEach { tool ->
             add(
                 buildJsonObject {
@@ -260,6 +281,17 @@ class AnthropicLlmClient(
         private const val ANTHROPIC_VERSION = "2023-06-01"
         const val DEFAULT_MAX_TOKENS = 1024
         private const val READ_TIMEOUT_MS = 14_000
+
+        /**
+         * Anthropic's server-side `web_search` tool version string —
+         * `web_search_<YYYYMMDD>`. The 20260209 release adds dynamic
+         * filtering (Claude post-processes search results before they
+         * hit the context window). Bump when Anthropic ships a newer
+         * version; older types stay supported but new model features
+         * ride on the latest pin. See:
+         *   https://platform.claude.com/docs/en/docs/agents-and-tools/tool-use/web-search-tool
+         */
+        private const val WEB_SEARCH_TOOL_VERSION = "web_search_20260209"
 
         /** Anthropic rejects tool definitions whose input_schema is missing;
          *  a parameterless tool needs an explicit empty-object schema. */

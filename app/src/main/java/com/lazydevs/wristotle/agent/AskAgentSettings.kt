@@ -62,6 +62,17 @@ class AskAgentSettings(context: Context) {
     )
     val customTriggers: StateFlow<List<String>> = _customTriggers
 
+    // Anthropic's server-side `web_search_20250305` tool. Off by default —
+    // billed per query on Anthropic's side, so opt-in only. When on,
+    // AnthropicLlmClient appends the tool spec to every chat request and
+    // Claude can search the web mid-reply for fresh facts (news, sports,
+    // weather elsewhere, etc.). OpenAI-compat users get the universal
+    // answer via an MCP web-search server — see troubleshooting docs.
+    private val _anthropicWebSearch = MutableStateFlow(
+        prefs.getBoolean(KEY_ANTHROPIC_WEB_SEARCH, false),
+    )
+    val anthropicWebSearch: StateFlow<Boolean> = _anthropicWebSearch
+
     fun setProvider(value: LlmProvider) {
         prefs.edit().putString(KEY_PROVIDER, value.name).apply()
         _provider.value = value
@@ -69,6 +80,11 @@ class AskAgentSettings(context: Context) {
 
     fun setAnthropicApiKey(value: String) = write(KEY_ANTHROPIC_API_KEY, value.trim(), _anthropicApiKey)
     fun setAnthropicModel(value: String) = write(KEY_ANTHROPIC_MODEL, value.trim(), _anthropicModel)
+    fun setAnthropicWebSearch(value: Boolean) {
+        if (_anthropicWebSearch.value == value) return
+        prefs.edit().putBoolean(KEY_ANTHROPIC_WEB_SEARCH, value).apply()
+        _anthropicWebSearch.value = value
+    }
     fun setOpenAiEndpoint(value: String) = write(KEY_OPENAI_ENDPOINT, value.trim(), _openaiEndpoint)
     fun setOpenAiApiKey(value: String) = write(KEY_OPENAI_API_KEY, value.trim(), _openaiApiKey)
     fun setOpenAiModel(value: String) = write(KEY_OPENAI_MODEL, value.trim(), _openaiModel)
@@ -97,12 +113,25 @@ class AskAgentSettings(context: Context) {
         LlmProvider.ANTHROPIC -> AnthropicLlmClient(
             apiKey = _anthropicApiKey.value,
             model = _anthropicModel.value,
+            webSearchEnabled = _anthropicWebSearch.value,
         )
         LlmProvider.OPENAI_COMPATIBLE -> OpenAiCompatibleLlmClient(
             endpointUrl = _openaiEndpoint.value,
             apiKey = _openaiApiKey.value,
             model = _openaiModel.value,
         )
+    }
+
+    /**
+     * True when the active provider has server-side tools that need
+     * the chat/tool path even with zero user-configured MCP servers
+     * (today: Anthropic with web_search enabled). When false and no
+     * MCP servers are configured, AskAgentHandler can take the cheaper
+     * one-shot `complete()` route.
+     */
+    fun activeProviderHasServerTools(): Boolean = when (_provider.value) {
+        LlmProvider.ANTHROPIC -> _anthropicWebSearch.value
+        LlmProvider.OPENAI_COMPATIBLE -> false
     }
 
     private fun readProvider(): LlmProvider {
@@ -126,6 +155,7 @@ class AskAgentSettings(context: Context) {
         private const val KEY_OPENAI_MODEL = "openai_model"
         private const val KEY_SYSTEM_PROMPT = "system_prompt"
         private const val KEY_CUSTOM_TRIGGERS = "custom_triggers"
+        private const val KEY_ANTHROPIC_WEB_SEARCH = "anthropic_web_search"
 
         // Defaults: cheap + decent + broadly available. Users override
         // per-provider via the Settings card; field is a plain text
