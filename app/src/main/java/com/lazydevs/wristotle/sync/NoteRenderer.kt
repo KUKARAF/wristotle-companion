@@ -29,12 +29,14 @@ import java.time.Instant
  *   scripting / external tooling.
  *
  * Two granularities:
- * - `OneFilePerEntity` — `Wristotle/notes/<id>.md` per note, Overwrite.
+ * - `OneFilePerEntity` — `Wristotle/notes/<ISO timestamp>.md` per note,
+ *   Overwrite.
  * - `AppendToSingleFile` — the renderer still returns per-entity
- *   fragments at `Wristotle/notes.md` with `mode = Append`; the
- *   coordinator concatenates all fragments and atomically rewrites
- *   the file. (Per-fragment with mode=Append keeps the renderer
- *   stateless; the coordinator owns the "all fragments at once" view.)
+ *   fragments at `Wristotle/notes/notes.md` (inside the entity folder
+ *   alongside attachments/) with `mode = Append`; the coordinator
+ *   concatenates all fragments and atomically rewrites the file.
+ *   (Per-fragment with mode=Append keeps the renderer stateless; the
+ *   coordinator owns the "all fragments at once" view.)
  *
  * Pure — no Android imports — so the test layer can exercise every
  * branch with synthetic `Note` instances. Audio attachment files are
