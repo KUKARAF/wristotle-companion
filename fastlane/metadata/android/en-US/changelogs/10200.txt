@@ -1,0 +1,19 @@
+Folder sync for Notes + Conversations.
+
+Each of Settings → 📝 Notes and Settings → 💬 Conversation
+gets a new "Sync to folder" card:
+
+- Pick any folder on this device — an Obsidian vault, a
+  Joplin / Logseq watch folder, a Dropbox / Drive /
+  Syncthing sync root, a git-versioned vault, or any
+  plain-text app's folder.
+- CommonMark-clean Markdown by default; Plain text and
+  JSON also available.
+- One file per entry, or append to a single daily-log
+  file. Conversations default to append.
+- ISO timestamp filenames so reinstalling can't clobber
+  existing files.
+- "Sync now" button for manual passes.
+- Audio attachments copied alongside, linked by filename.
+
+Closes codeberg #5.

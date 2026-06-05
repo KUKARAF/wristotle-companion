@@ -102,6 +102,26 @@ class WristotleApplication : Application() {
     lateinit var notesAudioStore: com.lazydevs.wristotle.notes.NotesAudioStore
         private set
 
+    /** Notes folder sync (Phase A). One [FileSyncSettings] +
+     *  [FileSyncCoordinator] per syncable entity scope; conversations
+     *  follow when needed. The coordinator is held so the Settings
+     *  card's "Sync now" button can call [syncNow]. */
+    lateinit var notesSyncSettings: com.lazydevs.wristotle.sync.FileSyncSettings
+        private set
+    lateinit var notesSyncCoordinator:
+        com.lazydevs.wristotle.sync.FileSyncCoordinator<com.lazydevs.wristotle.notes.Note>
+        private set
+
+    /** Conversations folder sync — phase B. Independent scope from
+     *  notes; user can pick the same folder OR a different one.
+     *  Default granularity = AppendToSingleFile (daily-log shape) since
+     *  per-query files would flood any vault. */
+    lateinit var conversationsSyncSettings: com.lazydevs.wristotle.sync.FileSyncSettings
+        private set
+    lateinit var conversationsSyncCoordinator:
+        com.lazydevs.wristotle.sync.FileSyncCoordinator<com.lazydevs.wristotle.history.ConversationEntry>
+        private set
+
     /** Tasks data layer (separate Room DB; checklist items, no due dates). */
     lateinit var taskRepository: com.lazydevs.wristotle.tasks.TaskRepository
         private set
@@ -345,6 +365,38 @@ class WristotleApplication : Application() {
             settings = noteSettings,
         )
         appScope.launch { noteRepository.prune() }
+
+        // Folder sync — per-entity Settings instance + Coordinator running
+        // on the long-lived app scope. The coordinator no-ops until the
+        // user enables sync + picks a folder; subscription drops cleanly
+        // when either flips off.
+        notesSyncSettings = com.lazydevs.wristotle.sync.FileSyncSettings(this, scope = "notes")
+        notesSyncCoordinator = com.lazydevs.wristotle.sync.FileSyncCoordinator(
+            context = this,
+            settings = notesSyncSettings,
+            renderer = com.lazydevs.wristotle.sync.NoteRenderer(),
+            entitiesFlow = noteRepository.observeAll(),
+            idOf = { it.id.toString() },
+            scope = "notes",
+            appScope = appScope,
+        )
+        notesSyncCoordinator.start()
+
+        conversationsSyncSettings = com.lazydevs.wristotle.sync.FileSyncSettings(
+            context = this,
+            scope = "conversations",
+            defaultGranularity = com.lazydevs.wristotle.sync.FileSyncGranularity.AppendToSingleFile,
+        )
+        conversationsSyncCoordinator = com.lazydevs.wristotle.sync.FileSyncCoordinator(
+            context = this,
+            settings = conversationsSyncSettings,
+            renderer = com.lazydevs.wristotle.sync.ConversationRenderer(),
+            entitiesFlow = conversationRepository.observeAll(),
+            idOf = { it.id.toString() },
+            scope = "conversations",
+            appScope = appScope,
+        )
+        conversationsSyncCoordinator.start()
 
         // Tasks — separate Room DB, no auto-prune (user-managed checklist).
         tasksDb = com.lazydevs.wristotle.tasks.TasksDatabase.build(this)

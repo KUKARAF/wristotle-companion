@@ -437,10 +437,19 @@ private fun SettingsCategoryContent(
                         onClearAudio = onShowClearAudioConfirm,
                     )
                 }
+                ConversationsSyncCard(
+                    settings = app.conversationsSyncSettings,
+                    coordinator = app.conversationsSyncCoordinator,
+                )
             }
 
-            SettingsCategory.Notes ->
+            SettingsCategory.Notes -> {
                 NotesSettingsCard(vm = notesVm)
+                NotesSyncCard(
+                    settings = app.notesSyncSettings,
+                    coordinator = app.notesSyncCoordinator,
+                )
+            }
 
             SettingsCategory.Reminders -> {
                 val reminderDefaultMinutes by reminderSettings.defaultOffsetMin.collectAsState()

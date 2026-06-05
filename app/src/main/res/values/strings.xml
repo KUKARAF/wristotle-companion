@@ -503,6 +503,36 @@
     <string name="notes_settings_append_audio_merge">Merge into one recording</string>
     <string name="notes_settings_append_audio_separate">Keep as separate clips</string>
     <string name="notes_add_fab_desc">Add note</string>
+
+    <!-- Folder sync — shared widget strings (Notes + Conversations, issue #5) -->
+    <string name="file_sync_folder_label">Folder</string>
+    <string name="file_sync_folder_unpicked">No folder picked yet.</string>
+    <string name="file_sync_pick_folder">Pick folder</string>
+    <string name="file_sync_change_folder">Change</string>
+    <string name="file_sync_disconnect">Disconnect</string>
+    <string name="file_sync_format_label">Format</string>
+    <string name="file_sync_format_markdown">Markdown</string>
+    <string name="file_sync_format_plaintext">Plain text</string>
+    <string name="file_sync_format_json">JSON</string>
+    <string name="file_sync_granularity_label">Granularity</string>
+    <string name="file_sync_granularity_one_per">One file per entry</string>
+    <string name="file_sync_granularity_append">Append to single file</string>
+    <string name="file_sync_delete_cascades_label">Delete the file when the entry is removed</string>
+    <string name="file_sync_now">Sync now</string>
+    <string name="file_sync_in_flight">Syncing…</string>
+    <string name="file_sync_result_success">Wrote %1$d · removed %2$d</string>
+    <string name="file_sync_result_failed">Failed: %1$s</string>
+    <string name="file_sync_result_skipped">Sync is disabled or no folder picked.</string>
+
+    <!-- Notes folder sync — entity-specific strings only -->
+    <string name="notes_sync_header">Sync to folder</string>
+    <string name="notes_sync_desc">Write every note as a file in a folder you pick on this device — works with Obsidian vaults, Joplin/Logseq watch folders, Dropbox/Google Drive sync roots, git-versioned vaults, or any plain-text app. Markdown by default; the file format stays CommonMark-clean so it round-trips across every tool.\n\nHow to enable:\n1. Flip the toggle below.\n2. Tap \"Pick folder\" and choose the destination (e.g. your Obsidian vault).\n3. Optional: change format / granularity / delete behaviour.\n\nNotes write to \"Wristotle/notes/\" inside the picked folder; audio recordings go to \"Wristotle/notes/attachments/\". Cloud distribution is the picked folder\'s job — if you pick a folder inside Dropbox, Dropbox syncs it.</string>
+    <string name="notes_sync_enabled_label">Sync notes to a folder</string>
+
+    <!-- Conversations folder sync — entity-specific strings only -->
+    <string name="conv_sync_header">Sync to folder</string>
+    <string name="conv_sync_desc">Write every voice query + response to a folder you pick on this device. Same architecture as the Notes sync card (any Obsidian / Joplin / Logseq vault, any Dropbox / Drive / Syncthing folder, any plain-text app — Wristotle writes; your existing sync stack distributes). Default granularity is \"Append to single file\" because per-query files would flood the vault.\n\nEverything goes under \"Wristotle/conversations/\" in the picked folder — \"conversations.md\" (append mode) or one \"&lt;timestamp&gt;.md\" per entry, with audio recordings (when captured) in \"attachments/\".</string>
+    <string name="conv_sync_enabled_label">Sync conversations to a folder</string>
     <string name="notes_add_title">New note</string>
     <string name="notes_add_field_label">Note</string>
     <string name="notes_add_placeholder">Type, or tap the mic to dictate</string>

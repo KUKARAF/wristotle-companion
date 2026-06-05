@@ -58,8 +58,8 @@ android {
         //
         // Bump scheme: versionCode is 2 digits per component (max 99.99.99).
         // v1.2.3 → versionCode 1*10000 + 2*100 + 3 = 10203.
-        versionCode = 10100
-        versionName = "1.1.0"
+        versionCode = 10200
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -265,6 +265,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.documentfile)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.service)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

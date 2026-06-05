@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-2-0-folder-sync",
+            date = "2026-06-05",
+            companionVersion = "v1.2.0",
+            watchVersion = null,
+            title = "Folder sync for Notes + Conversations",
+            description = "Settings → 📝 Notes and Settings → 💬 Conversation each gain a new \"Sync to folder\" card. Pick any directory on your phone (an Obsidian vault, a Joplin / Logseq watch folder, a Dropbox / Drive / Syncthing sync root, a git-versioned vault, or any plain-text app's folder) and Wristotle writes every entry as a file there. Cloud distribution is the picked folder's job — your existing sync stack handles the rest. CommonMark-clean Markdown by default, Plain text and JSON formats also available, one-file-per-entry or append-to-single-file granularity. ISO-timestamp filenames so a fresh install can't collide with old files. Sync now button on each card for manual passes. Closes codeberg.org/wristotle/wristotle-companion/issues/5.",
+            sampleQuery = null,
+            docsPath = "features/#settings-tab-whats-in-each-category",
+        ),
+        FeatureEntry(
             id = "v1-1-0-agent-aliases-polish",
             date = "2026-06-05",
             companionVersion = "v1.1.0",
