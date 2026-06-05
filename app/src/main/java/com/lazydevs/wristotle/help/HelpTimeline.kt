@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-1-0-agent-aliases-polish",
+            date = "2026-06-05",
+            companionVersion = "v1.1.0",
+            watchVersion = null,
+            title = "Claude web search + smarter aliases + reminder polish",
+            description = "Ask Agent → Anthropic gets a new \"Web search (Claude built-in)\" toggle that lets Claude search the web mid-reply for fresh facts (news, sports, today's prices) and return a cited answer — billed by Anthropic per search, off by default. App aliases now tolerate compound-word inconsistencies: an alias stored as \"audiobook\" still matches when dictation transcribes \"audio book\" (and vice versa), so you don't need to add both spellings. The App aliases card also gains a numbered how-to-add guide in its info blurb. Two bug fixes: \"remind me in two hours to <task>\" no longer keeps the time phrase in the reminder title (issue #4), and the Ask Agent system-prompt help text now points users running reasoning models (Qwen3 / DeepSeek-R1) at the inference-server fix for chain-of-thought leakage.",
+            sampleQuery = "ask claude what's the score of today's lakers game",
+            docsPath = "features/#settings-tab-whats-in-each-category",
+        ),
+        FeatureEntry(
             id = "v1-0-4-mcp-card",
             date = "2026-06-04",
             companionVersion = "v1.0.4",

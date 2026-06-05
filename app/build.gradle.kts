@@ -58,8 +58,8 @@ android {
         //
         // Bump scheme: versionCode is 2 digits per component (max 99.99.99).
         // v1.2.3 → versionCode 1*10000 + 2*100 + 3 = 10203.
-        versionCode = 10004
-        versionName = "1.0.4"
+        versionCode = 10100
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

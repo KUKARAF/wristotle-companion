@@ -1,0 +1,19 @@
+Three additions and two fixes:
+
+- Ask Agent → Anthropic gains a "Web search (Claude
+  built-in)" toggle. When on, Claude can search the web
+  mid-reply for fresh facts (news, sports, prices) and
+  return a cited answer. Off by default — Anthropic
+  bills per search.
+- App aliases now handle compound words automatically:
+  "audiobook" matches when dictation transcribes "audio
+  book" (and vice versa). No need to add both spellings.
+- App aliases card has a new how-to-add guide in its info
+  blurb.
+
+Fixes:
+- "remind me in two hours to <task>" no longer keeps
+  "in two hours" in the reminder title.
+- The Ask Agent system-prompt hint points users on
+  reasoning models (Qwen3 / DeepSeek-R1) at the server
+  flag for chain-of-thought leakage.
