@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-0-4-mcp-card",
+            date = "2026-06-04",
+            companionVersion = "v1.0.4",
+            watchVersion = null,
+            title = "MCP server card — edit, enable/disable, scheme guard",
+            description = "Settings → MCP servers gets three quality-of-life additions. Each row gains a pencil icon to edit name / URL / Authorization / streaming-vs-SSE in place (so a wrong token or moved endpoint doesn't need a delete-and-re-add), an enable/disable switch that the Ask Agent loop already respects, and a save-time \"Looks like a raw token\" warning when the Authorization value is missing a scheme prefix like Bearer or Token. Also fixes a crash when refreshing a server that returns 401.",
+            sampleQuery = null,
+            docsPath = "features/#settings-tab-whats-in-each-category",
+        ),
+        FeatureEntry(
             id = "v1-0-0",
             date = "2026-06-04",
             companionVersion = "v1.0.0",

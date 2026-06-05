@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-0-4-mcp-card",
+      "date": "2026-06-04",
+      "companion_version": "v1.0.4",
+      "watch_version": null,
+      "title": "MCP server card — edit, enable/disable, scheme guard",
+      "description": "Settings → MCP servers gets three quality-of-life additions. Each row gains a pencil icon to edit name / URL / Authorization / streaming-vs-SSE in place (so a wrong token or moved endpoint doesn't need a delete-and-re-add), an enable/disable switch that the Ask Agent loop already respects, and a save-time \"Looks like a raw token\" warning when the Authorization value is missing a scheme prefix like Bearer or Token. Also fixes a crash when refreshing a server that returns 401.",
+      "sample_query": null,
+      "docs_path": "features/#settings-tab-whats-in-each-category"
+    },
+    {
       "id": "v1-0-0",
       "date": "2026-06-04",
       "companion_version": "v1.0.0",

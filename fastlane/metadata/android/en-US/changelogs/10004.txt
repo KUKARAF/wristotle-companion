@@ -1,0 +1,14 @@
+Settings → MCP servers — three quality-of-life additions
+plus a crash fix:
+
+- Edit existing server in place (pencil icon).
+- Enable / disable switch per server; the Ask Agent loop
+  skips disabled servers automatically.
+- Save-time "Looks like a raw token" warning when the
+  Authorization value is missing a scheme prefix like
+  Bearer or Token.
+- Fix: refreshing a server that returns 401 no longer
+  crashes the app — you see a Failed status instead.
+
+Also fixes a malformed Accept header that some strict
+MCP servers were rejecting.
