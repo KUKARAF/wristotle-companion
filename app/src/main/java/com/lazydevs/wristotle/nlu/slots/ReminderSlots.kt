@@ -38,13 +38,30 @@ class ReminderSlots(
     private fun buildTitle(transcription: String): String =
         transcription
             .replace(STRIP_PREFIXES, "")
+            .replace(STRIP_LEADING_TIME_THEN_TO, "")
             .replace(STRIP_TIME_PHRASES, "")
             .trim()
             .replaceFirstChar { it.uppercaseChar() }
 
     private companion object {
+        // `\b` wraps the optional connectors so "remind me to call" strips
+        // the lead-in "to" but "remind me tomorrow" does NOT eat the "to"
+        // hidden inside "tomorrow" — issue #4 surfaced this bug while
+        // chasing the leading-time-clause case.
         val STRIP_PREFIXES = Regex(
-            """(?i)^(remind me (to|about|that)?|reminder (to|about)?|set a reminder (to|for)?|set an? alarm (for|to)?|schedule a reminder (for|to)?|wake me up|tell me when|ping me|buzz me)\s*""",
+            """(?i)^(remind me (\bto\b|\babout\b|\bthat\b)?|reminder (\bto\b|\babout\b)?|set a reminder (\bto\b|\bfor\b)?|set an? alarm (\bfor\b|\bto\b)?|schedule a reminder (\bfor\b|\bto\b)?|wake me up|tell me when|ping me|buzz me)\s*""",
+        )
+        // Handles the "remind me <time> to <task>" shape (issue #4):
+        // after STRIP_PREFIXES drops "remind me ", the residual is
+        // "in two hours to check the tables", and STRIP_TIME_PHRASES
+        // (anchored at end-of-string with a leading \s+) can't reach a
+        // time clause that sits at the START. This regex peels a
+        // leading time lead-in up to the task-introducing "to ".
+        // Lazy match between the lead-in and "to" keeps "remind me
+        // tomorrow to call mom" → "call mom" without over-eating
+        // anything past the first "to".
+        val STRIP_LEADING_TIME_THEN_TO = Regex(
+            """(?i)^\s*\b(in|at|by|on|tomorrow|next|this|every|later|tonight)\b[\w\s:.,]*?\bto\b\s+""",
         )
         // Note: "to" is intentionally NOT a lead-in — "remind me TO call" uses
         // "to" to introduce the task, not a time. The shared builder handles the

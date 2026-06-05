@@ -52,4 +52,33 @@ class ReminderSlotsTest {
     @Test fun `missing time still extracts title`() {
         assertEquals("Buy milk", title("remind me to buy milk"))
     }
+
+    // Issue #4: "remind me in two hours to <task>" — the leading time
+    // clause sits between the prefix and the task, not at the end, so
+    // the trailing-clause regex couldn't reach it. STRIP_LEADING_TIME_THEN_TO
+    // now peels lead-in + duration + "to" before STRIP_TIME_PHRASES runs.
+    @Test fun `leading duration clause before to is stripped`() {
+        assertEquals(
+            "Check the tables for the concessions.",
+            title("remind me in two hours to check the tables for the concessions."),
+        )
+    }
+
+    @Test fun `leading at-time clause before to is stripped`() {
+        assertEquals("Send the email", title("remind me at noon to send the email"))
+    }
+
+    @Test fun `leading day-word clause before to is stripped`() {
+        assertEquals("Call mom", title("remind me tomorrow to call mom"))
+        assertEquals("Submit the form", title("remind me on monday to submit the form"))
+        assertEquals("Pay the bill", title("remind me next week to pay the bill"))
+    }
+
+    // Make sure the new leading-clause regex doesn't fire when the
+    // first word is a "to"-prefixed task — i.e. doesn't see "in" inside
+    // "finish" or similar mid-word matches.
+    @Test fun `task starting with non-lead-in word is unaffected`() {
+        assertEquals("Buy groceries", title("remind me to buy groceries"))
+        assertEquals("Check email", title("remind me to check email at 3pm"))
+    }
 }
