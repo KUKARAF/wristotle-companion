@@ -1,0 +1,20 @@
+Self-hosted endpoints over HTTP work
+again.
+
+If you point Ask Agent, an STT provider,
+or an MCP server at a plain http:// URL —
+a LAN box, a Tailscale CGNAT address, a
+self-signed endpoint behind a reverse
+proxy — Android was rejecting the request
+before Wristotle ever saw it.
+
+Wristotle now declares cleartext traffic
+as permitted in its manifest, matching
+what Core Devices' Pebble app, Jellyfin,
+Home Assistant Companion, and Nextcloud
+do. The URL field is the user's explicit
+opt-in.
+
+HTTPS endpoints are unchanged.
+
+Closes #9.

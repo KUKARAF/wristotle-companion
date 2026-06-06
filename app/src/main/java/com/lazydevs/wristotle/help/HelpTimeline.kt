@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-4-1-cleartext-http",
+            date = "2026-06-06",
+            companionVersion = "v1.4.1",
+            watchVersion = null,
+            title = "Self-hosted endpoints over HTTP work again",
+            description = "Ask Agent, STT, and MCP requests to plain http:// URLs (LAN, Tailscale, self-signed) no longer get blocked by Android (#9).",
+            sampleQuery = null,
+            docsPath = "features/#settings-tab-whats-in-each-category",
+        ),
+        FeatureEntry(
             id = "v1-4-0-morning-brief",
             date = "2026-06-06",
             companionVersion = "v1.4.0",
