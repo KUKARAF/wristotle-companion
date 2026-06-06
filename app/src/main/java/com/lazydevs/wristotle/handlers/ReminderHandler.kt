@@ -38,8 +38,9 @@ class ReminderHandler(context: Context, private val transport: PebbleTransport) 
         val time = result.slots[SlotKeys.Time] as? Date ?: return "Couldn't set reminder"
         val title = (result.slots[SlotKeys.Title] as? String)?.takeIf { it.isNotBlank() }
             ?: result.rawQuery.replaceFirstChar { it.uppercaseChar() }
+        val isPersistent = result.slots[SlotKeys.Persistent] as? Boolean ?: false
 
-        Log.d(TAG, "date=$time  title=$title")
+        Log.d(TAG, "date=$time  title=$title  persistent=$isPersistent")
 
         val pinId = UUID.randomUUID().toString()
         val pin = TimelinePin(
@@ -56,9 +57,22 @@ class ReminderHandler(context: Context, private val transport: PebbleTransport) 
         Log.d(TAG, "insertTimelinePin: $pinResult")
 
         return if (pinResult == TimelineResult.Success) {
-            pinStore.save(ReminderRecord(id = pinId, title = title, timeMs = time.time))
+            // attemptsRemaining is 0 for non-persistent reminders so phase B's
+            // scheduler skips them without an explicit isPersistent check.
+            val attemptsRemaining =
+                if (isPersistent) ReminderSettings.DEFAULT_MAX_ATTEMPTS else 0
+            pinStore.save(
+                ReminderRecord(
+                    id = pinId,
+                    title = title,
+                    timeMs = time.time,
+                    isPersistent = isPersistent,
+                    attemptsRemaining = attemptsRemaining,
+                ),
+            )
             val formatted = android.text.format.DateFormat.format("MMM d 'at' h:mm a", time).toString()
-            "Reminder set:\n$title\n$formatted"
+            val prefix = if (isPersistent) "Persistent reminder set" else "Reminder set"
+            "$prefix:\n$title\n$formatted"
         } else {
             Log.w(TAG, "insertTimelinePin failed: $pinResult")
             "Failed to set reminder ($pinResult)"

@@ -130,7 +130,13 @@ data class BackupManifest(
     )
 
     /** Wire-format record matching the manifest JSON, not the Room/PinStore type. */
-    data class PinRecord(val id: String, val title: String, val timeMs: Long?)
+    data class PinRecord(
+        val id: String,
+        val title: String,
+        val timeMs: Long?,
+        val isPersistent: Boolean = false,
+        val attemptsRemaining: Int = 0,
+    )
 
     companion object {
         /**
@@ -296,6 +302,13 @@ object BackupManifestCodec {
                     put("id", p.id)
                     put("title", p.title)
                     if (p.timeMs != null) put("time_ms", p.timeMs)
+                    // Persistent fields are only emitted when set so older
+                    // backups (pre persistent-reminders) stay byte-clean and
+                    // newer ones don't carry default noise on every record.
+                    if (p.isPersistent) {
+                        put("is_persistent", true)
+                        put("attempts_remaining", p.attemptsRemaining)
+                    }
                 })
             }
         })
@@ -447,6 +460,8 @@ object BackupManifestCodec {
                     id = p.getString("id"),
                     title = p.optString("title", ""),
                     timeMs = if (p.has("time_ms")) p.getLong("time_ms") else null,
+                    isPersistent = p.optBoolean("is_persistent", false),
+                    attemptsRemaining = p.optInt("attempts_remaining", 0),
                 )
             },
             appAliases = aliasesObj.keys().asSequence().associateWith { aliasesObj.getString(it) },

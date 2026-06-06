@@ -525,7 +525,15 @@ class BackupImporter(private val app: WristotleApplication) {
         if (incoming.isEmpty()) return EntityStats()
         val store = PinStore(app.applicationContext)
         val existing = store.all()
-        val toMerge = incoming.map { ReminderRecord(it.id, it.title, it.timeMs) }
+        val toMerge = incoming.map {
+            ReminderRecord(
+                id = it.id,
+                title = it.title,
+                timeMs = it.timeMs,
+                isPersistent = it.isPersistent,
+                attemptsRemaining = it.attemptsRemaining,
+            )
+        }
         val merged = MergeStrategies.mergePins(existing, toMerge)
         store.replaceAll(merged)
         val imported = merged.size - existing.size

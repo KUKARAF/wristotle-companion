@@ -153,7 +153,13 @@ class BackupExporter(private val app: WristotleApplication) {
             ),
             prefs = readPrefsBlock(selection),
             reminderPins = pinRecords.map {
-                BackupManifest.PinRecord(it.id, it.title, it.timeMs)
+                BackupManifest.PinRecord(
+                    id = it.id,
+                    title = it.title,
+                    timeMs = it.timeMs,
+                    isPersistent = it.isPersistent,
+                    attemptsRemaining = it.attemptsRemaining,
+                )
             },
             appAliases = aliases,
             contactAliases = contactAliases,

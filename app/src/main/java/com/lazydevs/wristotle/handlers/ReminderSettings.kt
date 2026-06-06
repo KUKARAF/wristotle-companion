@@ -43,5 +43,18 @@ class ReminderSettings(context: Context) {
 
         const val DEFAULT_OFFSET_MIN = 30
         val ALLOWED_OFFSET_MIN = listOf(5, 10, 15, 30, 45, 60, 90)
+
+        /** Persistent-reminder cadence in minutes — used by phase B's
+         *  scheduler to re-arm the phone notification after a reminder
+         *  has fired. Phase C exposes these via the Settings card; for
+         *  now the handler reads the default directly. */
+        const val DEFAULT_INTERVAL_MIN = 10
+        val ALLOWED_INTERVAL_MIN = listOf(5, 10, 15, 30)
+
+        /** Max times the phone notification can re-fire before the
+         *  scheduler gives up — saves users from runaway nagging if
+         *  they put the phone down without dismissing. */
+        const val DEFAULT_MAX_ATTEMPTS = 5
+        val ALLOWED_MAX_ATTEMPTS = listOf(3, 5, 7, 10)
     }
 }

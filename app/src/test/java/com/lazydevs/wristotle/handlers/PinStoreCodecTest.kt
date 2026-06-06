@@ -82,4 +82,34 @@ class PinStoreCodecTest {
         )
         assertEquals(listOf("real"), PinStoreCodec.decode(raw).map { it.id })
     }
+
+    // --- persistent reminder fields (added in companion v1.5.0) ---
+
+    @Test fun persistentFieldsRoundTrip() {
+        val records = listOf(
+            ReminderRecord("p1", "Take meds", 1_000L, isPersistent = true, attemptsRemaining = 5),
+            ReminderRecord("p2", "Stretch", 2_000L, isPersistent = true, attemptsRemaining = 1),
+        )
+        assertEquals(records, PinStoreCodec.decode(PinStoreCodec.encode(records)))
+    }
+
+    @Test fun nonPersistentRecordDecodesWithDefaults() {
+        // A reminder saved before the persistent fields existed (3-field wire)
+        // must decode back as non-persistent with zero attempts.
+        // Constructing the wire by hand mimics an upgrade-from-old-blob path.
+        val raw = "old-idbuy milk1700000000000"  // 3 fields, no persistent suffix
+        val decoded = PinStoreCodec.decode(raw)
+        assertEquals(1, decoded.size)
+        assertEquals(false, decoded[0].isPersistent)
+        assertEquals(0, decoded[0].attemptsRemaining)
+    }
+
+    @Test fun mixedPersistentAndPlainRoundTripInOrder() {
+        val records = listOf(
+            ReminderRecord("plain", "Call dentist", 100L),
+            ReminderRecord("nag", "Take meds", 200L, isPersistent = true, attemptsRemaining = 3),
+            ReminderRecord("plain-no-time", "Standup", null),
+        )
+        assertEquals(records, PinStoreCodec.decode(PinStoreCodec.encode(records)))
+    }
 }
