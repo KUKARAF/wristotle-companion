@@ -2,12 +2,12 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
-      "id": "watch-v1-1-0-polish",
+      "id": "watch-v1-1-0-color-theme",
       "date": "2026-06-05",
-      "companion_version": null,
+      "companion_version": "v1.3.0",
       "watch_version": "v1.1.0",
-      "title": "Watch app — design tokens + icon set + per-row glyphs",
-      "description": "Watch UI polish pass. Every menu row across Notes, Tasks, Alarms, and the Quick Launch chooser now carries a leading entity icon — a page for notes, an empty / filled checkbox for tasks, a clock for alarms, the action's glyph in Quick Launch. Empty states (\"No notes yet\", \"No tasks\", \"No alarms\") show the same icon so the screen identity is preserved even when there's nothing in the list. Typography hierarchy is now named (display / title / body / subhead / body-sm / caption) and rolls through every screen via a shared theme header. On color Pebbles (Time / Time Steel / Time Round / Time 2 / Emery) the chat progress strip lights up in ChromeYellow; Aplite + Diorite stay monochrome.",
+      "title": "Watch polish + opt-in color theme + chat bubbles",
+      "description": "Visual polish across the whole watch app plus an opt-in color theme controlled from the companion. Watch side: every menu row in Notes, Tasks, Alarms, and the Quick Launch chooser now carries a leading entity icon (page, empty / filled checkbox, clock, mic), and chat entries sit inside soft rounded bubbles. A new design-tokens header names every font, color, and spacing constant the watch uses. Companion side: Settings → 📱 Watch gains a \"Color theme\" switch — when on, color-capable watches (Time / Time Steel / Time Round / Time 2 / Emery) light up colored icon variants (red bell, green check, yellow page, blue mic, purple gear), the menu highlight bg switches to LightGray so dark icons stay visible on the selected row, the chat bubbles fill with a warm yellow tint, and the chat progress strip glows accent during dictation / agent activity. Black-and-white watches (Pebble Classic, Pebble 2) stay monochrome regardless. Also fixes a Pebble window-routing race: picking \"Dictation\" from the Quick chooser menu no longer silently swallows the SDK push.",
       "sample_query": null,
       "docs_path": "features/#on-watch-ui"
     },
