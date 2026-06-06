@@ -61,6 +61,8 @@ fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.AskAgent,      // phase B1 is pure Q&A — read-only by construction.
                           // B2's tool-calling will hand destructive decisions
                           // to the LLM; revisit the confirm gate then.
+    Intent.MorningBrief,   // aggregates read-only data — calendar / alarms /
+                           // reminders / tasks / notes — no mutations.
     Intent.Battery,
     Intent.Steps,
     Intent.Vibrate,

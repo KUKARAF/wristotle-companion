@@ -187,6 +187,13 @@ class PebbleListenerService : BasePebbleListenerService() {
                 mcpServers = app.mcpServerRepository,
                 transport = app.transport,
             ),
+            com.lazydevs.wristotle.handlers.MorningBriefHandler(
+                context = this,
+                calendar = calendarRepo,
+                alarms = app.alarmRepository,
+                tasks = app.taskRepository,
+                notes = app.noteRepository,
+            ),
         ))
     }
 

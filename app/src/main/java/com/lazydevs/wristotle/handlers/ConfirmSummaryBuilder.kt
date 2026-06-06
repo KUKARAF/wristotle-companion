@@ -96,6 +96,9 @@ object ConfirmSummaryBuilder {
         // keep the `when` exhaustive (and to surface a sane debug-log
         // line in PebbleListenerService's pre-dispatch trace).
         Intent.AskAgent      -> "action: ask-agent\ndetails: ${slot(r, "query")}"
+        // MorningBrief is read-only — confirm prompt never fires; here
+        // for exhaustiveness + the pre-dispatch debug line.
+        Intent.MorningBrief  -> "action: morning-brief\ndetails: -"
         Intent.Battery       -> "action: battery\ndetails: -"
         Intent.Steps         -> "action: steps\ndetails: -"
         Intent.Vibrate       -> "action: vibrate\ndetails: -"

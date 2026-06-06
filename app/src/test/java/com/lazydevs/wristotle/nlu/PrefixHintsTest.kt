@@ -445,4 +445,35 @@ class PrefixHintsTest {
             PrefixHints.hintFor("reschedule my dentist appointment to 4pm"),
         )
     }
+
+    @Test fun `morning brief maps to MorningBrief`() {
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("morning brief"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("brief me"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("brief me on today"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("daily summary"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("summary of today"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("summary of my day"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("today's rundown"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("rundown of today"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("what's my day"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("what's on my plate today"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("what's coming up today"))
+        assertEquals(Intent.MorningBrief, PrefixHints.hintFor("what do i have today"))
+    }
+
+    @Test fun `bare good morning does NOT map to MorningBrief`() {
+        // Greeting must NOT trigger the aggregator. The classifier's
+        // fallback (Unknown) is the correct destination — the user
+        // would have to be explicit.
+        assertEquals(null, PrefixHints.hintFor("good morning"))
+        assertEquals(null, PrefixHints.hintFor("morning"))
+    }
+
+    @Test fun `explicit tasks queries still route to ListTasks`() {
+        // The MorningBrief rule must not regress the existing
+        // "list my tasks" / "what are my tasks" routing — those have
+        // the `tasks` keyword and stay with ListTasks.
+        assertEquals(Intent.ListTasks, PrefixHints.hintFor("list my tasks"))
+        assertEquals(Intent.ListTasks, PrefixHints.hintFor("what are my tasks"))
+    }
 }

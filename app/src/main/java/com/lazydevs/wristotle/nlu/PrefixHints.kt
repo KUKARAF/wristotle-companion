@@ -200,6 +200,22 @@ internal object PrefixHints {
         // Rescues the below-threshold/ambiguous path when the classifier is
         // unsure on a bare "what's <math>".
         Regex("(?i)\\b\\d+(\\.\\d+)?\\s*(%|\\b(?:plus|minus|times|multiplied\\s+by|divided\\s+by|over|percent)\\b)") to Intent.Calculate,
+        // MorningBrief — explicit "brief / day / today / schedule" cues
+        // with a verb / interrogative anchor. Deliberately requires more
+        // than just "morning" or "good morning" so a casual greeting
+        // doesn't aggregate the user's whole day. Sits above the
+        // ListReminders / ListTasks rules below because "what do I have
+        // today" could otherwise match a list-tasks pattern; the brief
+        // is the more general aggregation, and ListTasks still wins for
+        // explicit "tasks" / "todos" keywords.
+        Regex(
+            "(?i)" +
+                "(^\\s*(morning\\s+brief|brief\\s+me|daily\\s+summary|today's\\s+rundown|rundown\\s+of\\s+today)\\b" +
+                "|\\bsummary\\s+of\\s+(today|my\\s+day)\\b" +
+                "|^\\s*what(?:'s|\\s+is)?\\s+(my\\s+day|on\\s+my\\s+(plate|schedule)|coming\\s+up|happening)\\b.*\\btoday\\b" +
+                "|^\\s*what(?:'s|\\s+is)?\\s+(my\\s+day|on\\s+my\\s+(plate|schedule)|coming\\s+up|happening)\\b" +
+                "|^\\s*what\\s+(do\\s+i\\s+have|have\\s+i\\s+got)\\b.*\\btoday\\b)",
+        ) to Intent.MorningBrief,
         Regex("(?i)^\\s*(remind|set (a )?reminder|reminder)\\b") to Intent.Reminder,
         // ListTasks — interrogative / list / show + the `tasks` noun.
         // Mirrors the ListReminders shape. Sits ABOVE AddTask so a

@@ -646,6 +646,34 @@ object SeedExamples {
             "ask agent how many planets are in the solar system",
             "ask claude give me a recipe for pancakes",
         ))
+
+        // ── MorningBrief ────────────────────────────────────────────────
+        // Aggregator over today's meetings, alarms, reminders, tasks,
+        // and notes. Seeds favour "brief" / "day" / "today" tokens —
+        // bare "good morning" intentionally NOT seeded (too greeting-
+        // like, would mis-route casual hellos). PrefixHints.refine
+        // routes "morning brief" / "brief me" / "what's my day" / etc.
+        // explicitly so the embedding classifier doesn't need to be
+        // confident on its own.
+        addAll(Intent.MorningBrief, listOf(
+            "morning brief",
+            "give me my morning brief",
+            "brief me",
+            "brief me on today",
+            "what's my day",
+            "what's my day look like",
+            "what's on my plate today",
+            "what do i have today",
+            "what have i got today",
+            "what's coming up today",
+            "summary of today",
+            "summary of my day",
+            "daily summary",
+            "what's on my schedule today",
+            "rundown of today",
+            "today's rundown",
+            "what's happening today",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }
