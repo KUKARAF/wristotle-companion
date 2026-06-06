@@ -82,19 +82,34 @@ class PersistentReminderReceiver : BroadcastReceiver() {
 
     private fun postNotification(context: Context, record: ReminderRecord) {
         val notifId = PersistentReminderScheduler.notificationId(record.id)
+        val requestCode = PersistentReminderScheduler.requestCode(record.id)
         val stopIntent = Intent(context, PersistentReminderReceiver::class.java).apply {
             action = PersistentReminderScheduler.ACTION_STOP
             putExtra(PersistentReminderScheduler.EXTRA_PIN_ID, record.id)
         }
         val stopPi = PendingIntent.getBroadcast(
             context,
-            // Stop and Fire share request-code conventions but live under
-            // distinct action strings, so they don't collide. Use the same
-            // hash so both sides target the same logical reminder.
-            PersistentReminderScheduler.requestCode(record.id),
+            // Stop and Fire share the same request code per pinId — they
+            // live under distinct action strings so they don't collide, and
+            // we want every Wristotle artefact for a logical reminder to
+            // resolve from the same hash.
+            requestCode,
             stopIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        // Tap on the notification body → open the launcher activity so the
+        // user can take action (list/cancel/edit). Without a contentIntent
+        // tapping does nothing visible, which the smoke-test caught.
+        val contentPi = context.packageManager
+            .getLaunchIntentForPackage(context.packageName)
+            ?.let {
+                PendingIntent.getActivity(
+                    context,
+                    requestCode,
+                    it,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+            }
 
         val notification = NotificationCompat.Builder(context, PersistentReminderScheduler.CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_round)
@@ -102,8 +117,13 @@ class PersistentReminderReceiver : BroadcastReceiver() {
             .setContentText(buildBody(record))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setAutoCancel(false)
+            // Auto-cancel only on tap (opens the app). The Stop action
+            // dismisses explicitly; a swipe-away dismisses just this nag
+            // but leaves the chain alive so the next one still fires —
+            // matches the "persistent" promise.
+            .setAutoCancel(true)
             .setOnlyAlertOnce(false)
+            .apply { if (contentPi != null) setContentIntent(contentPi) }
             .addAction(
                 NotificationCompat.Action.Builder(
                     android.R.drawable.ic_menu_close_clear_cancel,

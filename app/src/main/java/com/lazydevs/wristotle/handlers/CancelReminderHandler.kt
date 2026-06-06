@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.handlers
 
 import android.content.Context
 import android.util.Log
+import com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler
 import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -20,7 +21,11 @@ private const val TAG = "CancelReminderHandler"
  *    target that matches nothing reports not-found rather than falling back to
  *    the latest, so we never delete the wrong reminder on a misheard target.
  */
-class CancelReminderHandler(context: Context, private val transport: PebbleTransport) : ActionHandler {
+class CancelReminderHandler(
+    context: Context,
+    private val transport: PebbleTransport,
+    private val persistentScheduler: PersistentReminderScheduler,
+) : ActionHandler {
 
     private val pinStore = PinStore(context)
 
@@ -47,6 +52,11 @@ class CancelReminderHandler(context: Context, private val transport: PebbleTrans
 
         return if (cancelResult is TimelineResult.Success) {
             pinStore.remove(record.id)
+            // Also kill any pending phone-side nag chain for this pin. No-op
+            // for non-persistent records (cancel() looks up a PendingIntent
+            // that was never created) and harmless if the chain has already
+            // exhausted its attempts.
+            persistentScheduler.cancel(record.id)
             if (target.isEmpty() || record.title.isBlank()) "Reminder cancelled"
             else "Cancelled: ${record.title}"
         } else {

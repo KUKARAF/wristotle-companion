@@ -58,6 +58,24 @@ class ReminderListFormatterTest {
         assertFalse(out.contains("• R6 — "))
     }
 
+    @Test fun persistentRowGetsPersistentSuffix() {
+        val records = listOf(
+            ReminderRecord("a", "Take meds", now + hour, isPersistent = true, attemptsRemaining = 5),
+            ReminderRecord("b", "Gym", now + 2 * hour),
+        )
+        val out = ReminderListFormatter.format(records, now)
+        assertTrue(out.contains("• Take meds — ") && out.contains("(persistent)"))
+        // The plain one stays plain — no spurious suffix.
+        assertTrue(out.lines().any { it.startsWith("• Gym — ") && !it.contains("(persistent)") })
+    }
+
+    @Test fun persistentSuffixWithoutTime() {
+        val records = listOf(
+            ReminderRecord("a", "Legacy", null, isPersistent = true, attemptsRemaining = 5),
+        )
+        assertTrue(ReminderListFormatter.format(records, now).contains("• Legacy (persistent)"))
+    }
+
     // --- formatAtTime: answer for a specific clock hour ---
 
     private fun atHour(dayOffset: Int, hourOfDay: Int): Long =

@@ -49,7 +49,8 @@ object ReminderListFormatter {
         val fmt = SimpleDateFormat("MMM d 'at' h:mm a", Locale.getDefault())
         return records.take(MAX_SHOWN).joinToString("\n") { r ->
             val time = r.timeMs?.let { fmt.format(Date(it)) }
-            if (time != null) "• ${r.title} — $time" else "• ${r.title}"
+            val tail = if (r.isPersistent) " (persistent)" else ""
+            if (time != null) "• ${r.title} — $time$tail" else "• ${r.title}$tail"
         }
     }
 

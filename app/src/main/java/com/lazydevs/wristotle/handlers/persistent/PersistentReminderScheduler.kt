@@ -77,15 +77,25 @@ class PersistentReminderScheduler(private val app: Context) {
     }
 
     /**
-     * Cancel a pending alarm by pin id. Safe to call when no alarm is
-     * scheduled (the PendingIntent lookup returns null and we no-op). Does
-     * NOT touch [PinStore] or the watch timeline pin — those belong to the
-     * caller that owns the broader cancel flow.
+     * Cancel a pending alarm by pin id AND dismiss any active notification
+     * for it. Both halves are independent and idempotent so this is safe to
+     * call when no alarm is scheduled (e.g. the user taps Stop after the
+     * nag chain has already exhausted) — the alarm cancellation no-ops and
+     * the notification dismissal still runs. Does NOT touch [PinStore] or
+     * the watch timeline pin; those belong to the caller that owns the
+     * broader cancel flow.
      */
     fun cancel(pinId: String) {
-        val pi = firePendingIntent(pinId, flagsForLookup()) ?: return
-        alarmManager.cancel(pi)
-        pi.cancel()
+        // Alarm half: only present while attempts remain. After the chain
+        // exhausts, the FLAG_NO_CREATE lookup returns null and we skip
+        // straight to dismissing the active notification.
+        firePendingIntent(pinId, flagsForLookup())?.let { pi ->
+            alarmManager.cancel(pi)
+            pi.cancel()
+        }
+        // Notification half: always dismiss. The user tapped Stop on a
+        // visible notification — leaving it on screen would be a UX bug
+        // regardless of where the chain is in its lifecycle.
         notificationManager.cancel(notificationId(pinId))
         Log.d(TAG, "cancelled pinId=$pinId")
     }
