@@ -1,0 +1,17 @@
+Bug fixes.
+
+- Alarms: "set an alarm for an hour from now"
+  now fires one hour from now instead of the
+  current minute (issue #8). Same fix benefits
+  "in a minute", "a day from now", etc.
+- Permissions tab: the Voice Input card no
+  longer leaves an empty frame after Core
+  Devices users dismiss the scope note —
+  the card disappears entirely once read
+  (issue #7).
+- Diagnostics export gains a per-half raw
+  + parsed dump for the voice-provider
+  detection so future "I set it via ADB
+  but the app still says denied" reports
+  can be diagnosed from the bundle without
+  a rebuild.

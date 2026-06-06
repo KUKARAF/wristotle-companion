@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-3-1-alarm-fix-perm-card-fix",
+            date = "2026-06-05",
+            companionVersion = "v1.3.1",
+            watchVersion = null,
+            title = "Bug fixes — relative alarms + Permissions tab polish",
+            description = "Two user-visible fixes. \"Set an alarm for an hour from now\" now correctly fires one hour from now instead of the current minute (codeberg issue #8). Same fix lifts \"in a minute\", \"a day from now\", and similar relative shapes — prettytime's article-quantifier gap was closed by rewriting \"a / an + unit\" to \"1 + unit\" before parse, and SetAlarmSlots now strips the verb-phrase preamble first so prettytime sees only the time fragment. On the Permissions tab, the Voice Input card no longer leaves an empty frame after Core Devices users dismiss the scope note (codeberg issue #7) — the card now hides entirely once the explanation is acknowledged, since Wristotle's voice provider doesn't participate when Core Devices is in front. Diagnostics export gains a per-half raw + parsed dump for the voice-provider detection so future symptom reports surface the actual setting value without needing a rebuild.",
+            sampleQuery = "set an alarm for an hour from now",
+            docsPath = "features/#settings-tab-whats-in-each-category",
+        ),
+        FeatureEntry(
             id = "watch-v1-1-0-color-theme",
             date = "2026-06-05",
             companionVersion = "v1.3.0",
