@@ -1,0 +1,26 @@
+Persistent reminders.
+
+Some reminders you really don't want
+to miss. Ask for "persistent reminder
+to take meds at 9pm", "nag me to call
+mom at 5", or "keep reminding me to
+drink water at noon".
+
+The watch timeline pin still fires
+at the scheduled time. Your phone
+then keeps re-firing a notification
+every 10 minutes (configurable —
+Settings → Reminders → Persistent
+reminders) until you tap Stop, run
+out of nags, or cancel the reminder
+by voice.
+
+Tap Stop on the notification to kill
+the whole chain. Tap the body to
+acknowledge this one but keep being
+reminded. Cancel a persistent reminder
+by voice and the phone-side chain
+clears too — no chasing the
+notification.
+
+Closes #10.
