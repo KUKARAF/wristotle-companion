@@ -327,6 +327,8 @@ class BackupExporter(private val app: WristotleApplication) {
             ) else null,
             reminder = if (sel.appPreferences) BackupManifest.ReminderPrefs(
                 defaultOffsetMin = app.reminderSettings.defaultOffsetMin.value,
+                defaultIntervalMin = app.reminderSettings.defaultIntervalMin.value,
+                defaultMaxAttempts = app.reminderSettings.defaultMaxAttempts.value,
             ) else null,
             weather = if (sel.weatherSettings) BackupManifest.WeatherPrefs(
                 unit = app.weatherSettings.unit.value.name,

@@ -477,7 +477,11 @@ class BackupImporter(private val app: WristotleApplication) {
             }
             p.whisperModels?.let { app.modelStorage.activeModelId = it.activeModelId }
             p.nluModels?.let { app.nluModelStorage.activeModelId = it.activeModelId }
-            p.reminder?.let { app.reminderSettings.setDefaultOffsetMin(it.defaultOffsetMin) }
+            p.reminder?.let {
+                app.reminderSettings.setDefaultOffsetMin(it.defaultOffsetMin)
+                app.reminderSettings.setDefaultIntervalMin(it.defaultIntervalMin)
+                app.reminderSettings.setDefaultMaxAttempts(it.defaultMaxAttempts)
+            }
         }
 
         if (sel.weatherSettings) {

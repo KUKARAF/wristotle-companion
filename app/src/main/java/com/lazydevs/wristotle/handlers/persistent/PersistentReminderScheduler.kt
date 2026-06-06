@@ -154,11 +154,12 @@ class PersistentReminderScheduler(private val app: Context) {
         fun requestCode(pinId: String): Int = pinId.hashCode()
         fun notificationId(pinId: String): Int = pinId.hashCode()
 
-        /** Re-fire cadence pulled directly from [ReminderSettings]'s default
-         *  for now. Phase C will plumb the StateFlow setter so a Settings
-         *  edit takes effect on the next re-arm without an app restart. */
-        fun intervalMs(): Long =
-            ReminderSettings.DEFAULT_INTERVAL_MIN * 60_000L
+        /** Re-fire cadence — reads `ReminderSettings.defaultIntervalMin`
+         *  freshly each call so a Settings edit takes effect on the very
+         *  next re-arm without restarting the app. Cheap (single SharedPrefs
+         *  read), called once per fire. */
+        fun intervalMs(context: Context): Long =
+            ReminderSettings(context).defaultIntervalMin.value * 60_000L
 
         private fun flagsForCreate(): Int =
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

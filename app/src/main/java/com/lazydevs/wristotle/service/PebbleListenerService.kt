@@ -142,7 +142,12 @@ class PebbleListenerService : BasePebbleListenerService() {
         registry = HandlerRegistry(listOf(
             CallHandler(this, contacts),
             com.lazydevs.wristotle.handlers.SendMessageHandler(this, contacts),
-            ReminderHandler(this, transport, app.persistentReminderScheduler),
+            ReminderHandler(
+                this,
+                transport,
+                app.persistentReminderScheduler,
+                defaultMaxAttemptsProvider = { app.reminderSettings.defaultMaxAttempts.value },
+            ),
             CancelReminderHandler(this, transport),
             ListRemindersHandler(this),
             RescheduleHandler(this, transport),

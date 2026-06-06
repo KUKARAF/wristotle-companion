@@ -388,6 +388,14 @@
         <item quantity="one">%d minute</item>
         <item quantity="other">%d minutes</item>
     </plurals>
+    <string name="settings_reminders_persistent_subheader">Persistent reminders</string>
+    <string name="settings_reminders_persistent_desc">Reminders you ask for with "persistent reminder", "nag me", or "keep reminding me" also fire a phone notification at intervals after the watch pin goes off, until you tap Stop.</string>
+    <string name="settings_reminders_interval_label">Nag interval</string>
+    <string name="settings_reminders_max_attempts_label">Max nags</string>
+    <plurals name="settings_reminders_max_attempts_value">
+        <item quantity="one">%d attempt</item>
+        <item quantity="other">%d attempts</item>
+    </plurals>
 
     <!-- Backup &amp; Restore card -->
     <string name="settings_backup_header">Backup &amp; Restore</string>

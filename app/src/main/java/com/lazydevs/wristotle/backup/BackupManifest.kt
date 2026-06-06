@@ -1,5 +1,6 @@
 package com.lazydevs.wristotle.backup
 
+import com.lazydevs.wristotle.handlers.ReminderSettings
 import com.lazydevs.wristotle.phone.ContactRef
 import org.json.JSONArray
 import org.json.JSONObject
@@ -96,7 +97,11 @@ data class BackupManifest(
     data class DiagnosticsPrefs(val redactPii: Boolean, val includeAudio: Boolean)
     data class ModelPrefs(val activeModelId: String?)
 
-    data class ReminderPrefs(val defaultOffsetMin: Int)
+    data class ReminderPrefs(
+        val defaultOffsetMin: Int,
+        val defaultIntervalMin: Int = ReminderSettings.DEFAULT_INTERVAL_MIN,
+        val defaultMaxAttempts: Int = ReminderSettings.DEFAULT_MAX_ATTEMPTS,
+    )
 
     /** `apiKey` rides only when the user ticks the secret checkbox. */
     data class WeatherPrefs(
@@ -264,6 +269,8 @@ object BackupManifestCodec {
             m.prefs.reminder?.let { r ->
                 put("wristotle_reminder_settings", JSONObject().apply {
                     put("default_offset_min", r.defaultOffsetMin)
+                    put("default_interval_min", r.defaultIntervalMin)
+                    put("default_max_attempts", r.defaultMaxAttempts)
                 })
             }
             m.prefs.weather?.let { w ->
@@ -424,6 +431,14 @@ object BackupManifestCodec {
                 reminder = prefs.optJSONObject("wristotle_reminder_settings")?.let { r ->
                     BackupManifest.ReminderPrefs(
                         defaultOffsetMin = r.optInt("default_offset_min", 0),
+                        defaultIntervalMin = r.optInt(
+                            "default_interval_min",
+                            ReminderSettings.DEFAULT_INTERVAL_MIN,
+                        ),
+                        defaultMaxAttempts = r.optInt(
+                            "default_max_attempts",
+                            ReminderSettings.DEFAULT_MAX_ATTEMPTS,
+                        ),
                     )
                 },
                 weather = prefs.optJSONObject("weather_settings")?.let { w ->

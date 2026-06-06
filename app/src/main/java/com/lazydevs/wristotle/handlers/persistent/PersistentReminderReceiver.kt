@@ -65,7 +65,8 @@ class PersistentReminderReceiver : BroadcastReceiver() {
         val next = record.copy(attemptsRemaining = record.attemptsRemaining - 1)
         pinStore.save(next)
         if (next.attemptsRemaining > 0) {
-            val triggerAt = System.currentTimeMillis() + PersistentReminderScheduler.intervalMs()
+            val triggerAt = System.currentTimeMillis() +
+                PersistentReminderScheduler.intervalMs(context)
             armNext(context, pinId, triggerAt)
             Log.d(TAG, "fire: pinId=$pinId re-armed at=$triggerAt remaining=${next.attemptsRemaining}")
         } else {

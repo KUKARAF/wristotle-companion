@@ -29,6 +29,7 @@ class ReminderHandler(
     context: Context,
     private val transport: PebbleTransport,
     private val persistentScheduler: PersistentReminderScheduler,
+    private val defaultMaxAttemptsProvider: () -> Int = { ReminderSettings.DEFAULT_MAX_ATTEMPTS },
 ) : ActionHandler {
 
     private val pinStore = PinStore(context)
@@ -65,7 +66,7 @@ class ReminderHandler(
             // attemptsRemaining is 0 for non-persistent reminders so phase B's
             // scheduler skips them without an explicit isPersistent check.
             val attemptsRemaining =
-                if (isPersistent) ReminderSettings.DEFAULT_MAX_ATTEMPTS else 0
+                if (isPersistent) defaultMaxAttemptsProvider() else 0
             val record = ReminderRecord(
                 id = pinId,
                 title = title,
