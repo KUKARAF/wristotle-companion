@@ -199,6 +199,18 @@ enum class Intent {
      *  (that's phase B2). Read-only — not in the confirm gate. */
     AskAgent,
 
+    /** One-shot aggregate of "what's on my plate today" — voiced as
+     *  "morning brief" / "brief me" / "what's my day" / "summary of
+     *  today". No slots in v1 (the brief is whole-by-default; an
+     *  optional `sections` filter is a v2 idea). Handler aggregates
+     *  one-line summaries from the existing CalendarRepository,
+     *  AlarmRepository, PinStore (reminders), TaskRepository, and
+     *  NoteRepository for the today-range and joins them with
+     *  newlines, trimmed for the watch chat surface. Read-only —
+     *  not in the confirm gate. Unread-message section deferred to
+     *  a follow-up. */
+    MorningBrief,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

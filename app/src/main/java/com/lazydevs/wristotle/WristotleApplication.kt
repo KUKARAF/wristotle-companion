@@ -475,6 +475,7 @@ class WristotleApplication : Application() {
             Intent.AskAgent to com.lazydevs.wristotle.nlu.slots.AskAgentSlots(
                 extrasProvider = { askAgentSettings.customTriggers.value },
             ),
+            Intent.MorningBrief to com.lazydevs.wristotle.nlu.slots.MorningBriefSlots(),
         ))
 
         learningCollector = LearningCollector(
