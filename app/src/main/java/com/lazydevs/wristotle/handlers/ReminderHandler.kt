@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.handlers
 
 import android.content.Context
 import android.util.Log
+import com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler
 import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -24,7 +25,11 @@ private const val TAG = "ReminderHandler"
  * title-stripping regex from this file's history.
  */
 @OptIn(ExperimentalTime::class)
-class ReminderHandler(context: Context, private val transport: PebbleTransport) : ActionHandler {
+class ReminderHandler(
+    context: Context,
+    private val transport: PebbleTransport,
+    private val persistentScheduler: PersistentReminderScheduler,
+) : ActionHandler {
 
     private val pinStore = PinStore(context)
 
@@ -61,15 +66,15 @@ class ReminderHandler(context: Context, private val transport: PebbleTransport) 
             // scheduler skips them without an explicit isPersistent check.
             val attemptsRemaining =
                 if (isPersistent) ReminderSettings.DEFAULT_MAX_ATTEMPTS else 0
-            pinStore.save(
-                ReminderRecord(
-                    id = pinId,
-                    title = title,
-                    timeMs = time.time,
-                    isPersistent = isPersistent,
-                    attemptsRemaining = attemptsRemaining,
-                ),
+            val record = ReminderRecord(
+                id = pinId,
+                title = title,
+                timeMs = time.time,
+                isPersistent = isPersistent,
+                attemptsRemaining = attemptsRemaining,
             )
+            pinStore.save(record)
+            if (isPersistent) persistentScheduler.schedule(record)
             val formatted = android.text.format.DateFormat.format("MMM d 'at' h:mm a", time).toString()
             val prefix = if (isPersistent) "Persistent reminder set" else "Reminder set"
             "$prefix:\n$title\n$formatted"
