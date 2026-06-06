@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-5-0-persistent-reminders",
+            date = "2026-06-06",
+            companionVersion = "v1.5.0",
+            watchVersion = null,
+            title = "Persistent reminders — keep nagging until you tap Stop",
+            description = "Ask for a \"persistent reminder\" or \"nag me\" and your phone re-fires the reminder every few minutes after the watch pin fires (#10).",
+            sampleQuery = "persistent reminder to take meds at nine",
+            docsPath = "voice-commands/#persistent-reminders",
+        ),
+        FeatureEntry(
             id = "v1-4-1-cleartext-http",
             date = "2026-06-06",
             companionVersion = "v1.4.1",
