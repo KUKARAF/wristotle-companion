@@ -136,6 +136,7 @@ class WatchSettingsRepository(
             longPressUpAction         = data.intSetting (MessageKeys.SETTING_LONG_PRESS_UP_ACTION)   ?: previous?.longPressUpAction         ?: MessageKeys.BUTTON_ACTION_MENU,
             longPressDownAction       = data.intSetting (MessageKeys.SETTING_LONG_PRESS_DOWN_ACTION) ?: previous?.longPressDownAction       ?: MessageKeys.BUTTON_ACTION_TASKS,
             selectAction              = data.intSetting (MessageKeys.SETTING_SELECT_ACTION)          ?: previous?.selectAction              ?: MessageKeys.BUTTON_ACTION_DICTATION,
+            colorTheme                = data.boolSetting(MessageKeys.SETTING_COLOR_THEME)            ?: previous?.colorTheme                ?: false,
         )
         _state.value = WatchSettingsState.Loaded(merged)
     }
@@ -193,6 +194,7 @@ class WatchSettingsRepository(
             int(MessageKeys.SETTING_LONG_PRESS_UP_ACTION, baseline?.longPressUpAction, updated.longPressUpAction)
             int(MessageKeys.SETTING_LONG_PRESS_DOWN_ACTION, baseline?.longPressDownAction, updated.longPressDownAction)
             int(MessageKeys.SETTING_SELECT_ACTION, baseline?.selectAction, updated.selectAction)
+            bool(MessageKeys.SETTING_COLOR_THEME, baseline?.colorTheme, updated.colorTheme)
         }
     }
 

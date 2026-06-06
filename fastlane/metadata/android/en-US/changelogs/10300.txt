@@ -1,0 +1,23 @@
+Color theme + watch polish + chat bubbles.
+
+Settings → 📱 Watch gains a new "Color theme"
+switch (off by default). When on, color-capable
+Pebbles (Time / Time Steel / Time Round /
+Time 2 / Emery) light up:
+
+- Colored menu icons — red bell, green check,
+  amber page, blue mic, purple gear.
+- LightGray menu highlight so icons stay
+  visible on the selected row.
+- Pastel-yellow chat bubbles.
+- Accent-yellow progress strip during
+  dictation / agent activity.
+
+B&W watches stay monochrome regardless.
+
+Companion-side change for the watch v1.1.0
+polish pass — design tokens, per-row icons,
+rounded chat bubbles, and the Quick chooser
+dictation race-fix all live on the watch.
+
+Ships alongside watch v1.1.0.

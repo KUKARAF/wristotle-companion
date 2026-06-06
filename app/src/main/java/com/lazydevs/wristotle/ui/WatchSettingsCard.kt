@@ -131,6 +131,16 @@ private fun EditableBody(baseline: WatchSettings, onSave: (WatchSettings) -> Uni
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SwitchRow(
+            label = stringResource(R.string.watch_settings_color_theme),
+            checked = draft.colorTheme,
+            onChange = { draft = draft.copy(colorTheme = it) },
+        )
+        Text(
+            stringResource(R.string.watch_settings_color_theme_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SwitchRow(
             label = stringResource(R.string.watch_settings_dictation_confirmation),
             checked = draft.dictationConfirmation,
             onChange = { draft = draft.copy(dictationConfirmation = it) },

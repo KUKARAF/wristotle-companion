@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "watch-v1-1-0-color-theme",
+            date = "2026-06-05",
+            companionVersion = "v1.3.0",
+            watchVersion = "v1.1.0",
+            title = "Watch polish + opt-in color theme + chat bubbles",
+            description = "Visual polish across the whole watch app plus an opt-in color theme controlled from the companion. Watch side: every menu row in Notes, Tasks, Alarms, and the Quick Launch chooser now carries a leading entity icon (page, empty / filled checkbox, clock, mic), and chat entries sit inside soft rounded bubbles. A new design-tokens header names every font, color, and spacing constant the watch uses. Companion side: Settings → 📱 Watch gains a \"Color theme\" switch — when on, color-capable watches (Time / Time Steel / Time Round / Time 2 / Emery) light up colored icon variants (red bell, green check, yellow page, blue mic, purple gear), the menu highlight bg switches to LightGray so dark icons stay visible on the selected row, the chat bubbles fill with a warm yellow tint, and the chat progress strip glows accent during dictation / agent activity. Black-and-white watches (Pebble Classic, Pebble 2) stay monochrome regardless. Also fixes a Pebble window-routing race: picking \"Dictation\" from the Quick chooser menu no longer silently swallows the SDK push.",
+            sampleQuery = null,
+            docsPath = "features/#on-watch-ui",
+        ),
+        FeatureEntry(
             id = "v1-2-0-folder-sync",
             date = "2026-06-05",
             companionVersion = "v1.2.0",

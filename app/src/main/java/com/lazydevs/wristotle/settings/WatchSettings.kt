@@ -42,4 +42,10 @@ data class WatchSettings(
     val longPressUpAction: Int,
     val longPressDownAction: Int,
     val selectAction: Int,
+    /** Master color-theme toggle. When true, the watch lights up its
+     *  colored icon variants + a LightGray menu highlight bg + the
+     *  ACCENT-tinted chat progress strip on color-capable platforms
+     *  (Basalt / Chalk / Emery / Gabbro / Flint). No effect on
+     *  monochrome watches. Default false on a fresh install. */
+    val colorTheme: Boolean,
 )

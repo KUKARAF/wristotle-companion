@@ -59,6 +59,12 @@ object MessageKeys {
     val SETTING_LONG_PRESS_DOWN_ACTION: UInt = 10043u
     val SETTING_SELECT_ACTION: UInt          = 10044u
 
+    /** Master "Enable color theme" toggle. When true the watch lights up
+     *  its colored icon variants + a LightGray menu highlight bg + the
+     *  ACCENT chat progress strip on color-capable platforms. Default
+     *  false on a fresh install; B&W watches are unaffected either way. */
+    val SETTING_COLOR_THEME: UInt            = 10053u
+
     /** Chat-surface button-action wire values. Stable; persisted on the watch.
      *  Every value is legal on every slot — the defaults differ by slot but
      *  the user can bind anything to anything. */
@@ -241,6 +247,7 @@ object MessageKeys {
         SETTING_LONG_PRESS_UP_ACTION,
         SETTING_LONG_PRESS_DOWN_ACTION,
         SETTING_SELECT_ACTION,
+        SETTING_COLOR_THEME,
     )
 
     /** Value of MSG_TARGET that means "this message is for the Android companion". */

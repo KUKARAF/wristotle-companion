@@ -552,6 +552,8 @@
     <string name="watch_settings_disconnected">Couldn\'t reach the watch. Make sure it\'s connected and the Wristotle watch app is running.</string>
     <string name="watch_settings_old_app">The Wristotle watch app needs an update to manage settings from here. Install the latest .pbw on the watch and tap Refresh.</string>
     <string name="watch_settings_logging">Debug logging</string>
+    <string name="watch_settings_color_theme">Color theme</string>
+    <string name="watch_settings_color_theme_hint">Lights up icons, the menu highlight, and the chat progress strip in color. No effect on black-and-white watches.</string>
     <string name="watch_settings_dictation_confirmation">Confirm transcription before sending</string>
     <string name="watch_settings_confirm_before_send">Confirm before send</string>
     <string name="watch_settings_confirm_timeout">Confirm timeout</string>
