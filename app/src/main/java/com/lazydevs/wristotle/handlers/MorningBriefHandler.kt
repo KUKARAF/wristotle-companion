@@ -4,6 +4,7 @@ import android.content.Context
 import com.lazydevs.wristotle.alarms.AlarmRepository
 import com.lazydevs.wristotle.briefing.MorningBriefRenderer
 import com.lazydevs.wristotle.briefing.TodayRange
+import com.lazydevs.wristotle.briefing.UnreadMessagesProvider
 import com.lazydevs.wristotle.notes.NoteRepository
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
@@ -25,10 +26,11 @@ import com.lazydevs.wristotle.tasks.TaskRepository
  * surfacing a permission nag — the user already sees the Calendar
  * card in the Permissions tab if they want to enable it.
  *
- * Unread messages are NOT included in v1. SMS via Telephony +
- * notification-listener counts for WhatsApp / Telegram have their
- * own permission scope and vendor differences; pull them into a
- * follow-up once the rest of the brief feels right on-device.
+ * Unread messages: snapshot of currently-posted notifications from
+ * a curated set of messaging apps (`MessagingApps`), grouped by app.
+ * Snapshot semantics — a notification the user has already dismissed
+ * never appears; no persistence, no notification body or extras read.
+ * Empty when Notification Access isn't granted.
  */
 class MorningBriefHandler(
     context: Context,
@@ -36,6 +38,7 @@ class MorningBriefHandler(
     private val alarms: AlarmRepository,
     private val tasks: TaskRepository,
     private val notes: NoteRepository,
+    private val unreadMessages: UnreadMessagesProvider = UnreadMessagesProvider(),
 ) : ActionHandler {
 
     override val tag: String = "morning-brief"
@@ -64,10 +67,21 @@ class MorningBriefHandler(
         val notesToday = notes.mostRecent(MAX_RECENT_NOTES_SCAN)
             .filter { it.createdAtEpochMs in today }
 
+        // Snapshot is cheap and synchronous (it's just reading the
+        // listener's activeNotifications array). Empty when Notification
+        // Access isn't granted or the listener isn't bound yet.
+        val messages = unreadMessages.snapshot()
+
         return MorningBriefRenderer.render(
             listOf(
                 MorningBriefRenderer.meetingsSection(meetings),
                 MorningBriefRenderer.alarmsSection(alarmsToday),
+                // Messages sit between time-anchored items (meetings /
+                // alarms) and the personal queue (reminders / tasks /
+                // notes) — they're current-state, like the calendar
+                // line, but transient enough that they drop first when
+                // the trim hits.
+                MorningBriefRenderer.messagesSection(messages),
                 MorningBriefRenderer.remindersSection(remindersToday),
                 MorningBriefRenderer.tasksSection(pendingTasks),
                 MorningBriefRenderer.notesSection(notesToday),

@@ -5,6 +5,7 @@ import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.tasks.TaskEntity
+import com.lazydevs.wristotle.briefing.UnreadMessagesProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -102,6 +103,64 @@ class MorningBriefRendererTest {
             listOf(alarm(8, 0, "C"), alarm(6, 30, "A"), alarm(7, 0, "B")),
         )!!
         assertEquals("Alarms: 3 today — 6:30am, 7:00am, 8:00am", out)
+    }
+
+    // ── messagesSection ────────────────────────────────────────────
+
+    private fun snap(messaging: List<UnreadMessagesProvider.Section>, other: Int = 0) =
+        UnreadMessagesProvider.Snapshot(messaging = messaging, otherCount = other)
+
+    @Test fun `no messages returns null`() {
+        assertNull(MorningBriefRenderer.messagesSection(snap(emptyList(), 0)))
+    }
+
+    @Test fun `single message renders singular`() {
+        val out = MorningBriefRenderer.messagesSection(
+            snap(listOf(UnreadMessagesProvider.Section("WhatsApp", 1))),
+        )!!
+        assertEquals("Messages: 1 from WhatsApp", out)
+    }
+
+    @Test fun `multiple messages from multiple apps`() {
+        val out = MorningBriefRenderer.messagesSection(
+            snap(listOf(
+                UnreadMessagesProvider.Section("WhatsApp", 3),
+                UnreadMessagesProvider.Section("Slack", 2),
+                UnreadMessagesProvider.Section("Signal", 1),
+            )),
+        )!!
+        assertEquals("Messages: 6 from WhatsApp, Slack, Signal", out)
+    }
+
+    @Test fun `more than four apps get a plus N more tail`() {
+        val out = MorningBriefRenderer.messagesSection(
+            snap(listOf(
+                UnreadMessagesProvider.Section("WhatsApp", 1),
+                UnreadMessagesProvider.Section("Slack", 1),
+                UnreadMessagesProvider.Section("Signal", 1),
+                UnreadMessagesProvider.Section("Telegram", 1),
+                UnreadMessagesProvider.Section("Discord", 1),
+                UnreadMessagesProvider.Section("Messenger", 1),
+            )),
+        )!!
+        assertTrue(out, out.startsWith("Messages: 6 from"))
+        assertTrue(out, "+2 more apps" in out)
+    }
+
+    @Test fun `other-only count renames the line to Notifications`() {
+        val out = MorningBriefRenderer.messagesSection(snap(emptyList(), 3))!!
+        assertEquals("Notifications: 3 other", out)
+    }
+
+    @Test fun `messaging count stays messaging — other goes to the tail`() {
+        // Closes the "Messages: 6" confusion from the on-device test
+        // where 2 messaging notifs + 4 other read as "6 messages".
+        // Header now reports messaging total; the "+4 other" tail
+        // surfaces unmatched notifications honestly.
+        val out = MorningBriefRenderer.messagesSection(
+            snap(listOf(UnreadMessagesProvider.Section("WhatsApp", 2)), other = 4),
+        )!!
+        assertEquals("Messages: 2 from WhatsApp, +4 other", out)
     }
 
     // ── remindersSection ───────────────────────────────────────────

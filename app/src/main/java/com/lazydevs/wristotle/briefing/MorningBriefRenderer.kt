@@ -84,6 +84,52 @@ object MorningBriefRenderer {
     }
 
     /**
+     * "Messages: 5 from WhatsApp, Slack, +2 other" — count + messaging
+     * apps with active notifications, ordered by count desc. Anything
+     * the messaging-app token table didn't match collapses into a
+     * trailing "+N other" so the user has a sense of how full their
+     * notification tray is without naming every app.
+     *
+     * Apps are listed up to [MESSAGES_PREVIEW_APPS] to keep the line
+     * short; any extras beyond that roll into a "+M more apps" tail
+     * BEFORE the "+N other" — so the worst-case shape is
+     * `"Messages: T from A, B, C, D, +M more apps, +N other"`.
+     */
+    fun messagesSection(snapshot: UnreadMessagesProvider.Snapshot): String? {
+        if (snapshot.isEmpty) return null
+
+        // Other-only shortcut: no matched messaging apps. Renaming the
+        // line to "Notifications:" reads more honestly than calling
+        // them "Messages" when there's no actual messaging app named.
+        if (snapshot.messaging.isEmpty()) {
+            return "Notifications: ${snapshot.otherCount} other"
+        }
+
+        // The header count is messaging-only. Earlier shapes included
+        // `otherCount` in the total, which read as "6 messages" when
+        // really only 2 were from messaging apps. The "+N other" tail
+        // surfaces unmatched notifications without inflating the
+        // messages number.
+        val messagingTotal = snapshot.messaging.sumOf { it.count }
+
+        if (messagingTotal == 1 && snapshot.messaging.size == 1 && snapshot.otherCount == 0) {
+            return "Messages: 1 from ${snapshot.messaging.first().label}"
+        }
+
+        val preview = snapshot.messaging.take(MESSAGES_PREVIEW_APPS)
+        val previewLabels = preview.joinToString(", ") { it.label }
+        val extraApps = snapshot.messaging.size - preview.size
+
+        val tail = buildList {
+            if (extraApps > 0) add("+$extraApps more apps")
+            if (snapshot.otherCount > 0) add("+${snapshot.otherCount} other")
+        }.joinToString(", ")
+
+        val from = listOf(previewLabels, tail).filter { it.isNotEmpty() }.joinToString(", ")
+        return "Messages: $messagingTotal from $from"
+    }
+
+    /**
      * "Reminders: 2 due today" — count-only for v1. Reminder titles are
      * often long ("remind me to pick up dry cleaning before 5pm") and
      * compose with the existing watch reminder pin, so the brief
@@ -139,6 +185,7 @@ object MorningBriefRenderer {
 
     private const val MEETINGS_PREVIEW = 3
     private const val ALARMS_PREVIEW = 3
+    private const val MESSAGES_PREVIEW_APPS = 4
     private const val NOTE_PREVIEW_CHARS = 40
 
     // SimpleDateFormat isn't thread-safe; a ThreadLocal lets the renderer
