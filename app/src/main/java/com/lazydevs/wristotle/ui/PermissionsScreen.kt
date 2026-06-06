@@ -81,22 +81,29 @@ fun PermissionsScreen(
             batteryOptimizationGranted = perms.ignoringBatteryOptimizations,
             onRequest = onRequestWatchPermissions,
         )
-        VoiceInputCard(
-            recordAudioGranted = perms.recordAudio,
-            isDefaultVoiceProvider = isDefaultProvider,
-            adbCommand = vm.adbActivationCommand,
-            onRequest = onRequestVoicePermissions,
-            // The scope note only renders when also not-yet-dismissed.
-            showScopeNote = !companion.whisperAppliesToWatchDictation
-                && !voiceInputScopeNoteDismissed,
-            // Voice-input rows (Record Audio, default-provider status,
-            // ADB picker) hide entirely when the user is on a cloud-
-            // dictation companion — independent of whether the scope
-            // note has been dismissed. Dismissing the note just means
-            // "I've read this," not "show me the irrelevant rows again."
-            voiceInputAppliesToWatch = companion.whisperAppliesToWatchDictation,
-            onDismissScopeNote = vm::dismissVoiceInputScopeNote,
-        )
+        // Hide the entire Voice Input card once Core Devices users have
+        // dismissed the scope note. The card's inner rows are already
+        // gated on `whisperAppliesToWatchDictation` so they don't show
+        // for cloud-dictation companions — but the title + frame
+        // remained, leaving an empty card on the Permissions tab and
+        // (per issue #7) leading users to think Wristotle's voice
+        // setup mattered for their watch path when it didn't.
+        //
+        // microPebble users (whisperApplies == true) always see the
+        // full card; Core Devices users see only the dismissable scope
+        // note, and once they dismiss it the card disappears entirely.
+        if (companion.whisperAppliesToWatchDictation || !voiceInputScopeNoteDismissed) {
+            VoiceInputCard(
+                recordAudioGranted = perms.recordAudio,
+                isDefaultVoiceProvider = isDefaultProvider,
+                adbCommand = vm.adbActivationCommand,
+                onRequest = onRequestVoicePermissions,
+                showScopeNote = !companion.whisperAppliesToWatchDictation
+                    && !voiceInputScopeNoteDismissed,
+                voiceInputAppliesToWatch = companion.whisperAppliesToWatchDictation,
+                onDismissScopeNote = vm::dismissVoiceInputScopeNote,
+            )
+        }
         MediaControlCard(
             granted = perms.mediaControl,
             onOpenSettings = { openNotificationListenerSettings(context) },
