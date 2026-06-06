@@ -73,4 +73,40 @@ class TimeParserTest {
     @Test fun `no time returns null`() {
         assertNull(parseTime("remind me to buy groceries"))
     }
+
+    // Bug: codeberg.org/wristotle/wristotle-companion/issues/8 —
+    // "set an alarm for an hour from now" was firing at the current
+    // time because prettytime can't quantify the indefinite article.
+    // normalizeNumbers now rewrites `(a|an) (second|minute|hour|…)`
+    // → `1 (second|minute|hour|…)` before handing off.
+    // Bug: codeberg.org/wristotle/wristotle-companion/issues/8 —
+    // "an hour from now" in the stripped form now parses correctly
+    // after normalizeNumbers rewrites the indefinite article to "1".
+    @Test fun `bare an hour from now parses as relative one hour`() {
+        val before = System.currentTimeMillis()
+        val result = parseTime("an hour from now")
+        assertNotNull(result)
+        val ms = result!!.date.time - before
+        assert(ms in 55 * 60 * 1000L..65 * 60 * 1000L) {
+            "expected ~1h from now, got ${ms / 60000}min (delta ${ms}ms, parsed=${result.date})"
+        }
+    }
+
+    @Test fun `bare a minute parses as relative one minute`() {
+        val before = System.currentTimeMillis()
+        val result = parseTime("a minute from now")
+        assertNotNull(result)
+        val ms = result!!.date.time - before
+        assert(ms in 50 * 1000L..70 * 1000L) {
+            "expected ~1min from now, got ${ms / 1000}s"
+        }
+    }
+
+    // The article rewrite must NOT touch articles that aren't part of
+    // a time-unit phrase. "Remind me to buy a book" doesn't have a
+    // time, so the rewrite shouldn't change the absence-of-time signal.
+    @Test fun `article before non-time-noun stays untouched`() {
+        assertNull(parseTime("remind me to buy a book"))
+        assertNull(parseTime("set an alarm to call mom"))
+    }
 }

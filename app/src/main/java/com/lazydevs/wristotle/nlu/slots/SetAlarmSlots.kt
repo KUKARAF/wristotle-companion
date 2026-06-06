@@ -19,13 +19,15 @@ import java.util.Date
 class SetAlarmSlots : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
-        // Try the raw query first — prettytime handles short forms like
-        // "set an alarm for 7am" directly. If it fails (often happens on
-        // "for 3:30 pm" with longer queries where the parser anchors on
-        // the wrong token), strip the creation prefix so prettytime sees
-        // only the time fragment.
-        val date: Date = parseTime(query)?.date
-            ?: parseTime(query.replace(STRIP_PREFIX, "").trim())?.date
+        // Strip the creation prefix FIRST. prettytime-nlp choked on
+        // "set an alarm for an hour from now" — it parses the query
+        // but anchors on the verb phrase and returns "now" instead of
+        // "+1h" (codeberg.org/wristotle/wristotle-companion/issues/8).
+        // The raw form is still tried as a fallback for any
+        // pathological case where stripping changes meaning.
+        val stripped = query.replace(STRIP_PREFIX, "").trim()
+        val date: Date = parseTime(stripped)?.date
+            ?: parseTime(query)?.date
             ?: return emptyMap()
         return mapOf(SlotKeys.Time to date)
     }

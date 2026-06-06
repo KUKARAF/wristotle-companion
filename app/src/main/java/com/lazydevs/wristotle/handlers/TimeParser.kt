@@ -29,8 +29,26 @@ private val WORD_PATTERN = Regex(
 // Matches H MM or HH MM that is not already colon-separated.
 private val HOUR_MINUTE_UNJOINED = Regex("""(?<![:\d])([1-9]|1[0-2]) ([0-5]\d)(?![:\d])""")
 
+// Indefinite article in front of a duration unit. prettytime-nlp
+// understands "in a minute" / "in an hour" (it's tolerant of the
+// article when "in" comes before), but blows up on "an hour from
+// now" — it can't quantify the article in that shape and falls back
+// to "now". Rewrite to "1 <unit>" upstream so prettytime sees a
+// numeric quantity in both shapes.
+//
+// Tight enough not to touch articles outside the time domain:
+// "remind me to buy a book" → "a" sits before "book", not a unit,
+// so nothing changes.
+//
+// Closes codeberg.org/wristotle/wristotle-companion/issues/8.
+private val ARTICLE_BEFORE_TIME_UNIT = Regex(
+    """\b(?:a|an)\s+(second|minute|hour|day|week|month|year)(s?)\b""",
+    RegexOption.IGNORE_CASE,
+)
+
 private fun normalizeNumbers(text: String): String {
-    val digits = WORD_PATTERN.replace(text) { WORD_NUMBERS[it.value.lowercase()] ?: "" }
+    val articled = ARTICLE_BEFORE_TIME_UNIT.replace(text) { "1 ${it.groupValues[1]}${it.groupValues[2]}" }
+    val digits = WORD_PATTERN.replace(articled) { WORD_NUMBERS[it.value.lowercase()] ?: "" }
         .replace("  ", " ").trim()
     return HOUR_MINUTE_UNJOINED.replace(digits) { "${it.groupValues[1]}:${it.groupValues[2]}" }
 }
