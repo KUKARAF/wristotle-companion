@@ -13,6 +13,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-4-0-morning-brief",
+            date = "2026-06-06",
+            companionVersion = "v1.4.0",
+            watchVersion = null,
+            title = "Morning brief — voice rollup of today's plate",
+            description = "One-shot rollup of today's meetings, alarms, reminders, tasks, notes, and unread messages from your messaging apps.",
+            sampleQuery = "morning brief",
+            docsPath = "voice-commands/#morning-brief",
+        ),
+        FeatureEntry(
             id = "v1-3-1-alarm-fix-perm-card-fix",
             date = "2026-06-05",
             companionVersion = "v1.3.1",

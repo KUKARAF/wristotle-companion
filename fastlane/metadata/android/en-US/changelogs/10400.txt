@@ -1,0 +1,19 @@
+Morning brief.
+
+Ask "morning brief" or "what's on my
+plate today" and Wristotle reads back a
+one-shot rollup of today's meetings,
+alarms, reminders, pending tasks, notes
+created today, and unread messages from
+your messaging apps.
+
+Tight format for the watch chat — each
+section gets a short line, capped to ~280
+characters total. Empty sections drop
+out; long days truncate from the bottom
+so the time-anchored items stay visible.
+
+Unread messages read live from
+notification access (no persistence).
+A notification you've already dismissed
+won't appear in the brief.
