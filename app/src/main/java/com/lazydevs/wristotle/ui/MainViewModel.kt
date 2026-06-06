@@ -146,6 +146,12 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
         NotificationManagerCompat.getEnabledListenerPackages(app).contains(app.packageName)
 
     private fun isThisAppTheDefaultVoiceProvider(): Boolean {
+        // Android 16 normalizes the stored value into the short form
+        // some time after the write — `pkg/.speech.service.WhisperRecognitionService`,
+        // with a leading dot on the class half. `ComponentName.unflattenFromString`
+        // handles both the full form (what we write via ADB) and the
+        // normalized short form, so equality holds either way. Verified
+        // empirically against #7's repro flow on a Pixel 10a / Android 16.
         val current = Settings.Secure
             .getString(app.contentResolver, VOICE_RECOGNITION_SERVICE)
             ?.let { ComponentName.unflattenFromString(it) }

@@ -118,7 +118,38 @@ class DiagnosticsBuilder(
         appendLine("- Record audio: ${grant(Manifest.permission.RECORD_AUDIO)}")
         appendLine("- Notification access: ${yesNo(hasNotificationAccess())}")
         appendLine("- Default voice provider: ${yesNo(isDefaultVoiceProvider())}")
+        appendVoiceProviderDetail()
         appendLine()
+    }
+
+    /**
+     * Raw + parsed view of the voice-provider detection comparison.
+     * Surfaced so we can diagnose codeberg #7's "ADB sets it but the
+     * card reads not-default" path: dumping both sides lets us see
+     * whether `Settings.Secure.voice_recognition_service` even
+     * contains a value, and whether the parse + equality reflects
+     * what we expect.
+     *
+     * Indented two spaces under the "Default voice provider" line.
+     */
+    private fun StringBuilder.appendVoiceProviderDetail() {
+        val raw: String? = android.provider.Settings.Secure
+            .getString(context.contentResolver, VOICE_RECOGNITION_SERVICE)
+        val parsed: android.content.ComponentName? = raw?.let {
+            android.content.ComponentName.unflattenFromString(it)
+        }
+        val expected = android.content.ComponentName(
+            context,
+            com.lazydevs.wristotle.speech.service.WhisperRecognitionService::class.java,
+        )
+        appendLine("  - Setting raw:    ${raw ?: "(null)"}")
+        appendLine("  - Parsed pkg:     ${parsed?.packageName ?: "(unparsable)"}")
+        appendLine("  - Parsed class:   ${parsed?.className ?: "(unparsable)"}")
+        appendLine("  - Expected pkg:   ${expected.packageName}")
+        appendLine("  - Expected class: ${expected.className}")
+        appendLine("  - Expected flat:  ${expected.flattenToString()}")
+        appendLine("  - Pkg match:      ${yesNo(parsed?.packageName == expected.packageName)}")
+        appendLine("  - Class match:    ${yesNo(parsed?.className == expected.className)}")
     }
 
     private fun StringBuilder.appendPebbleCompanionSection() {
