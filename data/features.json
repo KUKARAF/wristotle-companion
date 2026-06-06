@@ -7,7 +7,7 @@
       "companion_version": "v1.3.1",
       "watch_version": null,
       "title": "Bug fixes — relative alarms + Permissions tab polish",
-      "description": "Two user-visible fixes. \"Set an alarm for an hour from now\" now correctly fires one hour from now instead of the current minute (codeberg issue #8). Same fix lifts \"in a minute\", \"a day from now\", and similar relative shapes — prettytime's article-quantifier gap was closed by rewriting \"a / an + unit\" to \"1 + unit\" before parse, and SetAlarmSlots now strips the verb-phrase preamble first so prettytime sees only the time fragment. On the Permissions tab, the Voice Input card no longer leaves an empty frame after Core Devices users dismiss the scope note (codeberg issue #7) — the card now hides entirely once the explanation is acknowledged, since Wristotle's voice provider doesn't participate when Core Devices is in front. Diagnostics export gains a per-half raw + parsed dump for the voice-provider detection so future symptom reports surface the actual setting value without needing a rebuild.",
+      "description": "Relative alarms (\"an hour from now\") fire on time again; Voice Input no longer leaves an empty card (#7, #8).",
       "sample_query": "set an alarm for an hour from now",
       "docs_path": "features/#settings-tab-whats-in-each-category"
     },
@@ -17,7 +17,7 @@
       "companion_version": "v1.3.0",
       "watch_version": "v1.1.0",
       "title": "Watch polish + opt-in color theme + chat bubbles",
-      "description": "Visual polish across the whole watch app plus an opt-in color theme controlled from the companion. Watch side: every menu row in Notes, Tasks, Alarms, and the Quick Launch chooser now carries a leading entity icon (page, empty / filled checkbox, clock, mic), and chat entries sit inside soft rounded bubbles. A new design-tokens header names every font, color, and spacing constant the watch uses. Companion side: Settings → 📱 Watch gains a \"Color theme\" switch — when on, color-capable watches (Time / Time Steel / Time Round / Time 2 / Emery) light up colored icon variants (red bell, green check, yellow page, blue mic, purple gear), the menu highlight bg switches to LightGray so dark icons stay visible on the selected row, the chat bubbles fill with a warm yellow tint, and the chat progress strip glows accent during dictation / agent activity. Black-and-white watches (Pebble Classic, Pebble 2) stay monochrome regardless. Also fixes a Pebble window-routing race: picking \"Dictation\" from the Quick chooser menu no longer silently swallows the SDK push.",
+      "description": "Per-row icons across every list, rounded chat bubbles, and an opt-in colour theme controlled from the companion (color-capable watches only).",
       "sample_query": null,
       "docs_path": "features/#on-watch-ui"
     },
@@ -27,7 +27,7 @@
       "companion_version": "v1.2.0",
       "watch_version": null,
       "title": "Folder sync for Notes + Conversations",
-      "description": "Settings → 📝 Notes and Settings → 💬 Conversation each gain a new \"Sync to folder\" card. Pick any directory on your phone (an Obsidian vault, a Joplin / Logseq watch folder, a Dropbox / Drive / Syncthing sync root, a git-versioned vault, or any plain-text app's folder) and Wristotle writes every entry as a file there. Cloud distribution is the picked folder's job — your existing sync stack handles the rest. CommonMark-clean Markdown by default, Plain text and JSON formats also available, one-file-per-entry or append-to-single-file granularity. ISO-timestamp filenames so a fresh install can't collide with old files. Sync now button on each card for manual passes. Closes codeberg.org/wristotle/wristotle-companion/issues/5.",
+      "description": "Sync Notes and Conversations to any folder on your phone — Obsidian, Joplin, Dropbox, git vault — Markdown by default.",
       "sample_query": null,
       "docs_path": "features/#settings-tab-whats-in-each-category"
     },
@@ -37,7 +37,7 @@
       "companion_version": "v1.1.0",
       "watch_version": null,
       "title": "Claude web search + smarter aliases + reminder polish",
-      "description": "Ask Agent → Anthropic gets a new \"Web search (Claude built-in)\" toggle that lets Claude search the web mid-reply for fresh facts (news, sports, today's prices) and return a cited answer — billed by Anthropic per search, off by default. App aliases now tolerate compound-word inconsistencies: an alias stored as \"audiobook\" still matches when dictation transcribes \"audio book\" (and vice versa), so you don't need to add both spellings. The App aliases card also gains a numbered how-to-add guide in its info blurb. Two bug fixes: \"remind me in two hours to <task>\" no longer keeps the time phrase in the reminder title (issue #4), and the Ask Agent system-prompt help text now points users running reasoning models (Qwen3 / DeepSeek-R1) at the inference-server fix for chain-of-thought leakage.",
+      "description": "Anthropic web-search toggle for Ask Agent, smarter app-alias matching, and cleaner reminder titles (#4).",
       "sample_query": "ask claude what's the score of today's lakers game",
       "docs_path": "features/#settings-tab-whats-in-each-category"
     },
@@ -47,7 +47,7 @@
       "companion_version": "v1.0.4",
       "watch_version": null,
       "title": "MCP server card — edit, enable/disable, scheme guard",
-      "description": "Settings → MCP servers gets three quality-of-life additions. Each row gains a pencil icon to edit name / URL / Authorization / streaming-vs-SSE in place (so a wrong token or moved endpoint doesn't need a delete-and-re-add), an enable/disable switch that the Ask Agent loop already respects, and a save-time \"Looks like a raw token\" warning when the Authorization value is missing a scheme prefix like Bearer or Token. Also fixes a crash when refreshing a server that returns 401.",
+      "description": "MCP servers gain in-place edit, an enable/disable toggle, a raw-token scheme-guard warning, and a 401-refresh crash fix.",
       "sample_query": null,
       "docs_path": "features/#settings-tab-whats-in-each-category"
     },
@@ -57,7 +57,7 @@
       "companion_version": "v1.0.0",
       "watch_version": "v1.0.0",
       "title": "Leaving alpha — first-launch setup wizard",
-      "description": "After six months of alpha, Wristotle is stable. v1.0.0 lands a multi-step welcome wizard on first launch that walks new users through the optional model downloads + permissions + app scan, plus a persistent Settings → 🌟 Setup card that surfaces the same checklist and adds quality-of-life nudges (contact aliases, Speech provider, Ask Agent). Steps are dynamic — Core Devices users skip the Whisper step, low-RAM phones skip the NLU step, power users see Welcome → Final and are done.",
+      "description": "Leaving alpha. First-launch wizard walks new users through models, permissions, and app scan; persistent Settings → 🌟 Setup card.",
       "sample_query": null,
       "docs_path": "features/#settings-tab-whats-in-each-category"
     },
@@ -67,7 +67,7 @@
       "companion_version": "v0.20.0",
       "watch_version": null,
       "title": "Cloud + self-hosted speech-to-text",
-      "description": "Settings → Speech provider — choose between on-device Whisper, any OpenAI-compatible /audio/transcriptions endpoint (OpenAI, Groq, Cloudflare Workers AI, self-hosted Speaches or whisper.cpp HTTP server, …), or a primary + fallback pair. \"Test connection\" verifies your endpoint before the first real dictation; the active mode picks up on the next voice query without an app restart.",
+      "description": "Pick on-device Whisper, any OpenAI-compatible HTTP endpoint, or a primary + fallback pair. \"Test connection\" verifies before first use.",
       "sample_query": null,
       "docs_path": "features/#models-optional"
     },
@@ -77,7 +77,7 @@
       "companion_version": "v0.19.0",
       "watch_version": null,
       "title": "Import custom Whisper models",
-      "description": "Settings → Speech → Imported models — sideload a whisper.cpp .bin from anywhere on your phone (fine-tuned, language-specific, distilled). First four bytes are validated against the ggml / GGUF header before the file is copied in, and the active imported model now counts toward the Settings-tab attention badge.",
+      "description": "Sideload any whisper.cpp .bin from your phone (fine-tuned, language-specific, distilled). Magic bytes validated before copy.",
       "sample_query": null,
       "docs_path": "features/#models-optional"
     },
