@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.handlers
 
 import android.content.Context
 import android.util.Log
+import com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler
 import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -29,7 +30,11 @@ private const val TAG = "RescheduleHandler"
  * not to the original reminder's time.
  */
 @OptIn(ExperimentalTime::class)
-class RescheduleHandler(context: Context, private val transport: PebbleTransport) : ActionHandler {
+class RescheduleHandler(
+    context: Context,
+    private val transport: PebbleTransport,
+    private val persistentScheduler: PersistentReminderScheduler,
+) : ActionHandler {
 
     private val pinStore = PinStore(context)
 
@@ -59,6 +64,9 @@ class RescheduleHandler(context: Context, private val transport: PebbleTransport
             return "Failed to reschedule ($deleteResult)"
         }
         pinStore.remove(record.id)
+        // Kill the phone-side nag chain tied to the old pin id; a fresh one
+        // re-arms below if the record was persistent.
+        persistentScheduler.cancel(record.id)
 
         val newId = UUID.randomUUID().toString()
         val pin = TimelinePin(
@@ -75,7 +83,18 @@ class RescheduleHandler(context: Context, private val transport: PebbleTransport
         Log.d(TAG, "re-insert result: $insertResult")
 
         return if (insertResult == TimelineResult.Success) {
-            pinStore.save(ReminderRecord(id = newId, title = record.title, timeMs = time.time))
+            // Carry forward persistence so a "remind me at 3pm" → "make that
+            // 4pm" doesn't quietly downgrade a persistent reminder. The
+            // attempts counter resets too — the new pin starts a fresh chain.
+            val moved = ReminderRecord(
+                id = newId,
+                title = record.title,
+                timeMs = time.time,
+                isPersistent = record.isPersistent,
+                attemptsRemaining = record.attemptsRemaining,
+            )
+            pinStore.save(moved)
+            if (moved.isPersistent) persistentScheduler.schedule(moved)
             val formatted = android.text.format.DateFormat.format("MMM d 'at' h:mm a", time).toString()
             "Moved: ${record.title}\n$formatted"
         } else {

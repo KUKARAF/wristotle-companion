@@ -43,6 +43,11 @@ object SlotKeys {
     /** Discriminators / filter values. */
     const val Filter = "filter"
 
+    /** Reminder opt-in: the user said "persistent reminder" / "nag me" / "keep
+     *  reminding me" and wants the phone to re-fire the reminder until they
+     *  dismiss it. Value is a [Boolean]. */
+    const val Persistent = "persistent"
+
     /** Filter values used with [Filter]. Discriminate the list-style
      *  intents (ListTasks pending vs completed). Not slot keys themselves
      *  — string values written as a slot's *value*. */

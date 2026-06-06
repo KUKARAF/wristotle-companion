@@ -144,6 +144,16 @@ class WristotleApplication : Application() {
         com.lazydevs.wristotle.alarms.AlarmSettings(this)
     }
 
+    /** Persistent-reminder scheduler — owns AlarmManager handles + the
+     *  "Persistent reminders" notification channel. Lazy because a user
+     *  with no persistent reminders never hits the code path; the
+     *  notification channel itself is created up-front in onCreate so the
+     *  first nag has a channel to land on. */
+    val persistentReminderScheduler:
+        com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler by lazy {
+        com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler(this)
+    }
+
     /** MCP client data layer. Lazy so the Room DB build + first SharedPrefs
      *  read are deferred from cold start to the first Settings-tap / first
      *  AskAgent intent / first backup run — most users never open these
@@ -339,6 +349,10 @@ class WristotleApplication : Application() {
         transport = PebbleTransport(this)
         modelStorage = ModelStorage(this)
         nluModelStorage = NluModelStorage(this)
+
+        // Persistent reminders need their notification channel before the
+        // first nag fires. Idempotent — safe to call on every onCreate.
+        persistentReminderScheduler.ensureNotificationChannel()
 
         conversationDb = ConversationDatabase.build(this)
         conversationSettings = ConversationSettings(this)

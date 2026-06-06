@@ -11,6 +11,18 @@
          intents). Normal permission, auto-granted at install — no runtime
          prompt. Required for ACTION_SET_ALARM / ACTION_SET_TIMER. -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <!-- Persistent reminders re-fire on the phone after the watch timeline pin
+         fires, at user-configured intervals. Exact alarms keep the
+         "remind me at 3pm" promise tight under Doze:
+           - USE_EXACT_ALARM: auto-granted on Android 13+ for true
+             alarm-clock-shaped apps (reminder / timer / calendar);
+           - SCHEDULE_EXACT_ALARM: revocable fallback for 12-and-older.
+         RECEIVE_BOOT_COMPLETED lets PersistentReminderBootReceiver re-arm
+         the AlarmManager schedule after a device reboot (AlarmManager wipes
+         pending alarms on shutdown). -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- The companion bridges to a connected wearable (Pebble watch via
@@ -113,6 +125,31 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Persistent reminders: internal fire + Stop-action receiver.
+             exported=false because the broadcasts are always sent with
+             an explicit component name from inside the app — no external
+             entry point should be able to synthesise them. -->
+        <receiver
+            android:name=".handlers.persistent.PersistentReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.lazydevs.wristotle.PERSISTENT_REMINDER_FIRE" />
+                <action android:name="com.lazydevs.wristotle.PERSISTENT_REMINDER_STOP" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Boot recovery: re-arms persistent-reminder alarms after device
+             restart. exported=true is required because BOOT_COMPLETED is a
+             system broadcast; kept in a separate receiver from the fire /
+             stop entry points so those stay internal-only. -->
+        <receiver
+            android:name=".handlers.persistent.PersistentReminderBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

@@ -10,11 +10,18 @@ package com.lazydevs.wristotle.handlers
  *
  * [timeMs] is the epoch-millis start time, or `null` when unknown (legacy pins
  * migrated from the old id-only format, which didn't store the time).
+ *
+ * [isPersistent] marks the reminder as one that should also nag the phone via
+ * a notification at user-configured intervals after the watch pin fires (phase
+ * B wires the scheduler). [attemptsRemaining] tracks how many more times the
+ * scheduler is allowed to re-fire — defaults to 0 for non-persistent records.
  */
 data class ReminderRecord(
     val id: String,
     val title: String,
     val timeMs: Long?,
+    val isPersistent: Boolean = false,
+    val attemptsRemaining: Int = 0,
 )
 
 /**
@@ -37,7 +44,13 @@ internal object PinStoreCodec {
             // Defensively strip the separators from the title so a pathological
             // value can't corrupt the framing.
             val safeTitle = r.title.replace(RS, ' ').replace(US, ' ')
-            listOf(r.id, safeTitle, r.timeMs?.toString() ?: "").joinToString(US.toString())
+            listOf(
+                r.id,
+                safeTitle,
+                r.timeMs?.toString() ?: "",
+                if (r.isPersistent) "1" else "0",
+                r.attemptsRemaining.toString(),
+            ).joinToString(US.toString())
         }
 
     /**
@@ -64,7 +77,11 @@ internal object PinStoreCodec {
             val id = parts.getOrNull(0)?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             val title = parts.getOrNull(1).orEmpty()
             val timeMs = parts.getOrNull(2)?.toLongOrNull()
-            ReminderRecord(id, title, timeMs)
+            // Fields 4 + 5 added when persistent reminders shipped — absent in
+            // older blobs, in which case both default to "not persistent".
+            val isPersistent = parts.getOrNull(3) == "1"
+            val attemptsRemaining = parts.getOrNull(4)?.toIntOrNull() ?: 0
+            ReminderRecord(id, title, timeMs, isPersistent, attemptsRemaining)
         }
     }
 

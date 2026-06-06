@@ -2,6 +2,7 @@ package com.lazydevs.wristotle.handlers
 
 import android.content.Context
 import android.util.Log
+import com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler
 import com.lazydevs.wristotle.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -24,7 +25,12 @@ private const val TAG = "ReminderHandler"
  * title-stripping regex from this file's history.
  */
 @OptIn(ExperimentalTime::class)
-class ReminderHandler(context: Context, private val transport: PebbleTransport) : ActionHandler {
+class ReminderHandler(
+    context: Context,
+    private val transport: PebbleTransport,
+    private val persistentScheduler: PersistentReminderScheduler,
+    private val defaultMaxAttemptsProvider: () -> Int = { ReminderSettings.DEFAULT_MAX_ATTEMPTS },
+) : ActionHandler {
 
     private val pinStore = PinStore(context)
 
@@ -38,8 +44,9 @@ class ReminderHandler(context: Context, private val transport: PebbleTransport) 
         val time = result.slots[SlotKeys.Time] as? Date ?: return "Couldn't set reminder"
         val title = (result.slots[SlotKeys.Title] as? String)?.takeIf { it.isNotBlank() }
             ?: result.rawQuery.replaceFirstChar { it.uppercaseChar() }
+        val isPersistent = result.slots[SlotKeys.Persistent] as? Boolean ?: false
 
-        Log.d(TAG, "date=$time  title=$title")
+        Log.d(TAG, "date=$time  title=$title  persistent=$isPersistent")
 
         val pinId = UUID.randomUUID().toString()
         val pin = TimelinePin(
@@ -56,9 +63,22 @@ class ReminderHandler(context: Context, private val transport: PebbleTransport) 
         Log.d(TAG, "insertTimelinePin: $pinResult")
 
         return if (pinResult == TimelineResult.Success) {
-            pinStore.save(ReminderRecord(id = pinId, title = title, timeMs = time.time))
+            // attemptsRemaining is 0 for non-persistent reminders so phase B's
+            // scheduler skips them without an explicit isPersistent check.
+            val attemptsRemaining =
+                if (isPersistent) defaultMaxAttemptsProvider() else 0
+            val record = ReminderRecord(
+                id = pinId,
+                title = title,
+                timeMs = time.time,
+                isPersistent = isPersistent,
+                attemptsRemaining = attemptsRemaining,
+            )
+            pinStore.save(record)
+            if (isPersistent) persistentScheduler.schedule(record)
             val formatted = android.text.format.DateFormat.format("MMM d 'at' h:mm a", time).toString()
-            "Reminder set:\n$title\n$formatted"
+            val prefix = if (isPersistent) "Persistent reminder set" else "Reminder set"
+            "$prefix:\n$title\n$formatted"
         } else {
             Log.w(TAG, "insertTimelinePin failed: $pinResult")
             "Failed to set reminder ($pinResult)"

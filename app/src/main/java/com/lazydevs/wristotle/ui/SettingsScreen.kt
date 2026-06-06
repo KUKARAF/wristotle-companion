@@ -453,6 +453,8 @@ private fun SettingsCategoryContent(
 
             SettingsCategory.Reminders -> {
                 val reminderDefaultMinutes by reminderSettings.defaultOffsetMin.collectAsState()
+                val reminderIntervalMin by reminderSettings.defaultIntervalMin.collectAsState()
+                val reminderMaxAttempts by reminderSettings.defaultMaxAttempts.collectAsState()
                 AlarmsCard(
                     repository = app.alarmRepository,
                     dispatcher = app.alarmDispatcher,
@@ -462,6 +464,12 @@ private fun SettingsCategoryContent(
                     selectedMinutes = reminderDefaultMinutes,
                     options = ReminderSettings.ALLOWED_OFFSET_MIN,
                     onSelect = reminderSettings::setDefaultOffsetMin,
+                    selectedIntervalMin = reminderIntervalMin,
+                    intervalOptions = ReminderSettings.ALLOWED_INTERVAL_MIN,
+                    onSelectInterval = reminderSettings::setDefaultIntervalMin,
+                    selectedMaxAttempts = reminderMaxAttempts,
+                    maxAttemptsOptions = ReminderSettings.ALLOWED_MAX_ATTEMPTS,
+                    onSelectMaxAttempts = reminderSettings::setDefaultMaxAttempts,
                 )
             }
 
@@ -874,8 +882,16 @@ private fun ReminderSettingsCard(
     selectedMinutes: Int,
     options: List<Int>,
     onSelect: (Int) -> Unit,
+    selectedIntervalMin: Int,
+    intervalOptions: List<Int>,
+    onSelectInterval: (Int) -> Unit,
+    selectedMaxAttempts: Int,
+    maxAttemptsOptions: List<Int>,
+    onSelectMaxAttempts: (Int) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var offsetExpanded by remember { mutableStateOf(false) }
+    var intervalExpanded by remember { mutableStateOf(false) }
+    var attemptsExpanded by remember { mutableStateOf(false) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -888,29 +904,105 @@ private fun ReminderSettingsCard(
             )
 
             ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = it },
+                expanded = offsetExpanded,
+                onExpandedChange = { offsetExpanded = it },
             ) {
                 OutlinedTextField(
                     value = pluralStringResource(R.plurals.settings_reminders_default_minutes, selectedMinutes, selectedMinutes),
                     onValueChange = {},
                     readOnly = true,
                     label = { Text(stringResource(R.string.settings_reminders_default_label)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = offsetExpanded) },
                     modifier = Modifier
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                         .fillMaxWidth(),
                 )
                 ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
+                    expanded = offsetExpanded,
+                    onDismissRequest = { offsetExpanded = false },
                 ) {
                     options.forEach { minutes ->
                         DropdownMenuItem(
                             text = { Text(pluralStringResource(R.plurals.settings_reminders_default_minutes, minutes, minutes)) },
                             onClick = {
                                 onSelect(minutes)
-                                expanded = false
+                                offsetExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            // Persistent reminders sub-section. Two knobs — nag interval +
+            // max attempts — wrapped in the same card so users see one
+            // "Reminders" surface; CardTitleWithInfo on the parent already
+            // tells them what reminders mean.
+            Text(
+                text = stringResource(R.string.settings_reminders_persistent_subheader),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(R.string.settings_reminders_persistent_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            ExposedDropdownMenuBox(
+                expanded = intervalExpanded,
+                onExpandedChange = { intervalExpanded = it },
+            ) {
+                OutlinedTextField(
+                    value = pluralStringResource(R.plurals.settings_reminders_default_minutes, selectedIntervalMin, selectedIntervalMin),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.settings_reminders_interval_label)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = intervalExpanded) },
+                    modifier = Modifier
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                        .fillMaxWidth(),
+                )
+                ExposedDropdownMenu(
+                    expanded = intervalExpanded,
+                    onDismissRequest = { intervalExpanded = false },
+                ) {
+                    intervalOptions.forEach { minutes ->
+                        DropdownMenuItem(
+                            text = { Text(pluralStringResource(R.plurals.settings_reminders_default_minutes, minutes, minutes)) },
+                            onClick = {
+                                onSelectInterval(minutes)
+                                intervalExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+
+            ExposedDropdownMenuBox(
+                expanded = attemptsExpanded,
+                onExpandedChange = { attemptsExpanded = it },
+            ) {
+                OutlinedTextField(
+                    value = pluralStringResource(R.plurals.settings_reminders_max_attempts_value, selectedMaxAttempts, selectedMaxAttempts),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.settings_reminders_max_attempts_label)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = attemptsExpanded) },
+                    modifier = Modifier
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                        .fillMaxWidth(),
+                )
+                ExposedDropdownMenu(
+                    expanded = attemptsExpanded,
+                    onDismissRequest = { attemptsExpanded = false },
+                ) {
+                    maxAttemptsOptions.forEach { attempts ->
+                        DropdownMenuItem(
+                            text = { Text(pluralStringResource(R.plurals.settings_reminders_max_attempts_value, attempts, attempts)) },
+                            onClick = {
+                                onSelectMaxAttempts(attempts)
+                                attemptsExpanded = false
                             },
                         )
                     }

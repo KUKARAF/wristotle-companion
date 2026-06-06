@@ -1,5 +1,6 @@
 package com.lazydevs.wristotle.backup
 
+import com.lazydevs.wristotle.handlers.ReminderSettings
 import com.lazydevs.wristotle.phone.ContactRef
 import org.json.JSONArray
 import org.json.JSONObject
@@ -96,7 +97,11 @@ data class BackupManifest(
     data class DiagnosticsPrefs(val redactPii: Boolean, val includeAudio: Boolean)
     data class ModelPrefs(val activeModelId: String?)
 
-    data class ReminderPrefs(val defaultOffsetMin: Int)
+    data class ReminderPrefs(
+        val defaultOffsetMin: Int,
+        val defaultIntervalMin: Int = ReminderSettings.DEFAULT_INTERVAL_MIN,
+        val defaultMaxAttempts: Int = ReminderSettings.DEFAULT_MAX_ATTEMPTS,
+    )
 
     /** `apiKey` rides only when the user ticks the secret checkbox. */
     data class WeatherPrefs(
@@ -130,7 +135,13 @@ data class BackupManifest(
     )
 
     /** Wire-format record matching the manifest JSON, not the Room/PinStore type. */
-    data class PinRecord(val id: String, val title: String, val timeMs: Long?)
+    data class PinRecord(
+        val id: String,
+        val title: String,
+        val timeMs: Long?,
+        val isPersistent: Boolean = false,
+        val attemptsRemaining: Int = 0,
+    )
 
     companion object {
         /**
@@ -258,6 +269,8 @@ object BackupManifestCodec {
             m.prefs.reminder?.let { r ->
                 put("wristotle_reminder_settings", JSONObject().apply {
                     put("default_offset_min", r.defaultOffsetMin)
+                    put("default_interval_min", r.defaultIntervalMin)
+                    put("default_max_attempts", r.defaultMaxAttempts)
                 })
             }
             m.prefs.weather?.let { w ->
@@ -296,6 +309,13 @@ object BackupManifestCodec {
                     put("id", p.id)
                     put("title", p.title)
                     if (p.timeMs != null) put("time_ms", p.timeMs)
+                    // Persistent fields are only emitted when set so older
+                    // backups (pre persistent-reminders) stay byte-clean and
+                    // newer ones don't carry default noise on every record.
+                    if (p.isPersistent) {
+                        put("is_persistent", true)
+                        put("attempts_remaining", p.attemptsRemaining)
+                    }
                 })
             }
         })
@@ -411,6 +431,14 @@ object BackupManifestCodec {
                 reminder = prefs.optJSONObject("wristotle_reminder_settings")?.let { r ->
                     BackupManifest.ReminderPrefs(
                         defaultOffsetMin = r.optInt("default_offset_min", 0),
+                        defaultIntervalMin = r.optInt(
+                            "default_interval_min",
+                            ReminderSettings.DEFAULT_INTERVAL_MIN,
+                        ),
+                        defaultMaxAttempts = r.optInt(
+                            "default_max_attempts",
+                            ReminderSettings.DEFAULT_MAX_ATTEMPTS,
+                        ),
                     )
                 },
                 weather = prefs.optJSONObject("weather_settings")?.let { w ->
@@ -447,6 +475,8 @@ object BackupManifestCodec {
                     id = p.getString("id"),
                     title = p.optString("title", ""),
                     timeMs = if (p.has("time_ms")) p.getLong("time_ms") else null,
+                    isPersistent = p.optBoolean("is_persistent", false),
+                    attemptsRemaining = p.optInt("attempts_remaining", 0),
                 )
             },
             appAliases = aliasesObj.keys().asSequence().associateWith { aliasesObj.getString(it) },

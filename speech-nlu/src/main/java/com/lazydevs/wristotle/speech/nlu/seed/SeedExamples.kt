@@ -92,6 +92,9 @@ object SeedExamples {
             "shoot lisa a WhatsApp",
         ))
         // ── Reminder ────────────────────────────────────────────────────
+        // Mixed seeds cover the bare reminder family + the persistent variants
+        // ("persistent reminder", "nag me", "keep reminding me"). All route to
+        // Intent.Reminder; ReminderSlots discriminates persistent vs not.
         addAll(Intent.Reminder, listOf(
             "remind me to pick up milk at five pm",
             "set a reminder for the meeting tomorrow at noon",
@@ -104,6 +107,14 @@ object SeedExamples {
             "I need a reminder to call grandma tomorrow",
             "tell me when it's three pm",
             "remind me later",
+            "persistent reminder to take meds at nine pm",
+            "persistent reminder for the meeting at three",
+            "set a persistent reminder for laundry tonight",
+            "nag me to call mom at five",
+            "nag me to drink water at noon",
+            "keep reminding me to take the trash out at eight am",
+            "keep nagging me to stretch every hour",
+            "remind me persistently to check the oven at six",
         ))
         // ── SetAlarm (redirect) ─────────────────────────────────────────
         // Alarms-v2: voice creation moved to the companion's Alarms card.

@@ -477,7 +477,11 @@ class BackupImporter(private val app: WristotleApplication) {
             }
             p.whisperModels?.let { app.modelStorage.activeModelId = it.activeModelId }
             p.nluModels?.let { app.nluModelStorage.activeModelId = it.activeModelId }
-            p.reminder?.let { app.reminderSettings.setDefaultOffsetMin(it.defaultOffsetMin) }
+            p.reminder?.let {
+                app.reminderSettings.setDefaultOffsetMin(it.defaultOffsetMin)
+                app.reminderSettings.setDefaultIntervalMin(it.defaultIntervalMin)
+                app.reminderSettings.setDefaultMaxAttempts(it.defaultMaxAttempts)
+            }
         }
 
         if (sel.weatherSettings) {
@@ -525,7 +529,15 @@ class BackupImporter(private val app: WristotleApplication) {
         if (incoming.isEmpty()) return EntityStats()
         val store = PinStore(app.applicationContext)
         val existing = store.all()
-        val toMerge = incoming.map { ReminderRecord(it.id, it.title, it.timeMs) }
+        val toMerge = incoming.map {
+            ReminderRecord(
+                id = it.id,
+                title = it.title,
+                timeMs = it.timeMs,
+                isPersistent = it.isPersistent,
+                attemptsRemaining = it.attemptsRemaining,
+            )
+        }
         val merged = MergeStrategies.mergePins(existing, toMerge)
         store.replaceAll(merged)
         val imported = merged.size - existing.size

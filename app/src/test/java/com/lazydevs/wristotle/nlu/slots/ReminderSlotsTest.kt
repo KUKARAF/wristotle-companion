@@ -3,6 +3,7 @@ package com.lazydevs.wristotle.nlu.slots
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
@@ -80,5 +81,51 @@ class ReminderSlotsTest {
     @Test fun `task starting with non-lead-in word is unaffected`() {
         assertEquals("Buy groceries", title("remind me to buy groceries"))
         assertEquals("Check email", title("remind me to check email at 3pm"))
+    }
+
+    // --- persistent reminders ---
+
+    @Test fun `plain reminder does not set persistent slot`() {
+        assertNull("plain reminder must not be flagged persistent", slots("remind me to call mom at 2pm")["persistent"])
+    }
+
+    @Test fun `persistent reminder sets the flag and strips the modifier`() {
+        val s = slots("persistent reminder to take meds at nine pm")
+        assertEquals(true, s["persistent"])
+        assertEquals("Take meds", s["title"])
+    }
+
+    @Test fun `nag me sets the flag and strips the prefix`() {
+        val s = slots("nag me to drink water at noon")
+        assertEquals(true, s["persistent"])
+        assertEquals("Drink water", s["title"])
+    }
+
+    @Test fun `keep reminding me sets the flag and strips the prefix`() {
+        val s = slots("keep reminding me to take the trash out at eight am")
+        assertEquals(true, s["persistent"])
+        assertEquals("Take the trash out", s["title"])
+    }
+
+    @Test fun `keep nagging me sets the flag and strips the prefix`() {
+        val s = slots("keep nagging me to stretch at 3pm")
+        assertEquals(true, s["persistent"])
+        assertEquals("Stretch", s["title"])
+    }
+
+    @Test fun `remind me persistently shape strips modifier without leaving stray spaces`() {
+        // "remind me persistently to call mom at 3pm" — modifier strip drops
+        // "persistently" and the remaining "remind me  to" collapses through
+        // STRIP_PREFIXES on the second pass.
+        val s = slots("remind me persistently to call mom at 3pm")
+        assertEquals(true, s["persistent"])
+        assertEquals("Call mom", s["title"])
+    }
+
+    @Test fun `word containing persist is not flagged`() {
+        // Defensive: "persistence" / "persisting" must not trip the detector.
+        // The detector uses \b boundaries; "persistent" / "persistently" are
+        // the only forms it accepts.
+        assertNull(slots("remind me about persistence training at 4pm")["persistent"])
     }
 }
