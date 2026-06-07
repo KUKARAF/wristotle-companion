@@ -85,6 +85,9 @@ def render() -> tuple[str, int]:
 
     entries = "\n".join(emit_entry(f) for f in features)
     header = textwrap.dedent('''\
+        // SPDX-License-Identifier: AGPL-3.0-only
+        // Copyright (C) 2025-2026 Lazy Devs
+
         package com.lazydevs.wristotle.help
 
         /**
