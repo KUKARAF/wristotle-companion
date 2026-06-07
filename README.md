@@ -477,4 +477,6 @@ Watch app needs no changes — natural-language queries arrive over
 
 ## License
 
-MIT — see [LICENSE](LICENSE). The bundled `whisper.cpp` submodule is also MIT (Georgi Gerganov); ONNX Runtime is MIT (Microsoft); MiniLM-L6-v2 is Apache 2.0 (Microsoft Research). Per-dependency licenses ship with each library's metadata.
+AGPLv3 — see [LICENSE](LICENSE). The bundled `whisper.cpp` submodule is MIT (Georgi Gerganov); ONNX Runtime is MIT (Microsoft); MiniLM-L6-v2 is Apache 2.0 (Microsoft Research). All three are AGPLv3-compatible. Per-dependency licenses ship with each library's metadata.
+
+**License history.** Wristotle was MIT-licensed through June 7, 2026 (releases v1.0.0 – v1.5.0, and any clone of `main` from before that date). From June 7, 2026 onward — and from v1.6.0 / any clone of `main` after the relicense commit — Wristotle is licensed under AGPLv3. The legal cutoff is the `LICENSE` file in the commit you cloned: anyone holding an MIT-era checkout or v1.5.0-or-earlier tag keeps MIT terms on that copy.

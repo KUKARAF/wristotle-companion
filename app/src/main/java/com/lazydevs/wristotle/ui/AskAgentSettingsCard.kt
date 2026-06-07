@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2025-2026 Lazy Devs
+
 package com.lazydevs.wristotle.ui
 
 import androidx.compose.foundation.layout.Arrangement
@@ -202,4 +205,3 @@ private fun OpenAiFields(settings: AskAgentSettings) {
         modifier = Modifier.fillMaxWidth(),
     )
 }
-

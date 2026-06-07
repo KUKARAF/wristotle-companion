@@ -1,6 +1,6 @@
 Wristotle turns your Pebble watch's dictation button into a voice command surface on your phone — calls, texts, reminders, alarms, music control, notes, tasks, weather, world clock, calculator, and an Ask-Agent path that can hit any MCP server you configure.
 
-Everything runs on-device by default. Optional cloud Whisper / self-hosted speech-to-text endpoint and optional Anthropic or OpenAI-compatible LLM if you want them. Baseline doesn't phone home; no account, no tracking, MIT-licensed.
+Everything runs on-device by default. Optional cloud Whisper / self-hosted speech-to-text endpoint and optional Anthropic or OpenAI-compatible LLM if you want them. Baseline doesn't phone home; no account, no tracking, AGPLv3-licensed.
 
 Works with microPebble and Core Devices (rePebble).
 
