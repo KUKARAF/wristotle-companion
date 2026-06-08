@@ -14,7 +14,7 @@ package com.lazydevs.wristotle.speech.nlu.slots
  *
  *  - [com.lazydevs.wristotle.speech.nlu.slots.AskAgentSlots] strips the
  *    lead-in before passing the body to the LLM.
- *  - [com.lazydevs.wristotle.nlu.WatchHintRefiner] (via
+ *  - [com.lazydevs.wristotle.speech.nlu.WatchHintRefiner] (via
  *    [com.lazydevs.wristotle.speech.nlu.PrefixHints]) routes a query whose
  *    opening matches to [com.lazydevs.wristotle.speech.nlu.Intent.AskAgent].
  *

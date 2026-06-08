@@ -39,7 +39,7 @@ class FakeIntentClassifier(
  * Convenience: build an [IntentResult] for the classifier to return.
  *
  * Pass [runnerUp] to model the "tight margin" path in
- * [com.lazydevs.wristotle.nlu.WatchHintRefiner.refineUnhinted] — the
+ * [com.lazydevs.wristotle.speech.nlu.WatchHintRefiner.refineUnhinted] — the
  * runner-up sits in `alternates[0]` and triggers a PrefixHints rescue
  * when `confidence - runnerUp < ROUTE_MARGIN` (0.10).
  */

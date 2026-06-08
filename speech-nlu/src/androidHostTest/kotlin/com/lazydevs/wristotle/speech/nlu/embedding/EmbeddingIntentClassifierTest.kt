@@ -14,7 +14,7 @@ import org.junit.Test
 /**
  * Classifier-internal logic tests using synthetic 2D unit-vector
  * embeddings — no MiniLM model, no ONNX, no Whisper. Covers the bits
- * that the [com.lazydevs.wristotle.nlu.VoicePipeline] tests intentionally
+ * that the [com.lazydevs.wristotle.speech.nlu.VoicePipeline] tests intentionally
  * delegate to a [FakeIntentClassifier]:
  *
  *  - Per-intent top-K-mean ranking (and the "noisy seed can't drag the

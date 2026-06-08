@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.nlu
+package com.lazydevs.wristotle.speech.nlu
 
-import com.lazydevs.wristotle.logging.WristotleLog as Log
-import com.lazydevs.wristotle.speech.nlu.Intent
-import com.lazydevs.wristotle.speech.nlu.PrefixHints
-import com.lazydevs.wristotle.speech.nlu.slots.*
-import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.logging.Logger
+import com.lazydevs.wristotle.speech.nlu.logging.NoopLogger
+import com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers
+import kotlin.concurrent.Volatile
 
 private const val TAG = "WatchHintRefiner"
 
@@ -27,6 +26,10 @@ private const val TAG = "WatchHintRefiner"
  *   3. The classifier is confidently above margin → trust it, with the
  *      deterministic Time↔WorldTime correction applied to fix the
  *      embedding's known confusion when a location keyword is present.
+ *
+ * R3 batch 1 — lifted to commonMain. The Android-bound logger was
+ * replaced with the multiplatform [Logger] interface; production wires
+ * it to `WristotleLogger`.
  */
 object WatchHintRefiner {
 
@@ -50,6 +53,7 @@ object WatchHintRefiner {
         routeThreshold: Float,
         routeMargin: Float,
         customAskAgentSubjects: List<String> = emptyList(),
+        logger: Logger = NoopLogger,
     ): Intent? {
         // User-supplied "ask jarvis …" triggers run BEFORE PrefixHints so a
         // custom subject takes effect on every code path (watch-hinted and
@@ -61,21 +65,20 @@ object WatchHintRefiner {
                 return Intent.AskAgent
             }
         }
-        if (watchHint != null) return refineWatchHinted(classified, watchHint, query, routeThreshold)
+        if (watchHint != null) return refineWatchHinted(classified, watchHint, query, routeThreshold, logger)
         if (classified == null) return null
-        return refineUnhinted(classified, query, routeThreshold, routeMargin)
+        return refineUnhinted(classified, query, routeThreshold, routeMargin, logger)
     }
 
     /** Cache the route regex by extras-list identity so we don't recompile
      *  on every query. The list is short (typically 1-5 entries) and
      *  changes only when the user edits Settings. */
     @Volatile private var cachedExtras: List<String> = emptyList()
-    @Volatile private var cachedRouteRegex: Regex =
-        com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers.routeRegex(emptyList())
+    @Volatile private var cachedRouteRegex: Regex = AskAgentTriggers.routeRegex(emptyList())
 
     private fun customAskAgentRegex(extras: List<String>): Regex {
         if (extras == cachedExtras) return cachedRouteRegex
-        val rebuilt = com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers.routeRegex(extras)
+        val rebuilt = AskAgentTriggers.routeRegex(extras)
         cachedExtras = extras
         cachedRouteRegex = rebuilt
         return rebuilt
@@ -86,6 +89,7 @@ object WatchHintRefiner {
         watchHint: Intent,
         query: String,
         routeThreshold: Float,
+        logger: Logger,
     ): Intent {
         // The watch routes anything containing "remind(er)" to REMINDER_QUERY,
         // so a Reminder hint can actually be a list ("is there a reminder at
@@ -113,7 +117,7 @@ object WatchHintRefiner {
             else -> watchHint
         }
         if (refined != watchHint) {
-            Log.d(TAG, "watch hinted $watchHint; refined to $refined " +
+            logger.d(TAG, "watch hinted $watchHint; refined to $refined " +
                 "(prefix=$prefixHint classifier=${classified?.intent}@${classified?.confidence})")
         }
         return refined
@@ -124,17 +128,8 @@ object WatchHintRefiner {
         query: String,
         routeThreshold: Float,
         routeMargin: Float,
+        logger: Logger,
     ): Intent {
-        // Confidence + margin gate. Three paths:
-        //   1. Above threshold AND margin clear of the runner-up: trust the
-        //      classifier's pick directly.
-        //   2. Above threshold but tight margin OR below threshold: check for
-        //      an unambiguous opening verb (`text`/`call`/`remind`/`cancel`/
-        //      `find phone`). If the prefix hint resolves cleanly, route to
-        //      that — a verb at the front of the query is deterministic
-        //      evidence the embedder may have missed (e.g. when a long body
-        //      dilutes the cosine to the canonical intent centroid).
-        //   3. No hint AND no usable classifier pick → Unknown.
         val runnerUp = classified.alternates.firstOrNull()?.score ?: 0f
         val below = classified.confidence < routeThreshold
         val ambiguous = !below && (classified.confidence - runnerUp) < routeMargin
@@ -143,10 +138,10 @@ object WatchHintRefiner {
             val hint = PrefixHints.hintFor(query)
             if (hint != null) {
                 val refined = PrefixHints.refineWorldTime(query, hint)
-                Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) → prefix hint $refined wins")
+                logger.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) → prefix hint $refined wins")
                 return refined
             }
-            Log.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) and no prefix hint → Unknown")
+            logger.d(TAG, "$why (conf=${classified.confidence} runnerUp=$runnerUp) and no prefix hint → Unknown")
             return Intent.Unknown
         }
         // Confident classifier pick — trusted directly, with two post-pick
@@ -160,7 +155,7 @@ object WatchHintRefiner {
         //     opener but Cancel's handler is reminder-only).
         val finalIntent = PrefixHints.refineWorldTime(query, PrefixHints.refineCancelAlarm(query, classified.intent))
         if (finalIntent != classified.intent) {
-            Log.d(TAG, "intent refine: ${classified.intent} → $finalIntent for \"$query\"")
+            logger.d(TAG, "intent refine: ${classified.intent} → $finalIntent for \"$query\"")
         }
         return finalIntent
     }

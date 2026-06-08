@@ -3,7 +3,7 @@
 
 package com.lazydevs.wristotle.nlu.pipeline
 
-import com.lazydevs.wristotle.nlu.VoicePipeline
+import com.lazydevs.wristotle.speech.nlu.VoicePipeline
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.slots.*
 import com.lazydevs.wristotle.phone.ContactsRepository
@@ -20,7 +20,7 @@ import org.junit.Test
 /**
  * End-to-end voice routing tests — query in, (intent, slots) out, no
  * Android / PebbleKit / Whisper in the loop. Each row exercises the
- * full classifier → [com.lazydevs.wristotle.nlu.WatchHintRefiner] →
+ * full classifier → [com.lazydevs.wristotle.speech.nlu.WatchHintRefiner] →
  * slot-extractor seam. See `tests.md` for how to add a row.
  */
 class VoicePipelineTest {

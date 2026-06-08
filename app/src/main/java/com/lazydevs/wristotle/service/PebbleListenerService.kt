@@ -35,7 +35,7 @@ import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.nlu.LearningCollector
 import com.lazydevs.wristotle.nlu.NluSettings
-import com.lazydevs.wristotle.nlu.VoicePipeline
+import com.lazydevs.wristotle.speech.nlu.VoicePipeline
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.settings.WatchSettingsRepository
@@ -132,6 +132,9 @@ class PebbleListenerService : BasePebbleListenerService() {
             classifier = IntentClassifiers.provider(this),
             slotExtractors = app.slotExtractors,
             askAgentSubjects = { app.askAgentSettings.customTriggers.value },
+            // R3 batch 1 — pipe the Android-side ring-buffered logger
+            // through the multiplatform Logger interface.
+            logger = com.lazydevs.wristotle.logging.WristotleLogger,
         )
         nluSettings = app.nluSettings
         learningCollector = app.learningCollector
