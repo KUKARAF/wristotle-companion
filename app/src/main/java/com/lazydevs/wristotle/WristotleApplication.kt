@@ -103,7 +103,7 @@ class WristotleApplication : Application() {
     /** Notes data layer (Phase A — watch-dictated text + optional .wav). */
     lateinit var noteRepository: com.lazydevs.wristotle.notes.NoteRepository
         private set
-    lateinit var noteSettings: com.lazydevs.wristotle.notes.NoteSettings
+    lateinit var noteSettings: com.lazydevs.wristotle.speech.nlu.settings.NoteSettings
         private set
     lateinit var notesAudioStore: com.lazydevs.wristotle.notes.NotesAudioStore
         private set
@@ -407,7 +407,12 @@ class WristotleApplication : Application() {
         // in case the user lowered the keep-last-N cap while the app was off.
         notesDb = com.lazydevs.wristotle.notes.NoteDatabase.build(this)
         notesAudioStore = com.lazydevs.wristotle.notes.NotesAudioStore(this)
-        noteSettings = com.lazydevs.wristotle.notes.NoteSettings(this)
+        noteSettings = com.lazydevs.wristotle.speech.nlu.settings.NoteSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                com.lazydevs.wristotle.speech.nlu.settings.NoteSettings.PREFS_NAME,
+            ),
+        )
         noteRepository = com.lazydevs.wristotle.notes.NoteRepository(
             dao = notesDb.noteDao(),
             audioStore = notesAudioStore,

@@ -25,8 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
-import com.lazydevs.wristotle.notes.AppendAudioMode
-import com.lazydevs.wristotle.notes.NoteSettings
+import com.lazydevs.wristotle.speech.nlu.settings.AppendAudioMode
+import com.lazydevs.wristotle.speech.nlu.settings.NoteSettings
 
 /**
  * Settings card exposing the notes keep-last-N cap. "All" (the default)

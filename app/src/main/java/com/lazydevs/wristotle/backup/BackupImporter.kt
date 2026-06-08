@@ -13,8 +13,8 @@ import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
 import com.lazydevs.wristotle.speech.nlu.settings.WeatherProviderId
 import com.lazydevs.wristotle.history.ConversationEntry
-import com.lazydevs.wristotle.notes.AppendAudioMode
 import com.lazydevs.wristotle.notes.Note
+import com.lazydevs.wristotle.speech.nlu.settings.AppendAudioMode
 import com.lazydevs.wristotle.notes.NoteAudioPaths
 import com.lazydevs.wristotle.phone.ContactRef
 import com.lazydevs.wristotle.nlu.learning.ExampleEntry

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.notes
+package com.lazydevs.wristotle.speech.nlu.settings
 
-import android.content.Context
-import androidx.core.content.edit
+import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +21,7 @@ enum class AppendAudioMode { MERGE, SEPARATE }
 /**
  * Read surface of [NoteSettings] used by non-UI callers (the repository).
  * Lets the repo depend on the StateFlow contract instead of the concrete
- * Context-bound [NoteSettings], so tests can inject a fake without
+ * [KeyValueStore]-bound [NoteSettings], so tests can inject a fake without
  * standing up Android prefs.
  */
 interface NoteSettingsView {
@@ -34,22 +33,24 @@ interface NoteSettingsView {
  * User preference for note retention. Stored count is the cap; the
  * special value [UNLIMITED] = 0 means "keep all notes" (default).
  *
- * Mirrors the simple shape of [com.lazydevs.wristotle.speech.nlu.settings.ConversationSettings]
- * but is count-based, not time-based — long-form notes don't age the
- * way ephemeral conversation entries do.
+ * Mirrors the simple shape of [ConversationSettings] but is count-based,
+ * not time-based — long-form notes don't age the way ephemeral
+ * conversation entries do.
+ *
+ * R3 batch 7 — lifted from :app. The Context-based SharedPreferences swap
+ * for [KeyValueStore]; production wires it to a
+ * `SharedPreferencesKeyValueStore` over [PREFS_NAME] so the persisted
+ * values survive the upgrade.
  */
-class NoteSettings(context: Context) : NoteSettingsView {
+class NoteSettings(private val store: KeyValueStore) : NoteSettingsView {
 
-    private val prefs = context.applicationContext
-        .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
-    private val _keepLast = MutableStateFlow(prefs.getInt(KEY_KEEP_LAST, UNLIMITED))
+    private val _keepLast = MutableStateFlow(store.getInt(KEY_KEEP_LAST, UNLIMITED))
     /** Current cap; [UNLIMITED] (=0) means no cap. */
     override val keepLast: StateFlow<Int> = _keepLast.asStateFlow()
 
     fun setKeepLast(value: Int) {
         val v = if (value < 0) 0 else value
-        prefs.edit { putInt(KEY_KEEP_LAST, v) }
+        store.putInt(KEY_KEEP_LAST, v)
         _keepLast.value = v
     }
 
@@ -57,16 +58,19 @@ class NoteSettings(context: Context) : NoteSettingsView {
     override val appendAudioMode: StateFlow<AppendAudioMode> = _appendAudioMode.asStateFlow()
 
     fun setAppendAudioMode(value: AppendAudioMode) {
-        prefs.edit { putString(KEY_APPEND_AUDIO_MODE, value.name) }
+        store.putString(KEY_APPEND_AUDIO_MODE, value.name)
         _appendAudioMode.value = value
     }
 
-    private fun loadAppendAudioMode(): AppendAudioMode = runCatching {
-        AppendAudioMode.valueOf(prefs.getString(KEY_APPEND_AUDIO_MODE, AppendAudioMode.MERGE.name)!!)
-    }.getOrDefault(AppendAudioMode.MERGE)
+    private fun loadAppendAudioMode(): AppendAudioMode {
+        val name = store.getString(KEY_APPEND_AUDIO_MODE, AppendAudioMode.MERGE.name)
+        return runCatching { enumValueOf<AppendAudioMode>(name) }
+            .getOrDefault(AppendAudioMode.MERGE)
+    }
 
     companion object {
-        private const val PREFS_NAME = "wristotle_notes"
+        /** SharedPreferences file name the Android-side store uses. */
+        const val PREFS_NAME = "wristotle_notes"
         private const val KEY_KEEP_LAST = "keep_last"
         private const val KEY_APPEND_AUDIO_MODE = "append_audio_mode"
 

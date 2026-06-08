@@ -11,10 +11,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.notes.AppendAudioMode
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.notes.NoteRepository
-import com.lazydevs.wristotle.notes.NoteSettings
+import com.lazydevs.wristotle.speech.nlu.settings.AppendAudioMode
+import com.lazydevs.wristotle.speech.nlu.settings.NoteSettings
 import com.lazydevs.wristotle.speech.Recognizers
 import com.lazydevs.wristotle.speech.audio.MicAudioSource
 import com.lazydevs.wristotle.speech.recognizer.Recognizer

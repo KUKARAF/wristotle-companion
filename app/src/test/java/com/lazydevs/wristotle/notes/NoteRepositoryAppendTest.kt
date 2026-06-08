@@ -3,6 +3,9 @@
 
 package com.lazydevs.wristotle.notes
 
+import com.lazydevs.wristotle.speech.nlu.settings.AppendAudioMode
+import com.lazydevs.wristotle.speech.nlu.settings.NoteSettings
+import com.lazydevs.wristotle.speech.nlu.settings.NoteSettingsView
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

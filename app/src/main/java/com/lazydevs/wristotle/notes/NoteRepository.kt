@@ -4,6 +4,9 @@
 package com.lazydevs.wristotle.notes
 
 import android.util.Log
+import com.lazydevs.wristotle.speech.nlu.settings.AppendAudioMode
+import com.lazydevs.wristotle.speech.nlu.settings.NoteSettings
+import com.lazydevs.wristotle.speech.nlu.settings.NoteSettingsView
 import kotlinx.coroutines.flow.Flow
 import java.io.File
 
