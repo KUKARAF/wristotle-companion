@@ -18,17 +18,17 @@ import com.lazydevs.wristotle.history.ConversationSettings
 import com.lazydevs.wristotle.media.ActiveMediaSession
 import com.lazydevs.wristotle.nlu.LearningCollector
 import com.lazydevs.wristotle.nlu.NluSettings
-import com.lazydevs.wristotle.nlu.slots.CalendarSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CalendarSlots
 import com.lazydevs.wristotle.speech.nlu.slots.CallSlots
 import com.lazydevs.wristotle.speech.nlu.slots.CancelSlots
-import com.lazydevs.wristotle.nlu.slots.CreateEventSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CreateEventSlots
 import com.lazydevs.wristotle.speech.nlu.slots.FindPhoneSlots
 import com.lazydevs.wristotle.nlu.slots.ListRemindersSlots
 import com.lazydevs.wristotle.speech.nlu.slots.MediaPlaySlots
 import com.lazydevs.wristotle.speech.nlu.slots.MediaSeekSlots
 import com.lazydevs.wristotle.speech.nlu.slots.MediaTargetSlots
 import com.lazydevs.wristotle.speech.nlu.slots.OpenAppSlots
-import com.lazydevs.wristotle.nlu.slots.ReminderSlots
+import com.lazydevs.wristotle.speech.nlu.slots.ReminderSlots
 import com.lazydevs.wristotle.nlu.slots.RescheduleSlots
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.settings.WatchSettingsRepository
@@ -492,6 +492,7 @@ class WristotleApplication : Application() {
             Intent.Call to CallSlots(),
             Intent.SendMessage to com.lazydevs.wristotle.nlu.slots.SendMessageSlots(contacts),
             Intent.Reminder to ReminderSlots(
+                timeParser = com.lazydevs.wristotle.handlers.PrettyTimeTimeParser,
                 defaultOffsetMinProvider = { reminderSettings.defaultOffsetMin.value },
             ),
             Intent.Cancel to CancelSlots(),
@@ -505,8 +506,8 @@ class WristotleApplication : Application() {
             Intent.MediaSeekForward to mediaSeekSlots,
             Intent.MediaSeekBackward to mediaSeekSlots,
             Intent.OpenApp to OpenAppSlots(),
-            Intent.Calendar to CalendarSlots(),
-            Intent.CreateEvent to CreateEventSlots(),
+            Intent.Calendar to CalendarSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
+            Intent.CreateEvent to CreateEventSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
             Intent.Note to com.lazydevs.wristotle.speech.nlu.slots.NoteSlots(),
             Intent.AppendNote to com.lazydevs.wristotle.speech.nlu.slots.AppendNoteSlots(),
             Intent.AddTask to com.lazydevs.wristotle.speech.nlu.slots.AddTaskSlots(),
@@ -516,8 +517,8 @@ class WristotleApplication : Application() {
             // verbs; the handlers differ only in what they DO with the matched task.
             Intent.CompleteTask to com.lazydevs.wristotle.speech.nlu.slots.CompleteTaskSlots(),
             Intent.DeleteTask to com.lazydevs.wristotle.speech.nlu.slots.CompleteTaskSlots(),
-            Intent.CancelAlarm to com.lazydevs.wristotle.nlu.slots.CancelAlarmSlots(),
-            Intent.SetAlarm to com.lazydevs.wristotle.nlu.slots.SetAlarmSlots(),
+            Intent.CancelAlarm to com.lazydevs.wristotle.speech.nlu.slots.CancelAlarmSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
+            Intent.SetAlarm to com.lazydevs.wristotle.speech.nlu.slots.SetAlarmSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
             Intent.SetTimer to com.lazydevs.wristotle.speech.nlu.slots.SetTimerSlots(),
             Intent.WorldTime to com.lazydevs.wristotle.speech.nlu.slots.WorldTimeSlots(),
             Intent.Calculate to com.lazydevs.wristotle.speech.nlu.slots.CalculateSlots(),

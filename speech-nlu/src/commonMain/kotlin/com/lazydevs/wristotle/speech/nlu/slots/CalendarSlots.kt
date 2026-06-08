@@ -1,26 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.nlu.slots
+package com.lazydevs.wristotle.speech.nlu.slots
 
-import com.lazydevs.wristotle.handlers.parseTime
+import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
-import com.lazydevs.wristotle.speech.nlu.slots.*
-import java.util.Date
+import kotlinx.datetime.Instant
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.Calendar]:
  *   - `count` — Int, how many upcoming events to list ("next 3 meetings").
  *               Absent → the handler defaults to 1 ("next meeting").
- *   - `date`  — [java.util.Date], set only when the query names a specific
+ *   - `date`  — [Instant], set only when the query names a specific
  *               day ("on May 25", "tomorrow", "next monday"). When present
  *               the handler lists that day's events; when absent it lists
  *               the next [count] upcoming events.
  *
  * Date is parsed only when a day token is present so PrettyTime can't
  * greedily turn a bare count ("next 3") into a date.
+ *
+ * R2 batch 4 — lifted from :app, takes the [TimeParser] interface
+ * via constructor rather than calling the JVM-only `parseTime` global.
  */
-class CalendarSlots : SlotExtractor {
+class CalendarSlots(
+    private val timeParser: TimeParser,
+) : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
@@ -29,7 +33,7 @@ class CalendarSlots : SlotExtractor {
         extractCount(lower)?.let { out[SlotKeys.Count] = it }
 
         if (DATE_HINT.containsMatchIn(lower)) {
-            parseTime(query)?.let { out[SlotKeys.Date] = it.date }
+            timeParser.parse(query)?.let { out[SlotKeys.Date] = it.instant }
         }
         return out
     }
@@ -57,4 +61,4 @@ class CalendarSlots : SlotExtractor {
 
 /** Type-safe slot reads for the Calendar handler. */
 fun Map<String, Any>.calendarCount(default: Int = 1): Int = (this[SlotKeys.Count] as? Int) ?: default
-fun Map<String, Any>.calendarDate(): Date? = this[SlotKeys.Date] as? Date
+fun Map<String, Any>.calendarDate(): Instant? = this[SlotKeys.Date] as? Instant

@@ -14,7 +14,7 @@ import org.junit.Test
 class CalendarSlotsTest {
 
     private fun extract(query: String): Map<String, Any> =
-        runBlocking { CalendarSlots().extract(query) }
+        runBlocking { CalendarSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser).extract(query) }
 
     // --- Count ----------------------------------------------------------
 

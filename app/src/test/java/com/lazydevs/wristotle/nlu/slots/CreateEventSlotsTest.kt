@@ -14,7 +14,7 @@ import org.junit.Test
 class CreateEventSlotsTest {
 
     private fun extract(query: String): Map<String, Any> =
-        runBlocking { CreateEventSlots().extract(query) }
+        runBlocking { CreateEventSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser).extract(query) }
 
     // --- Title (called / titled / about) --------------------------------
 

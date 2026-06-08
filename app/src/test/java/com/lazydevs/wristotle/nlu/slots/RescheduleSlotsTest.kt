@@ -19,7 +19,10 @@ class RescheduleSlotsTest {
     }
 
     private fun target(query: String) = slots(query)["target"] as String?
-    private fun time(query: String) = slots(query)["time"] as Date?
+    // R2 batch 4 — slot value type changed Date → Instant. Convert at the
+    // test boundary so the rest of this Date-using test body stays the same.
+    private fun time(query: String) =
+        (slots(query)["time"] as? kotlinx.datetime.Instant)?.let { Date(it.toEpochMilliseconds()) }
 
     // --- target extraction (time clause + verbs + fillers stripped) ---
 

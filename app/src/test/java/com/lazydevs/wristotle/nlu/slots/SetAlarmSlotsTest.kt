@@ -3,6 +3,8 @@
 
 package com.lazydevs.wristotle.nlu.slots
 
+import kotlinx.datetime.Instant
+
 import com.lazydevs.wristotle.speech.nlu.slots.*
 
 import kotlinx.coroutines.runBlocking
@@ -22,10 +24,13 @@ import java.util.Date
  */
 class SetAlarmSlotsTest {
 
-    private val slots = SetAlarmSlots()
+    private val slots = SetAlarmSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser)
 
+    // R2 batch 4 — slot value is now Instant (commonMain). Convert to Date
+    // at the test boundary so the existing Calendar-based assertions keep
+    // working without rewriting every test body.
     private fun extractDate(query: String): Date? = runBlocking {
-        slots.extract(query)[SlotKeys.Time] as? Date
+        (slots.extract(query)[SlotKeys.Time] as? Instant)?.let { Date(it.toEpochMilliseconds()) }
     }
 
     @Test fun `absolute 7am parses to 7 o'clock`() {

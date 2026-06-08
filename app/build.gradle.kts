@@ -275,6 +275,7 @@ dependencies {
     implementation(libs.pebblekit)
     implementation(libs.prettytime.nlp)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.datetime)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)

@@ -3,10 +3,10 @@
 
 package com.lazydevs.wristotle.handlers
 
-import com.lazydevs.wristotle.nlu.slots.eventAttendee
-import com.lazydevs.wristotle.nlu.slots.eventDurationMinutes
-import com.lazydevs.wristotle.nlu.slots.eventTime
-import com.lazydevs.wristotle.nlu.slots.eventTitle
+import com.lazydevs.wristotle.speech.nlu.slots.eventAttendee
+import com.lazydevs.wristotle.speech.nlu.slots.eventDurationMinutes
+import com.lazydevs.wristotle.speech.nlu.slots.eventTime
+import com.lazydevs.wristotle.speech.nlu.slots.eventTitle
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -42,7 +42,9 @@ class CreateEventHandler(private val calendar: CalendarRepository) : ActionHandl
         )
         val duration = result.slots.eventDurationMinutes()
 
-        return when (val r = calendar.createEvent(title, start.time, duration)) {
+        // R2 batch 4: start is now Instant — convert to epoch millis for the
+        // Android calendar repository.
+        return when (val r = calendar.createEvent(title, start.toEpochMilliseconds(), duration)) {
             is CalendarRepository.CreateResult.Success ->
                 "Created:\n${r.title}\n${EventTimeFormat.whenLabel(r.begin)}"
             CalendarRepository.CreateResult.NoCalendar ->

@@ -16,7 +16,7 @@ import com.lazydevs.wristotle.speech.nlu.slots.*
  */
 class ListRemindersSlots : SlotExtractor {
     override suspend fun extract(query: String): Map<String, Any> {
-        val time = parseTime(query)?.date ?: return emptyMap()
+        val time = parseTime(query)?.instant ?: return emptyMap()
         return mapOf(SlotKeys.Time to time)
     }
 }

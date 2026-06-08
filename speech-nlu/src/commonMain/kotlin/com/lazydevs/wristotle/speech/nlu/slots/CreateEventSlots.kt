@@ -1,37 +1,35 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.nlu.slots
+package com.lazydevs.wristotle.speech.nlu.slots
 
-import com.lazydevs.wristotle.handlers.parseTime
+import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
-import com.lazydevs.wristotle.speech.nlu.slots.*
-import java.util.Date
+import kotlinx.datetime.Instant
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.CreateEvent]:
- *   - `time`            — [Date] start time, parsed via the shared `parseTime`
- *                         (PrettyTime + word-form numbers). Required by the
- *                         handler; absent → it reports it couldn't parse a time.
+ *   - `time`            — [Instant] start time, parsed via [TimeParser]
+ *                         (Android impl: PrettyTime + word-form numbers).
+ *                         Required; absent → handler reports it couldn't
+ *                         parse a time.
  *   - `title`           — explicit event title from "called/titled/about/for X".
- *                         Absent → the handler defaults to "Meeting" (+ attendee).
+ *                         Absent → handler defaults to "Meeting" (+ attendee).
  *   - `attendee`        — the "with X" participant, used to build a default
  *                         title ("Meeting with Alex") when no explicit title.
  *   - `durationMinutes` — Int, parsed from "for one hour" / "30 minute" /
- *                         "half hour". Absent → the handler defaults to 60.
+ *                         "half hour". Absent → handler defaults to 60.
  *
- * Title/attendee are read off the raw transcript (both are keyword-anchored).
- * A trailing time clause is stripped from the captured title so the spoken
- * clock time doesn't bleed into the name whether the title leads or trails
- * the time ("…called standup at 3pm" and "…at 3pm called standup" both →
- * "Standup"); the attendee pattern already stops before a time token.
+ * R2 batch 4 — lifted from :app; [TimeParser] injected via constructor.
  */
-class CreateEventSlots : SlotExtractor {
+class CreateEventSlots(
+    private val timeParser: TimeParser,
+) : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
 
-        parseTime(query)?.let { out[SlotKeys.Time] = it.date }
+        timeParser.parse(query)?.let { out[SlotKeys.Time] = it.instant }
 
         // Title/attendee are read off the raw query — both regexes are
         // keyword-anchored (called/titled/about, with), so a time phrase
@@ -87,7 +85,7 @@ class CreateEventSlots : SlotExtractor {
 }
 
 /** Type-safe slot reads for the CreateEvent handler. */
-fun Map<String, Any>.eventTime(): Date? = this[SlotKeys.Time] as? Date
+fun Map<String, Any>.eventTime(): Instant? = this[SlotKeys.Time] as? Instant
 fun Map<String, Any>.eventTitle(): String? = this[SlotKeys.Title] as? String
 fun Map<String, Any>.eventAttendee(): String? = this[SlotKeys.Attendee] as? String
 fun Map<String, Any>.eventDurationMinutes(default: Int = 60): Int =

@@ -3,8 +3,8 @@
 
 package com.lazydevs.wristotle.handlers
 
-import com.lazydevs.wristotle.nlu.slots.calendarCount
-import com.lazydevs.wristotle.nlu.slots.calendarDate
+import com.lazydevs.wristotle.speech.nlu.slots.calendarCount
+import com.lazydevs.wristotle.speech.nlu.slots.calendarDate
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -30,8 +30,12 @@ class CalendarHandler(private val calendar: CalendarRepository) : ActionHandler 
         if (!calendar.hasPermission()) {
             return "Calendar access not granted.\nEnable it in the Wristotle app."
         }
-        val date = result.slots.calendarDate()
-        return if (date != null) describeDay(date) else describeUpcoming(result.slots.calendarCount())
+        // R2 batch 4: calendarDate() now returns Instant (commonMain); convert
+        // to Date at this boundary so the rest of this Android-bound handler
+        // (EventTimeFormat etc.) doesn't have to change.
+        val instant = result.slots.calendarDate()
+        return if (instant != null) describeDay(Date(instant.toEpochMilliseconds()))
+        else describeUpcoming(result.slots.calendarCount())
     }
 
     private suspend fun describeDay(date: Date): String {
