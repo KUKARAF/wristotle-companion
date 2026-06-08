@@ -481,7 +481,7 @@ private fun SettingsCategoryContent(
                 val notifLogEnabled by app.notificationLogSettings.enabled.collectAsState()
                 val notifLogCount by remember {
                     app.notificationLogDb.notificationPostDao()
-                        .observeCountSince(com.lazydevs.wristotle.briefing.TodayRange.now().startMs)
+                        .observeCountSince(com.lazydevs.wristotle.speech.nlu.briefing.TodayRange.now().startMs)
                 }.collectAsState(initial = 0)
                 MorningBriefCard(
                     logEnabled = notifLogEnabled,

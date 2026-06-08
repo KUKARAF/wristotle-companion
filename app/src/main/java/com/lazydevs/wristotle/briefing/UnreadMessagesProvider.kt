@@ -7,6 +7,8 @@ import android.service.notification.StatusBarNotification
 import com.lazydevs.wristotle.media.MediaSessionsListener
 import com.lazydevs.wristotle.notifications.NotificationFilter
 import com.lazydevs.wristotle.notifications.NotificationPostDao
+import com.lazydevs.wristotle.speech.nlu.briefing.MessagingApps
+import com.lazydevs.wristotle.speech.nlu.briefing.TodayRange
 
 /**
  * Adapter over [MediaSessionsListener]'s snapshotActiveNotifications.

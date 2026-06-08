@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.briefing
+package com.lazydevs.wristotle.speech.nlu.briefing
 
 /**
  * Substring-token → display-label lookup for messaging apps. Used by
@@ -25,7 +25,7 @@ package com.lazydevs.wristotle.briefing
  * [UnreadMessagesProvider] — the brief still surfaces the count so
  * the user has a sense of how full their notification tray is.
  */
-internal object MessagingApps {
+object MessagingApps {
 
     /**
      * Substring tokens. Each (token, label) pair tells the brief

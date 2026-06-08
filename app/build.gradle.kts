@@ -297,6 +297,9 @@ dependencies {
     // codec tests exercise the real JSONObject behaviour (vs. the no-op stubs
     // that `unitTests.isReturnDefaultValues = true` would otherwise hand back).
     testImplementation(libs.org.json)
+    // TodayRangeTest (and future tests of code lifted to :speech-nlu commonMain)
+    // construct kotlinx-datetime instants for fixture inputs.
+    testImplementation(libs.kotlinx.datetime)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -13,7 +13,7 @@ import androidx.room.PrimaryKey
  *
  *  - [packageName] is the source app's package id, used to match against
  *    the messaging-app substring registry in
- *    [com.lazydevs.wristotle.briefing.MessagingApps].
+ *    [com.lazydevs.wristotle.speech.nlu.briefing.MessagingApps].
  *  - [conversationKey] dedupes "8 SMS messages across 2 conversations"
  *    down to 2 rows per brief. Computed by
  *    [NotificationFilter.conversationKey] at insert time.

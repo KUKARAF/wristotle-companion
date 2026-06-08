@@ -69,6 +69,10 @@ kotlin {
             // kotlinx-serialization-json for the lifted MCP layer
             // (JsonObject / JsonElement). Multiplatform; safe on iOS.
             implementation(libs.kotlinx.serialization.json)
+            // kotlinx-datetime — replaces java.util.{Date, Calendar, TimeZone}
+            // + java.text.SimpleDateFormat for the lifted briefing pieces
+            // (TodayRange today, MorningBriefRenderer + Date-using slots next).
+            implementation(libs.kotlinx.datetime)
         }
         androidMain.dependencies {
             implementation(project(":speech"))

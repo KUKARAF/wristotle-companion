@@ -23,6 +23,11 @@ orgJson = "20231013"
 mcp = "0.8.3"
 ktor = "3.4.0"
 kotlinxSerialization = "1.7.3"
+# kotlinx-datetime — multiplatform replacement for java.util.{Date, Calendar,
+# TimeZone} + java.text.SimpleDateFormat that's portable to Kotlin/Native.
+# First consumer is TodayRange (R2 batch 3); follow-up batches lift the
+# Date-using slot files + MorningBriefRenderer.
+kotlinxDatetime = "0.6.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -64,6 +69,7 @@ ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-conte
 ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

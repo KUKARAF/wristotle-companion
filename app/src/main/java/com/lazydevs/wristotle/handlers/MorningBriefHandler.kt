@@ -7,13 +7,14 @@ import android.content.Context
 import android.util.Log
 import com.lazydevs.wristotle.alarms.AlarmRepository
 import com.lazydevs.wristotle.briefing.MorningBriefRenderer
-import com.lazydevs.wristotle.briefing.TodayRange
+import com.lazydevs.wristotle.speech.nlu.briefing.TodayRange
 import com.lazydevs.wristotle.briefing.UnreadMessagesProvider
 import com.lazydevs.wristotle.notes.NoteRepository
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.tasks.TaskRepository
+import com.lazydevs.wristotle.speech.nlu.briefing.MessagingApps
 
 private const val TAG = "MorningBriefHandler"
 
