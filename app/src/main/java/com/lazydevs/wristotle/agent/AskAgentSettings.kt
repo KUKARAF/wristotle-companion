@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import com.lazydevs.wristotle.speech.nlu.agent.*
 
 /**
  * Companion-local LLM settings. Per-provider keys are stored

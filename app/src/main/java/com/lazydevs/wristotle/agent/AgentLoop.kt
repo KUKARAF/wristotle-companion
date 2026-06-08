@@ -10,6 +10,7 @@ import com.lazydevs.wristotle.mcp.McpSession
 import com.lazydevs.wristotle.speech.nlu.mcp.ToolCallResult
 import com.lazydevs.wristotle.speech.nlu.mcp.McpTool
 import com.lazydevs.wristotle.speech.nlu.mcp.McpIntegration
+import com.lazydevs.wristotle.speech.nlu.agent.*
 
 /**
  * Drives the LLM ↔ MCP-tools loop for one AskAgent voice query.

@@ -5,7 +5,7 @@ package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.agent.AgentLoop
 import com.lazydevs.wristotle.agent.AskAgentSettings
-import com.lazydevs.wristotle.agent.LlmResult
+import com.lazydevs.wristotle.speech.nlu.agent.LlmResult
 import com.lazydevs.wristotle.mcp.McpServerRepository
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
@@ -105,7 +105,7 @@ class AskAgentHandler(
      *  form (`integration.tool`) for the watch's hint-bar status line.
      *  Falls back to the raw wireName when the prefix isn't present. */
     private fun friendly(wireName: String): String =
-        com.lazydevs.wristotle.agent.LlmTool.parseWireName(wireName)
+        com.lazydevs.wristotle.speech.nlu.agent.LlmTool.parseWireName(wireName)
             ?.let { (integration, tool) -> "$integration.$tool" }
             ?: wireName
 

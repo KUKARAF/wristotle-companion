@@ -7,7 +7,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.agent.LlmProvider
+import com.lazydevs.wristotle.speech.nlu.agent.LlmProvider
 import com.lazydevs.wristotle.handlers.PinStore
 import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.handlers.TempUnit

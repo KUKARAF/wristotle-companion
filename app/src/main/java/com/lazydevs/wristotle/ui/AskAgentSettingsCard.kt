@@ -27,7 +27,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.agent.AskAgentSettings
-import com.lazydevs.wristotle.agent.LlmProvider
+import com.lazydevs.wristotle.speech.nlu.agent.LlmProvider
 import com.lazydevs.wristotle.ui.components.PasswordField
 
 /**

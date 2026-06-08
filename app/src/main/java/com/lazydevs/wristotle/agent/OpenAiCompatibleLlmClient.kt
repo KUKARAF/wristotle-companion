@@ -15,6 +15,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import org.json.JSONArray
 import org.json.JSONObject
+import com.lazydevs.wristotle.speech.nlu.agent.*
 
 /**
  * OpenAI Chat Completions wire-shape client. Same protocol is spoken
