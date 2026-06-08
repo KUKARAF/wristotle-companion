@@ -1,0 +1,27 @@
+Morning brief catches dismissed
+notifications.
+
+The brief's "Messages" line used to read
+only your current tray — anything you
+swiped before brief time was gone.
+
+New opt-in toggle in Settings → 🔔
+Notifications → Include dismissed
+notifications. When on, Wristotle stores
+app id + conversation key + timestamp
+for every notification posted today, so
+the brief still surfaces what you'd
+already cleared. Body, title, and sender
+are never read or stored. Auto-prunes
+after 7 days; Clear log wipes it on
+demand.
+
+The brief also shows raw message count
+alongside the conversation count when
+they diverge: "Messages: 1 conversation
+(5 msgs) from WhatsApp" for chatty
+threads.
+
+First release under AGPLv3 — v1.5.0
+and earlier remain MIT. See the README
+for the per-commit cutoff.
