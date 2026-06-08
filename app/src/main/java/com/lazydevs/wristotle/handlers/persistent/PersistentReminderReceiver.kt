@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.handlers.PinStore
 import com.lazydevs.wristotle.handlers.ReminderRecord
+import com.lazydevs.wristotle.speech.nlu.notifier.PersistentReminderNagFormatter
 
 private const val TAG = "PersistentReminder"
 
@@ -117,7 +118,7 @@ class PersistentReminderReceiver : BroadcastReceiver() {
         val notification = NotificationCompat.Builder(context, PersistentReminderScheduler.CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_round)
             .setContentTitle(record.title)
-            .setContentText(buildBody(record))
+            .setContentText(PersistentReminderNagFormatter.body(record.attemptsRemaining))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             // Auto-cancel only on tap (opens the app). The Stop action
@@ -138,18 +139,6 @@ class PersistentReminderReceiver : BroadcastReceiver() {
 
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.notify(notifId, notification)
-    }
-
-    private fun buildBody(record: ReminderRecord): String {
-        // attemptsRemaining at this point INCLUDES the current fire — we
-        // decrement after posting. So a "remaining = 5" record means "this
-        // is fire 1 of 5"; copy below reads as "(4 more nags after this)".
-        val afterThis = (record.attemptsRemaining - 1).coerceAtLeast(0)
-        return when (afterThis) {
-            0 -> "Persistent reminder · last nag"
-            1 -> "Persistent reminder · 1 more nag after this"
-            else -> "Persistent reminder · $afterThis more nags after this"
-        }
     }
 
     private fun armNext(context: Context, pinId: String, triggerAtMs: Long) {
