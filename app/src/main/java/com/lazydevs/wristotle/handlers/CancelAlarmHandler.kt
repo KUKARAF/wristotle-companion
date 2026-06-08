@@ -3,8 +3,8 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.alarms.AlarmDestination
 import com.lazydevs.wristotle.speech.nlu.transport.sendAlarmCancel
-import com.lazydevs.wristotle.alarms.AlarmDestination
 import com.lazydevs.wristotle.alarms.AlarmDispatcher
 import com.lazydevs.wristotle.alarms.AlarmEntity
 import com.lazydevs.wristotle.alarms.AlarmRepository

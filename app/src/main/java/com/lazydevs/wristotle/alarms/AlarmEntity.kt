@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.alarms
 
+import com.lazydevs.wristotle.speech.nlu.alarms.AlarmDestination
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 

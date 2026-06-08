@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle
 
+import com.lazydevs.wristotle.speech.nlu.settings.AlarmSettings
 import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
@@ -146,8 +147,13 @@ class WristotleApplication : Application() {
     val alarmDispatcher: com.lazydevs.wristotle.alarms.AlarmDispatcher by lazy {
         com.lazydevs.wristotle.alarms.AlarmDispatcher(this, transport, alarmRepository)
     }
-    val alarmSettings: com.lazydevs.wristotle.alarms.AlarmSettings by lazy {
-        com.lazydevs.wristotle.alarms.AlarmSettings(this)
+    val alarmSettings: AlarmSettings by lazy {
+        AlarmSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                AlarmSettings.PREFS_NAME,
+            ),
+        )
     }
 
     /** Persistent-reminder scheduler — owns AlarmManager handles + the

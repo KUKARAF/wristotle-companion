@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.alarms
 
+import com.lazydevs.wristotle.speech.nlu.alarms.AlarmDestination
 import com.lazydevs.wristotle.speech.nlu.transport.sendAlarmCancel
 import com.lazydevs.wristotle.speech.nlu.transport.sendAlarmSet
 import android.content.Context

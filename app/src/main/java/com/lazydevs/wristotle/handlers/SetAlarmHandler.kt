@@ -3,11 +3,11 @@
 
 package com.lazydevs.wristotle.handlers
 
-import com.lazydevs.wristotle.alarms.AlarmDestination
+import com.lazydevs.wristotle.speech.nlu.alarms.AlarmDestination
+import com.lazydevs.wristotle.speech.nlu.settings.AlarmSettings
 import com.lazydevs.wristotle.alarms.AlarmDispatcher
 import com.lazydevs.wristotle.alarms.AlarmEntity
 import com.lazydevs.wristotle.alarms.AlarmRepository
-import com.lazydevs.wristotle.alarms.AlarmSettings
 import com.lazydevs.wristotle.alarms.DispatchResult
 import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys

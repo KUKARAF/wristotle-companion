@@ -3,6 +3,8 @@
 
 package com.lazydevs.wristotle.ui
 
+import com.lazydevs.wristotle.speech.nlu.alarms.AlarmDestination
+import com.lazydevs.wristotle.speech.nlu.settings.AlarmSettings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,11 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lazydevs.wristotle.R
-import com.lazydevs.wristotle.alarms.AlarmDestination
 import com.lazydevs.wristotle.alarms.AlarmDispatcher
 import com.lazydevs.wristotle.alarms.AlarmEntity
 import com.lazydevs.wristotle.alarms.AlarmRepository
-import com.lazydevs.wristotle.alarms.AlarmSettings
 import com.lazydevs.wristotle.alarms.DispatchResult
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
