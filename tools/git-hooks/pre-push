@@ -28,6 +28,53 @@ url="$2"
 HELP_CONTENT="app/src/main/java/com/lazydevs/wristotle/help/HelpTimeline.kt"
 FEATURES_JSON="data/features.json"
 
+# wristotle-core KMP guardrail: any push that touches commonMain must
+# compile cleanly for the iOS Sim target. Catches JVM-only imports that
+# slipped through (e.g. `@kotlin.jvm.Volatile`, `java.util.Date`,
+# `org.json.*`, `localizedMessage`) before they hit the remote.
+#
+# Buffer the ref list from stdin first so the loop below can still run
+# its tag-validation pass on the same input — git only feeds stdin once.
+COMMON_MAIN_DIR='wristotle-core/src/commonMain'
+refs_input=$(cat)
+common_main_touched=0
+while read local_ref local_sha remote_ref remote_sha; do
+    case "$remote_ref" in
+        refs/heads/*)
+            if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+                base=$(git merge-base "$local_sha" origin/main 2>/dev/null || echo "")
+            else
+                base="$remote_sha"
+            fi
+            if [ -n "$base" ] && git diff --name-only "$base" "$local_sha" -- "$COMMON_MAIN_DIR" 2>/dev/null | grep -q .; then
+                common_main_touched=1
+            fi
+            ;;
+    esac
+done <<EOF
+$refs_input
+EOF
+
+if [ "$common_main_touched" = "1" ]; then
+    echo "→ pre-push: commonMain changed, verifying iOS Sim compile…" >&2
+    if ! ./gradlew :wristotle-core:compileKotlinIosSimulatorArm64 -q >&2; then
+        cat >&2 <<EOF
+
+✗ pre-push: :wristotle-core:compileKotlinIosSimulatorArm64 failed.
+  Common cause: a JVM-only import slipped into commonMain. See
+  CLAUDE.md § "Adding new features — where does the code go?" for the
+  substitution table (memory: feedback_kn_jvm_only_lift_traps).
+
+  Fix the iOS Sim compile, then push again.
+
+  To bypass (e.g. iOS toolchain unavailable on this host):
+    git push --no-verify
+
+EOF
+        exit 1
+    fi
+fi
+
 while read local_ref local_sha remote_ref remote_sha; do
     case "$remote_ref" in
         refs/tags/*)
@@ -135,6 +182,8 @@ EOF
             esac
             ;;
     esac
-done
+done <<EOF
+$refs_input
+EOF
 
 exit 0
