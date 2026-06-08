@@ -41,51 +41,88 @@ class UnreadMessagesProvider(
     private val postsDao: NotificationPostDao? = null,
 ) {
 
-    data class Section(val label: String, val count: Int)
+    /**
+     * Per-app messaging count. `conversations` is dedup'd by
+     * `conversationKey` so two SMS from the same friend count as 1
+     * conversation; `messages` is the raw count (no dedupe) so the brief
+     * can also surface volume (`"2 conversations (17 msgs)"`) when
+     * they diverge.
+     */
+    data class Section(val label: String, val conversations: Int, val messages: Int)
 
     data class Snapshot(
-        /** Messaging-app counts, ordered count-descending then label-ascending. */
+        /** Messaging-app counts, ordered conversations-descending then label-ascending. */
         val messaging: List<Section>,
-        /** Notifications that didn't match any messaging token. */
+        /** Notifications that didn't match any messaging token; dedup'd
+         *  by conversation key (the user can't act on these so the raw
+         *  count isn't useful here). */
         val otherCount: Int,
     ) {
-        val totalCount: Int get() = messaging.sumOf { it.count } + otherCount
+        val totalConversations: Int get() = messaging.sumOf { it.conversations } + otherCount
+        val totalMessages: Int get() = messaging.sumOf { it.messages } + otherCount
         val isEmpty: Boolean get() = messaging.isEmpty() && otherCount == 0
     }
 
     /** Empty Snapshot when notification access isn't granted, the
      *  listener service isn't bound, or every active notification
      *  was filtered out. */
-    fun snapshot(): Snapshot {
-        val active = MediaSessionsListener.snapshotActiveNotifications()
-            ?: return Snapshot(emptyList(), 0)
-
-        val rows = active.mapNotNull { sbn ->
-            if (!sbn.isActionable()) return@mapNotNull null
-            Row(sbn.packageName, sbn.conversationKey())
-        }
-        return aggregate(rows)
-    }
+    fun snapshot(): Snapshot = aggregate(collectSnapshotRows())
 
     /**
      * Phase B query path — reads posts in the half-open [today.startMs,
      * nowMs] range from the persisted log and buckets them the same way
      * [snapshot] buckets active notifications. Returns an empty Snapshot
-     * when no DAO was injected (caller forgot to wire it) so callers can
-     * fall back to [snapshot] cleanly.
+     * when no DAO was injected.
      *
      * `nowMs + 1` is used as the upper bound so a notification posted
      * during this exact millisecond still lands in the result.
      */
     suspend fun todayPosts(nowMs: Long = System.currentTimeMillis()): Snapshot {
-        val dao = postsDao ?: return Snapshot(emptyList(), 0)
-        val today = TodayRange.now(nowMs)
-        val posts = dao.postsBetween(
-            fromEpochMs = today.startMs,
-            untilEpochMs = nowMs + 1,
-        )
-        val rows = posts.map { Row(it.packageName, it.conversationKey) }
+        val rows = collectTodayPostRows(nowMs) ?: return Snapshot(emptyList(), 0)
         return aggregate(rows)
+    }
+
+    /**
+     * Union of the snapshot rows + today's persisted-log rows,
+     * deduped by conversation key and aggregated by [aggregate]. This is
+     * the path the handler runs when the user has opted into the log:
+     *
+     *  - Notifications currently sitting in the tray (snapshot rows)
+     *    AND notifications posted earlier today that the user has since
+     *    dismissed (log rows) both land in the count.
+     *  - Same conversation appearing in both sets is counted once.
+     *
+     * Solves the "I just turned the log on, my brief shrunk" case:
+     * snapshot's tray contents stay in the answer until the log catches
+     * up tomorrow.
+     */
+    suspend fun snapshotPlusTodayPosts(nowMs: Long = System.currentTimeMillis()): Snapshot {
+        val snapshotRows = collectSnapshotRows()
+        val logRows = collectTodayPostRows(nowMs) ?: emptyList()
+        return aggregate(snapshotRows + logRows)
+    }
+
+    /** Pure shape-conversion from active notifications → Rows. Empty if
+     *  the listener isn't bound; the [Row] list is the natural empty
+     *  return rather than null so callers can `+` it freely. */
+    private fun collectSnapshotRows(): List<Row> {
+        val active = MediaSessionsListener.snapshotActiveNotifications()
+            ?: return emptyList()
+        return active.mapNotNull { sbn ->
+            if (!sbn.isActionable()) return@mapNotNull null
+            Row(sbn.packageName, sbn.conversationKey())
+        }
+    }
+
+    /** DAO read + map. Null when no DAO was injected (signals to callers
+     *  that the log path isn't wired, so they can pick the snapshot-only
+     *  fallback). */
+    private suspend fun collectTodayPostRows(nowMs: Long): List<Row>? {
+        val dao = postsDao ?: return null
+        val today = TodayRange.now(nowMs)
+        return dao
+            .postsBetween(fromEpochMs = today.startMs, untilEpochMs = nowMs + 1)
+            .map { Row(it.packageName, it.conversationKey) }
     }
 
     /** Routes through the pure [NotificationFilter] so the listener
@@ -112,26 +149,31 @@ class UnreadMessagesProvider(
     companion object {
 
         /**
-         * Pure: dedupe by conversationKey, partition by whether the
-         * package matches a [MessagingApps] token, group the matched
-         * side by label (count-desc then label-asc), and return the
-         * matching [Snapshot]. No I/O, no Android imports — fully
-         * unit-testable. Exposed `internal` so the matching test class
-         * can exercise it directly.
+         * Pure: partition by whether the package matches a [MessagingApps]
+         * token; for each matched app, count distinct conversations AND
+         * total messages (no dedupe). Sort sections conversations-desc
+         * then label-asc. Unmatched ("other") notifications are dedup'd
+         * by conversation key — the raw count doesn't help the user.
+         * No I/O, no Android imports — fully unit-testable.
          */
         internal fun aggregate(rows: List<Row>): Snapshot {
-            val deduped = rows.distinctBy { it.conversationKey }
-            val (messaging, other) = deduped.partition {
+            val (messaging, other) = rows.partition {
                 MessagingApps.labelOf(it.packageName) != null
             }
             val sections = messaging
-                .groupingBy { MessagingApps.labelOf(it.packageName)!! }
-                .eachCount()
-                .map { (label, count) -> Section(label, count) }
+                .groupBy { MessagingApps.labelOf(it.packageName)!! }
+                .map { (label, group) ->
+                    Section(
+                        label = label,
+                        conversations = group.distinctBy { it.conversationKey }.size,
+                        messages = group.size,
+                    )
+                }
                 .sortedWith(
-                    compareByDescending<Section> { it.count }.thenBy { it.label },
+                    compareByDescending<Section> { it.conversations }.thenBy { it.label },
                 )
-            return Snapshot(messaging = sections, otherCount = other.size)
+            val otherDedup = other.distinctBy { it.conversationKey }.size
+            return Snapshot(messaging = sections, otherCount = otherDedup)
         }
     }
 }

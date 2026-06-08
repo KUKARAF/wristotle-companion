@@ -195,6 +195,7 @@
     <string name="settings_section_diagnostics">Diagnostics</string>
     <string name="settings_section_notes">Notes</string>
     <string name="settings_section_reminders">Alarms &amp; Reminders</string>
+    <string name="settings_section_notifications">Notifications</string>
     <string name="settings_section_setup">Setup</string>
 
     <!-- Settings → 🌟 Setup card. Persistent home for recommended setup

@@ -77,6 +77,7 @@ enum class SettingsCategory(@param:StringRes val labelRes: Int, val emoji: Strin
     Conversation(R.string.settings_section_conversation, "💬"),
     Notes(R.string.settings_section_notes, "📝"),
     Reminders(R.string.settings_section_reminders, "⏰"),
+    Notifications(R.string.settings_section_notifications, "🔔"),
     Weather(R.string.settings_section_weather, "☁️"),
     Models(R.string.settings_section_models, "🧠"),
     Learning(R.string.settings_section_learning, "🎓"),
@@ -458,11 +459,6 @@ private fun SettingsCategoryContent(
                 val reminderDefaultMinutes by reminderSettings.defaultOffsetMin.collectAsState()
                 val reminderIntervalMin by reminderSettings.defaultIntervalMin.collectAsState()
                 val reminderMaxAttempts by reminderSettings.defaultMaxAttempts.collectAsState()
-                val notifLogEnabled by app.notificationLogSettings.enabled.collectAsState()
-                val notifLogCount by remember {
-                    app.notificationLogDb.notificationPostDao()
-                        .observeCountSince(com.lazydevs.wristotle.briefing.TodayRange.now().startMs)
-                }.collectAsState(initial = 0)
                 AlarmsCard(
                     repository = app.alarmRepository,
                     dispatcher = app.alarmDispatcher,
@@ -479,6 +475,14 @@ private fun SettingsCategoryContent(
                     maxAttemptsOptions = ReminderSettings.ALLOWED_MAX_ATTEMPTS,
                     onSelectMaxAttempts = reminderSettings::setDefaultMaxAttempts,
                 )
+            }
+
+            SettingsCategory.Notifications -> {
+                val notifLogEnabled by app.notificationLogSettings.enabled.collectAsState()
+                val notifLogCount by remember {
+                    app.notificationLogDb.notificationPostDao()
+                        .observeCountSince(com.lazydevs.wristotle.briefing.TodayRange.now().startMs)
+                }.collectAsState(initial = 0)
                 MorningBriefCard(
                     logEnabled = notifLogEnabled,
                     logCount = notifLogCount,

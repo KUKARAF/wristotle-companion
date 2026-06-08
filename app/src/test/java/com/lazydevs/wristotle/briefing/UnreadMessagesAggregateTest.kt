@@ -13,29 +13,38 @@ private fun aggregate(rows: List<Row>): UnreadMessagesProvider.Snapshot =
 
 /**
  * Pure tests for [UnreadMessagesProvider.aggregate] — the shared
- * partition/dedup/sort logic that both `snapshot()` and `todayPosts()`
- * funnel into. Covers the regressions that surfaced during v1.4.0
- * Morning Brief development plus a new dedup case for the persisted-log
- * path where the same conversation can post multiple times in a day.
+ * partition / per-app counting / sort logic that all three brief paths
+ * (snapshot / todayPosts / snapshotPlusTodayPosts) funnel into.
+ *
+ * Each messaging Section now carries TWO numbers: `conversations`
+ * (dedup'd by conversation key) and `messages` (raw). The brief
+ * renderer surfaces both when they diverge (one chatty thread); the
+ * aggregator just has to compute them faithfully.
  */
 class UnreadMessagesAggregateTest {
 
     @Test fun emptyRowsProducesEmptySnapshot() {
         val s = aggregate(emptyList())
         assertTrue(s.isEmpty)
-        assertEquals(0, s.totalCount)
+        assertEquals(0, s.totalConversations)
+        assertEquals(0, s.totalMessages)
     }
 
-    @Test fun groupsMessagingByLabelCountDescThenLabelAsc() {
+    @Test fun groupsMessagingByLabelConvDescThenLabelAsc() {
         val s = aggregate(listOf(
             Row("com.whatsapp", "com.whatsapp/sc/u1"),
             Row("com.whatsapp", "com.whatsapp/sc/u2"),
             Row("org.thoughtcrime.securesms", "org.thoughtcrime.securesms/sc/u1"),
             Row("com.android.messaging", "com.android.messaging/ch/t1"),
         ))
+        // No duplicate keys — conversations and messages both = row count.
         assertEquals(
-            listOf("WhatsApp" to 2, "Messages" to 1, "Signal" to 1),
-            s.messaging.map { it.label to it.count },
+            listOf(
+                Triple("WhatsApp", 2, 2),
+                Triple("Messages", 1, 1),
+                Triple("Signal", 1, 1),
+            ),
+            s.messaging.map { Triple(it.label, it.conversations, it.messages) },
         )
         assertEquals(0, s.otherCount)
     }
@@ -49,27 +58,32 @@ class UnreadMessagesAggregateTest {
         assertEquals(2, s.otherCount)
     }
 
-    @Test fun dedupesByConversationKey() {
+    @Test fun dedupesConversationsButCountsMessagesRaw() {
         // Persisted-log path posts a row per incoming SMS within one
-        // thread; the aggregate must collapse them via the shared
-        // conversation key so "8 SMS in 2 threads" reads as 2 not 8.
+        // thread. The aggregator should report:
+        //   - conversations = 2 (only 2 distinct threads)
+        //   - messages      = 4 (raw count)
+        // The renderer then decides whether to surface both numbers.
         val s = aggregate(listOf(
             Row("com.android.messaging", "com.android.messaging/ch/thread-1"),
             Row("com.android.messaging", "com.android.messaging/ch/thread-1"),
             Row("com.android.messaging", "com.android.messaging/ch/thread-1"),
             Row("com.android.messaging", "com.android.messaging/ch/thread-2"),
         ))
-        assertEquals(listOf("Messages" to 2), s.messaging.map { it.label to it.count })
+        val section = s.messaging.single()
+        assertEquals("Messages", section.label)
+        assertEquals(2, section.conversations)
+        assertEquals(4, section.messages)
     }
 
     @Test fun samePackageMultipleConversationsCountSeparately() {
-        // Sanity: two different conversation keys in the same app should
-        // count as two, not be collapsed by package.
         val s = aggregate(listOf(
             Row("com.whatsapp", "com.whatsapp/sc/alice"),
             Row("com.whatsapp", "com.whatsapp/sc/bob"),
         ))
-        assertEquals(listOf("WhatsApp" to 2), s.messaging.map { it.label to it.count })
+        val section = s.messaging.single()
+        assertEquals(2, section.conversations)
+        assertEquals(2, section.messages)
     }
 
     @Test fun mixedMessagingAndOtherAreSegregated() {
@@ -80,23 +94,36 @@ class UnreadMessagesAggregateTest {
             Row("com.another.weird", "com.another.weird/id/2"),
         ))
         assertEquals(
-            listOf("Messages" to 1, "WhatsApp" to 1),
-            s.messaging.map { it.label to it.count },
+            listOf("Messages", "WhatsApp"),
+            s.messaging.map { it.label },
         )
         assertEquals(2, s.otherCount)
     }
 
-    @Test fun totalCountIncludesMessagingPlusOther() {
+    @Test fun totalsIncludeMessagingPlusOther() {
+        // Two messaging conversations (1 raw msg each) + 1 other →
+        // totalConversations = 2 + 1 = 3, totalMessages = 2 + 1 = 3.
         val s = aggregate(listOf(
             Row("com.whatsapp", "com.whatsapp/sc/u1"),
+            Row("com.android.messaging", "com.android.messaging/ch/t1"),
             Row("com.weird.app", "com.weird.app/id/1"),
         ))
-        assertEquals(2, s.totalCount)
+        assertEquals(3, s.totalConversations)
+        assertEquals(3, s.totalMessages)
     }
 
-    @Test fun tieBreakerOnLabelAscWhenCountsEqual() {
-        // Three apps each with one notification — count is tied at 1, so
-        // label-asc decides the order. "Messages" < "WhatsApp" so it wins.
+    @Test fun totalsDivergeWhenAThreadIsChatty() {
+        // 1 conversation in WhatsApp with 5 raw messages.
+        val rows = (1..5).map {
+            Row("com.whatsapp", "com.whatsapp/sc/alice")
+        }
+        val s = aggregate(rows)
+        assertEquals(1, s.totalConversations)
+        assertEquals(5, s.totalMessages)
+    }
+
+    @Test fun tieBreakerOnLabelAscWhenConvCountsEqual() {
+        // Three apps each with one conversation — sort by label-asc.
         val s = aggregate(listOf(
             Row("com.whatsapp", "com.whatsapp/sc/u1"),
             Row("com.android.messaging", "com.android.messaging/ch/t1"),
