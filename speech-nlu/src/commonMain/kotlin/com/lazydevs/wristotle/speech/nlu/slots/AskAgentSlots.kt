@@ -4,6 +4,10 @@
 package com.lazydevs.wristotle.speech.nlu.slots
 
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
+// kotlin.concurrent.Volatile is the multiplatform @Volatile (Kotlin 1.9+);
+// the unqualified @Volatile resolves to kotlin.jvm.Volatile which doesn't
+// exist on Kotlin/Native.
+import kotlin.concurrent.Volatile
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.AskAgent]:
