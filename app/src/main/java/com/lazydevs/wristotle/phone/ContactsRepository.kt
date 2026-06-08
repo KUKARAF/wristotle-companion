@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.provider.ContactsContract
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
+import com.lazydevs.wristotle.speech.nlu.contacts.ContactsResolver
 import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 import kotlinx.coroutines.withContext
 
@@ -16,10 +17,10 @@ import kotlinx.coroutines.withContext
 class ContactsRepository(
     private val context: Context,
     private val aliasStore: ContactAliasStore = ContactAliasStore(context),
-) {
+) : ContactsResolver {
 
     /** Returns true if READ_CONTACTS permission has been granted. */
-    fun hasPermission(): Boolean =
+    override fun hasPermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) ==
             PackageManager.PERMISSION_GRANTED
 
@@ -44,7 +45,7 @@ class ContactsRepository(
      *
      * Runs on [Dispatchers.IO] — ContentResolver queries are blocking.
      */
-    suspend fun findContact(query: String): ResolvedContact? = withContext(Dispatchers.IO) {
+    override suspend fun findContact(query: String): ResolvedContact? = withContext(Dispatchers.IO) {
         aliasStore.resolve(normalizePhrase(query))?.let { ref ->
             resolveByLookupKey(ref)?.let { return@withContext it }
             // Alias matched but the lookup key didn't resolve — contact

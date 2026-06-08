@@ -30,4 +30,12 @@ data class ResolvedContact(
  */
 interface ContactsResolver {
     suspend fun findContact(query: String): ResolvedContact?
+
+    /**
+     * Whether the platform permission gate currently allows reading
+     * contacts. Handlers check this BEFORE [findContact] to surface a
+     * user-actionable error ("Contacts permission not granted") instead
+     * of a generic not-found.
+     */
+    fun hasPermission(): Boolean
 }

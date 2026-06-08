@@ -12,7 +12,7 @@ import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.handlers.CalendarHandler
-import com.lazydevs.wristotle.handlers.CallHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.CallHandler
 import com.lazydevs.wristotle.handlers.CancelReminderHandler
 import com.lazydevs.wristotle.handlers.CreateEventHandler
 import com.lazydevs.wristotle.handlers.FindPhoneHandler
@@ -150,7 +150,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         val appIndex = app.appIndex
         val calendarRepo = CalendarRepository(this)
         registry = HandlerRegistry(listOf(
-            CallHandler(this, contacts),
+            CallHandler(contacts, com.lazydevs.wristotle.telephony.AndroidTelephony(this)),
             com.lazydevs.wristotle.handlers.SendMessageHandler(this, contacts),
             ReminderHandler(
                 this,
