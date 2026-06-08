@@ -15,7 +15,7 @@ import java.util.Date
 class RescheduleSlotsTest {
 
     private fun slots(query: String): Map<String, Any> = runBlocking {
-        RescheduleSlots().extract(query)
+        RescheduleSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser).extract(query)
     }
 
     private fun target(query: String) = slots(query)["target"] as String?
