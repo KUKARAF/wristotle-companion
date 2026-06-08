@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.history
 
 import android.util.Log
+import com.lazydevs.wristotle.speech.nlu.settings.ConversationSettings
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
 

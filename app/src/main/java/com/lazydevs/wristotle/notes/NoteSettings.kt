@@ -34,7 +34,7 @@ interface NoteSettingsView {
  * User preference for note retention. Stored count is the cap; the
  * special value [UNLIMITED] = 0 means "keep all notes" (default).
  *
- * Mirrors the simple shape of [com.lazydevs.wristotle.history.ConversationSettings]
+ * Mirrors the simple shape of [com.lazydevs.wristotle.speech.nlu.settings.ConversationSettings]
  * but is count-based, not time-based — long-form notes don't age the
  * way ephemeral conversation entries do.
  */

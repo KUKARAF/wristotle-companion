@@ -34,8 +34,8 @@ import android.speech.SpeechRecognizer
 import com.lazydevs.wristotle.speech.audio.AudioSource
 import com.lazydevs.wristotle.speech.recognizer.HttpRecognizer
 import com.lazydevs.wristotle.speech.recognizer.TranscriptionEvent
-import com.lazydevs.wristotle.stt.SttProviderMode
-import com.lazydevs.wristotle.stt.SttProviderSettings
+import com.lazydevs.wristotle.speech.nlu.settings.SttProviderMode
+import com.lazydevs.wristotle.speech.nlu.settings.SttProviderSettings
 import com.lazydevs.wristotle.ui.components.PasswordField
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

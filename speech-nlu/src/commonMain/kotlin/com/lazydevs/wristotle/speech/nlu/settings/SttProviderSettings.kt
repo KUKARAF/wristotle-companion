@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.stt
+package com.lazydevs.wristotle.speech.nlu.settings
 
-import android.content.Context
-import android.content.SharedPreferences
+import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -16,37 +15,35 @@ import kotlinx.coroutines.flow.StateFlow
  * final transcript bubble — whichever recognizer produced it is opaque
  * to the watch side.
  *
- * Mirror of `AskAgentSettings` shape for consistency: per-key
- * `SharedPrefs` + per-field `StateFlow` for Settings UI reactivity.
- * The single HTTP config (base URL + bearer key + model) covers every
+ * Single HTTP config (base URL + bearer key + model) covers every
  * OpenAI-compatible `/audio/transcriptions` provider — see
  * `speech/.../HttpRecognizer.kt` for the wire shape.
+ *
+ * R3 batch 5 — lifted from :app onto the [KeyValueStore] seam. Production
+ * wires it to a `SharedPreferencesKeyValueStore` over [PREFS_NAME] so
+ * persisted values survive the upgrade. The "missing key" sentinel
+ * collapses to empty-string semantics since no real provider mode name
+ * is empty and the URL/model defaults are themselves empty by design
+ * (see `feedback_no_prefilled_provider_defaults`).
  */
-class SttProviderSettings(context: Context) {
-
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+class SttProviderSettings(private val store: KeyValueStore) {
 
     private val _mode = MutableStateFlow(readMode())
     /** Which recognizer is primary, and what happens on failure. */
     val mode: StateFlow<SttProviderMode> = _mode
 
-    private val _httpBaseUrl = MutableStateFlow(
-        prefs.getString(KEY_HTTP_BASE_URL, null) ?: DEFAULT_BASE_URL,
-    )
+    private val _httpBaseUrl = MutableStateFlow(store.getString(KEY_HTTP_BASE_URL, DEFAULT_BASE_URL))
     val httpBaseUrl: StateFlow<String> = _httpBaseUrl
 
-    private val _httpApiKey = MutableStateFlow(prefs.getString(KEY_HTTP_API_KEY, "").orEmpty())
+    private val _httpApiKey = MutableStateFlow(store.getString(KEY_HTTP_API_KEY, ""))
     val httpApiKey: StateFlow<String> = _httpApiKey
 
-    private val _httpModel = MutableStateFlow(
-        prefs.getString(KEY_HTTP_MODEL, null) ?: DEFAULT_MODEL,
-    )
+    private val _httpModel = MutableStateFlow(store.getString(KEY_HTTP_MODEL, DEFAULT_MODEL))
     val httpModel: StateFlow<String> = _httpModel
 
     fun setMode(value: SttProviderMode) {
         if (_mode.value == value) return
-        prefs.edit().putString(KEY_MODE, value.name).apply()
+        store.putString(KEY_MODE, value.name)
         _mode.value = value
     }
 
@@ -55,18 +52,21 @@ class SttProviderSettings(context: Context) {
     fun setHttpModel(value: String) = write(KEY_HTTP_MODEL, value.trim(), _httpModel)
 
     private fun readMode(): SttProviderMode {
-        val name = prefs.getString(KEY_MODE, null) ?: return SttProviderMode.LOCAL_ONLY
-        return runCatching { SttProviderMode.valueOf(name) }.getOrDefault(SttProviderMode.LOCAL_ONLY)
+        val name = store.getString(KEY_MODE, "")
+        if (name.isEmpty()) return SttProviderMode.LOCAL_ONLY
+        return runCatching { enumValueOf<SttProviderMode>(name) }
+            .getOrDefault(SttProviderMode.LOCAL_ONLY)
     }
 
     private fun write(key: String, value: String, flow: MutableStateFlow<String>) {
         if (flow.value == value) return
-        prefs.edit().putString(key, value).apply()
+        store.putString(key, value)
         flow.value = value
     }
 
     companion object {
-        private const val PREFS_NAME = "stt_provider_settings"
+        /** SharedPreferences file name the Android-side store uses. */
+        const val PREFS_NAME = "stt_provider_settings"
         private const val KEY_MODE = "mode"
         private const val KEY_HTTP_BASE_URL = "http_base_url"
         private const val KEY_HTTP_API_KEY = "http_api_key"

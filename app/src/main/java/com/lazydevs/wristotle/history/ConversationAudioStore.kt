@@ -5,6 +5,7 @@ package com.lazydevs.wristotle.history
 
 import android.content.Context
 import android.util.Log
+import com.lazydevs.wristotle.speech.nlu.settings.ConversationAudioSettings
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteBuffer

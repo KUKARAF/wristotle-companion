@@ -10,12 +10,12 @@ import android.util.Log
 import com.lazydevs.wristotle.apps.AppIndex
 import com.lazydevs.wristotle.apps.AppIndexDatabase
 import com.lazydevs.wristotle.apps.AppIndexer
-import com.lazydevs.wristotle.history.ConversationAudioSettings
 import com.lazydevs.wristotle.messaging.toInfoForSlots
 import com.lazydevs.wristotle.history.ConversationAudioStore
 import com.lazydevs.wristotle.history.ConversationDatabase
 import com.lazydevs.wristotle.history.ConversationRepository
-import com.lazydevs.wristotle.history.ConversationSettings
+import com.lazydevs.wristotle.speech.nlu.settings.ConversationAudioSettings
+import com.lazydevs.wristotle.speech.nlu.settings.ConversationSettings
 import com.lazydevs.wristotle.media.ActiveMediaSession
 import com.lazydevs.wristotle.nlu.LearningCollector
 import com.lazydevs.wristotle.speech.nlu.NluSettings
@@ -50,7 +50,7 @@ import com.lazydevs.wristotle.speech.recognizer.CompositeRecognizer
 import com.lazydevs.wristotle.speech.recognizer.HttpRecognizer
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.StubRecognizer
-import com.lazydevs.wristotle.stt.SttProviderMode
+import com.lazydevs.wristotle.speech.nlu.settings.SttProviderMode
 import com.lazydevs.wristotle.speech.whisper.ModelStorage
 import com.lazydevs.wristotle.speech.whisper.WhisperRecognizer
 import com.lazydevs.wristotle.transport.PebbleTransport
@@ -206,8 +206,13 @@ class WristotleApplication : Application() {
     }
 
     /** STT-provider preferences. See `wristotle-companion/stt-providers.md`. */
-    val sttProviderSettings: com.lazydevs.wristotle.stt.SttProviderSettings by lazy {
-        com.lazydevs.wristotle.stt.SttProviderSettings(this)
+    val sttProviderSettings: com.lazydevs.wristotle.speech.nlu.settings.SttProviderSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.SttProviderSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                com.lazydevs.wristotle.speech.nlu.settings.SttProviderSettings.PREFS_NAME,
+            ),
+        )
     }
 
     /** First-launch wizard's dismissed flag + reactive surface. Lives
@@ -234,7 +239,7 @@ class WristotleApplication : Application() {
             contactAliasCount = { contactAliasStore.all().size },
             isSpeechProviderConfigured = {
                 sttProviderSettings.mode.value !=
-                    com.lazydevs.wristotle.stt.SttProviderMode.LOCAL_ONLY ||
+                    com.lazydevs.wristotle.speech.nlu.settings.SttProviderMode.LOCAL_ONLY ||
                     sttProviderSettings.httpBaseUrl.value.isNotEmpty()
             },
             isAskAgentConfigured = {
@@ -380,8 +385,12 @@ class WristotleApplication : Application() {
         persistentReminderScheduler.ensureNotificationChannel()
 
         conversationDb = ConversationDatabase.build(this)
-        conversationSettings = ConversationSettings(this)
-        conversationAudioSettings = ConversationAudioSettings(this)
+        conversationSettings = ConversationSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(this, ConversationSettings.PREFS_NAME),
+        )
+        conversationAudioSettings = ConversationAudioSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(this, ConversationAudioSettings.PREFS_NAME),
+        )
         conversationAudioStore = ConversationAudioStore(this)
         conversationRepository = ConversationRepository(
             dao = conversationDb.conversationDao(),
