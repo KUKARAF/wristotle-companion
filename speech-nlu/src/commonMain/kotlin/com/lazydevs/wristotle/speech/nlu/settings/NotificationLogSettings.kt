@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.notifications
+package com.lazydevs.wristotle.speech.nlu.settings
 
-import android.content.Context
-import android.content.SharedPreferences
-import androidx.core.content.edit
+import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,26 +17,20 @@ import kotlinx.coroutines.flow.asStateFlow
  * project's privacy-default-off stance means the toggle ships disabled
  * and the user has to explicitly opt in before any rows land.
  *
- * Lives at its own SharedPrefs file so a "Clear log" + a settings reset
- * stay decoupled — Phase C's UI calls
- * [com.lazydevs.wristotle.notifications.NotificationLogStore.deleteAll]
- * for the data half independently of touching this prefs file.
+ * R4 batch 10 — lifted from :app onto the [KeyValueStore] seam.
  */
-class NotificationLogSettings(context: Context) {
+class NotificationLogSettings(private val store: KeyValueStore) {
 
-    private val prefs: SharedPreferences =
-        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
-    private val _enabled = MutableStateFlow(prefs.getBoolean(KEY_ENABLED, DEFAULT_ENABLED))
+    private val _enabled = MutableStateFlow(store.getBoolean(KEY_ENABLED, DEFAULT_ENABLED))
     val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
 
     fun setEnabled(value: Boolean) {
-        prefs.edit { putBoolean(KEY_ENABLED, value) }
+        store.putBoolean(KEY_ENABLED, value)
         _enabled.value = value
     }
 
     companion object {
-        private const val PREFS_NAME = "wristotle_notif_log_settings"
+        const val PREFS_NAME = "wristotle_notif_log_settings"
         private const val KEY_ENABLED = "enabled"
 
         const val DEFAULT_ENABLED = false

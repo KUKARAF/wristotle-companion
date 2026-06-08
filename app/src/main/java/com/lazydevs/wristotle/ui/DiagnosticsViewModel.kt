@@ -15,7 +15,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.diagnostics.DiagnosticsBuilder
-import com.lazydevs.wristotle.diagnostics.DiagnosticsSettings
+import com.lazydevs.wristotle.speech.nlu.settings.DiagnosticsSettings
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow

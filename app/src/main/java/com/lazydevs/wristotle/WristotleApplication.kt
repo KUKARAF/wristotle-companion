@@ -113,7 +113,7 @@ class WristotleApplication : Application() {
      *  [FileSyncCoordinator] per syncable entity scope; conversations
      *  follow when needed. The coordinator is held so the Settings
      *  card's "Sync now" button can call [syncNow]. */
-    lateinit var notesSyncSettings: com.lazydevs.wristotle.sync.FileSyncSettings
+    lateinit var notesSyncSettings: com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings
         private set
     lateinit var notesSyncCoordinator:
         com.lazydevs.wristotle.sync.FileSyncCoordinator<com.lazydevs.wristotle.notes.Note>
@@ -123,7 +123,7 @@ class WristotleApplication : Application() {
      *  notes; user can pick the same folder OR a different one.
      *  Default granularity = AppendToSingleFile (daily-log shape) since
      *  per-query files would flood any vault. */
-    lateinit var conversationsSyncSettings: com.lazydevs.wristotle.sync.FileSyncSettings
+    lateinit var conversationsSyncSettings: com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings
         private set
     lateinit var conversationsSyncCoordinator:
         com.lazydevs.wristotle.sync.FileSyncCoordinator<com.lazydevs.wristotle.history.ConversationEntry>
@@ -174,8 +174,13 @@ class WristotleApplication : Application() {
         com.lazydevs.wristotle.notifications.NotificationLogDatabase.build(this)
     }
     val notificationLogSettings:
-        com.lazydevs.wristotle.notifications.NotificationLogSettings by lazy {
-        com.lazydevs.wristotle.notifications.NotificationLogSettings(this)
+        com.lazydevs.wristotle.speech.nlu.settings.NotificationLogSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.NotificationLogSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                com.lazydevs.wristotle.speech.nlu.settings.NotificationLogSettings.PREFS_NAME,
+            ),
+        )
     }
     val notificationLogStore:
         com.lazydevs.wristotle.notifications.NotificationLogStore by lazy {
@@ -225,8 +230,13 @@ class WristotleApplication : Application() {
     /** First-launch wizard's dismissed flag + reactive surface. Lives
      *  in its own SharedPrefs (`setup_state`) deliberately so it never
      *  travels in backups — see `setup-flow.md`. */
-    val setupSettings: com.lazydevs.wristotle.setup.SetupSettings by lazy {
-        com.lazydevs.wristotle.setup.SetupSettings(this)
+    val setupSettings: com.lazydevs.wristotle.speech.nlu.settings.SetupSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.SetupSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                com.lazydevs.wristotle.speech.nlu.settings.SetupSettings.PREFS_NAME,
+            ),
+        )
     }
 
     /** Pending recommended-setup actions for the Settings → 🌟 Setup
@@ -339,8 +349,13 @@ class WristotleApplication : Application() {
 
     /** Diagnostics-export preferences. Lazy — only consulted when the
      *  user actually runs an export from the Settings card. */
-    val diagnosticsSettings: com.lazydevs.wristotle.diagnostics.DiagnosticsSettings by lazy {
-        com.lazydevs.wristotle.diagnostics.DiagnosticsSettings(this)
+    val diagnosticsSettings: com.lazydevs.wristotle.speech.nlu.settings.DiagnosticsSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.DiagnosticsSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                com.lazydevs.wristotle.speech.nlu.settings.DiagnosticsSettings.PREFS_NAME,
+            ),
+        )
     }
 
     /** Which BLE companion is paired (rePebble / microPebble / unknown).
@@ -442,7 +457,12 @@ class WristotleApplication : Application() {
         // on the long-lived app scope. The coordinator no-ops until the
         // user enables sync + picks a folder; subscription drops cleanly
         // when either flips off.
-        notesSyncSettings = com.lazydevs.wristotle.sync.FileSyncSettings(this, scope = "notes")
+        notesSyncSettings = com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings.prefsName("notes"),
+            ),
+        )
         notesSyncCoordinator = com.lazydevs.wristotle.sync.FileSyncCoordinator(
             context = this,
             settings = notesSyncSettings,
@@ -454,10 +474,12 @@ class WristotleApplication : Application() {
         )
         notesSyncCoordinator.start()
 
-        conversationsSyncSettings = com.lazydevs.wristotle.sync.FileSyncSettings(
-            context = this,
-            scope = "conversations",
-            defaultGranularity = com.lazydevs.wristotle.sync.FileSyncGranularity.AppendToSingleFile,
+        conversationsSyncSettings = com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings(
+            store = com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings.prefsName("conversations"),
+            ),
+            defaultGranularity = com.lazydevs.wristotle.speech.nlu.settings.FileSyncGranularity.AppendToSingleFile,
         )
         conversationsSyncCoordinator = com.lazydevs.wristotle.sync.FileSyncCoordinator(
             context = this,

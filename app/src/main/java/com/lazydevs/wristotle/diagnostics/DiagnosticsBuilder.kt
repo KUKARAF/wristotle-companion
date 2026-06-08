@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.diagnostics
 
+import com.lazydevs.wristotle.speech.nlu.settings.DiagnosticsSettings
 import android.Manifest
 import android.content.Context
 import android.os.Build

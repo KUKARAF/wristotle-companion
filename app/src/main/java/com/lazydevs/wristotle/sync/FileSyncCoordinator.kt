@@ -3,6 +3,10 @@
 
 package com.lazydevs.wristotle.sync
 
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncFormat
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncGranularity
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncFormatOptions
 import android.content.Context
 import android.net.Uri
 import android.util.Log
