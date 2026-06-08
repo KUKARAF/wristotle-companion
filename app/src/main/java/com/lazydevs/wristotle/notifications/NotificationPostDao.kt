@@ -6,6 +6,7 @@ package com.lazydevs.wristotle.notifications
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NotificationPostDao {
@@ -32,7 +33,8 @@ interface NotificationPostDao {
     @Query("DELETE FROM notification_posts")
     suspend fun deleteAll(): Int
 
-    /** Count, used by the Settings card to show "N posts logged today." */
-    @Query("SELECT COUNT(*) FROM notification_posts")
-    suspend fun count(): Int
+    /** Count, used by the Settings card to show "N posts logged today."
+     *  Flow so the card refreshes live as new posts land. */
+    @Query("SELECT COUNT(*) FROM notification_posts WHERE postedAtEpochMs >= :fromEpochMs")
+    fun observeCountSince(fromEpochMs: Long): Flow<Int>
 }

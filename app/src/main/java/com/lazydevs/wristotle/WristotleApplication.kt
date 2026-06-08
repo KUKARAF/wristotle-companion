@@ -157,21 +157,23 @@ class WristotleApplication : Application() {
         com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler(this)
     }
 
-    /** Persisted notification log — Phase A wires the DB + write path; the
-     *  store hard-defaults to disabled here so no rows land until Phase C
-     *  swaps in the Settings-backed provider. Lazy so a user who never
+    /** Persisted notification log — Phase A wires the DB + write path,
+     *  Phase C plumbs the Settings-backed toggle. Lazy so a user who never
      *  flips the toggle pays no Room init cost. */
     val notificationLogDb:
         com.lazydevs.wristotle.notifications.NotificationLogDatabase by lazy {
         com.lazydevs.wristotle.notifications.NotificationLogDatabase.build(this)
+    }
+    val notificationLogSettings:
+        com.lazydevs.wristotle.notifications.NotificationLogSettings by lazy {
+        com.lazydevs.wristotle.notifications.NotificationLogSettings(this)
     }
     val notificationLogStore:
         com.lazydevs.wristotle.notifications.NotificationLogStore by lazy {
         com.lazydevs.wristotle.notifications.NotificationLogStore(
             dao = notificationLogDb.notificationPostDao(),
             scope = appScope,
-            // Phase C replaces with { notificationLogSettings.enabled.value }.
-            enabledProvider = { false },
+            enabledProvider = { notificationLogSettings.enabled.value },
         )
     }
 

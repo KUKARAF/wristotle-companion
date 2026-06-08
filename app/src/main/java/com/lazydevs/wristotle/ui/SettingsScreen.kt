@@ -458,6 +458,11 @@ private fun SettingsCategoryContent(
                 val reminderDefaultMinutes by reminderSettings.defaultOffsetMin.collectAsState()
                 val reminderIntervalMin by reminderSettings.defaultIntervalMin.collectAsState()
                 val reminderMaxAttempts by reminderSettings.defaultMaxAttempts.collectAsState()
+                val notifLogEnabled by app.notificationLogSettings.enabled.collectAsState()
+                val notifLogCount by remember {
+                    app.notificationLogDb.notificationPostDao()
+                        .observeCountSince(com.lazydevs.wristotle.briefing.TodayRange.now().startMs)
+                }.collectAsState(initial = 0)
                 AlarmsCard(
                     repository = app.alarmRepository,
                     dispatcher = app.alarmDispatcher,
@@ -473,6 +478,12 @@ private fun SettingsCategoryContent(
                     selectedMaxAttempts = reminderMaxAttempts,
                     maxAttemptsOptions = ReminderSettings.ALLOWED_MAX_ATTEMPTS,
                     onSelectMaxAttempts = reminderSettings::setDefaultMaxAttempts,
+                )
+                MorningBriefCard(
+                    logEnabled = notifLogEnabled,
+                    logCount = notifLogCount,
+                    onToggleLog = app.notificationLogSettings::setEnabled,
+                    onClearLog = app.notificationLogStore::deleteAll,
                 )
             }
 
@@ -1009,6 +1020,60 @@ private fun ReminderSettingsCard(
                             },
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MorningBriefCard(
+    logEnabled: Boolean,
+    logCount: Int,
+    onToggleLog: (Boolean) -> Unit,
+    onClearLog: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CardTitleWithInfo(
+                title = stringResource(R.string.settings_morning_brief_header),
+                description = stringResource(R.string.settings_morning_brief_desc),
+            )
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.settings_morning_brief_log_toggle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                )
+                Switch(checked = logEnabled, onCheckedChange = onToggleLog)
+            }
+            Text(
+                stringResource(R.string.settings_morning_brief_log_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (logEnabled) {
+                Text(
+                    stringResource(R.string.settings_morning_brief_log_count, logCount),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Button(
+                    onClick = onClearLog,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.settings_morning_brief_log_clear))
                 }
             }
         }

@@ -89,6 +89,7 @@ data class BackupManifest(
         val whisperModels: ModelPrefs? = null,
         val nluModels: ModelPrefs? = null,
         val reminder: ReminderPrefs? = null,
+        val morningBrief: MorningBriefPrefs? = null,
         val weather: WeatherPrefs? = null,
         val askAgent: AskAgentPrefs? = null,
         val sttProvider: SttProviderPrefs? = null,
@@ -104,6 +105,14 @@ data class BackupManifest(
         val defaultOffsetMin: Int,
         val defaultIntervalMin: Int = ReminderSettings.DEFAULT_INTERVAL_MIN,
         val defaultMaxAttempts: Int = ReminderSettings.DEFAULT_MAX_ATTEMPTS,
+    )
+
+    /** Morning Brief preferences. Currently one knob — the opt-in toggle
+     *  for the persisted-notification-log path that lets the brief surface
+     *  notifications you'd already dismissed earlier today. The DB rows
+     *  themselves are NOT backed up; only the user's toggle preference. */
+    data class MorningBriefPrefs(
+        val notifLogEnabled: Boolean = false,
     )
 
     /** `apiKey` rides only when the user ticks the secret checkbox. */
@@ -276,6 +285,11 @@ object BackupManifestCodec {
                     put("default_max_attempts", r.defaultMaxAttempts)
                 })
             }
+            m.prefs.morningBrief?.let { mb ->
+                put("wristotle_notif_log_settings", JSONObject().apply {
+                    put("enabled", mb.notifLogEnabled)
+                })
+            }
             m.prefs.weather?.let { w ->
                 put("weather_settings", JSONObject().apply {
                     put("unit", w.unit)
@@ -442,6 +456,11 @@ object BackupManifestCodec {
                             "default_max_attempts",
                             ReminderSettings.DEFAULT_MAX_ATTEMPTS,
                         ),
+                    )
+                },
+                morningBrief = prefs.optJSONObject("wristotle_notif_log_settings")?.let { mb ->
+                    BackupManifest.MorningBriefPrefs(
+                        notifLogEnabled = mb.optBoolean("enabled", false),
                     )
                 },
                 weather = prefs.optJSONObject("weather_settings")?.let { w ->
