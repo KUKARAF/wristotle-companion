@@ -1,36 +1,43 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.nlu
+package com.lazydevs.wristotle.speech.nlu
 
-import android.content.Context
-import android.content.SharedPreferences
-import androidx.core.content.edit
+import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * User preferences for the NLU intent layer. Currently a single toggle —
- * "Learn from my voice commands" — which gates [LearningCollector]
+ * "Learn from my voice commands" — which gates `LearningCollector`
  * inserts. Routing itself is gated on the active NLU model being present;
  * no toggle for that, the user controls it via the Settings model card.
+ *
+ * R3 batch 4 — lifted from :app. The `Context`-based SharedPreferences
+ * dependency replaced with a [KeyValueStore] constructor param;
+ * production wires it to a `SharedPreferencesKeyValueStore` over the
+ * existing "wristotle_nlu_settings" file so the persisted value
+ * survives the upgrade.
  */
-class NluSettings(context: Context) {
+class NluSettings(store: KeyValueStore) {
 
-    private val prefs: SharedPreferences =
-        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val storeRef = store
 
-    private val _learningEnabled = MutableStateFlow(prefs.getBoolean(KEY_LEARNING, true))
+    private val _learningEnabled = MutableStateFlow(storeRef.getBoolean(KEY_LEARNING, true))
     val learningEnabled: StateFlow<Boolean> = _learningEnabled.asStateFlow()
 
     fun setLearningEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_LEARNING, enabled) }
+        storeRef.putBoolean(KEY_LEARNING, enabled)
         _learningEnabled.value = enabled
     }
 
     companion object {
-        private const val PREFS_NAME = "wristotle_nlu_settings"
+        /** SharedPreferences file name the Android-side store uses.
+         *  Kept as the file convention rather than the StoredApp /
+         *  AppIndex prefs naming so the v1.x upgrade path doesn't lose
+         *  the persisted "learning enabled" toggle. */
+        const val PREFS_NAME = "wristotle_nlu_settings"
         private const val KEY_LEARNING = "learning_enabled"
 
         /**

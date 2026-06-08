@@ -18,7 +18,7 @@ import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.history.ConversationSettings
 import com.lazydevs.wristotle.media.ActiveMediaSession
 import com.lazydevs.wristotle.nlu.LearningCollector
-import com.lazydevs.wristotle.nlu.NluSettings
+import com.lazydevs.wristotle.speech.nlu.NluSettings
 import com.lazydevs.wristotle.speech.nlu.slots.CalendarSlots
 import com.lazydevs.wristotle.speech.nlu.slots.CallSlots
 import com.lazydevs.wristotle.speech.nlu.slots.CancelSlots
@@ -191,7 +191,7 @@ class WristotleApplication : Application() {
     }
 
     /** Reminder feature preferences (default offset when no time is spoken). */
-    lateinit var reminderSettings: com.lazydevs.wristotle.handlers.ReminderSettings
+    lateinit var reminderSettings: com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
         private set
 
     /** Weather feature preferences (unit + provider + OpenWeather API key). */
@@ -456,12 +456,22 @@ class WristotleApplication : Application() {
         // mcpDb / mcpServerRepository / askAgentSettings / diagnosticsSettings
         // are `by lazy` — first access pays the init.
 
-        reminderSettings = com.lazydevs.wristotle.handlers.ReminderSettings(this)
+        reminderSettings = com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings.PREFS_NAME,
+            ),
+        )
         weatherSettings = com.lazydevs.wristotle.settings.WeatherSettings(this)
 
         nluDb = NluDatabase.build(this)
         nluBank = ExampleBank(nluDb.exampleDao())
-        nluSettings = NluSettings(this)
+        // R3 batch 4: NluSettings lifted to commonMain; wire the
+        // SharedPreferences-backed store using the existing file name so
+        // the persisted "learning enabled" toggle survives the upgrade.
+        nluSettings = NluSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(this, NluSettings.PREFS_NAME),
+        )
 
         activeMediaSession = ActiveMediaSession(this)
 

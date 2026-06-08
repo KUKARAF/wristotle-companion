@@ -57,7 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.handlers.ReminderSettings
+import com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
 import com.lazydevs.wristotle.ui.components.ConfirmDialog
 import kotlinx.coroutines.launch
 

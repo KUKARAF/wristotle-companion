@@ -34,7 +34,7 @@ import com.lazydevs.wristotle.handlers.RescheduleHandler
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.nlu.LearningCollector
-import com.lazydevs.wristotle.nlu.NluSettings
+import com.lazydevs.wristotle.speech.nlu.NluSettings
 import com.lazydevs.wristotle.speech.nlu.VoicePipeline
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.phone.ContactsRepository

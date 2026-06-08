@@ -13,7 +13,7 @@ import android.os.Build
 import android.util.Log
 import com.lazydevs.wristotle.handlers.PinStore
 import com.lazydevs.wristotle.handlers.ReminderRecord
-import com.lazydevs.wristotle.handlers.ReminderSettings
+import com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
 
 private const val TAG = "PersistentReminder"
 
@@ -172,7 +172,12 @@ class PersistentReminderScheduler(private val app: Context) {
          *  next re-arm without restarting the app. Cheap (single SharedPrefs
          *  read), called once per fire. */
         fun intervalMs(context: Context): Long =
-            ReminderSettings(context).defaultIntervalMin.value * 60_000L
+            ReminderSettings(
+                com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                    context,
+                    ReminderSettings.PREFS_NAME,
+                ),
+            ).defaultIntervalMin.value * 60_000L
 
         private fun flagsForCreate(): Int =
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
