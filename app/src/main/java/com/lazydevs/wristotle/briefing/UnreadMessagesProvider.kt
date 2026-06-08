@@ -6,6 +6,7 @@ package com.lazydevs.wristotle.briefing
 import android.service.notification.StatusBarNotification
 import com.lazydevs.wristotle.media.MediaSessionsListener
 import com.lazydevs.wristotle.notifications.NotificationFilter
+import com.lazydevs.wristotle.notifications.NotificationPostDao
 
 /**
  * Adapter over [MediaSessionsListener]'s snapshotActiveNotifications.
@@ -33,7 +34,12 @@ import com.lazydevs.wristotle.notifications.NotificationFilter
  * Snapshot semantics — no persistence. A notification the user has
  * already dismissed never appears in the brief.
  */
-class UnreadMessagesProvider {
+class UnreadMessagesProvider(
+    /** Phase B+: read from the persisted post log when the toggle is on
+     *  ([todayPosts]). Nullable so the legacy snapshot-only path stays
+     *  callable without wiring the DAO. */
+    private val postsDao: NotificationPostDao? = null,
+) {
 
     data class Section(val label: String, val count: Int)
 
@@ -54,27 +60,32 @@ class UnreadMessagesProvider {
         val active = MediaSessionsListener.snapshotActiveNotifications()
             ?: return Snapshot(emptyList(), 0)
 
-        // Dedupe by a per-conversation key so "8 SMS notifications
-        // across 2 conversations" counts as 2. AOSP Messaging (the
-        // GrapheneOS / non-GMS default) posts a fresh notification per
-        // incoming SMS within a conversation, and any other app with
-        // a chatty notification style would otherwise inflate the
-        // brief count the same way.
-        val actionable = active
-            .filter { it.isActionable() }
-            .distinctBy { it.conversationKey() }
-
-        val (messaging, other) = actionable.partition {
-            MessagingApps.labelOf(it.packageName) != null
+        val rows = active.mapNotNull { sbn ->
+            if (!sbn.isActionable()) return@mapNotNull null
+            Row(sbn.packageName, sbn.conversationKey())
         }
+        return aggregate(rows)
+    }
 
-        val sections = messaging
-            .groupingBy { MessagingApps.labelOf(it.packageName)!! }
-            .eachCount()
-            .map { (label, count) -> Section(label, count) }
-            .sortedWith(compareByDescending<Section> { it.count }.thenBy { it.label })
-
-        return Snapshot(messaging = sections, otherCount = other.size)
+    /**
+     * Phase B query path — reads posts in the half-open [today.startMs,
+     * nowMs] range from the persisted log and buckets them the same way
+     * [snapshot] buckets active notifications. Returns an empty Snapshot
+     * when no DAO was injected (caller forgot to wire it) so callers can
+     * fall back to [snapshot] cleanly.
+     *
+     * `nowMs + 1` is used as the upper bound so a notification posted
+     * during this exact millisecond still lands in the result.
+     */
+    suspend fun todayPosts(nowMs: Long = System.currentTimeMillis()): Snapshot {
+        val dao = postsDao ?: return Snapshot(emptyList(), 0)
+        val today = TodayRange.now(nowMs)
+        val posts = dao.postsBetween(
+            fromEpochMs = today.startMs,
+            untilEpochMs = nowMs + 1,
+        )
+        val rows = posts.map { Row(it.packageName, it.conversationKey) }
+        return aggregate(rows)
     }
 
     /** Routes through the pure [NotificationFilter] so the listener
@@ -92,4 +103,35 @@ class UnreadMessagesProvider {
     /** Routes through [NotificationFilter] for the same reason. */
     private fun StatusBarNotification.isActionable(): Boolean =
         NotificationFilter.isActionable(packageName, notification?.flags ?: 0)
+
+    /** One unit of "something to count": a package id + its
+     *  conversation key. Both the snapshot and posts-log paths
+     *  produce a list of these and hand it to [aggregate]. */
+    internal data class Row(val packageName: String, val conversationKey: String)
+
+    companion object {
+
+        /**
+         * Pure: dedupe by conversationKey, partition by whether the
+         * package matches a [MessagingApps] token, group the matched
+         * side by label (count-desc then label-asc), and return the
+         * matching [Snapshot]. No I/O, no Android imports — fully
+         * unit-testable. Exposed `internal` so the matching test class
+         * can exercise it directly.
+         */
+        internal fun aggregate(rows: List<Row>): Snapshot {
+            val deduped = rows.distinctBy { it.conversationKey }
+            val (messaging, other) = deduped.partition {
+                MessagingApps.labelOf(it.packageName) != null
+            }
+            val sections = messaging
+                .groupingBy { MessagingApps.labelOf(it.packageName)!! }
+                .eachCount()
+                .map { (label, count) -> Section(label, count) }
+                .sortedWith(
+                    compareByDescending<Section> { it.count }.thenBy { it.label },
+                )
+            return Snapshot(messaging = sections, otherCount = other.size)
+        }
+    }
 }
