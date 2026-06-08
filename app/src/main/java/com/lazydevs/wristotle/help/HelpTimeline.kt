@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-6-0-notif-log",
+            date = "2026-06-07",
+            companionVersion = "v1.6.0",
+            watchVersion = null,
+            title = "Morning brief catches dismissed notifications (opt-in)",
+            description = "Optional persisted log lets the brief include notifications you swiped or cleared earlier today. App id + conversation key + timestamp only — never the body or sender.",
+            sampleQuery = "morning brief",
+            docsPath = "voice-commands/#morning-brief",
+        ),
+        FeatureEntry(
             id = "v1-5-0-persistent-reminders",
             date = "2026-06-06",
             companionVersion = "v1.5.0",

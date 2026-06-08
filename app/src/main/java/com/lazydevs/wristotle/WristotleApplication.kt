@@ -403,6 +403,18 @@ class WristotleApplication : Application() {
         )
         appScope.launch { noteRepository.prune() }
 
+        // Notification log retention — drop rows older than the
+        // retention window so the DB stays bounded if the user kept
+        // the toggle on for weeks. The brief only ever reads "today"
+        // so anything past the window is dead weight. No-op when the
+        // toggle is off; the store still has nothing to prune.
+        appScope.launch {
+            notificationLogStore.prune(
+                cutoffEpochMs = System.currentTimeMillis() -
+                    com.lazydevs.wristotle.notifications.NotificationLogStore.DEFAULT_RETENTION_MS,
+            )
+        }
+
         // Folder sync — per-entity Settings instance + Coordinator running
         // on the long-lived app scope. The coordinator no-ops until the
         // user enables sync + picks a folder; subscription drops cleanly
