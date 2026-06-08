@@ -485,6 +485,9 @@ class BackupImporter(private val app: WristotleApplication) {
                 app.reminderSettings.setDefaultIntervalMin(it.defaultIntervalMin)
                 app.reminderSettings.setDefaultMaxAttempts(it.defaultMaxAttempts)
             }
+            p.morningBrief?.let {
+                app.notificationLogSettings.setEnabled(it.notifLogEnabled)
+            }
         }
 
         if (sel.weatherSettings) {

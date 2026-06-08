@@ -8,6 +8,7 @@ import android.content.Context
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import com.lazydevs.wristotle.WristotleApplication
 
 private const val TAG = "MediaSessionsListener"
 
@@ -52,10 +53,20 @@ class MediaSessionsListener : NotificationListenerService() {
         Log.d(TAG, "notification listener disconnected")
     }
 
-    // Deliberate no-ops: we never inspect or persist notifications on
-    // posted / removed callbacks. The Morning Brief reads
-    // `activeNotifications` on demand instead.
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {}
+    /**
+     * Funnel into [com.lazydevs.wristotle.notifications.NotificationLogStore]
+     * for the persisted-log path. The store gates on its own opt-in
+     * provider (default off until the user flips the Settings toggle —
+     * see Phase C), so most installs experience this as a no-op.
+     * onNotificationRemoved stays a no-op — the persisted log tracks
+     * posts only.
+     */
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        sbn ?: return
+        (applicationContext as? WristotleApplication)
+            ?.notificationLogStore?.record(sbn)
+    }
+
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {}
 
     companion object {

@@ -77,6 +77,7 @@ enum class SettingsCategory(@param:StringRes val labelRes: Int, val emoji: Strin
     Conversation(R.string.settings_section_conversation, "💬"),
     Notes(R.string.settings_section_notes, "📝"),
     Reminders(R.string.settings_section_reminders, "⏰"),
+    Notifications(R.string.settings_section_notifications, "🔔"),
     Weather(R.string.settings_section_weather, "☁️"),
     Models(R.string.settings_section_models, "🧠"),
     Learning(R.string.settings_section_learning, "🎓"),
@@ -473,6 +474,20 @@ private fun SettingsCategoryContent(
                     selectedMaxAttempts = reminderMaxAttempts,
                     maxAttemptsOptions = ReminderSettings.ALLOWED_MAX_ATTEMPTS,
                     onSelectMaxAttempts = reminderSettings::setDefaultMaxAttempts,
+                )
+            }
+
+            SettingsCategory.Notifications -> {
+                val notifLogEnabled by app.notificationLogSettings.enabled.collectAsState()
+                val notifLogCount by remember {
+                    app.notificationLogDb.notificationPostDao()
+                        .observeCountSince(com.lazydevs.wristotle.briefing.TodayRange.now().startMs)
+                }.collectAsState(initial = 0)
+                MorningBriefCard(
+                    logEnabled = notifLogEnabled,
+                    logCount = notifLogCount,
+                    onToggleLog = app.notificationLogSettings::setEnabled,
+                    onClearLog = app.notificationLogStore::deleteAll,
                 )
             }
 
@@ -1009,6 +1024,60 @@ private fun ReminderSettingsCard(
                             },
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MorningBriefCard(
+    logEnabled: Boolean,
+    logCount: Int,
+    onToggleLog: (Boolean) -> Unit,
+    onClearLog: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CardTitleWithInfo(
+                title = stringResource(R.string.settings_morning_brief_header),
+                description = stringResource(R.string.settings_morning_brief_desc),
+            )
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.settings_morning_brief_log_toggle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                )
+                Switch(checked = logEnabled, onCheckedChange = onToggleLog)
+            }
+            Text(
+                stringResource(R.string.settings_morning_brief_log_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (logEnabled) {
+                Text(
+                    stringResource(R.string.settings_morning_brief_log_count, logCount),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Button(
+                    onClick = onClearLog,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.settings_morning_brief_log_clear))
                 }
             }
         }

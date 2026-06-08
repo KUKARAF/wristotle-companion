@@ -117,9 +117,14 @@ class MorningBriefRendererTest {
         assertNull(MorningBriefRenderer.messagesSection(snap(emptyList(), 0)))
     }
 
+    /** Helper for the common "every message is its own conversation"
+     *  case — equal conversations + messages counts. */
+    private fun section(label: String, count: Int) =
+        UnreadMessagesProvider.Section(label, conversations = count, messages = count)
+
     @Test fun `single message renders singular`() {
         val out = MorningBriefRenderer.messagesSection(
-            snap(listOf(UnreadMessagesProvider.Section("WhatsApp", 1))),
+            snap(listOf(section("WhatsApp", 1))),
         )!!
         assertEquals("Messages: 1 from WhatsApp", out)
     }
@@ -127,9 +132,9 @@ class MorningBriefRendererTest {
     @Test fun `multiple messages from multiple apps`() {
         val out = MorningBriefRenderer.messagesSection(
             snap(listOf(
-                UnreadMessagesProvider.Section("WhatsApp", 3),
-                UnreadMessagesProvider.Section("Slack", 2),
-                UnreadMessagesProvider.Section("Signal", 1),
+                section("WhatsApp", 3),
+                section("Slack", 2),
+                section("Signal", 1),
             )),
         )!!
         assertEquals("Messages: 6 from WhatsApp, Slack, Signal", out)
@@ -138,12 +143,12 @@ class MorningBriefRendererTest {
     @Test fun `more than four apps get a plus N more tail`() {
         val out = MorningBriefRenderer.messagesSection(
             snap(listOf(
-                UnreadMessagesProvider.Section("WhatsApp", 1),
-                UnreadMessagesProvider.Section("Slack", 1),
-                UnreadMessagesProvider.Section("Signal", 1),
-                UnreadMessagesProvider.Section("Telegram", 1),
-                UnreadMessagesProvider.Section("Discord", 1),
-                UnreadMessagesProvider.Section("Messenger", 1),
+                section("WhatsApp", 1),
+                section("Slack", 1),
+                section("Signal", 1),
+                section("Telegram", 1),
+                section("Discord", 1),
+                section("Messenger", 1),
             )),
         )!!
         assertTrue(out, out.startsWith("Messages: 6 from"))
@@ -161,9 +166,44 @@ class MorningBriefRendererTest {
         // Header now reports messaging total; the "+4 other" tail
         // surfaces unmatched notifications honestly.
         val out = MorningBriefRenderer.messagesSection(
-            snap(listOf(UnreadMessagesProvider.Section("WhatsApp", 2)), other = 4),
+            snap(listOf(section("WhatsApp", 2)), other = 4),
         )!!
         assertEquals("Messages: 2 from WhatsApp, +4 other", out)
+    }
+
+    // ── conversations + raw messages divergence ───────────────────
+
+    @Test fun `single conversation with multiple messages surfaces raw count`() {
+        // One thread, five buzzes — header reads as a single
+        // conversation but the parenthetical surfaces the actual
+        // volume so the user knows the thread is chatty.
+        val out = MorningBriefRenderer.messagesSection(snap(listOf(
+            UnreadMessagesProvider.Section("WhatsApp", conversations = 1, messages = 5),
+        )))!!
+        assertEquals("Messages: 1 conversation (5 msgs) from WhatsApp", out)
+    }
+
+    @Test fun `multiple conversations and many messages — both surfaced`() {
+        val out = MorningBriefRenderer.messagesSection(snap(listOf(
+            UnreadMessagesProvider.Section("WhatsApp", conversations = 2, messages = 12),
+            UnreadMessagesProvider.Section("Signal", conversations = 1, messages = 5),
+        )))!!
+        // 3 conversations + 17 individual messages — both numbers in.
+        assertEquals(
+            "Messages: 3 conversations (17 msgs) from WhatsApp, Signal",
+            out,
+        )
+    }
+
+    @Test fun `equal conversations and messages drops the parenthetical`() {
+        // 2 conversations with 1 message each — the parenthetical
+        // would just repeat what the header already says, so it's
+        // suppressed for a calmer brief.
+        val out = MorningBriefRenderer.messagesSection(snap(listOf(
+            UnreadMessagesProvider.Section("WhatsApp", conversations = 1, messages = 1),
+            UnreadMessagesProvider.Section("Signal", conversations = 1, messages = 1),
+        )))!!
+        assertEquals("Messages: 2 from WhatsApp, Signal", out)
     }
 
     // ── remindersSection ───────────────────────────────────────────

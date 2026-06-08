@@ -108,14 +108,19 @@ object MorningBriefRenderer {
             return "Notifications: ${snapshot.otherCount} other"
         }
 
-        // The header count is messaging-only. Earlier shapes included
+        // The header counts are messaging-only. Earlier shapes included
         // `otherCount` in the total, which read as "6 messages" when
         // really only 2 were from messaging apps. The "+N other" tail
         // surfaces unmatched notifications without inflating the
         // messages number.
-        val messagingTotal = snapshot.messaging.sumOf { it.count }
+        val conversations = snapshot.messaging.sumOf { it.conversations }
+        val messages = snapshot.messaging.sumOf { it.messages }
 
-        if (messagingTotal == 1 && snapshot.messaging.size == 1 && snapshot.otherCount == 0) {
+        // Single-conversation single-message shortcut for the calmest
+        // possible output: "Messages: 1 from WhatsApp".
+        if (conversations == 1 && messages == 1 &&
+            snapshot.messaging.size == 1 && snapshot.otherCount == 0
+        ) {
             return "Messages: 1 from ${snapshot.messaging.first().label}"
         }
 
@@ -128,8 +133,17 @@ object MorningBriefRenderer {
             if (snapshot.otherCount > 0) add("+${snapshot.otherCount} other")
         }.joinToString(", ")
 
+        // Surface raw-message volume only when it diverges from the
+        // conversation count — equal counts would just add noise.
+        val header = if (messages > conversations) {
+            val unit = if (conversations == 1) "conversation" else "conversations"
+            "$conversations $unit ($messages msgs)"
+        } else {
+            conversations.toString()
+        }
+
         val from = listOf(previewLabels, tail).filter { it.isNotEmpty() }.joinToString(", ")
-        return "Messages: $messagingTotal from $from"
+        return "Messages: $header from $from"
     }
 
     /**

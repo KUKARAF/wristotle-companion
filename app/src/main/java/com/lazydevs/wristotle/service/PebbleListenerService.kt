@@ -201,6 +201,10 @@ class PebbleListenerService : BasePebbleListenerService() {
                 alarms = app.alarmRepository,
                 tasks = app.taskRepository,
                 notes = app.noteRepository,
+                unreadMessages = com.lazydevs.wristotle.briefing.UnreadMessagesProvider(
+                    postsDao = app.notificationLogDb.notificationPostDao(),
+                ),
+                notifLogEnabledProvider = { app.notificationLogSettings.enabled.value },
             ),
         ))
     }

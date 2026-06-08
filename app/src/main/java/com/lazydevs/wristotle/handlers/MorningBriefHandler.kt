@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.handlers
 
 import android.content.Context
+import android.util.Log
 import com.lazydevs.wristotle.alarms.AlarmRepository
 import com.lazydevs.wristotle.briefing.MorningBriefRenderer
 import com.lazydevs.wristotle.briefing.TodayRange
@@ -13,6 +14,8 @@ import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.tasks.TaskRepository
+
+private const val TAG = "MorningBriefHandler"
 
 /**
  * Handles [Intent.MorningBrief] — assembles a one-shot summary of
@@ -29,11 +32,17 @@ import com.lazydevs.wristotle.tasks.TaskRepository
  * surfacing a permission nag — the user already sees the Calendar
  * card in the Permissions tab if they want to enable it.
  *
- * Unread messages: snapshot of currently-posted notifications from
- * a curated set of messaging apps (`MessagingApps`), grouped by app.
- * Snapshot semantics — a notification the user has already dismissed
- * never appears; no persistence, no notification body or extras read.
- * Empty when Notification Access isn't granted.
+ * Unread messages: two paths, selected by [notifLogEnabledProvider].
+ *  - Default (toggle off, default-stance): snapshot of currently-posted
+ *    notifications from a curated set of messaging apps
+ *    (`MessagingApps`), grouped by app. Snapshot semantics — a
+ *    notification the user has already dismissed never appears.
+ *  - Persisted log (toggle on, Settings → 🔔 Notifications): replays
+ *    `todayPosts()` from the on-device log so a notification swiped
+ *    before brief time still shows up. Empty-log fallback to snapshot
+ *    catches the "toggle just turned on, no posts logged yet" case.
+ *
+ * Either way: no notification body / title / extras are read.
  */
 class MorningBriefHandler(
     context: Context,
@@ -42,6 +51,7 @@ class MorningBriefHandler(
     private val tasks: TaskRepository,
     private val notes: NoteRepository,
     private val unreadMessages: UnreadMessagesProvider = UnreadMessagesProvider(),
+    private val notifLogEnabledProvider: () -> Boolean = { false },
 ) : ActionHandler {
 
     override val tag: String = "morning-brief"
@@ -70,10 +80,18 @@ class MorningBriefHandler(
         val notesToday = notes.mostRecent(MAX_RECENT_NOTES_SCAN)
             .filter { it.createdAtEpochMs in today }
 
-        // Snapshot is cheap and synchronous (it's just reading the
-        // listener's activeNotifications array). Empty when Notification
-        // Access isn't granted or the listener isn't bound yet.
-        val messages = unreadMessages.snapshot()
+        // Persisted-log path when the user opted in via Settings →
+        // 🔔 Notifications: union of the currently-in-tray snapshot AND
+        // today's persisted log, deduped by conversation key. Catches
+        // both "I dismissed it before brief time" (log) and "it's still
+        // in my tray" (snapshot) without losing either.
+        val messages = if (notifLogEnabledProvider()) {
+            val combined = unreadMessages.snapshotPlusTodayPosts()
+            Log.d(TAG, "notif-log path: ${combined.totalConversations} conv / ${combined.totalMessages} msgs (snapshot ∪ log)")
+            combined
+        } else {
+            unreadMessages.snapshot()
+        }
 
         return MorningBriefRenderer.render(
             listOf(

@@ -157,6 +157,26 @@ class WristotleApplication : Application() {
         com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler(this)
     }
 
+    /** Persisted notification log — Phase A wires the DB + write path,
+     *  Phase C plumbs the Settings-backed toggle. Lazy so a user who never
+     *  flips the toggle pays no Room init cost. */
+    val notificationLogDb:
+        com.lazydevs.wristotle.notifications.NotificationLogDatabase by lazy {
+        com.lazydevs.wristotle.notifications.NotificationLogDatabase.build(this)
+    }
+    val notificationLogSettings:
+        com.lazydevs.wristotle.notifications.NotificationLogSettings by lazy {
+        com.lazydevs.wristotle.notifications.NotificationLogSettings(this)
+    }
+    val notificationLogStore:
+        com.lazydevs.wristotle.notifications.NotificationLogStore by lazy {
+        com.lazydevs.wristotle.notifications.NotificationLogStore(
+            dao = notificationLogDb.notificationPostDao(),
+            scope = appScope,
+            enabledProvider = { notificationLogSettings.enabled.value },
+        )
+    }
+
     /** MCP client data layer. Lazy so the Room DB build + first SharedPrefs
      *  read are deferred from cold start to the first Settings-tap / first
      *  AskAgent intent / first backup run — most users never open these
@@ -382,6 +402,18 @@ class WristotleApplication : Application() {
             settings = noteSettings,
         )
         appScope.launch { noteRepository.prune() }
+
+        // Notification log retention — drop rows older than the
+        // retention window so the DB stays bounded if the user kept
+        // the toggle on for weeks. The brief only ever reads "today"
+        // so anything past the window is dead weight. No-op when the
+        // toggle is off; the store still has nothing to prune.
+        appScope.launch {
+            notificationLogStore.prune(
+                cutoffEpochMs = System.currentTimeMillis() -
+                    com.lazydevs.wristotle.notifications.NotificationLogStore.DEFAULT_RETENTION_MS,
+            )
+        }
 
         // Folder sync — per-entity Settings instance + Coordinator running
         // on the long-lived app scope. The coordinator no-ops until the

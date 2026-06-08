@@ -195,6 +195,7 @@
     <string name="settings_section_diagnostics">Diagnostics</string>
     <string name="settings_section_notes">Notes</string>
     <string name="settings_section_reminders">Alarms &amp; Reminders</string>
+    <string name="settings_section_notifications">Notifications</string>
     <string name="settings_section_setup">Setup</string>
 
     <!-- Settings → 🌟 Setup card. Persistent home for recommended setup
@@ -672,4 +673,13 @@
     <string name="tasks_clear_all_title">Clear all tasks?</string>
     <string name="tasks_clear_all_message">Permanently removes every task — pending and completed.</string>
     <string name="tasks_clear_all_apply">Clear</string>
+
+    <!-- Morning Brief — persisted notification log card -->
+    <string name="settings_morning_brief_header">Morning Brief</string>
+    <string name="settings_morning_brief_desc">Voice "morning brief" reads back today\'s meetings, alarms, reminders, tasks, notes, and unread messages.</string>
+    <string name="settings_morning_brief_log_toggle">Include dismissed notifications</string>
+    <string name="settings_morning_brief_log_desc">By default the brief only shows messages currently sitting in your tray. Turn this on to also include notifications you swiped or cleared earlier today. Wristotle records app id + conversation key + timestamp only — never the body, title, or sender of a notification.</string>
+    <string name="settings_morning_brief_log_count">Logged today: %1$d</string>
+    <string name="settings_morning_brief_log_clear">Clear log</string>
+    <string name="settings_morning_brief_log_cleared">Notification log cleared.</string>
 </resources>
