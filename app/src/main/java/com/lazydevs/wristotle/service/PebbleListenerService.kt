@@ -193,8 +193,8 @@ class PebbleListenerService : BasePebbleListenerService() {
                 settings = app.alarmSettings,
             ),
             SetTimerHandler(this),
-            com.lazydevs.wristotle.handlers.WorldTimeHandler(),
-            com.lazydevs.wristotle.handlers.CalculateHandler(),
+            com.lazydevs.wristotle.speech.nlu.handlers.WorldTimeHandler(),
+            com.lazydevs.wristotle.speech.nlu.handlers.CalculateHandler(),
             com.lazydevs.wristotle.handlers.WeatherHandler(
                 openMeteo = com.lazydevs.wristotle.handlers.OpenMeteoProvider(),
                 openWeatherFactory = { key -> com.lazydevs.wristotle.handlers.OpenWeatherProvider(key) },

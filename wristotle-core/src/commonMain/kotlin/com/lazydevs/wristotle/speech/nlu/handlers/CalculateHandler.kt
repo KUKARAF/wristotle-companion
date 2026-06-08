@@ -1,25 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package com.lazydevs.wristotle.speech.nlu.handlers
 
-import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
-import com.lazydevs.wristotle.speech.nlu.slots.calcExpression
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import java.math.BigDecimal
-import java.math.RoundingMode
+import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
+import com.lazydevs.wristotle.speech.nlu.slots.calcExpression
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlin.math.roundToLong
 
 /**
- * Handles [Intent.Calculate] — evaluates the arithmetic expression produced by
- * `CalculateSlots` via the pure [Calculator] and returns a watch-friendly
+ * Handles [Intent.Calculate] — evaluates the arithmetic expression produced
+ * by `CalculateSlots` via the pure [Calculator] and returns a watch-friendly
  * result ("= 12"). Whole numbers render without a decimal; fractional results
  * are rounded to 4 places with trailing zeros trimmed.
  *
  * Fails soft with a "Couldn't…" message (which the history badge treats as a
  * failure, keeping a bad parse out of NLU learning).
+ *
+ * R5 — lifted from :app. java.math.BigDecimal replaced with a manual
+ * round-to-4-decimal-places + trailing-zero strip so commonMain has zero
+ * JVM-only deps.
  */
 class CalculateHandler : ActionHandler {
 
@@ -40,10 +43,16 @@ class CalculateHandler : ActionHandler {
         // Whole number → no decimal point. The magnitude guard keeps very
         // large doubles off the Long path (where they'd overflow/round oddly).
         if (d == floor(d) && abs(d) < 1e15) return d.toLong().toString()
-        return BigDecimal.valueOf(d)
-            .setScale(4, RoundingMode.HALF_UP)
-            .stripTrailingZeros()
-            .toPlainString()
+        // Round to 4 decimal places + strip trailing zeros.
+        val scale = 10_000L
+        val rounded = (d * scale).roundToLong()
+        val sign = if (rounded < 0) "-" else ""
+        val absVal = abs(rounded)
+        val whole = absVal / scale
+        val frac = absVal % scale
+        if (frac == 0L) return "$sign$whole"
+        val fracStr = frac.toString().padStart(4, '0').trimEnd('0')
+        return "$sign$whole.$fracStr"
     }
 
     private companion object {

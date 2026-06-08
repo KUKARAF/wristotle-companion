@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package com.lazydevs.wristotle.speech.nlu.handlers
 
 /**
  * Tiny arithmetic evaluator for the [com.lazydevs.wristotle.speech.nlu.Intent.Calculate]
@@ -17,6 +17,8 @@ package com.lazydevs.wristotle.handlers
  *   expr   := term (('+' | '-') term)*
  *   term   := factor (('*' | '/') factor)*
  *   factor := number | '(' expr ')' | '-' factor
+ *
+ * R5 — lifted from :app. Zero-import pure Kotlin; runs as-is on commonMain.
  */
 object Calculator {
 
@@ -34,7 +36,7 @@ object Calculator {
         return try {
             val parser = Parser(tokens)
             val value = parser.parseExpr()
-            if (!parser.atEnd()) Result.Unparseable          // trailing junk, e.g. "2 2"
+            if (!parser.atEnd()) Result.Unparseable
             else if (value.isNaN() || value.isInfinite()) Result.Unparseable
             else Result.Value(value)
         } catch (_: DivByZeroSignal) {
@@ -46,8 +48,6 @@ object Calculator {
 
     // ── Tokenizer ───────────────────────────────────────────────────────────
 
-    /** Splits into number / operator / paren tokens. Returns null on any
-     *  unsupported character so the caller reports "couldn't work that out". */
     private fun tokenize(expr: String): List<String>? {
         val tokens = mutableListOf<String>()
         var i = 0
@@ -60,7 +60,7 @@ object Calculator {
                     var dots = if (c == '.') 1 else 0
                     i++
                     while (i < expr.length && (expr[i].isDigit() || expr[i] == '.')) {
-                        if (expr[i] == '.' && ++dots > 1) return null  // "1.2.3"
+                        if (expr[i] == '.' && ++dots > 1) return null
                         i++
                     }
                     tokens.add(expr.substring(start, i))
@@ -115,7 +115,7 @@ object Calculator {
         private fun parseFactor(): Double {
             val t = peek() ?: throw ParseError()
             return when {
-                t == "-" -> { next(); -parseFactor() }   // unary minus
+                t == "-" -> { next(); -parseFactor() }
                 t == "(" -> {
                     next()
                     val inner = parseExpr()

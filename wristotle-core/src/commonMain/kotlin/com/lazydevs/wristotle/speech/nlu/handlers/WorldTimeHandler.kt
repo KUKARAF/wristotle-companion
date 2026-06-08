@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package com.lazydevs.wristotle.speech.nlu.handlers
 
-import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
-import com.lazydevs.wristotle.speech.nlu.slots.worldTimeLocation
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
+import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
+import com.lazydevs.wristotle.speech.nlu.slots.worldTimeLocation
 import kotlin.math.abs
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * Handles [Intent.WorldTime] — "what time is it in Tokyo".
@@ -22,11 +23,12 @@ import kotlin.math.abs
  * when it's a different calendar day from the phone) and the offset relative
  * to the phone's own zone:
  *
- *   "It's 7:42 AM in Tokyo\n(Wed, 13h ahead)"
- *   "It's 9:15 PM in London\n(8h behind)"
+ *   "It's 7:42 AM in Tokyo\n(Wed, 13h ahead)."
+ *   "It's 9:15 PM in London\n(8h behind)."
  *
- * Pure `java.util` — no Context, no network. Fails soft with a watch-friendly
- * hint when the location is missing or unrecognised.
+ * R5 — lifted from :app. java.util.{SimpleDateFormat, Calendar, Date,
+ * TimeZone, Locale} replaced with kotlinx-datetime. Output strings preserved
+ * exactly so the watch chat copy doesn't change.
  */
 class WorldTimeHandler : ActionHandler {
 
@@ -38,33 +40,33 @@ class WorldTimeHandler : ActionHandler {
             ?: return "Which city?\nTry \"what time is it in Tokyo\"."
         val zone = TimeZoneResolver.resolve(location)
             ?: return "Couldn't find the time zone for \"$location\"."
-        return format(zone, location, Date())
+        return format(zone, location, Clock.System.now())
     }
 
-    /** Visible for the shape of the output; [now] is injectable for clarity. */
-    private fun format(zone: TimeZone, spoken: String, now: Date): String {
-        val timeFmt = SimpleDateFormat("h:mm a", Locale.US).apply { timeZone = zone }
-        val timeStr = timeFmt.format(now)
+    private fun format(zone: TimeZone, spoken: String, now: Instant): String {
+        val targetLdt = now.toLocalDateTime(zone)
+        val timeStr = formatTime(targetLdt)
         val city = titleCase(spoken)
-        val suffix = buildSuffix(zone, now)
+        val suffix = buildSuffix(zone, now, targetLdt)
         return "It's $timeStr in $city\n($suffix)."
     }
 
     /** "Wed, 13h ahead" / "8h behind" / "same time" — weekday only when the
      *  target is on a different calendar day from the phone's local zone. */
-    private fun buildSuffix(zone: TimeZone, now: Date): String {
+    private fun buildSuffix(zone: TimeZone, now: Instant, targetLdt: LocalDateTime): String {
         val parts = mutableListOf<String>()
 
-        val targetCal = Calendar.getInstance(zone)
-        val localCal = Calendar.getInstance()
-        val differentDay = targetCal.get(Calendar.DAY_OF_YEAR) != localCal.get(Calendar.DAY_OF_YEAR) ||
-            targetCal.get(Calendar.YEAR) != localCal.get(Calendar.YEAR)
+        val localLdt = now.toLocalDateTime(TimeZone.currentSystemDefault())
+        val differentDay = targetLdt.date != localLdt.date
         if (differentDay) {
-            val dayFmt = SimpleDateFormat("EEE", Locale.US).apply { timeZone = zone }
-            parts.add(dayFmt.format(now))
+            parts.add(WEEKDAY[targetLdt.dayOfWeek.ordinal])
         }
 
-        val diffMin = (zone.getOffset(now.time) - TimeZone.getDefault().getOffset(now.time)) / 60_000
+        // Compute the offset between zones at this Instant by projecting
+        // each wall-clock LDT back through UTC and taking the difference.
+        val targetEpoch = targetLdt.toInstant(TimeZone.UTC).toEpochMilliseconds()
+        val localEpoch = localLdt.toInstant(TimeZone.UTC).toEpochMilliseconds()
+        val diffMin = ((targetEpoch - localEpoch) / 60_000L).toInt()
         parts.add(offsetPhrase(diffMin))
         return parts.joinToString(", ")
     }
@@ -81,6 +83,14 @@ class WorldTimeHandler : ActionHandler {
         return if (diffMinutes > 0) "$magnitude ahead" else "$magnitude behind"
     }
 
+    private fun formatTime(ldt: LocalDateTime): String {
+        val hour24 = ldt.hour
+        val hour12 = ((hour24 + 11) % 12) + 1
+        val ampm = if (hour24 < 12) "AM" else "PM"
+        val mm = ldt.minute.toString().padStart(2, '0')
+        return "$hour12:$mm $ampm"
+    }
+
     private fun titleCase(s: String): String =
         s.split(" ").joinToString(" ") { word ->
             if (word.lowercase() in UPPERCASE_WORDS) word.uppercase()
@@ -88,7 +98,7 @@ class WorldTimeHandler : ActionHandler {
         }
 
     private companion object {
-        // Spoken abbreviations that read better fully capitalised.
         val UPPERCASE_WORDS = setOf("nyc", "la", "sf", "dc", "uk", "uae", "usa", "us")
+        val WEEKDAY = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     }
 }
