@@ -29,7 +29,7 @@ import com.lazydevs.wristotle.handlers.MediaPreviousHandler
 import com.lazydevs.wristotle.handlers.MediaSeekHandler
 import com.lazydevs.wristotle.handlers.AppendNoteHandler
 import com.lazydevs.wristotle.handlers.NoteHandler
-import com.lazydevs.wristotle.handlers.OpenAppHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.OpenAppHandler
 import com.lazydevs.wristotle.handlers.ReminderHandler
 import com.lazydevs.wristotle.handlers.CancelAlarmHandler
 import com.lazydevs.wristotle.handlers.SetTimerHandler
@@ -169,7 +169,11 @@ class PebbleListenerService : BasePebbleListenerService() {
             MediaPreviousHandler(this, media, appIndex),
             MediaSeekHandler(media, intent = com.lazydevs.wristotle.speech.nlu.Intent.MediaSeekForward),
             MediaSeekHandler(media, intent = com.lazydevs.wristotle.speech.nlu.Intent.MediaSeekBackward),
-            OpenAppHandler(this, appIndex),
+            OpenAppHandler(
+                com.lazydevs.wristotle.apps.AndroidAppLauncher(this),
+                appIndex,
+                emptyIndexHint = com.lazydevs.wristotle.handlers.EMPTY_INDEX_HINT,
+            ),
             CalendarHandler(calendarRepo),
             CreateEventHandler(calendarRepo),
             NoteHandler(app.noteRepository),

@@ -53,7 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.handlers.MediaPlayHandler
-import com.lazydevs.wristotle.handlers.OpenAppHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.OpenAppHandler
 import com.lazydevs.wristotle.history.ConversationEntry
 import java.io.File
 import java.text.DateFormat

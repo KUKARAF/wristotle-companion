@@ -4,27 +4,10 @@
 package com.lazydevs.wristotle.apps
 
 import com.lazydevs.wristotle.logging.WristotleLog as Log
+import com.lazydevs.wristotle.speech.nlu.apps.AppCatalog
+import com.lazydevs.wristotle.speech.nlu.apps.AppLookup
 
 private const val TAG = "AppIndex"
-
-/**
- * Three-way result distinguishing "user named an app we found",
- * "user said a generic media noun" ("play the song"), and "user
- * named something we don't recognise" ("play absolpt"). The
- * distinction matters because handlers should fall through to the
- * active session ONLY for generic phrasings — not for unrecognised
- * specific names, where silently acting on the wrong app would be
- * worse than telling the user we couldn't match.
- */
-sealed interface AppLookup {
-    /** Found a launcher package that matches the spoken query. */
-    data class Match(val packageId: String) : AppLookup
-    /** The query reduces to a generic media noun; safe to fall through
-     *  to whatever's active. */
-    data object Generic : AppLookup
-    /** Specific spoken name that didn't resolve to any installed app. */
-    data class NotFound(val spoken: String) : AppLookup
-}
 
 /**
  * Read-side facade over [InstalledAppDao]. Resolves a free-form
@@ -57,16 +40,16 @@ class AppIndex(
      *  Resolved before everything else. Default = no aliases (keeps tests +
      *  callers that don't care simple). */
     private val aliasResolver: (String) -> String? = { null },
-) {
+) : AppCatalog {
 
-    suspend fun count(): Int = dao.count()
+    override suspend fun count(): Int = dao.count()
     suspend fun latestScanAt(): Long? = dao.latestScanAt()
 
     /** All indexed apps (label + packageId), for the alias-picker UI. */
     suspend fun installedApps(): List<InstalledApp> = dao.all()
 
     /** See the [AppLookup] doc for what each return value means. */
-    suspend fun lookup(query: String): AppLookup {
+    override suspend fun lookup(query: String): AppLookup {
         val normalized = normalizeForIndex(query)
         if (normalized.isEmpty()) return AppLookup.Generic
 
