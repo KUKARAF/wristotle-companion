@@ -3,9 +3,9 @@
 
 package com.lazydevs.wristotle.briefing
 
-import android.app.Notification
 import android.service.notification.StatusBarNotification
 import com.lazydevs.wristotle.media.MediaSessionsListener
+import com.lazydevs.wristotle.notifications.NotificationFilter
 
 /**
  * Adapter over [MediaSessionsListener]'s snapshotActiveNotifications.
@@ -77,39 +77,19 @@ class UnreadMessagesProvider {
         return Snapshot(messaging = sections, otherCount = other.size)
     }
 
-    /**
-     * Stable identity for "the conversation this notification belongs
-     * to" within a single app. Tries the modern conversation hooks
-     * first (shortcutId, then channelId), then falls back to the
-     * notification's tag / id. Apps that don't model conversations
-     * still group cleanly because the (tag, id) pair is unique per
-     * notification slot.
-     */
-    private fun StatusBarNotification.conversationKey(): String {
-        val n = notification ?: return "$packageName#$id#$tag"
-        n.shortcutId?.takeIf { it.isNotBlank() }?.let {
-            return "$packageName/sc/$it"
-        }
-        n.channelId?.takeIf { it.isNotBlank() }?.let {
-            return "$packageName/ch/$it"
-        }
-        tag?.takeIf { it.isNotBlank() }?.let {
-            return "$packageName/tag/$it"
-        }
-        return "$packageName/id/$id"
-    }
+    /** Routes through the pure [NotificationFilter] so the listener
+     *  side (persisted-log path) sees the exact same definition of
+     *  "conversation." */
+    private fun StatusBarNotification.conversationKey(): String =
+        NotificationFilter.conversationKey(
+            packageName = packageName,
+            shortcutId = notification?.shortcutId,
+            channelId = notification?.channelId,
+            tag = tag,
+            id = id,
+        )
 
-    private fun StatusBarNotification.isActionable(): Boolean {
-        if (packageName == OUR_PACKAGE) return false
-        val flags = notification?.flags ?: 0
-        if (flags and Notification.FLAG_GROUP_SUMMARY != 0) return false
-        if (flags and Notification.FLAG_ONGOING_EVENT != 0) return false
-        if (flags and Notification.FLAG_FOREGROUND_SERVICE != 0) return false
-        if (flags and Notification.FLAG_NO_CLEAR != 0) return false
-        return true
-    }
-
-    private companion object {
-        const val OUR_PACKAGE = "com.lazydevs.wristotle"
-    }
+    /** Routes through [NotificationFilter] for the same reason. */
+    private fun StatusBarNotification.isActionable(): Boolean =
+        NotificationFilter.isActionable(packageName, notification?.flags ?: 0)
 }
