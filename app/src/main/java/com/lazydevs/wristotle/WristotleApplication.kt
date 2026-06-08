@@ -19,15 +19,15 @@ import com.lazydevs.wristotle.media.ActiveMediaSession
 import com.lazydevs.wristotle.nlu.LearningCollector
 import com.lazydevs.wristotle.nlu.NluSettings
 import com.lazydevs.wristotle.nlu.slots.CalendarSlots
-import com.lazydevs.wristotle.nlu.slots.CallSlots
-import com.lazydevs.wristotle.nlu.slots.CancelSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CallSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CancelSlots
 import com.lazydevs.wristotle.nlu.slots.CreateEventSlots
-import com.lazydevs.wristotle.nlu.slots.FindPhoneSlots
+import com.lazydevs.wristotle.speech.nlu.slots.FindPhoneSlots
 import com.lazydevs.wristotle.nlu.slots.ListRemindersSlots
-import com.lazydevs.wristotle.nlu.slots.MediaPlaySlots
-import com.lazydevs.wristotle.nlu.slots.MediaSeekSlots
-import com.lazydevs.wristotle.nlu.slots.MediaTargetSlots
-import com.lazydevs.wristotle.nlu.slots.OpenAppSlots
+import com.lazydevs.wristotle.speech.nlu.slots.MediaPlaySlots
+import com.lazydevs.wristotle.speech.nlu.slots.MediaSeekSlots
+import com.lazydevs.wristotle.speech.nlu.slots.MediaTargetSlots
+import com.lazydevs.wristotle.speech.nlu.slots.OpenAppSlots
 import com.lazydevs.wristotle.nlu.slots.ReminderSlots
 import com.lazydevs.wristotle.nlu.slots.RescheduleSlots
 import com.lazydevs.wristotle.phone.ContactsRepository
@@ -507,25 +507,25 @@ class WristotleApplication : Application() {
             Intent.OpenApp to OpenAppSlots(),
             Intent.Calendar to CalendarSlots(),
             Intent.CreateEvent to CreateEventSlots(),
-            Intent.Note to com.lazydevs.wristotle.nlu.slots.NoteSlots(),
-            Intent.AppendNote to com.lazydevs.wristotle.nlu.slots.AppendNoteSlots(),
-            Intent.AddTask to com.lazydevs.wristotle.nlu.slots.AddTaskSlots(),
-            Intent.ListTasks to com.lazydevs.wristotle.nlu.slots.ListTasksSlots(),
+            Intent.Note to com.lazydevs.wristotle.speech.nlu.slots.NoteSlots(),
+            Intent.AppendNote to com.lazydevs.wristotle.speech.nlu.slots.AppendNoteSlots(),
+            Intent.AddTask to com.lazydevs.wristotle.speech.nlu.slots.AddTaskSlots(),
+            Intent.ListTasks to com.lazydevs.wristotle.speech.nlu.slots.ListTasksSlots(),
             // CompleteTask + DeleteTask share the same target-extraction logic
             // — the slot extractor strips both complete-style and delete-style
             // verbs; the handlers differ only in what they DO with the matched task.
-            Intent.CompleteTask to com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots(),
-            Intent.DeleteTask to com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots(),
+            Intent.CompleteTask to com.lazydevs.wristotle.speech.nlu.slots.CompleteTaskSlots(),
+            Intent.DeleteTask to com.lazydevs.wristotle.speech.nlu.slots.CompleteTaskSlots(),
             Intent.CancelAlarm to com.lazydevs.wristotle.nlu.slots.CancelAlarmSlots(),
             Intent.SetAlarm to com.lazydevs.wristotle.nlu.slots.SetAlarmSlots(),
-            Intent.SetTimer to com.lazydevs.wristotle.nlu.slots.SetTimerSlots(),
-            Intent.WorldTime to com.lazydevs.wristotle.nlu.slots.WorldTimeSlots(),
-            Intent.Calculate to com.lazydevs.wristotle.nlu.slots.CalculateSlots(),
-            Intent.Weather to com.lazydevs.wristotle.nlu.slots.WeatherSlots(),
-            Intent.AskAgent to com.lazydevs.wristotle.nlu.slots.AskAgentSlots(
+            Intent.SetTimer to com.lazydevs.wristotle.speech.nlu.slots.SetTimerSlots(),
+            Intent.WorldTime to com.lazydevs.wristotle.speech.nlu.slots.WorldTimeSlots(),
+            Intent.Calculate to com.lazydevs.wristotle.speech.nlu.slots.CalculateSlots(),
+            Intent.Weather to com.lazydevs.wristotle.speech.nlu.slots.WeatherSlots(),
+            Intent.AskAgent to com.lazydevs.wristotle.speech.nlu.slots.AskAgentSlots(
                 extrasProvider = { askAgentSettings.customTriggers.value },
             ),
-            Intent.MorningBrief to com.lazydevs.wristotle.nlu.slots.MorningBriefSlots(),
+            Intent.MorningBrief to com.lazydevs.wristotle.speech.nlu.slots.MorningBriefSlots(),
         ))
 
         learningCollector = LearningCollector(

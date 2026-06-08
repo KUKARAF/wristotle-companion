@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.nlu.slots
+package com.lazydevs.wristotle.speech.nlu.slots
 
 /**
  * Shared regex builder for the AskAgent lead-in.
@@ -12,10 +12,10 @@ package com.lazydevs.wristotle.nlu.slots
  * the LLM gets *"ask jarvis what's the weather"* with the lead-in
  * baked in:
  *
- *  - [com.lazydevs.wristotle.nlu.slots.AskAgentSlots] strips the
+ *  - [com.lazydevs.wristotle.speech.nlu.slots.AskAgentSlots] strips the
  *    lead-in before passing the body to the LLM.
  *  - [com.lazydevs.wristotle.nlu.WatchHintRefiner] (via
- *    [com.lazydevs.wristotle.nlu.PrefixHints]) routes a query whose
+ *    [com.lazydevs.wristotle.speech.nlu.PrefixHints]) routes a query whose
  *    opening matches to [com.lazydevs.wristotle.speech.nlu.Intent.AskAgent].
  *
  * Built once per `extras` snapshot; callers cache by the extras list

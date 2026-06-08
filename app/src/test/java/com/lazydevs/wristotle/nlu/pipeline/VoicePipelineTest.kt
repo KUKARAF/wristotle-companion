@@ -4,9 +4,11 @@
 package com.lazydevs.wristotle.nlu.pipeline
 
 import com.lazydevs.wristotle.nlu.VoicePipeline
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.*
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.PrefixHints
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

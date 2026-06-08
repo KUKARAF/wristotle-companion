@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.nlu.slots
+package com.lazydevs.wristotle.speech.nlu.slots
 
 /**
  * Shared cleanup helpers for slot extractors.
@@ -26,7 +26,7 @@ private val TRAILING_EMPHASIS = Regex(
  * residual punctuation removed. Idempotent; safe to apply multiple
  * times. Returns the original string unchanged when nothing matches.
  */
-internal fun stripTrailingEmphasis(text: String): String {
+fun stripTrailingEmphasis(text: String): String {
     val withoutRun = TRAILING_EMPHASIS.replace(text, "")
     return withoutRun.trim().trimEnd('.', ',', '!', '?', ';', ':').trim()
 }
@@ -36,7 +36,7 @@ internal fun stripTrailingEmphasis(text: String): String {
  * token so contacts lookup matches the on-device "John" rather than
  * tripping over Whisper's "john,".
  */
-internal fun cleanNameToken(token: String): String =
+fun cleanNameToken(token: String): String =
     token.trim().trim('.', ',', '!', '?', ';', ':', '"', '\'').trim()
 
 /**
@@ -45,7 +45,7 @@ internal fun cleanNameToken(token: String): String =
  * always noise; contact-name extraction has its own filler-word handling
  * so it doesn't go through this.
  */
-internal fun cleanTitleToken(token: String): String =
+fun cleanTitleToken(token: String): String =
     cleanNameToken(token).replace(LEADING_ARTICLE, "").trim()
 
 private val LEADING_ARTICLE = Regex("""^(?i)(the|a|an)\s+""")
@@ -66,7 +66,7 @@ private val LEADING_ARTICLE = Regex("""^(?i)(the|a|an)\s+""")
  * Reschedule all normalise the same way; an edit to the trailing-
  * punctuation list (say) only has to happen once.
  */
-internal fun stripVerbBody(
+fun stripVerbBody(
     query: String,
     verbs: Regex,
     fillers: Regex,
@@ -88,7 +88,7 @@ private val TRIM_PUNCT = setOf('.', ',', '!', '?')
 
 /** Shared so the same compiled Regex is reused across slots that
  *  collapse whitespace runs. */
-internal val MULTI_WHITESPACE = Regex("\\s+")
+val MULTI_WHITESPACE = Regex("\\s+")
 
 /**
  * Spoken-number words → integers, for counts ("next three meetings") and
@@ -101,7 +101,7 @@ internal val MULTI_WHITESPACE = Regex("\\s+")
  * Callers that want to reject the bare article (e.g. SetTimer, to avoid
  * matching "set **a** timer" as 1) gate the word-form on an explicit unit.
  */
-internal val WORD_NUMBERS: Map<String, Int> = mapOf(
+val WORD_NUMBERS: Map<String, Int> = mapOf(
     "a" to 1, "an" to 1, "one" to 1,
     "two" to 2, "three" to 3, "four" to 4, "five" to 5,
     "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9,
@@ -112,13 +112,13 @@ internal val WORD_NUMBERS: Map<String, Int> = mapOf(
 
 /** Word-form alternation matching the keys of [WORD_NUMBERS]. Used by
  *  duration parsers as the number-token half of a "<n> <unit>" regex. */
-internal const val WORD_NUMBER_ALT =
+const val WORD_NUMBER_ALT =
     "a|an|one|two|three|four|five|six|seven|eight|nine|ten|" +
         "fifteen|twenty|thirty|forty|forty-five|forty five|fifty|sixty|ninety"
 
 /** Unit-token half of a duration regex. Matches seconds / minutes / hours
  *  in their long, short, and bare-letter forms. */
-internal const val DURATION_UNIT_ALT =
+const val DURATION_UNIT_ALT =
     "seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h"
 
 /**
@@ -132,7 +132,7 @@ internal const val DURATION_UNIT_ALT =
  * sides, so the "at" inside "chat", the "to" inside "auto", etc. are never
  * stripped mid-word — the single place that bug-class is handled.
  */
-internal fun trailingTimeClauseRegex(leadIns: Set<String>): Regex =
+fun trailingTimeClauseRegex(leadIns: Set<String>): Regex =
     Regex("""(?i)\s+\b(${leadIns.joinToString("|")})\b\s+[\w\s:.,]+$""")
 
 /**
@@ -143,7 +143,7 @@ internal fun trailingTimeClauseRegex(leadIns: Set<String>): Regex =
  * when the thing after the preposition is a temporal phrase ("in the
  * morning") rather than a location.
  */
-internal fun extractInOrAtLocation(query: String): String? {
+fun extractInOrAtLocation(query: String): String? {
     val lower = query.lowercase()
     val match = LOCATION_AFTER_IN_AT.find(lower) ?: return null
     var loc = match.groupValues[1].trim()

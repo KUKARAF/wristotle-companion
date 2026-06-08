@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.nlu.pipeline
 
 import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.PrefixHints
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.RankedIntent

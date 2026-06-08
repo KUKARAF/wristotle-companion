@@ -5,6 +5,7 @@ package com.lazydevs.wristotle.nlu.slots
 
 import com.lazydevs.wristotle.handlers.parseTime
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
+import com.lazydevs.wristotle.speech.nlu.slots.*
 import java.util.Date
 
 /**

@@ -6,7 +6,7 @@ package com.lazydevs.wristotle.handlers
 import android.content.Context
 import android.util.Log
 import com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.transport.PebbleTransport

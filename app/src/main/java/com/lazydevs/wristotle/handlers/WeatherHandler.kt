@@ -3,7 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
-import com.lazydevs.wristotle.nlu.slots.weatherLocation
+import com.lazydevs.wristotle.speech.nlu.slots.weatherLocation
 import com.lazydevs.wristotle.phone.PhoneLocation
 import com.lazydevs.wristotle.settings.WeatherProviderId
 import com.lazydevs.wristotle.settings.WeatherSettings

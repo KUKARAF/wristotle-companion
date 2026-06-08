@@ -5,6 +5,8 @@ package com.lazydevs.wristotle.nlu
 
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.PrefixHints
+import com.lazydevs.wristotle.speech.nlu.slots.*
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry

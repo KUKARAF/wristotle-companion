@@ -3,7 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
-import com.lazydevs.wristotle.nlu.slots.calcExpression
+import com.lazydevs.wristotle.speech.nlu.slots.calcExpression
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import java.math.BigDecimal

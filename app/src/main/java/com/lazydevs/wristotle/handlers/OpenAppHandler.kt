@@ -8,13 +8,13 @@ import com.lazydevs.wristotle.apps.AppIndex
 import com.lazydevs.wristotle.apps.AppLookup
 import com.lazydevs.wristotle.apps.launchApp
 import com.lazydevs.wristotle.apps.packageLabel
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 
 /**
  * Launches an installed app by spoken name ("open Spotify",
- * "launch Audible"). The `app` slot from [com.lazydevs.wristotle.nlu.slots.OpenAppSlots]
+ * "launch Audible"). The `app` slot from [com.lazydevs.wristotle.speech.nlu.slots.OpenAppSlots]
  * carries the spoken form; [AppIndex] resolves it to a package id.
  *
  * Three failure paths surfaced to the user, since each needs a

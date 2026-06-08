@@ -11,8 +11,8 @@ import com.lazydevs.wristotle.apps.InstalledApp
 import com.lazydevs.wristotle.handlers.MediaPlayHandler
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.history.ConversationSettings
-import com.lazydevs.wristotle.nlu.slots.MediaPlaySlots
-import com.lazydevs.wristotle.nlu.slots.OpenAppSlots
+import com.lazydevs.wristotle.speech.nlu.slots.MediaPlaySlots
+import com.lazydevs.wristotle.speech.nlu.slots.OpenAppSlots
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

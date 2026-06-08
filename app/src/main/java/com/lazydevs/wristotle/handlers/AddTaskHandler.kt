@@ -3,7 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.tasks.TaskRepository
@@ -14,7 +14,7 @@ import com.lazydevs.wristotle.tasks.TaskRepository
  * watch chat.
  *
  * Slot required: `body` (the task text, lead-in stripped by
- * [com.lazydevs.wristotle.nlu.slots.AddTaskSlots]). Returns *"What's
+ * [com.lazydevs.wristotle.speech.nlu.slots.AddTaskSlots]). Returns *"What's
  * the task?"* if body is missing/blank — the user can retry with
  * something parseable rather than seeing a silent failure.
  *

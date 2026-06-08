@@ -5,6 +5,8 @@ package com.lazydevs.wristotle.nlu
 
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.PrefixHints
+import com.lazydevs.wristotle.speech.nlu.slots.*
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 
 private const val TAG = "WatchHintRefiner"
@@ -69,11 +71,11 @@ object WatchHintRefiner {
      *  changes only when the user edits Settings. */
     @Volatile private var cachedExtras: List<String> = emptyList()
     @Volatile private var cachedRouteRegex: Regex =
-        com.lazydevs.wristotle.nlu.slots.AskAgentTriggers.routeRegex(emptyList())
+        com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers.routeRegex(emptyList())
 
     private fun customAskAgentRegex(extras: List<String>): Regex {
         if (extras == cachedExtras) return cachedRouteRegex
-        val rebuilt = com.lazydevs.wristotle.nlu.slots.AskAgentTriggers.routeRegex(extras)
+        val rebuilt = com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers.routeRegex(extras)
         cachedExtras = extras
         cachedRouteRegex = rebuilt
         return rebuilt

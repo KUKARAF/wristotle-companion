@@ -59,7 +59,7 @@ class AskAgentSettings(context: Context) {
     // string. Sanitised on every read so a hand-edited prefs file can't
     // sneak regex metacharacters through.
     private val _customTriggers = MutableStateFlow(
-        com.lazydevs.wristotle.nlu.slots.AskAgentTriggers.sanitise(
+        com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers.sanitise(
             prefs.getString(KEY_CUSTOM_TRIGGERS, "").orEmpty(),
         ),
     )
@@ -101,7 +101,7 @@ class AskAgentSettings(context: Context) {
      * lowercases — what we persist is what we'd run on the next query.
      */
     fun setCustomTriggers(rawText: String) {
-        val sanitised = com.lazydevs.wristotle.nlu.slots.AskAgentTriggers.sanitise(rawText)
+        val sanitised = com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers.sanitise(rawText)
         if (sanitised == _customTriggers.value) return
         prefs.edit().putString(KEY_CUSTOM_TRIGGERS, sanitised.joinToString("\n")).apply()
         _customTriggers.value = sanitised

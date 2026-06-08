@@ -5,7 +5,7 @@ package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.apps.AppIndex
 import com.lazydevs.wristotle.apps.AppLookup
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 
 /**

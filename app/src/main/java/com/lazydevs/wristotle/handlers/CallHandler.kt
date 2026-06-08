@@ -10,7 +10,7 @@ import android.os.Bundle
 import android.telecom.TelecomManager
 import android.util.Log
 import com.lazydevs.wristotle.phone.ContactsRepository
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.util.hasPermission

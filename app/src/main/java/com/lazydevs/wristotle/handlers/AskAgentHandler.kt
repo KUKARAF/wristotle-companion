@@ -7,7 +7,7 @@ import com.lazydevs.wristotle.agent.AgentLoop
 import com.lazydevs.wristotle.agent.AskAgentSettings
 import com.lazydevs.wristotle.agent.LlmResult
 import com.lazydevs.wristotle.mcp.McpServerRepository
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.transport.PebbleTransport

@@ -3,7 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
-import com.lazydevs.wristotle.nlu.slots.worldTimeLocation
+import com.lazydevs.wristotle.speech.nlu.slots.worldTimeLocation
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import java.text.SimpleDateFormat

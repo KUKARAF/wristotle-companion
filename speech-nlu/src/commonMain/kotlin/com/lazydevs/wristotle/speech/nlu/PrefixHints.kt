@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.nlu
+package com.lazydevs.wristotle.speech.nlu
 
 import com.lazydevs.wristotle.speech.nlu.Intent
 
@@ -41,7 +41,10 @@ import com.lazydevs.wristotle.speech.nlu.Intent
  * Add new anti-rule rows here AND a regression case in the test file
  * when you introduce a rule that requires precedence to be correct.
  */
-internal object PrefixHints {
+// Widened from `internal` to public when this lifted from :app to
+// :speech-nlu commonMain in R2 batch 1 — Android consumers
+// (WatchHintRefiner, VoicePipeline) live in a different module now.
+object PrefixHints {
 
     private val HINTS: List<Pair<Regex, Intent>> = listOf(
         // Media — seek variants FIRST so "skip ahead 30 seconds" /

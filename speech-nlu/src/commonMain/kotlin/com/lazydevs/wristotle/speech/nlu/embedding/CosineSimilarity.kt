@@ -11,7 +11,7 @@ import kotlin.math.sqrt
  * keep the divide-by-magnitudes variant available for unnormalized callers
  * but expect [dot] to be the one used at classify-time.
  */
-internal object CosineSimilarity {
+object CosineSimilarity {
 
     /** Dot product. Assumes [a] and [b] are L2-normalized; returns cosine. */
     fun dot(a: FloatArray, b: FloatArray): Float {

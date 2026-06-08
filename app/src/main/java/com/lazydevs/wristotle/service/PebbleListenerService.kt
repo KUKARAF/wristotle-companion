@@ -6,7 +6,7 @@ package com.lazydevs.wristotle.service
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.R
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.handlers.CalendarHandler
 import com.lazydevs.wristotle.handlers.CallHandler

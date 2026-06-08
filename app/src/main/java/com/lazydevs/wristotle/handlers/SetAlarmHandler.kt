@@ -9,7 +9,7 @@ import com.lazydevs.wristotle.alarms.AlarmEntity
 import com.lazydevs.wristotle.alarms.AlarmRepository
 import com.lazydevs.wristotle.alarms.AlarmSettings
 import com.lazydevs.wristotle.alarms.DispatchResult
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import java.util.Calendar
