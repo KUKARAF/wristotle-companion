@@ -320,11 +320,11 @@ class DiagnosticsBuilder(
     /** Map BUTTON_ACTION_* wire ints to their watch-side label so the
      *  report shows "DICTATION" rather than "3". */
     private fun buttonActionLabel(value: Int): String = when (value) {
-        com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_MENU      -> "MENU"
-        com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_NOTES     -> "NOTES"
-        com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_TASKS     -> "TASKS"
-        com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_DICTATION -> "DICTATION"
-        com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_ALARMS    -> "ALARMS"
+        com.lazydevs.wristotle.speech.nlu.transport.MessageKeys.BUTTON_ACTION_MENU      -> "MENU"
+        com.lazydevs.wristotle.speech.nlu.transport.MessageKeys.BUTTON_ACTION_NOTES     -> "NOTES"
+        com.lazydevs.wristotle.speech.nlu.transport.MessageKeys.BUTTON_ACTION_TASKS     -> "TASKS"
+        com.lazydevs.wristotle.speech.nlu.transport.MessageKeys.BUTTON_ACTION_DICTATION -> "DICTATION"
+        com.lazydevs.wristotle.speech.nlu.transport.MessageKeys.BUTTON_ACTION_ALARMS    -> "ALARMS"
         else -> "UNKNOWN($value)"
     }
 

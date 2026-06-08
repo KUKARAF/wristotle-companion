@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.transport.sendAlarmCancel
 import com.lazydevs.wristotle.alarms.AlarmDestination
 import com.lazydevs.wristotle.alarms.AlarmDispatcher
 import com.lazydevs.wristotle.alarms.AlarmEntity
@@ -11,7 +12,7 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import java.util.Calendar
 import java.util.Date
 
@@ -20,7 +21,7 @@ import java.util.Date
  *
  * Two grammar shapes:
  *  - Bare "cancel alarm" / "stop the alarm" — no [SlotKeys.Time] slot.
- *    Cancels ALL pending watch alarms via [PebbleTransport.sendAlarmCancel] (0).
+ *    Cancels ALL pending watch alarms via [WatchTransport.sendAlarmCancel] (0).
  *  - Time-qualified "cancel 7am alarm" — `time` slot present. Looks up
  *    Room rows whose `(hour, minute)` matches and cancels each watch leg
  *    by its `wireEpoch`. If multiple alarms share the time, all are cancelled.
@@ -43,7 +44,7 @@ import java.util.Date
  * companion UI). Not gated by the confirm-before-dispatch surface.
  */
 class CancelAlarmHandler(
-    private val transport: PebbleTransport,
+    private val transport: WatchTransport,
     private val repository: AlarmRepository,
     private val dispatcher: AlarmDispatcher,
 ) : ActionHandler {

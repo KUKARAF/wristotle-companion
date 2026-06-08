@@ -371,11 +371,11 @@ private fun AutoExitDropdown(seconds: Int, onChange: (Int) -> Unit) {
 @Composable
 private fun QuickLaunchActionDropdown(value: Int, onChange: (Int) -> Unit) {
     val choices = listOf(
-        com.lazydevs.wristotle.transport.MessageKeys.QUICK_LAUNCH_ACTION_DICTATE
+        com.lazydevs.wristotle.speech.nlu.transport.MessageKeys.QUICK_LAUNCH_ACTION_DICTATE
             to stringResource(R.string.watch_settings_quick_launch_action_dictate),
-        com.lazydevs.wristotle.transport.MessageKeys.QUICK_LAUNCH_ACTION_NOTES
+        com.lazydevs.wristotle.speech.nlu.transport.MessageKeys.QUICK_LAUNCH_ACTION_NOTES
             to stringResource(R.string.watch_settings_quick_launch_action_notes),
-        com.lazydevs.wristotle.transport.MessageKeys.QUICK_LAUNCH_ACTION_MENU
+        com.lazydevs.wristotle.speech.nlu.transport.MessageKeys.QUICK_LAUNCH_ACTION_MENU
             to stringResource(R.string.watch_settings_quick_launch_action_menu),
     )
     val display = choices.firstOrNull { it.first == value }?.second
@@ -406,7 +406,7 @@ private fun QuickLaunchActionDropdown(value: Int, onChange: (Int) -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ButtonActionDropdown(label: String, value: Int, onChange: (Int) -> Unit) {
-    val keys = com.lazydevs.wristotle.transport.MessageKeys
+    val keys = com.lazydevs.wristotle.speech.nlu.transport.MessageKeys
     val choices = listOf(
         keys.BUTTON_ACTION_DICTATION to stringResource(R.string.watch_settings_button_action_dictation),
         keys.BUTTON_ACTION_MENU      to stringResource(R.string.watch_settings_button_action_menu),

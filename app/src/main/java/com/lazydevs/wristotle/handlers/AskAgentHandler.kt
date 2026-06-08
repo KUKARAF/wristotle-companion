@@ -3,6 +3,8 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.transport.sendAgentStatus
+import com.lazydevs.wristotle.speech.nlu.transport.sendResponse
 import com.lazydevs.wristotle.agent.AgentLoop
 import com.lazydevs.wristotle.agent.AskAgentSettings
 import com.lazydevs.wristotle.speech.nlu.agent.LlmResult
@@ -11,7 +13,7 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 
 /**
  * Read-only by construction — not in the confirm-before-dispatch set.
@@ -23,7 +25,7 @@ import com.lazydevs.wristotle.transport.PebbleTransport
  *    aggregated tool list, up to 5 rounds.
  *
  * In the agent-loop path, intermediate "🛠 <toolName>" status lines
- * are sent to the watch via [PebbleTransport.sendResponse] so the
+ * are sent to the watch via [WatchTransport.sendResponse] so the
  * user sees what the LLM is doing across rounds. Each shows up as a
  * separate chat bubble — chatty but informative, matches the
  * Pebble-Wrist-AI reference pattern. The final answer returns via
@@ -36,7 +38,7 @@ import com.lazydevs.wristotle.transport.PebbleTransport
 class AskAgentHandler(
     private val settings: AskAgentSettings,
     private val mcpServers: McpServerRepository,
-    private val transport: PebbleTransport,
+    private val transport: WatchTransport,
 ) : ActionHandler {
 
     override val tag: String = "ask-agent"

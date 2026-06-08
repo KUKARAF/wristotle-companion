@@ -64,7 +64,7 @@ import kotlinx.coroutines.launch
  *
  * List + create + delete + enabled-toggle for [AlarmEntity] rows. Edits
  * fan out via [AlarmDispatcher]: enabling re-fires both legs (phone leg
- * via AlarmClock intent, watch leg via PebbleTransport), disabling
+ * via AlarmClock intent, watch leg via WatchTransport), disabling
  * cancels the watch leg only (phone is a programmatic dead-end per
  * alarm-timer.md).
  *

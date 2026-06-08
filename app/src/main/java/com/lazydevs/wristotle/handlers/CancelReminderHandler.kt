@@ -10,8 +10,8 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import com.lazydevs.wristotle.transport.PebbleTransport
-import io.rebble.pebblekit2.common.model.TimelineResult
+import com.lazydevs.wristotle.speech.nlu.transport.TimelineSendResult
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 
 private const val TAG = "CancelReminderHandler"
 
@@ -27,7 +27,7 @@ private const val TAG = "CancelReminderHandler"
  */
 class CancelReminderHandler(
     context: Context,
-    private val transport: PebbleTransport,
+    private val transport: WatchTransport,
     private val persistentScheduler: PersistentReminderScheduler,
 ) : ActionHandler {
 
@@ -51,10 +51,10 @@ class CancelReminderHandler(
                 }
         }
 
-        val cancelResult = transport.deleteReminder(record.id)
+        val cancelResult = transport.deleteReminderPin(record.id)
         Log.d(TAG, "deleteTimelinePin result: $cancelResult")
 
-        return if (cancelResult is TimelineResult.Success) {
+        return if (cancelResult is TimelineSendResult.Success) {
             pinStore.remove(record.id)
             // Also kill any pending phone-side nag chain for this pin. No-op
             // for non-persistent records (cancel() looks up a PendingIntent

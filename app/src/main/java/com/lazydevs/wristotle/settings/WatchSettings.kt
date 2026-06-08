@@ -40,7 +40,7 @@ data class WatchSettings(
      *  [confirmBeforeSend] is on. */
     val confirmDefaultSend: Boolean,
     /** Chat-surface button shortcut bindings. Each Int holds a
-     *  [com.lazydevs.wristotle.transport.MessageKeys.BUTTON_ACTION_*]
+     *  [com.lazydevs.wristotle.speech.nlu.transport.MessageKeys.BUTTON_ACTION_*]
      *  wire value. Defaults: UP/DOWN = MENU (0), SELECT = DICTATION (3). */
     val longPressUpAction: Int,
     val longPressDownAction: Int,

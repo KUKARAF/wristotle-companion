@@ -3,7 +3,7 @@
 
 package com.lazydevs.wristotle.notes
 
-import com.lazydevs.wristotle.transport.MessageKeys
+import com.lazydevs.wristotle.speech.nlu.transport.MessageKeys
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

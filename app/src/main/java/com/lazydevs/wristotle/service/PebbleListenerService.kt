@@ -3,6 +3,9 @@
 
 package com.lazydevs.wristotle.service
 
+import com.lazydevs.wristotle.speech.nlu.transport.sendConfirmPrompt
+import com.lazydevs.wristotle.speech.nlu.transport.sendForHint
+import com.lazydevs.wristotle.speech.nlu.transport.sendReady
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.R
@@ -43,8 +46,8 @@ import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
-import com.lazydevs.wristotle.transport.MessageKeys
-import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.speech.nlu.transport.MessageKeys
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import com.lazydevs.wristotle.transport.boolFlag
 import com.lazydevs.wristotle.transport.int32
 import com.lazydevs.wristotle.transport.text
@@ -78,7 +81,7 @@ class PebbleListenerService : BasePebbleListenerService() {
      *  live inside [onMessageReceived] don't fire on every inbound
      *  packet. Use this to reach any Application-scoped repository. */
     private lateinit var app: WristotleApplication
-    private lateinit var transport: PebbleTransport
+    private lateinit var transport: WatchTransport
     private lateinit var conversationRepository: ConversationRepository
     private lateinit var registry: HandlerRegistry
     private lateinit var voicePipeline: VoicePipeline

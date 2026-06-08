@@ -3,13 +3,17 @@
 
 package com.lazydevs.wristotle.service
 
+import com.lazydevs.wristotle.speech.nlu.transport.sendNoteDetailResponse
+import com.lazydevs.wristotle.speech.nlu.transport.sendNotesResponse
+import com.lazydevs.wristotle.speech.nlu.transport.sendTaskCompleteResponse
+import com.lazydevs.wristotle.speech.nlu.transport.sendTasksResponse
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.notes.NotesResponseFormatter
 import com.lazydevs.wristotle.tasks.TasksWireFrame
-import com.lazydevs.wristotle.transport.MessageKeys
-import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.speech.nlu.transport.MessageKeys
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import com.lazydevs.wristotle.transport.int32
 import io.rebble.pebblekit2.common.model.PebbleDictionary
 import java.util.concurrent.atomic.AtomicReference
@@ -31,7 +35,7 @@ private const val TAG = "WatchRequestRouter"
  */
 class WatchRequestRouter(
     private val app: WristotleApplication,
-    private val transport: PebbleTransport,
+    private val transport: WatchTransport,
 ) {
 
     /** Last batch of notes shipped via NOTES_RESPONSE — the watch refers
