@@ -10,8 +10,8 @@ plugins {
     // can resolve. AGP 9 rejects the legacy (com.android.library +
     // kotlin.multiplatform) stack — for KMP modules use the bespoke
     // android.kotlin.multiplatform.library plugin alongside the
-    // kotlin.multiplatform plugin instead. iOS spike S1a — :speech-nlu
-    // is the first KMP module in the build.
+    // kotlin.multiplatform plugin instead. iOS spike S1a — :wristotle-core
+    // (formerly :speech-nlu) is the first KMP module in the build.
     alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
 }

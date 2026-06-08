@@ -69,7 +69,7 @@ android {
         ndk {
             // Restrict the APK to arm64-v8a. The :speech-whisper module
             // already filters here, but the ONNX Runtime AAR (pulled in via
-            // :speech-nlu) ships .so files for x86_64 / x86 / armeabi-v7a /
+            // :wristotle-core) ships .so files for x86_64 / x86 / armeabi-v7a /
             // arm64-v8a — without this app-level filter, the APK ships all
             // four variants of libonnxruntime.so (~75 MB combined) when only
             // arm64-v8a is loadable on the target devices. Adding the filter
@@ -282,7 +282,7 @@ dependencies {
     implementation(libs.zip4j)
     implementation(project(":speech"))
     implementation(project(":speech-whisper"))
-    implementation(project(":speech-nlu"))
+    implementation(project(":wristotle-core"))
     // MCP client (phase A of AskAgent) — official SDK over Ktor's OkHttp engine.
     // Pure-package under app/.../mcp/; no separate module per the
     // module-vs-package check (single consumer, no NDK, no model lifecycle).
@@ -298,7 +298,7 @@ dependencies {
     // codec tests exercise the real JSONObject behaviour (vs. the no-op stubs
     // that `unitTests.isReturnDefaultValues = true` would otherwise hand back).
     testImplementation(libs.org.json)
-    // TodayRangeTest (and future tests of code lifted to :speech-nlu commonMain)
+    // TodayRangeTest (and future tests of code lifted to :wristotle-core commonMain)
     // construct kotlinx-datetime instants for fixture inputs.
     testImplementation(libs.kotlinx.datetime)
     androidTestImplementation(platform(libs.androidx.compose.bom))

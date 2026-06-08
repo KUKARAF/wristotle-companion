@@ -76,7 +76,7 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 # AGP 9's KMP-aware library plugin. Replaces (com.android.library +
 # kotlin.multiplatform) for modules that need both Android + iOS
-# targets — AGP 9 rejects that legacy combo. Used by :speech-nlu
+# targets — AGP 9 rejects that legacy combo. Used by :wristotle-core
 # from the iOS spike (S1a) onward.
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
