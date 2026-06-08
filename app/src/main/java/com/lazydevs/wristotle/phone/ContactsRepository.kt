@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.provider.ContactsContract
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 import kotlinx.coroutines.withContext
 
 /** Read-only access to the device contacts database. */
@@ -16,9 +17,6 @@ class ContactsRepository(
     private val context: Context,
     private val aliasStore: ContactAliasStore = ContactAliasStore(context),
 ) {
-
-    /** Resolved contact used by call and SMS handlers. */
-    data class Contact(val name: String, val number: String)
 
     /** Returns true if READ_CONTACTS permission has been granted. */
     fun hasPermission(): Boolean =
@@ -46,7 +44,7 @@ class ContactsRepository(
      *
      * Runs on [Dispatchers.IO] — ContentResolver queries are blocking.
      */
-    suspend fun findContact(query: String): Contact? = withContext(Dispatchers.IO) {
+    suspend fun findContact(query: String): ResolvedContact? = withContext(Dispatchers.IO) {
         aliasStore.resolve(normalizePhrase(query))?.let { ref ->
             resolveByLookupKey(ref)?.let { return@withContext it }
             // Alias matched but the lookup key didn't resolve — contact
@@ -71,12 +69,12 @@ class ContactsRepository(
      * same as `findContact` — the "(none of your contacts come close)"
      * outcome.
      */
-    suspend fun findInContacts(query: String): Contact? =
+    suspend fun findInContacts(query: String): ResolvedContact? =
         withContext(Dispatchers.IO) { findInProvider(query) }
 
     /** Single implementation of the LIKE %query% + score-floor matcher.
      *  Must be called from an IO dispatcher. */
-    private fun findInProvider(query: String): Contact? {
+    private fun findInProvider(query: String): ResolvedContact? {
         val nameCursor = context.contentResolver.query(
             ContactsContract.Contacts.CONTENT_URI,
             arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME_PRIMARY),
@@ -118,7 +116,7 @@ class ContactsRepository(
             if (cursor.moveToFirst()) cursor.getString(0) else null
         } ?: return null
 
-        return Contact(name, number)
+        return ResolvedContact(name, number)
     }
 
     /**
@@ -134,7 +132,7 @@ class ContactsRepository(
      * the volatile `_ID` ourselves. The caller already holds the IO
      * dispatcher (this is only invoked from [findContact]).
      */
-    private fun resolveByLookupKey(ref: ContactRef): Contact? {
+    private fun resolveByLookupKey(ref: ContactRef): ResolvedContact? {
         // Row-ID is intentionally 0 — `lookupContact` re-derives it
         // from the lookup key. The two-arg form is what the docs
         // recommend when the caller only has the key on hand.
@@ -173,6 +171,6 @@ class ContactsRepository(
             if (cursor.moveToFirst()) cursor.getString(0) else null
         } ?: return null
 
-        return Contact(displayName, number)
+        return ResolvedContact(displayName, number)
     }
 }

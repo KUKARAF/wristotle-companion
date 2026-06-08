@@ -23,7 +23,7 @@ import com.lazydevs.wristotle.speech.nlu.slots.NoteSlots
 import com.lazydevs.wristotle.speech.nlu.slots.OpenAppSlots
 import com.lazydevs.wristotle.speech.nlu.slots.ReminderSlots
 import com.lazydevs.wristotle.speech.nlu.slots.RescheduleSlots
-import com.lazydevs.wristotle.nlu.slots.SendMessageSlots
+import com.lazydevs.wristotle.speech.nlu.slots.SendMessageSlots
 import com.lazydevs.wristotle.speech.nlu.slots.CancelAlarmSlots
 import com.lazydevs.wristotle.speech.nlu.slots.SetTimerSlots
 import com.lazydevs.wristotle.speech.nlu.slots.WeatherSlots
@@ -31,6 +31,8 @@ import com.lazydevs.wristotle.speech.nlu.slots.WorldTimeSlots
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
+import com.lazydevs.wristotle.messaging.toInfoForSlots
 
 /**
  * Build a [SlotExtractorRegistry] for pipeline tests that mirrors the
@@ -51,7 +53,7 @@ import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
  * point of the harness.
  */
 fun testSlotRegistry(
-    findContact: suspend (String) -> ContactsRepository.Contact? = { null },
+    findContact: suspend (String) -> ResolvedContact? = { null },
     reminderOffsetMin: () -> Int = { 30 },
     askAgentSubjects: () -> List<String> = { emptyList() },
 ): SlotExtractorRegistry {
@@ -59,7 +61,7 @@ fun testSlotRegistry(
     val mediaSeekSlots = MediaSeekSlots()
     return SlotExtractorRegistry(mapOf(
         Intent.Call to CallSlots(),
-        Intent.SendMessage to SendMessageSlots(findContact = findContact),
+        Intent.SendMessage to SendMessageSlots(targets = com.lazydevs.wristotle.messaging.MessagingTargets.NAMED.map { it.toInfoForSlots() }, smsDisplayName = com.lazydevs.wristotle.messaging.MessagingTargets.Sms.displayName, findContact = findContact),
         Intent.Reminder to ReminderSlots(timeParser = com.lazydevs.wristotle.handlers.PrettyTimeTimeParser, defaultOffsetMinProvider = reminderOffsetMin),
         Intent.Cancel to CancelSlots(),
         Intent.ListReminders to ListRemindersSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),

@@ -16,6 +16,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 
 /**
  * End-to-end voice routing tests — query in, (intent, slots) out, no
@@ -30,7 +31,7 @@ class VoicePipelineTest {
         watchHint: Intent? = null,
         classifier: FakeIntentClassifier = FakeIntentClassifier(),
         askAgentSubjects: List<String> = emptyList(),
-        findContact: suspend (String) -> ContactsRepository.Contact? = { null },
+        findContact: suspend (String) -> ResolvedContact? = { null },
     ): VoicePipeline.Routed = runBlocking {
         val subjectsProvider = { askAgentSubjects }
         VoicePipeline(
@@ -267,7 +268,7 @@ class VoicePipelineTest {
             "WhatsApp mom on my way",
             findContact = { name ->
                 if (name.lowercase() == "mom") {
-                    ContactsRepository.Contact(name = "Mom", number = "555-0100")
+                    ResolvedContact(name = "Mom", number = "555-0100")
                 } else null
             },
         )

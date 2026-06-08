@@ -10,6 +10,7 @@ import com.lazydevs.wristotle.speech.nlu.IntentResult
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 
 /**
  * Pure formatter that renders an [IntentResult] as a short "action + body"
@@ -147,7 +148,7 @@ object ConfirmSummaryBuilder {
      *        phrase.
      */
     private fun contactName(r: IntentResult): String {
-        val resolved = (r.slots[SlotKeys.ResolvedContact] as? ContactsRepository.Contact)
+        val resolved = (r.slots[SlotKeys.ResolvedContact] as? ResolvedContact)
             ?.name?.takeIf { it.isNotEmpty() }
         if (resolved != null) return "[$resolved]"
         val spoken = (r.slots[SlotKeys.Contact] as? String)?.takeIf { it.isNotEmpty() }

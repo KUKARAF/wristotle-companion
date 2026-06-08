@@ -11,6 +11,7 @@ import com.lazydevs.wristotle.apps.AppIndex
 import com.lazydevs.wristotle.apps.AppIndexDatabase
 import com.lazydevs.wristotle.apps.AppIndexer
 import com.lazydevs.wristotle.history.ConversationAudioSettings
+import com.lazydevs.wristotle.messaging.toInfoForSlots
 import com.lazydevs.wristotle.history.ConversationAudioStore
 import com.lazydevs.wristotle.history.ConversationDatabase
 import com.lazydevs.wristotle.history.ConversationRepository
@@ -490,7 +491,15 @@ class WristotleApplication : Application() {
         val mediaTargetSlots = MediaTargetSlots()
         slotExtractors = SlotExtractorRegistry(mapOf(
             Intent.Call to CallSlots(),
-            Intent.SendMessage to com.lazydevs.wristotle.nlu.slots.SendMessageSlots(contacts),
+            // R3 batch 2 — SendMessageSlots lifted to commonMain; the
+            // Android-side MessagingTarget projects down via toInfo() and
+            // the contacts repo's findContact slots into the lambda
+            // signature the lifted slot accepts.
+            Intent.SendMessage to com.lazydevs.wristotle.speech.nlu.slots.SendMessageSlots(
+                targets = com.lazydevs.wristotle.messaging.MessagingTargets.NAMED.map { it.toInfoForSlots() },
+                smsDisplayName = com.lazydevs.wristotle.messaging.MessagingTargets.Sms.displayName,
+                findContact = contacts::findContact,
+            ),
             Intent.Reminder to ReminderSlots(
                 timeParser = com.lazydevs.wristotle.handlers.PrettyTimeTimeParser,
                 defaultOffsetMinProvider = { reminderSettings.defaultOffsetMin.value },

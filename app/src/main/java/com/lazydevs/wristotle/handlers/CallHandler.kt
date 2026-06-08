@@ -14,6 +14,7 @@ import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.util.hasPermission
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 
 private const val TAG = "CallHandler"
 
@@ -43,7 +44,7 @@ class CallHandler(
 
         // PebbleListenerService.enrichResolvedContact already looked
         // this name up before the confirm-gate; reuse that match.
-        val contact = (result.slots[SlotKeys.ResolvedContact] as? ContactsRepository.Contact)
+        val contact = (result.slots[SlotKeys.ResolvedContact] as? ResolvedContact)
             ?: contacts.findContact(contactName)
             ?: return "Contact not found: $contactName"
 

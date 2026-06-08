@@ -10,6 +10,7 @@ import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 
 /**
  * Handles [Intent.SendMessage] — the single voice path for sending a
@@ -78,7 +79,7 @@ class SendMessageHandler(
 
         // Reuse the upstream resolution when present — the slot extractor
         // already validated this name against the Contacts provider.
-        val contact = (result.slots[SlotKeys.ResolvedContact] as? ContactsRepository.Contact)
+        val contact = (result.slots[SlotKeys.ResolvedContact] as? ResolvedContact)
             ?: contacts.findContact(contactName)
             ?: return "Contact not found: $contactName"
 

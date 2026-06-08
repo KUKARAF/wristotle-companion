@@ -57,6 +57,7 @@ import java.util.UUID
 import android.content.Intent as AndroidIntent
 import android.os.Binder
 import android.os.IBinder
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 
 /**
  * Receives AppMessages from the Pebble watch via rePebble/microPebble.
@@ -485,13 +486,13 @@ class PebbleListenerService : BasePebbleListenerService() {
      * fail honestly with *"Contact not found"*.
      *
      * Short-circuits when the slot extractor already stashed a
-     * [ContactsRepository.Contact] (SendMessage's multi-word loop
+     * [ResolvedContact] (SendMessage's multi-word loop
      * resolves the contact during extraction). For Call, CallSlots
      * doesn't pre-resolve, so this still does the lookup.
      */
     private suspend fun enrichResolvedContact(routed: IntentResult): IntentResult {
         if (routed.intent != Intent.Call && routed.intent != Intent.SendMessage) return routed
-        if (routed.slots[SlotKeys.ResolvedContact] is ContactsRepository.Contact) return routed
+        if (routed.slots[SlotKeys.ResolvedContact] is ResolvedContact) return routed
         val spoken = (routed.slots[SlotKeys.Contact] as? String)?.trim().orEmpty()
         if (spoken.isEmpty()) return routed
         if (!contacts.hasPermission()) return routed

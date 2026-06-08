@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.nlu.slots
+package com.lazydevs.wristotle.speech.nlu.slots
 
-import com.lazydevs.wristotle.messaging.MessagingTarget
-import com.lazydevs.wristotle.messaging.MessagingTargets
-import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
 import com.lazydevs.wristotle.speech.nlu.slots.*
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
+import com.lazydevs.wristotle.speech.nlu.contacts.ContactsResolver
+import com.lazydevs.wristotle.speech.nlu.messaging.MessagingTargetInfo
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.SendMessage]:
@@ -45,9 +45,10 @@ import com.lazydevs.wristotle.speech.nlu.slots.*
  * misleading "Contact not found" prompt.
  */
 class SendMessageSlots(
-    private val findContact: suspend (String) -> ContactsRepository.Contact?,
+    private val targets: List<MessagingTargetInfo>,
+    private val smsDisplayName: String,
+    private val findContact: suspend (String) -> ResolvedContact?,
 ) : SlotExtractor {
-    constructor(contacts: ContactsRepository) : this(contacts::findContact)
 
     override suspend fun extract(query: String): Map<String, Any> {
         val lower = query.lowercase().trim()
@@ -106,7 +107,7 @@ class SendMessageSlots(
         // the lowercase + comma-strip work this method already did.
         val smsResult = extractSmsLike(normalised)
         if (smsResult.isNotEmpty()) {
-            return mapOf(SlotKeys.App to MessagingTargets.Sms.displayName) + smsResult
+            return mapOf(SlotKeys.App to smsDisplayName) + smsResult
         }
 
         return emptyMap()
@@ -200,11 +201,11 @@ class SendMessageSlots(
      * starts at the contact name (the trailing "to " is consumed) so
      * extractContactAndBody can do its greedy lookup directly.
      *
-     * Walks [MessagingTargets.NAMED] only — SMS has no aliases and is
+     * Walks [targets] only — SMS has no aliases and is
      * never matched this way.
      */
-    private fun matchVerbPrefixNamingApp(text: String): Pair<MessagingTarget, String>? {
-        for (target in MessagingTargets.NAMED) {
+    private fun matchVerbPrefixNamingApp(text: String): Pair<MessagingTargetInfo, String>? {
+        for (target in targets) {
             for (alias in target.aliasesByLengthDesc) {
                 for (template in VERB_PREFIX_WITH_APP_TEMPLATES) {
                     val prefix = template.replace("<app>", alias)
@@ -284,10 +285,10 @@ class SendMessageSlots(
      * first so "whats app" wins over "whats"), return the matched
      * target and the remainder of the text after the alias + a space.
      *
-     * Walks [MessagingTargets.NAMED] only.
+     * Walks [targets] only.
      */
-    private fun matchLeadingApp(text: String): Pair<MessagingTarget, String>? {
-        for (target in MessagingTargets.NAMED) {
+    private fun matchLeadingApp(text: String): Pair<MessagingTargetInfo, String>? {
+        for (target in targets) {
             // Sort by length descending so the longer alias matches
             // first when one is a prefix of another.
             for (alias in target.aliasesByLengthDesc) {
@@ -304,8 +305,8 @@ class SendMessageSlots(
      * target + the substrings before and after the `on <app>` segment,
      * or null if no match.
      */
-    private fun matchOnApp(text: String): Triple<MessagingTarget, String, String>? {
-        for (target in MessagingTargets.NAMED) {
+    private fun matchOnApp(text: String): Triple<MessagingTargetInfo, String, String>? {
+        for (target in targets) {
             for (alias in target.aliasesByLengthDesc) {
                 val needle = " on $alias "
                 val idx = text.indexOf(needle)
