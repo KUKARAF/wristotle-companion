@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.agent
+package com.lazydevs.wristotle.speech.nlu.agent
 
-import android.util.Log
-import com.lazydevs.wristotle.speech.util.SimpleHttp
-import com.lazydevs.wristotle.speech.util.providerErrorMessage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.lazydevs.wristotle.speech.nlu.http.HttpClient
+import com.lazydevs.wristotle.speech.nlu.http.HttpRequest
+import com.lazydevs.wristotle.speech.nlu.http.providerErrorMessage
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import org.json.JSONArray
-import org.json.JSONObject
-import com.lazydevs.wristotle.speech.nlu.agent.*
 
 /**
  * OpenAI Chat Completions wire-shape client. Same protocol is spoken
@@ -28,65 +30,63 @@ import com.lazydevs.wristotle.speech.nlu.agent.*
  * carries the invocations. Tool result messages use `role: "tool"`
  * with `tool_call_id` (distinct from Anthropic's structured-content
  * approach).
+ *
+ * R5 batch 2 — lifted from :app/agent. HTTP goes through the
+ * [HttpClient] seam; response parsing is kotlinx.serialization.json
+ * end-to-end.
  */
 class OpenAiCompatibleLlmClient(
+    private val http: HttpClient,
     private val endpointUrl: String,
     private val apiKey: String,
     private val model: String,
     private val maxTokens: Int = DEFAULT_MAX_TOKENS,
 ) : LlmClient {
 
-    override suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult =
-        withContext(Dispatchers.IO) {
-            if (endpointUrl.isBlank()) {
-                return@withContext LlmResult.Failure.Other("no endpoint URL configured")
-            }
-            try {
-                val messages = JSONArray()
-                if (!systemPrompt.isNullOrBlank()) {
-                    messages.put(JSONObject().put("role", "system").put("content", systemPrompt))
-                }
-                messages.put(JSONObject().put("role", "user").put("content", userQuery))
-
-                val body = JSONObject().apply {
-                    put("model", model)
-                    put("messages", messages)
-                    put("max_tokens", maxTokens)
-                }
-
-                val (status, payload) = httpPost(body.toString())
-                    ?: return@withContext LlmResult.Failure.Network("connect failed")
-                statusToCompleteResult(status, payload)
-            } catch (e: Exception) {
-                Log.w(TAG, "openai-compat complete failed", e)
-                LlmResult.Failure.Network(e.message ?: "unknown error")
-            }
+    override suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult {
+        if (endpointUrl.isBlank()) return LlmResult.Failure.Other("no endpoint URL configured")
+        return try {
+            val body = buildJsonObject {
+                put("model", model)
+                put("max_tokens", maxTokens)
+                put("messages", buildJsonArray {
+                    if (!systemPrompt.isNullOrBlank()) {
+                        add(buildJsonObject {
+                            put("role", "system")
+                            put("content", systemPrompt)
+                        })
+                    }
+                    add(buildJsonObject {
+                        put("role", "user")
+                        put("content", userQuery)
+                    })
+                })
+            }.toString()
+            val resp = httpPost(body)
+            statusToCompleteResult(resp.status, resp.body, resp.error)
+        } catch (e: Exception) {
+            LlmResult.Failure.Network(e.message ?: "unknown error")
         }
+    }
 
-    override suspend fun chat(
-        messages: List<LlmMessage>,
-        tools: List<LlmTool>,
-    ): LlmResponse = withContext(Dispatchers.IO) {
-        if (endpointUrl.isBlank()) {
-            return@withContext LlmResponse.Failure(LlmResult.Failure.Other("no endpoint URL configured"))
-        }
-        try {
+    override suspend fun chat(messages: List<LlmMessage>, tools: List<LlmTool>): LlmResponse {
+        if (endpointUrl.isBlank()) return LlmResponse.Failure(LlmResult.Failure.Other("no endpoint URL configured"))
+        return try {
             val body = buildChatBody(messages, tools)
-            val (status, payload) = httpPost(body)
-                ?: return@withContext LlmResponse.Failure(LlmResult.Failure.Network("connect failed"))
+            val resp = httpPost(body)
             when {
-                status == 401 -> LlmResponse.Failure(LlmResult.Failure.BadKey("API key rejected (401)"))
-                status == 429 -> LlmResponse.Failure(
-                    LlmResult.Failure.RateLimit(payload.providerErrorMessage() ?: "rate-limited (429)"),
+                resp.status == 0 -> LlmResponse.Failure(LlmResult.Failure.Network(resp.error ?: "connect failed"))
+                resp.status == 401 -> LlmResponse.Failure(LlmResult.Failure.BadKey("API key rejected (401)"))
+                resp.status == 429 -> LlmResponse.Failure(
+                    LlmResult.Failure.RateLimit(resp.body.providerErrorMessage() ?: "rate-limited (429)"),
                 )
-                status !in 200..299 -> LlmResponse.Failure(
-                    LlmResult.Failure.Other(payload.providerErrorMessage() ?: "HTTP $status"),
+                resp.status !in 200..299 -> LlmResponse.Failure(
+                    LlmResult.Failure.Other(resp.body.providerErrorMessage() ?: "HTTP ${resp.status}"),
                 )
-                payload == null -> LlmResponse.Failure(LlmResult.Failure.Network("empty response body"))
-                else -> parseChatSuccess(payload)
+                resp.body.isEmpty() -> LlmResponse.Failure(LlmResult.Failure.Network("empty response body"))
+                else -> parseChatSuccess(resp.body)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "openai-compat chat failed", e)
             LlmResponse.Failure(LlmResult.Failure.Network(e.message ?: "unknown error"))
         }
     }
@@ -103,7 +103,7 @@ class OpenAiCompatibleLlmClient(
         return obj.toString()
     }
 
-    private fun openAiTools(tools: List<LlmTool>) = kotlinx.serialization.json.buildJsonArray {
+    private fun openAiTools(tools: List<LlmTool>) = buildJsonArray {
         tools.forEach { tool ->
             add(buildJsonObject {
                 put("type", "function")
@@ -116,7 +116,7 @@ class OpenAiCompatibleLlmClient(
         }
     }
 
-    private fun openAiMessages(messages: List<LlmMessage>) = kotlinx.serialization.json.buildJsonArray {
+    private fun openAiMessages(messages: List<LlmMessage>) = buildJsonArray {
         messages.forEach { m ->
             when (m) {
                 is LlmMessage.System -> add(buildJsonObject {
@@ -133,12 +133,12 @@ class OpenAiCompatibleLlmClient(
                     // when tool_calls are set). Empty string would be
                     // rejected by some servers.
                     if (m.text.isNullOrBlank()) {
-                        put("content", kotlinx.serialization.json.JsonNull)
+                        put("content", JsonNull)
                     } else {
                         put("content", m.text)
                     }
                     if (m.toolCalls.isNotEmpty()) {
-                        put("tool_calls", kotlinx.serialization.json.buildJsonArray {
+                        put("tool_calls", buildJsonArray {
                             m.toolCalls.forEach { call ->
                                 add(buildJsonObject {
                                     put("id", call.id)
@@ -146,8 +146,7 @@ class OpenAiCompatibleLlmClient(
                                     put("function", buildJsonObject {
                                         put("name", call.wireName)
                                         // OpenAI wants `arguments` as a JSON-encoded STRING,
-                                        // not a JSON object. Both the loop and the wire
-                                        // recover the structured form by re-parsing.
+                                        // not a JSON object.
                                         put(
                                             "arguments",
                                             buildJsonObject {
@@ -174,23 +173,23 @@ class OpenAiCompatibleLlmClient(
     private fun parseChatSuccess(payload: String): LlmResponse {
         val json = runCatching { Json.parseToJsonElement(payload).jsonObject }.getOrNull()
             ?: return LlmResponse.Failure(LlmResult.Failure.Network("malformed JSON"))
-        val choices = json["choices"] as? kotlinx.serialization.json.JsonArray
+        val choices = json["choices"] as? JsonArray
             ?: return LlmResponse.Failure(LlmResult.Failure.Network("no choices"))
         if (choices.isEmpty()) return LlmResponse.Failure(LlmResult.Failure.Other("model returned no choices"))
         val message = (choices[0] as? JsonObject)?.get("message") as? JsonObject
             ?: return LlmResponse.Failure(LlmResult.Failure.Network("missing choices[0].message"))
 
-        val text = (message["content"] as? kotlinx.serialization.json.JsonPrimitive)
-            ?.content?.trim()?.ifBlank { null }
+        val text = (message["content"] as? JsonPrimitive)
+            ?.contentOrNull?.trim()?.ifBlank { null }
 
         val toolCalls = mutableListOf<LlmToolCall>()
-        (message["tool_calls"] as? kotlinx.serialization.json.JsonArray)?.forEach { entry ->
+        (message["tool_calls"] as? JsonArray)?.forEach { entry ->
             val obj = entry as? JsonObject ?: return@forEach
-            val id = obj["id"]?.toString()?.trim('"') ?: return@forEach
+            val id = (obj["id"] as? JsonPrimitive)?.contentOrNull ?: return@forEach
             val fn = obj["function"] as? JsonObject ?: return@forEach
-            val name = fn["name"]?.toString()?.trim('"') ?: return@forEach
+            val name = (fn["name"] as? JsonPrimitive)?.contentOrNull ?: return@forEach
             // `arguments` is a JSON-encoded string per the OpenAI spec.
-            val argsRaw = (fn["arguments"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: "{}"
+            val argsRaw = (fn["arguments"] as? JsonPrimitive)?.contentOrNull ?: "{}"
             val argsObj = runCatching { Json.parseToJsonElement(argsRaw).jsonObject }.getOrNull()
                 ?: return@forEach
             toolCalls.add(LlmToolCall(id = id, wireName = name, args = argsObj.toMap()))
@@ -200,44 +199,46 @@ class OpenAiCompatibleLlmClient(
 
     // ── HTTP ────────────────────────────────────────────────────────────────
 
-    private fun statusToCompleteResult(status: Int, payload: String?): LlmResult = when {
+    private fun statusToCompleteResult(status: Int, payload: String, error: String?): LlmResult = when {
+        status == 0 -> LlmResult.Failure.Network(error ?: "connect failed")
         status == 401 -> LlmResult.Failure.BadKey("API key rejected (401)")
         status == 429 -> LlmResult.Failure.RateLimit(payload.providerErrorMessage() ?: "rate-limited (429)")
         status !in 200..299 -> LlmResult.Failure.Other(payload.providerErrorMessage() ?: "HTTP $status")
-        payload == null -> LlmResult.Failure.Network("empty response body")
+        payload.isEmpty() -> LlmResult.Failure.Network("empty response body")
         else -> parseCompleteSuccess(payload)
     }
 
     private fun parseCompleteSuccess(payload: String): LlmResult {
-        val json = runCatching { JSONObject(payload) }.getOrNull()
+        val json = runCatching { Json.parseToJsonElement(payload).jsonObject }.getOrNull()
             ?: return LlmResult.Failure.Network("malformed JSON")
-        val choices = json.optJSONArray("choices") ?: return LlmResult.Failure.Network("no choices")
-        if (choices.length() == 0) return LlmResult.Failure.Other("model returned no choices")
-        val message = choices.optJSONObject(0)?.optJSONObject("message")
+        val choices = json["choices"] as? JsonArray ?: return LlmResult.Failure.Network("no choices")
+        if (choices.isEmpty()) return LlmResult.Failure.Other("model returned no choices")
+        val message = (choices[0] as? JsonObject)?.get("message") as? JsonObject
             ?: return LlmResult.Failure.Network("missing choices[0].message")
-        val text = message.optString("content").trim()
+        val text = (message["content"] as? JsonPrimitive)?.contentOrNull?.trim() ?: ""
         return if (text.isEmpty()) LlmResult.Failure.Other("model returned empty content")
         else LlmResult.Success(text)
     }
 
-    private fun httpPost(body: String): Pair<Int, String?>? = SimpleHttp.request(
-        url = endpointUrl,
-        method = "POST",
-        headers = buildMap {
-            put("Content-Type", "application/json")
-            put("Accept", "application/json")
-            // Local self-hosted servers (Ollama, llama.cpp) work without auth;
-            // omit the header entirely when the key is blank.
-            if (apiKey.isNotBlank()) put("Authorization", "Bearer $apiKey")
-        },
-        body = body,
-        // See AnthropicLlmClient.READ_TIMEOUT_MS for the rationale —
-        // cap under the watch's 15 s response ceiling.
-        readTimeoutMs = READ_TIMEOUT_MS,
+    private suspend fun httpPost(body: String) = http.request(
+        HttpRequest(
+            method = "POST",
+            url = endpointUrl,
+            headers = buildMap {
+                put("Content-Type", "application/json")
+                put("Accept", "application/json")
+                put("User-Agent", USER_AGENT)
+                // Local self-hosted servers (Ollama, llama.cpp) work without auth;
+                // omit the header entirely when the key is blank.
+                if (apiKey.isNotBlank()) put("Authorization", "Bearer $apiKey")
+            },
+            body = body.encodeToByteArray(),
+            timeoutMs = READ_TIMEOUT_MS,
+        ),
     )
 
     companion object {
-        private const val TAG = "OpenAiCompatibleLlmClient"
+        private const val USER_AGENT = "Wristotle/companion"
         const val DEFAULT_MAX_TOKENS = 1024
         const val DEFAULT_ENDPOINT_URL = "https://api.openai.com/v1/chat/completions"
         private const val READ_TIMEOUT_MS = 14_000

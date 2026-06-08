@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.agent
+package com.lazydevs.wristotle.speech.nlu.agent
 
-import android.util.Log
-import com.lazydevs.wristotle.speech.util.SimpleHttp
-import com.lazydevs.wristotle.speech.util.providerErrorMessage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.lazydevs.wristotle.speech.nlu.http.HttpClient
+import com.lazydevs.wristotle.speech.nlu.http.HttpRequest
+import com.lazydevs.wristotle.speech.nlu.http.providerErrorMessage
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import org.json.JSONArray
-import org.json.JSONObject
-import com.lazydevs.wristotle.speech.nlu.agent.*
 
 /**
  * Anthropic Messages API client.
@@ -30,69 +31,64 @@ import com.lazydevs.wristotle.speech.nlu.agent.*
  * Tool results are sent under `role: "user"` with structured content
  * (Anthropic's convention — different from OpenAI which uses a
  * dedicated `role: "tool"`).
+ *
+ * R5 batch 2 — lifted from :app/agent. HTTP goes through the
+ * [HttpClient] seam (Android impl wraps SimpleHttp/HttpURLConnection);
+ * response parsing now uses kotlinx.serialization.json end-to-end.
  */
 class AnthropicLlmClient(
+    private val http: HttpClient,
     private val apiKey: String,
     private val model: String,
     private val maxTokens: Int = DEFAULT_MAX_TOKENS,
     /**
-     * Opt-in: Anthropic's server-side `web_search_20250305` tool.
-     * Lets Claude search the web mid-reply for fresh facts (news /
-     * sports / weather / etc.). Billed per query on Anthropic's side;
-     * off by default. Toggle via Settings → ✨ Ask Agent. Only affects
-     * the [chat] code path — [complete] never sends tools.
+     * Opt-in: Anthropic's server-side `web_search_<YYYYMMDD>` tool.
+     * Lets Claude search the web mid-reply for fresh facts. Billed per
+     * query on Anthropic's side; off by default. Only affects [chat] —
+     * [complete] never sends tools.
      */
     private val webSearchEnabled: Boolean = false,
 ) : LlmClient {
 
-    override suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult =
-        withContext(Dispatchers.IO) {
-            if (apiKey.isBlank()) return@withContext LlmResult.Failure.NoKey()
-            try {
-                val body = JSONObject().apply {
-                    put("model", model)
-                    put("max_tokens", maxTokens)
-                    if (!systemPrompt.isNullOrBlank()) put("system", systemPrompt)
-                    put(
-                        "messages",
-                        JSONArray().put(
-                            JSONObject()
-                                .put("role", "user")
-                                .put("content", userQuery),
-                        ),
-                    )
-                }
-                val (status, payload) = httpPost(body.toString())
-                    ?: return@withContext LlmResult.Failure.Network("connect failed")
-                statusToCompleteResult(status, payload)
-            } catch (e: Exception) {
-                Log.w(TAG, "anthropic complete failed", e)
-                LlmResult.Failure.Network(e.message ?: "unknown error")
-            }
+    override suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult {
+        if (apiKey.isBlank()) return LlmResult.Failure.NoKey()
+        return try {
+            val body = buildJsonObject {
+                put("model", model)
+                put("max_tokens", maxTokens)
+                if (!systemPrompt.isNullOrBlank()) put("system", systemPrompt)
+                put("messages", buildJsonArray {
+                    add(buildJsonObject {
+                        put("role", "user")
+                        put("content", userQuery)
+                    })
+                })
+            }.toString()
+            val resp = httpPost(body)
+            statusToCompleteResult(resp.status, resp.body, resp.error)
+        } catch (e: Exception) {
+            LlmResult.Failure.Network(e.message ?: "unknown error")
         }
+    }
 
-    override suspend fun chat(
-        messages: List<LlmMessage>,
-        tools: List<LlmTool>,
-    ): LlmResponse = withContext(Dispatchers.IO) {
-        if (apiKey.isBlank()) return@withContext LlmResponse.Failure(LlmResult.Failure.NoKey())
-        try {
+    override suspend fun chat(messages: List<LlmMessage>, tools: List<LlmTool>): LlmResponse {
+        if (apiKey.isBlank()) return LlmResponse.Failure(LlmResult.Failure.NoKey())
+        return try {
             val body = buildChatBody(messages, tools)
-            val (status, payload) = httpPost(body)
-                ?: return@withContext LlmResponse.Failure(LlmResult.Failure.Network("connect failed"))
+            val resp = httpPost(body)
             when {
-                status == 401 -> LlmResponse.Failure(LlmResult.Failure.BadKey("API key rejected (401)"))
-                status == 429 -> LlmResponse.Failure(
-                    LlmResult.Failure.RateLimit(payload.providerErrorMessage() ?: "rate-limited (429)"),
+                resp.status == 0 -> LlmResponse.Failure(LlmResult.Failure.Network(resp.error ?: "connect failed"))
+                resp.status == 401 -> LlmResponse.Failure(LlmResult.Failure.BadKey("API key rejected (401)"))
+                resp.status == 429 -> LlmResponse.Failure(
+                    LlmResult.Failure.RateLimit(resp.body.providerErrorMessage() ?: "rate-limited (429)"),
                 )
-                status !in 200..299 -> LlmResponse.Failure(
-                    LlmResult.Failure.Other(payload.providerErrorMessage() ?: "HTTP $status"),
+                resp.status !in 200..299 -> LlmResponse.Failure(
+                    LlmResult.Failure.Other(resp.body.providerErrorMessage() ?: "HTTP ${resp.status}"),
                 )
-                payload == null -> LlmResponse.Failure(LlmResult.Failure.Network("empty response body"))
-                else -> parseChatSuccess(payload)
+                resp.body.isEmpty() -> LlmResponse.Failure(LlmResult.Failure.Network("empty response body"))
+                else -> parseChatSuccess(resp.body)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "anthropic chat failed", e)
             LlmResponse.Failure(LlmResult.Failure.Network(e.message ?: "unknown error"))
         }
     }
@@ -120,49 +116,35 @@ class AnthropicLlmClient(
         return obj.toString()
     }
 
-    private fun anthropicTools(tools: List<LlmTool>) = kotlinx.serialization.json.buildJsonArray {
-        // Anthropic's server-side web_search tool — opt-in via Settings.
-        // Listed first so Claude sees it before any user-provided tools.
-        // Version pin: bump WEB_SEARCH_TOOL_VERSION below when Anthropic
-        // ships a newer one; older versions keep working but new model
-        // features (e.g. dynamic filtering) ride on the latest version.
+    private fun anthropicTools(tools: List<LlmTool>) = buildJsonArray {
         if (webSearchEnabled) {
-            add(
-                buildJsonObject {
-                    put("type", WEB_SEARCH_TOOL_VERSION)
-                    put("name", "web_search")
-                },
-            )
+            add(buildJsonObject {
+                put("type", WEB_SEARCH_TOOL_VERSION)
+                put("name", "web_search")
+            })
         }
         tools.forEach { tool ->
-            add(
-                buildJsonObject {
-                    put("name", tool.wireName)
-                    tool.description?.let { put("description", it) }
-                    put("input_schema", tool.inputSchema ?: EMPTY_OBJECT_SCHEMA)
-                },
-            )
+            add(buildJsonObject {
+                put("name", tool.wireName)
+                tool.description?.let { put("description", it) }
+                put("input_schema", tool.inputSchema ?: EMPTY_OBJECT_SCHEMA)
+            })
         }
     }
 
-    private fun anthropicMessages(messages: List<LlmMessage>) = kotlinx.serialization.json.buildJsonArray {
-        // Adjacent Tool-results are coalesced into a single user message
-        // with multiple tool_result blocks (Anthropic prefers this shape
-        // and rejects consecutive user-role messages otherwise).
+    private fun anthropicMessages(messages: List<LlmMessage>) = buildJsonArray {
         var i = 0
         while (i < messages.size) {
             val m = messages[i]
             when (m) {
                 is LlmMessage.System -> error("system should be hoisted out before serialisation")
-                is LlmMessage.User -> add(
-                    buildJsonObject {
-                        put("role", "user")
-                        put("content", m.text)
-                    },
-                )
+                is LlmMessage.User -> add(buildJsonObject {
+                    put("role", "user")
+                    put("content", m.text)
+                })
                 is LlmMessage.Assistant -> add(buildJsonObject {
                     put("role", "assistant")
-                    put("content", kotlinx.serialization.json.buildJsonArray {
+                    put("content", buildJsonArray {
                         m.text?.takeIf { it.isNotBlank() }?.let { text ->
                             add(buildJsonObject {
                                 put("type", "text")
@@ -182,7 +164,6 @@ class AnthropicLlmClient(
                     })
                 })
                 is LlmMessage.Tool -> {
-                    // Coalesce consecutive Tool messages.
                     val toolBatch = mutableListOf<LlmMessage.Tool>()
                     while (i < messages.size && messages[i] is LlmMessage.Tool) {
                         toolBatch.add(messages[i] as LlmMessage.Tool)
@@ -190,7 +171,7 @@ class AnthropicLlmClient(
                     }
                     add(buildJsonObject {
                         put("role", "user")
-                        put("content", kotlinx.serialization.json.buildJsonArray {
+                        put("content", buildJsonArray {
                             toolBatch.forEach { t ->
                                 add(buildJsonObject {
                                     put("type", "tool_result")
@@ -213,18 +194,18 @@ class AnthropicLlmClient(
     private fun parseChatSuccess(payload: String): LlmResponse {
         val json = runCatching { Json.parseToJsonElement(payload).jsonObject }.getOrNull()
             ?: return LlmResponse.Failure(LlmResult.Failure.Network("malformed JSON"))
-        val content = json["content"] as? kotlinx.serialization.json.JsonArray
+        val content = json["content"] as? JsonArray
             ?: return LlmResponse.Failure(LlmResult.Failure.Network("no content in response"))
 
         val textBuilder = StringBuilder()
         val toolCalls = mutableListOf<LlmToolCall>()
         for (block in content) {
             val obj = block as? JsonObject ?: continue
-            when (obj["type"]?.toString()?.trim('"')) {
-                "text" -> obj["text"]?.toString()?.trim('"')?.let { textBuilder.append(it) }
+            when ((obj["type"] as? JsonPrimitive)?.contentOrNull) {
+                "text" -> (obj["text"] as? JsonPrimitive)?.contentOrNull?.let { textBuilder.append(it) }
                 "tool_use" -> {
-                    val id = obj["id"]?.toString()?.trim('"') ?: continue
-                    val name = obj["name"]?.toString()?.trim('"') ?: continue
+                    val id = (obj["id"] as? JsonPrimitive)?.contentOrNull ?: continue
+                    val name = (obj["name"] as? JsonPrimitive)?.contentOrNull ?: continue
                     val input = (obj["input"] as? JsonObject)?.toMap() ?: emptyMap()
                     toolCalls.add(LlmToolCall(id = id, wireName = name, args = input))
                 }
@@ -236,24 +217,25 @@ class AnthropicLlmClient(
 
     // ── HTTP ────────────────────────────────────────────────────────────────
 
-    private fun statusToCompleteResult(status: Int, payload: String?): LlmResult = when {
+    private fun statusToCompleteResult(status: Int, payload: String, error: String?): LlmResult = when {
+        status == 0 -> LlmResult.Failure.Network(error ?: "connect failed")
         status == 401 -> LlmResult.Failure.BadKey("API key rejected (401)")
         status == 429 -> LlmResult.Failure.RateLimit(payload.providerErrorMessage() ?: "rate-limited (429)")
         status !in 200..299 -> LlmResult.Failure.Other(payload.providerErrorMessage() ?: "HTTP $status")
-        payload == null -> LlmResult.Failure.Network("empty response body")
+        payload.isEmpty() -> LlmResult.Failure.Network("empty response body")
         else -> parseCompleteSuccess(payload)
     }
 
     private fun parseCompleteSuccess(payload: String): LlmResult {
-        val json = runCatching { JSONObject(payload) }.getOrNull()
+        val json = runCatching { Json.parseToJsonElement(payload).jsonObject }.getOrNull()
             ?: return LlmResult.Failure.Network("malformed JSON")
-        val content = json.optJSONArray("content")
+        val content = json["content"] as? JsonArray
             ?: return LlmResult.Failure.Network("no content in response")
         val text = buildString {
-            for (i in 0 until content.length()) {
-                val block = content.optJSONObject(i) ?: continue
-                if (block.optString("type") == "text") {
-                    append(block.optString("text"))
+            for (block in content) {
+                val obj = block as? JsonObject ?: continue
+                if ((obj["type"] as? JsonPrimitive)?.contentOrNull == "text") {
+                    (obj["text"] as? JsonPrimitive)?.contentOrNull?.let { append(it) }
                 }
             }
         }.trim()
@@ -261,39 +243,38 @@ class AnthropicLlmClient(
         else LlmResult.Success(text)
     }
 
-    private fun httpPost(body: String): Pair<Int, String?>? = SimpleHttp.request(
-        url = ENDPOINT,
-        method = "POST",
-        headers = mapOf(
-            "Content-Type" to "application/json",
-            "Accept" to "application/json",
-            "x-api-key" to apiKey,
-            "anthropic-version" to ANTHROPIC_VERSION,
+    private suspend fun httpPost(body: String) = http.request(
+        HttpRequest(
+            method = "POST",
+            url = ENDPOINT,
+            headers = mapOf(
+                "Content-Type" to "application/json",
+                "Accept" to "application/json",
+                "x-api-key" to apiKey,
+                "anthropic-version" to ANTHROPIC_VERSION,
+                "User-Agent" to USER_AGENT,
+            ),
+            body = body.encodeToByteArray(),
+            // Cap under the watch's PROCESSOR_TIMEOUT_MS (15 s) so a slow
+            // LLM round produces a real failure message in time for the
+            // watch to render it, instead of leaving the watch silent
+            // past its own ceiling.
+            timeoutMs = READ_TIMEOUT_MS,
         ),
-        body = body,
-        // Cap under the watch's PROCESSOR_TIMEOUT_MS (15 s in
-        // input/processor.c) so a slow LLM round produces a real failure
-        // message in time for the watch to render it, instead of leaving
-        // the watch silent past its own ceiling. The AskAgent loop also
-        // emits agent_status on Status.Thinking which re-arms that timer.
-        readTimeoutMs = READ_TIMEOUT_MS,
     )
 
     companion object {
-        private const val TAG = "AnthropicLlmClient"
         private const val ENDPOINT = "https://api.anthropic.com/v1/messages"
         private const val ANTHROPIC_VERSION = "2023-06-01"
+        private const val USER_AGENT = "Wristotle/companion"
         const val DEFAULT_MAX_TOKENS = 1024
         private const val READ_TIMEOUT_MS = 14_000
 
         /**
          * Anthropic's server-side `web_search` tool version string —
-         * `web_search_<YYYYMMDD>`. The 20260209 release adds dynamic
-         * filtering (Claude post-processes search results before they
-         * hit the context window). Bump when Anthropic ships a newer
+         * `web_search_<YYYYMMDD>`. Bump when Anthropic ships a newer
          * version; older types stay supported but new model features
-         * ride on the latest pin. See:
-         *   https://platform.claude.com/docs/en/docs/agents-and-tools/tool-use/web-search-tool
+         * ride on the latest pin.
          */
         private const val WEB_SEARCH_TOOL_VERSION = "web_search_20260209"
 

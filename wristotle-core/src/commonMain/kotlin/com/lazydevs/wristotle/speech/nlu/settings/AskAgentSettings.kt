@@ -1,84 +1,69 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.agent
+package com.lazydevs.wristotle.speech.nlu.settings
 
-import android.content.Context
-import android.content.SharedPreferences
+import com.lazydevs.wristotle.speech.nlu.agent.AnthropicLlmClient
+import com.lazydevs.wristotle.speech.nlu.agent.LlmClient
+import com.lazydevs.wristotle.speech.nlu.agent.LlmProvider
+import com.lazydevs.wristotle.speech.nlu.agent.OpenAiCompatibleLlmClient
+import com.lazydevs.wristotle.speech.nlu.http.HttpClient
+import com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers
+import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import com.lazydevs.wristotle.speech.nlu.agent.*
 
 /**
  * Companion-local LLM settings. Per-provider keys are stored
  * separately so the user can flip providers without losing the other
  * key. No watch mirror — entirely companion-side; the watch only sees
  * the final response text.
+ *
+ * R5 batch 3 — lifted from :app onto the [KeyValueStore] seam. The
+ * [activeClient] factory now takes the [HttpClient] explicitly (it was
+ * the entanglement that kept this class :app-side until B9 + B5.2
+ * shipped the seam and the lifted LLM clients).
  */
-class AskAgentSettings(context: Context) {
-
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+class AskAgentSettings(
+    private val store: KeyValueStore,
+    private val http: HttpClient,
+) {
 
     private val _provider = MutableStateFlow(readProvider())
     val provider: StateFlow<LlmProvider> = _provider
 
-    private val _anthropicApiKey = MutableStateFlow(prefs.getString(KEY_ANTHROPIC_API_KEY, "").orEmpty())
+    private val _anthropicApiKey = MutableStateFlow(store.getString(KEY_ANTHROPIC_API_KEY, ""))
     val anthropicApiKey: StateFlow<String> = _anthropicApiKey
 
-    private val _anthropicModel = MutableStateFlow(
-        prefs.getString(KEY_ANTHROPIC_MODEL, null) ?: DEFAULT_ANTHROPIC_MODEL,
-    )
+    private val _anthropicModel = MutableStateFlow(readOrDefault(KEY_ANTHROPIC_MODEL, DEFAULT_ANTHROPIC_MODEL))
     val anthropicModel: StateFlow<String> = _anthropicModel
 
     private val _openaiEndpoint = MutableStateFlow(
-        prefs.getString(KEY_OPENAI_ENDPOINT, null) ?: OpenAiCompatibleLlmClient.DEFAULT_ENDPOINT_URL,
+        readOrDefault(KEY_OPENAI_ENDPOINT, OpenAiCompatibleLlmClient.DEFAULT_ENDPOINT_URL),
     )
     val openaiEndpoint: StateFlow<String> = _openaiEndpoint
 
-    private val _openaiApiKey = MutableStateFlow(prefs.getString(KEY_OPENAI_API_KEY, "").orEmpty())
+    private val _openaiApiKey = MutableStateFlow(store.getString(KEY_OPENAI_API_KEY, ""))
     val openaiApiKey: StateFlow<String> = _openaiApiKey
 
-    private val _openaiModel = MutableStateFlow(
-        prefs.getString(KEY_OPENAI_MODEL, null) ?: DEFAULT_OPENAI_MODEL,
-    )
+    private val _openaiModel = MutableStateFlow(readOrDefault(KEY_OPENAI_MODEL, DEFAULT_OPENAI_MODEL))
     val openaiModel: StateFlow<String> = _openaiModel
 
-    // On first install (key absent) the watch-friendly baseline lands
-    // as the actual visible default in the Settings card — so what the
-    // user sees in the field IS what gets sent. An empty value is
-    // respected (user explicitly cleared it); resetSystemPromptToDefault()
-    // brings the baseline back.
-    private val _systemPrompt = MutableStateFlow(
-        prefs.getString(KEY_SYSTEM_PROMPT, null) ?: DEFAULT_SYSTEM_PROMPT,
-    )
+    private val _systemPrompt = MutableStateFlow(readOrDefault(KEY_SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT))
     val systemPrompt: StateFlow<String> = _systemPrompt
 
-    // User-supplied trigger words added on top of the built-in defaults
-    // ("agent", "claude", "ai", ...). Comma + newline separated on the
-    // wire so the UI can show one-per-line while we persist a compact
-    // string. Sanitised on every read so a hand-edited prefs file can't
-    // sneak regex metacharacters through.
     private val _customTriggers = MutableStateFlow(
-        com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers.sanitise(
-            prefs.getString(KEY_CUSTOM_TRIGGERS, "").orEmpty(),
-        ),
+        AskAgentTriggers.sanitise(store.getString(KEY_CUSTOM_TRIGGERS, "")),
     )
     val customTriggers: StateFlow<List<String>> = _customTriggers
 
-    // Anthropic's server-side `web_search_20250305` tool. Off by default —
-    // billed per query on Anthropic's side, so opt-in only. When on,
-    // AnthropicLlmClient appends the tool spec to every chat request and
-    // Claude can search the web mid-reply for fresh facts (news, sports,
-    // weather elsewhere, etc.). OpenAI-compat users get the universal
-    // answer via an MCP web-search server — see troubleshooting docs.
     private val _anthropicWebSearch = MutableStateFlow(
-        prefs.getBoolean(KEY_ANTHROPIC_WEB_SEARCH, false),
+        store.getBoolean(KEY_ANTHROPIC_WEB_SEARCH, false),
     )
     val anthropicWebSearch: StateFlow<Boolean> = _anthropicWebSearch
 
     fun setProvider(value: LlmProvider) {
-        prefs.edit().putString(KEY_PROVIDER, value.name).apply()
+        store.putString(KEY_PROVIDER, value.name)
         _provider.value = value
     }
 
@@ -86,7 +71,7 @@ class AskAgentSettings(context: Context) {
     fun setAnthropicModel(value: String) = write(KEY_ANTHROPIC_MODEL, value.trim(), _anthropicModel)
     fun setAnthropicWebSearch(value: Boolean) {
         if (_anthropicWebSearch.value == value) return
-        prefs.edit().putBoolean(KEY_ANTHROPIC_WEB_SEARCH, value).apply()
+        store.putBoolean(KEY_ANTHROPIC_WEB_SEARCH, value)
         _anthropicWebSearch.value = value
     }
     fun setOpenAiEndpoint(value: String) = write(KEY_OPENAI_ENDPOINT, value.trim(), _openaiEndpoint)
@@ -95,16 +80,10 @@ class AskAgentSettings(context: Context) {
     fun setSystemPrompt(value: String) = write(KEY_SYSTEM_PROMPT, value, _systemPrompt)
     fun resetSystemPromptToDefault() = setSystemPrompt(DEFAULT_SYSTEM_PROMPT)
 
-    /**
-     * Update the custom trigger words from the raw text the user typed
-     * in Settings (one-per-line is the displayed convention; commas are
-     * also accepted). Sanitisation drops blanks + duplicates and
-     * lowercases — what we persist is what we'd run on the next query.
-     */
     fun setCustomTriggers(rawText: String) {
-        val sanitised = com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers.sanitise(rawText)
+        val sanitised = AskAgentTriggers.sanitise(rawText)
         if (sanitised == _customTriggers.value) return
-        prefs.edit().putString(KEY_CUSTOM_TRIGGERS, sanitised.joinToString("\n")).apply()
+        store.putString(KEY_CUSTOM_TRIGGERS, sanitised.joinToString("\n"))
         _customTriggers.value = sanitised
     }
 
@@ -115,11 +94,13 @@ class AskAgentSettings(context: Context) {
      */
     fun activeClient(): LlmClient = when (_provider.value) {
         LlmProvider.ANTHROPIC -> AnthropicLlmClient(
+            http = http,
             apiKey = _anthropicApiKey.value,
             model = _anthropicModel.value,
             webSearchEnabled = _anthropicWebSearch.value,
         )
         LlmProvider.OPENAI_COMPATIBLE -> OpenAiCompatibleLlmClient(
+            http = http,
             endpointUrl = _openaiEndpoint.value,
             apiKey = _openaiApiKey.value,
             model = _openaiModel.value,
@@ -139,18 +120,25 @@ class AskAgentSettings(context: Context) {
     }
 
     private fun readProvider(): LlmProvider {
-        val name = prefs.getString(KEY_PROVIDER, null) ?: return LlmProvider.ANTHROPIC
-        return runCatching { LlmProvider.valueOf(name) }.getOrDefault(LlmProvider.ANTHROPIC)
+        val name = store.getString(KEY_PROVIDER, "")
+        if (name.isEmpty()) return LlmProvider.ANTHROPIC
+        return runCatching { enumValueOf<LlmProvider>(name) }
+            .getOrDefault(LlmProvider.ANTHROPIC)
+    }
+
+    private fun readOrDefault(key: String, default: String): String {
+        val raw = store.getString(key, "")
+        return raw.ifEmpty { default }
     }
 
     private fun write(key: String, value: String, flow: MutableStateFlow<String>) {
         if (flow.value == value) return
-        prefs.edit().putString(key, value).apply()
+        store.putString(key, value)
         flow.value = value
     }
 
     companion object {
-        private const val PREFS_NAME = "ask_agent_settings"
+        const val PREFS_NAME = "ask_agent_settings"
         private const val KEY_PROVIDER = "provider"
         private const val KEY_ANTHROPIC_API_KEY = "anthropic_api_key"
         private const val KEY_ANTHROPIC_MODEL = "anthropic_model"
@@ -161,9 +149,6 @@ class AskAgentSettings(context: Context) {
         private const val KEY_CUSTOM_TRIGGERS = "custom_triggers"
         private const val KEY_ANTHROPIC_WEB_SEARCH = "anthropic_web_search"
 
-        // Defaults: cheap + decent + broadly available. Users override
-        // per-provider via the Settings card; field is a plain text
-        // input so any provider's model id works.
         const val DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6"
         const val DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 

@@ -384,7 +384,7 @@ private fun SettingsCategoryContent(
     mcpServersVm: McpServersViewModel,
     reminderSettings: ReminderSettings,
     weatherSettings: com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings,
-    askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings,
+    askAgentSettings: com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings,
     /** Lets the 🌟 Setup card's "Open" buttons jump directly into the
      *  sub-screen for an action's [SettingsCategory] target instead of
      *  bouncing the user back to the landing page. */

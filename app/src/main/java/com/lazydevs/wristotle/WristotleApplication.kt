@@ -213,8 +213,14 @@ class WristotleApplication : Application() {
     /** AskAgent preferences — LLM provider + API key + model. Lazy for
      *  the same reason as [mcpDb]: only touched when the user opens the
      *  Settings card, fires an AskAgent intent, or runs a backup. */
-    val askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings by lazy {
-        com.lazydevs.wristotle.agent.AskAgentSettings(this)
+    val askAgentSettings: com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings(
+            store = com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings.PREFS_NAME,
+            ),
+            http = com.lazydevs.wristotle.http.AndroidHttpClient(),
+        )
     }
 
     /** STT-provider preferences. See `wristotle-companion/stt-providers.md`. */
