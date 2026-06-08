@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package com.lazydevs.wristotle.speech.nlu.handlers
 
+import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.calendar.CalendarEvent
+import com.lazydevs.wristotle.speech.nlu.calendar.CalendarReader
+import com.lazydevs.wristotle.speech.nlu.calendar.EventTimeFormat
 import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.calendarCount
 import com.lazydevs.wristotle.speech.nlu.slots.calendarDate
-import com.lazydevs.wristotle.phone.CalendarRepository
-import com.lazydevs.wristotle.speech.nlu.Intent
-import com.lazydevs.wristotle.speech.nlu.IntentResult
-import java.util.Date
 
 /**
  * Handles [Intent.Calendar] — read-only calendar lookups.
@@ -20,9 +21,12 @@ import java.util.Date
  *                      "next 3 meetings"; count defaults to 1).
  *
  * Responses are kept short for the watch chat — a few lines, one event per
- * line. Fails soft with a permission hint when READ_CALENDAR isn't granted.
+ * line. Fails soft with a permission hint when read isn't granted.
+ *
+ * R4 batch 6 — lifted from :app. Depends only on CalendarReader +
+ * EventTimeFormat, both in commonMain.
  */
-class CalendarHandler(private val calendar: CalendarRepository) : ActionHandler {
+class CalendarHandler(private val calendar: CalendarReader) : ActionHandler {
 
     override val tag: String = "calendar"
     override val intent: Intent = Intent.Calendar
@@ -31,17 +35,14 @@ class CalendarHandler(private val calendar: CalendarRepository) : ActionHandler 
         if (!calendar.hasPermission()) {
             return "Calendar access not granted.\nEnable it in the Wristotle app."
         }
-        // R2 batch 4: calendarDate() now returns Instant (commonMain); convert
-        // to Date at this boundary so the rest of this Android-bound handler
-        // (EventTimeFormat etc.) doesn't have to change.
         val instant = result.slots.calendarDate()
-        return if (instant != null) describeDay(Date(instant.toEpochMilliseconds()))
+        return if (instant != null) describeDay(instant.toEpochMilliseconds())
         else describeUpcoming(result.slots.calendarCount())
     }
 
-    private suspend fun describeDay(date: Date): String {
-        val events = calendar.onDay(date.time)
-        val dayLabel = EventTimeFormat.day(date)
+    private suspend fun describeDay(dayEpochMs: Long): String {
+        val events = calendar.onDay(dayEpochMs)
+        val dayLabel = EventTimeFormat.day(dayEpochMs)
         if (events.isEmpty()) return "Nothing on $dayLabel."
         val header = "${events.size} on $dayLabel:"
         return header + "\n" + events.take(MAX_LIST).joinToString("\n") { line(it, withDay = false) } +
@@ -62,14 +63,14 @@ class CalendarHandler(private val calendar: CalendarRepository) : ActionHandler 
     }
 
     /** "Buy milk at 3:00 PM" — or with the weekday when [withDay]. */
-    private fun line(e: CalendarRepository.Event, withDay: Boolean): String {
-        val time = if (e.allDay) "all day" else EventTimeFormat.time(Date(e.begin))
-        val day = if (withDay) EventTimeFormat.day(Date(e.begin)) + " " else ""
+    private fun line(e: CalendarEvent, withDay: Boolean): String {
+        val time = if (e.allDay) "all day" else EventTimeFormat.time(e.begin)
+        val day = if (withDay) EventTimeFormat.day(e.begin) + " " else ""
         return "• ${e.title} — $day$time"
     }
 
     /** Day + time for an upcoming event, e.g. "Wed May 21 at 3:00 PM". */
-    private fun whenLabel(e: CalendarRepository.Event): String =
+    private fun whenLabel(e: CalendarEvent): String =
         EventTimeFormat.whenLabel(e.begin, e.allDay)
 
     private fun overflowSuffix(total: Int): String =

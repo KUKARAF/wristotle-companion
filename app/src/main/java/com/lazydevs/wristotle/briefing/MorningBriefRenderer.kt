@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.briefing
 
+import com.lazydevs.wristotle.speech.nlu.calendar.CalendarEvent
 import com.lazydevs.wristotle.alarms.AlarmEntity
 import com.lazydevs.wristotle.handlers.ReminderRecord
 import com.lazydevs.wristotle.notes.Note
@@ -53,7 +54,7 @@ object MorningBriefRenderer {
      * watch budget. The fourth-and-beyond count rolls into a trailing
      * "+N more" hint.
      */
-    fun meetingsSection(events: List<CalendarRepository.Event>): String? {
+    fun meetingsSection(events: List<CalendarEvent>): String? {
         if (events.isEmpty()) return null
         val total = events.size
         val preview = events.sortedBy { it.begin }.take(MEETINGS_PREVIEW)

@@ -11,10 +11,10 @@ import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.handlers.CalendarHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.CalendarHandler
 import com.lazydevs.wristotle.speech.nlu.handlers.CallHandler
 import com.lazydevs.wristotle.handlers.CancelReminderHandler
-import com.lazydevs.wristotle.handlers.CreateEventHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.CreateEventHandler
 import com.lazydevs.wristotle.handlers.FindPhoneHandler
 import com.lazydevs.wristotle.handlers.ConfirmSummaryBuilder
 import com.lazydevs.wristotle.speech.nlu.handler.HandlerRegistry

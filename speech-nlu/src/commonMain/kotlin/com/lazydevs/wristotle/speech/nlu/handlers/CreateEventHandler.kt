@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package com.lazydevs.wristotle.speech.nlu.handlers
 
+import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.calendar.CalendarReader
+import com.lazydevs.wristotle.speech.nlu.calendar.CreateEventResult
+import com.lazydevs.wristotle.speech.nlu.calendar.EventTimeFormat
 import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.eventAttendee
 import com.lazydevs.wristotle.speech.nlu.slots.eventDurationMinutes
 import com.lazydevs.wristotle.speech.nlu.slots.eventTime
 import com.lazydevs.wristotle.speech.nlu.slots.eventTitle
-import com.lazydevs.wristotle.phone.CalendarRepository
-import com.lazydevs.wristotle.speech.nlu.Intent
-import com.lazydevs.wristotle.speech.nlu.IntentResult
 
 /**
  * Handles [Intent.CreateEvent] — writes a new event to the device calendar.
@@ -19,13 +21,12 @@ import com.lazydevs.wristotle.speech.nlu.IntentResult
  * with <attendee>") when none is spoken, since flaky transcription often
  * drops the title but the time + intent survive. Returns a "Created: …"
  * summary so a misheard time is visible on the watch. Fails soft when
- * WRITE_CALENDAR isn't granted or no writable calendar exists.
+ * write isn't granted or no writable calendar exists.
  *
- * Note: there is no pre-write confirmation on this branch — the generic
- * confirm-before-dispatch flow (parked on its own branch) wraps every
- * action handler, so once merged this insert is gated automatically.
+ * R4 batch 6 — lifted from :app. Depends only on CalendarReader, which
+ * is implemented Android-side by CalendarRepository.
  */
-class CreateEventHandler(private val calendar: CalendarRepository) : ActionHandler {
+class CreateEventHandler(private val calendar: CalendarReader) : ActionHandler {
 
     override val tag: String = "create_event"
     override val intent: Intent = Intent.CreateEvent
@@ -43,14 +44,12 @@ class CreateEventHandler(private val calendar: CalendarRepository) : ActionHandl
         )
         val duration = result.slots.eventDurationMinutes()
 
-        // R2 batch 4: start is now Instant — convert to epoch millis for the
-        // Android calendar repository.
         return when (val r = calendar.createEvent(title, start.toEpochMilliseconds(), duration)) {
-            is CalendarRepository.CreateResult.Success ->
+            is CreateEventResult.Success ->
                 "Created:\n${r.title}\n${EventTimeFormat.whenLabel(r.begin)}"
-            CalendarRepository.CreateResult.NoCalendar ->
+            CreateEventResult.NoCalendar ->
                 "No writable calendar found on your phone."
-            CalendarRepository.CreateResult.Failed ->
+            CreateEventResult.Failed ->
                 "Couldn't create the event."
         }
     }

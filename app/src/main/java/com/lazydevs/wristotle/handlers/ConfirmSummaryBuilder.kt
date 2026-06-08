@@ -164,7 +164,7 @@ object ConfirmSummaryBuilder {
 
     /**
      * Format the title + time pair for Reminder / CreateEvent. Mirrors
-     * [com.lazydevs.wristotle.handlers.CreateEventHandler]'s title rules
+     * [com.lazydevs.wristotle.speech.nlu.handlers.CreateEventHandler]'s title rules
      * (explicit + attendee → "Title with Attendee"; attendee-only →
      * "$defaultTitle with Attendee") so the confirm prompt shows the
      * same string that will land on the calendar. Time is omitted when
