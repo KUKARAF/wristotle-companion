@@ -7,6 +7,7 @@ import com.lazydevs.wristotle.handlers.ReminderSettings
 import com.lazydevs.wristotle.phone.ContactRef
 import org.json.JSONArray
 import org.json.JSONObject
+import com.lazydevs.wristotle.speech.nlu.backup.BackupSelection
 
 /**
  * Top-level shape of `manifest.json` inside a Wristotle backup ZIP.

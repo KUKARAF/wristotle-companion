@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.mcp
+package com.lazydevs.wristotle.speech.nlu.mcp
 
 /**
  * Most MCP servers expect `Authorization: <scheme> <credentials>`. When
@@ -16,7 +16,7 @@ package com.lazydevs.wristotle.mcp
  * Empty / blank values return true (= no warning) so we don't pester
  * users who legitimately want no auth header.
  */
-internal fun looksLikeFullAuthHeader(value: String): Boolean {
+fun looksLikeFullAuthHeader(value: String): Boolean {
     val trimmed = value.trim()
     if (trimmed.isEmpty()) return true
     val firstWord = trimmed.substringBefore(' ', missingDelimiterValue = "")

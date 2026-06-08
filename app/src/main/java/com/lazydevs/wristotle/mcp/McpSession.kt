@@ -7,6 +7,9 @@ import android.util.Log
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
+import com.lazydevs.wristotle.speech.nlu.mcp.McpIntegration
+import com.lazydevs.wristotle.speech.nlu.mcp.McpTool
+import com.lazydevs.wristotle.speech.nlu.mcp.ToolCallResult
 
 /**
  * Aggregates multiple [McpIntegration]s into a single front for the

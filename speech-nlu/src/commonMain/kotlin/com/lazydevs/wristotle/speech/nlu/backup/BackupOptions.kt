@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.backup
+package com.lazydevs.wristotle.speech.nlu.backup
 
 /**
  * The two dials a user turns when running an export or restore:

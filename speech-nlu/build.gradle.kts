@@ -66,6 +66,9 @@ kotlin {
             // pulls in the android-specific Main dispatcher
             // separately via kotlinx-coroutines-android.
             implementation(libs.kotlinx.coroutines.core)
+            // kotlinx-serialization-json for the lifted MCP layer
+            // (JsonObject / JsonElement). Multiplatform; safe on iOS.
+            implementation(libs.kotlinx.serialization.json)
         }
         androidMain.dependencies {
             implementation(project(":speech"))

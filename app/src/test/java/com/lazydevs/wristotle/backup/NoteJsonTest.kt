@@ -3,6 +3,8 @@
 
 package com.lazydevs.wristotle.backup
 
+import com.lazydevs.wristotle.speech.nlu.backup.*
+
 import com.lazydevs.wristotle.notes.Note
 import org.json.JSONObject
 import org.junit.Assert.assertEquals

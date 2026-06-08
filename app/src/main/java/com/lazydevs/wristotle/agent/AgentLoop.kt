@@ -7,7 +7,9 @@ import android.util.Log
 import com.lazydevs.wristotle.mcp.HttpMcpIntegration
 import com.lazydevs.wristotle.mcp.McpServerEntity
 import com.lazydevs.wristotle.mcp.McpSession
-import com.lazydevs.wristotle.mcp.ToolCallResult
+import com.lazydevs.wristotle.speech.nlu.mcp.ToolCallResult
+import com.lazydevs.wristotle.speech.nlu.mcp.McpTool
+import com.lazydevs.wristotle.speech.nlu.mcp.McpIntegration
 
 /**
  * Drives the LLM ↔ MCP-tools loop for one AskAgent voice query.

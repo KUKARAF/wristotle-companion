@@ -25,6 +25,8 @@ import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
 import org.json.JSONObject
 import java.io.File
+import com.lazydevs.wristotle.speech.nlu.backup.BackupSelection
+import com.lazydevs.wristotle.speech.nlu.backup.BackupOptions
 
 private const val TAG = "BackupImporter"
 

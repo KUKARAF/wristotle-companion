@@ -51,9 +51,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.mcp.McpServerEntity
-import com.lazydevs.wristotle.mcp.McpTool
-import com.lazydevs.wristotle.mcp.ToolCallResult
-import com.lazydevs.wristotle.mcp.looksLikeFullAuthHeader
+import com.lazydevs.wristotle.speech.nlu.mcp.McpTool
+import com.lazydevs.wristotle.speech.nlu.mcp.ToolCallResult
+import com.lazydevs.wristotle.speech.nlu.mcp.looksLikeFullAuthHeader
 
 /**
  * One Card for the add-server form, plus one Card per configured

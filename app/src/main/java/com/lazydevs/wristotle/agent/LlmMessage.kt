@@ -48,7 +48,7 @@ sealed interface LlmMessage {
 
 /**
  * Tool definition the LLM sees in its `tools` parameter. Built from
- * an [com.lazydevs.wristotle.mcp.McpTool] and prefixed with the
+ * an [com.lazydevs.wristotle.speech.nlu.mcp.McpTool] and prefixed with the
  * source integration's name so multiple servers can expose
  * same-named tools without colliding (`<integration>.<tool>` shape,
  * dot-separated — both Anthropic and OpenAI accept `[a-zA-Z0-9_-]`
