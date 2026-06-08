@@ -8,7 +8,7 @@ import com.lazydevs.wristotle.speech.nlu.Intent
 /**
  * Initial labeled examples bundled with the app. Embedded at startup to
  * seed the [com.lazydevs.wristotle.speech.nlu.embedding.EmbeddingIntentClassifier]
- * centroids; learned examples (added via [com.lazydevs.wristotle.speech.nlu.bank.LearningCollector])
+ * centroids; learned examples (added via [com.lazydevs.wristotle.nlu.learning.LearningCollector])
  * accumulate alongside.
  *
  * Phrasings target the variation we expect from voice input:

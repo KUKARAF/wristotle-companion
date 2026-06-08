@@ -3,8 +3,22 @@
 
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.ksp)
 }
+
+// iOS spike refactor (2026-06-07): the Room-backed ExampleBank /
+// ExampleDao / NluDatabase / ExampleEntry moved out of this module
+// into app/.../nlu/learning/ — the bank is an Android persistence
+// concern that lives in the consuming app, not in the shared NLU
+// brain. The classifier now asks for learned rows via the pure
+// `loadLearned: suspend () -> List<LearnedExample>` lambda instead
+// of taking an ExampleBank dependency. Net effect: this module is
+// Room-free and KSP-free, which unblocks the next attempt at the
+// KMP restructure (iOS spike S1a).
+//
+// Still Android-only here because of MiniLmEmbedder (ONNX Runtime
+// Android binding) + the res/raw/minilm_vocab.txt resource. The
+// next pass at S1a re-introduces KMP with these as the only
+// expect/actual seams.
 
 android {
     namespace = "com.lazydevs.wristotle.speech.nlu"
@@ -22,8 +36,8 @@ android {
 
     testOptions {
         // No-op `android.util.Log` so pure-Kotlin code that happens to
-        // log (e.g. ExampleBank's cap-reached path) tests on the JVM
-        // without dragging in Robolectric. Mirrors :app.
+        // log tests on the JVM without dragging in Robolectric.
+        // Mirrors :app.
         unitTests.isReturnDefaultValues = true
     }
 }
@@ -33,9 +47,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.onnxruntime.android)
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.android)

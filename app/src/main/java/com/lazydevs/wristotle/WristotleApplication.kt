@@ -37,8 +37,8 @@ import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
 import com.lazydevs.wristotle.speech.nlu.StubIntentClassifier
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleBank
-import com.lazydevs.wristotle.speech.nlu.bank.NluDatabase
+import com.lazydevs.wristotle.nlu.learning.ExampleBank
+import com.lazydevs.wristotle.nlu.learning.NluDatabase
 import com.lazydevs.wristotle.speech.nlu.embedding.EmbeddingIntentClassifier
 import com.lazydevs.wristotle.speech.nlu.embedding.MiniLmEmbedder
 import com.lazydevs.wristotle.speech.nlu.embedding.Tokenizer
@@ -258,7 +258,7 @@ class WristotleApplication : Application() {
         private set
     lateinit var notesDb: com.lazydevs.wristotle.notes.NoteDatabase
         private set
-    lateinit var nluDb: com.lazydevs.wristotle.speech.nlu.bank.NluDatabase
+    lateinit var nluDb: com.lazydevs.wristotle.nlu.learning.NluDatabase
         private set
 
     /**
@@ -693,7 +693,15 @@ class WristotleApplication : Application() {
             Log.d(TAG, "creating intent classifier for active model: $path")
             val tokenizer = Tokenizer.fromContext(this, com.lazydevs.wristotle.speech.nlu.R.raw.minilm_vocab)
             val embedder = MiniLmEmbedder(modelPath = path, tokenizer = tokenizer)
-            val classifier = EmbeddingIntentClassifier(embedder, nluBank)
+            // The classifier no longer takes the Room-backed ExampleBank
+            // directly — it asks for learned rows via a pure lambda so
+            // the :speech-nlu module can stay free of Android persistence.
+            // ExampleBank.loadLearned() returns the LearnedExample shape
+            // the classifier expects.
+            val classifier = EmbeddingIntentClassifier(
+                embedder = embedder,
+                loadLearned = nluBank::loadLearned,
+            )
             cachedClassifier = path to classifier
             classifier
         }

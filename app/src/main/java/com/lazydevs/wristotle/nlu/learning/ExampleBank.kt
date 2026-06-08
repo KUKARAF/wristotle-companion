@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.speech.nlu.bank
+package com.lazydevs.wristotle.nlu.learning
 
 import android.util.Log
 import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.embedding.LearnedExample
 
 private const val TAG = "ExampleBank"
 
@@ -19,6 +20,15 @@ private const val TAG = "ExampleBank"
 class ExampleBank(private val dao: ExampleDao) {
 
     suspend fun learnedExamples(): List<ExampleEntry> = dao.learned()
+
+    /**
+     * Adapter for [com.lazydevs.wristotle.speech.nlu.embedding.EmbeddingIntentClassifier]'s
+     * `loadLearned` lambda. The classifier needs only (id, intent, rawText)
+     * triples — this strips the Room-specific shape so the classifier
+     * can stay free of any persistence dependency.
+     */
+    suspend fun loadLearned(): List<LearnedExample> =
+        dao.learned().map { LearnedExample(id = it.id, intent = it.intent, rawText = it.rawText) }
 
     /**
      * Add a learned example. Returns true if a new row was inserted (caller

@@ -4,8 +4,6 @@
 package com.lazydevs.wristotle.speech.nlu.embedding
 
 import com.lazydevs.wristotle.speech.nlu.Intent
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleBank
-import com.lazydevs.wristotle.speech.nlu.bank.FakeExampleDao
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -29,8 +27,19 @@ import org.junit.Test
  * What it does NOT cover: real-world embedding quality — i.e. does the
  * actual MiniLM model place "remind me to call mom" near the Reminder
  * cluster? That's the deferred NLU eval harness in TODO.md § Testing.
+ *
+ * Learned-row plumbing is fed via [MutableLearnedSource] — the
+ * in-memory equivalent of the Android Room-backed ExampleBank that
+ * lives in :app. Keeping the classifier dependency-free at the test
+ * boundary mirrors the production wiring (`loadLearned: () -> List`).
  */
 class EmbeddingIntentClassifierTest {
+
+    /** Fake learned-row source backing the `loadLearned` lambda. */
+    private class MutableLearnedSource {
+        val rows = mutableListOf<LearnedExample>()
+        suspend fun load(): List<LearnedExample> = rows.toList()
+    }
 
     // ── Geometry helpers ──────────────────────────────────────────────────
     //
@@ -39,18 +48,13 @@ class EmbeddingIntentClassifierTest {
     // gives cosine ≈ cos(θ - seed_angle) for each seed — easy to reason
     // about manually.
 
-    private fun bankWithLearned(): Pair<ExampleBank, FakeExampleDao> {
-        val dao = FakeExampleDao()
-        return ExampleBank(dao) to dao
-    }
-
     private fun classifier(
         seeds: List<Pair<Intent, String>>,
         embeddings: Map<String, FloatArray>,
-        bank: ExampleBank = bankWithLearned().first,
+        learned: MutableLearnedSource = MutableLearnedSource(),
     ): EmbeddingIntentClassifier = EmbeddingIntentClassifier(
         embedder = FakeEmbedder(embeddings),
-        bank = bank,
+        loadLearned = learned::load,
         seeds = seeds,
     )
 
@@ -60,7 +64,7 @@ class EmbeddingIntentClassifierTest {
         val embedder = FakeEmbedder(emptyMap())
         val c = EmbeddingIntentClassifier(
             embedder = embedder,
-            bank = bankWithLearned().first,
+            loadLearned = { emptyList() },
             seeds = emptyList(),
         )
         val r = c.classify("")
@@ -223,7 +227,7 @@ class EmbeddingIntentClassifierTest {
     // ── Learned rows + rebuild ───────────────────────────────────────────
 
     @Test fun `rebuild picks up rows added to the bank after warm-up`() = runBlocking {
-        val (bank, _) = bankWithLearned()
+        val learned = MutableLearnedSource()
         val c = classifier(
             seeds = listOf(Intent.Reminder to "r0"),
             embeddings = mapOf(
@@ -232,7 +236,7 @@ class EmbeddingIntentClassifierTest {
                 "call mom" to unit2d(90.0),
                 "QUERY" to unit2d(89.0),
             ),
-            bank = bank,
+            learned = learned,
         )
         c.warmUp()
 
@@ -242,7 +246,7 @@ class EmbeddingIntentClassifierTest {
         assertEquals(Intent.Reminder, c.classify("QUERY").intent)
 
         // Insert a learned Call row and rebuild.
-        assertTrue(bank.addLearned("call mom", Intent.Call))
+        learned.rows += LearnedExample(id = 1L, intent = Intent.Call.name, rawText = "call mom")
         c.rebuild()
 
         // Now Call is in the bank — and the query, sitting at 89°,
@@ -259,7 +263,7 @@ class EmbeddingIntentClassifierTest {
         ))
         val c = EmbeddingIntentClassifier(
             embedder = embedder,
-            bank = bankWithLearned().first,
+            loadLearned = { emptyList() },
             seeds = listOf(Intent.Reminder to "remind"),
         )
         // No explicit warmUp() — classify must self-warm.
@@ -273,7 +277,7 @@ class EmbeddingIntentClassifierTest {
         val embedder = FakeEmbedder(mapOf("remind" to unit2d(0.0)))
         val c = EmbeddingIntentClassifier(
             embedder = embedder,
-            bank = bankWithLearned().first,
+            loadLearned = { emptyList() },
             seeds = listOf(Intent.Reminder to "remind"),
         )
         c.warmUp()
@@ -289,7 +293,7 @@ class EmbeddingIntentClassifierTest {
     @Test fun `tag identifies the classifier and isStub is false`() {
         val c = EmbeddingIntentClassifier(
             embedder = FakeEmbedder(emptyMap()),
-            bank = bankWithLearned().first,
+            loadLearned = { emptyList() },
             seeds = emptyList(),
         )
         assertEquals("embedding", c.tag)
@@ -308,7 +312,7 @@ class EmbeddingIntentClassifierTest {
         }
         val c = EmbeddingIntentClassifier(
             embedder = tracking,
-            bank = bankWithLearned().first,
+            loadLearned = { emptyList() },
             seeds = emptyList(),
         )
         c.close()

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.speech.nlu.bank
+package com.lazydevs.wristotle.nlu.learning
 
 import com.lazydevs.wristotle.speech.nlu.Intent
 import kotlinx.coroutines.runBlocking

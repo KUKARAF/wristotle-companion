@@ -17,7 +17,7 @@ import com.lazydevs.wristotle.notes.AppendAudioMode
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.notes.NoteAudioPaths
 import com.lazydevs.wristotle.phone.ContactRef
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
+import com.lazydevs.wristotle.nlu.learning.ExampleEntry
 import com.lazydevs.wristotle.tasks.TaskEntity
 import android.provider.ContactsContract
 import kotlinx.coroutines.Dispatchers

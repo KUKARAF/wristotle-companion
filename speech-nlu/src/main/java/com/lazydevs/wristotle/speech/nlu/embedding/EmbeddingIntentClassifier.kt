@@ -8,8 +8,6 @@ import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.RankedIntent
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleBank
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
 import com.lazydevs.wristotle.speech.nlu.seed.SeedExamples
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -40,7 +38,13 @@ private const val TAG = "EmbeddingIntentClassifier"
  */
 class EmbeddingIntentClassifier(
     private val embedder: Embedder,
-    private val bank: ExampleBank,
+    /**
+     * Source of learned examples for warm-up + rebuild. The classifier
+     * doesn't care how they're stored — the consumer wires in a Room-backed
+     * read on Android, an in-memory list on iOS / tests, etc. Returning an
+     * empty list is the natural "no learning persistence" default.
+     */
+    private val loadLearned: suspend () -> List<LearnedExample> = { emptyList() },
     private val seeds: List<Pair<Intent, String>> = SeedExamples.all,
 ) : IntentClassifier, Closeable {
 
@@ -65,7 +69,7 @@ class EmbeddingIntentClassifier(
                 val seedEmbeds = seeds.map { (intent, text) ->
                     Embedded(intent, embedder.embed(text))
                 }
-                val learnedEmbeds = bank.learnedExamples().mapNotNull { entry ->
+                val learnedEmbeds = loadLearned().mapNotNull { entry ->
                     runCatching {
                         Embedded(Intent.fromName(entry.intent), embedder.embed(entry.rawText))
                     }.onFailure { Log.w(TAG, "skip learned entry ${entry.id}: ${it.message}") }
@@ -82,7 +86,7 @@ class EmbeddingIntentClassifier(
             // Re-embed the learned rows; seed embeddings stay cached.
             val cachedSeeds = examples.take(seeds.size)
             val learned = withContext(Dispatchers.Default) {
-                bank.learnedExamples().mapNotNull { entry ->
+                loadLearned().mapNotNull { entry ->
                     runCatching {
                         Embedded(Intent.fromName(entry.intent), embedder.embed(entry.rawText))
                     }.getOrNull()
