@@ -3,8 +3,6 @@
 
 package com.lazydevs.wristotle.speech.nlu.embedding
 
-import android.content.Context
-
 /**
  * BERT-style WordPiece tokenizer for MiniLM-L6-v2. Loads the vocab from
  * `R.raw.minilm_vocab` and exposes a single [encode] method that returns
@@ -133,12 +131,15 @@ class Tokenizer internal constructor(
             CharCategory.OTHER_PUNCTUATION,
         )
 
-        /** Loads the vocab from the bundled raw resource. */
-        fun fromContext(context: Context, vocabResId: Int): Tokenizer {
+        /**
+         * Builds a tokenizer from an iterable of vocab lines. One word
+         * per line, line index = token id — exactly the layout the
+         * MiniLM-L6-v2 vocab ships in. Pure; the platform-specific
+         * loader (Android `R.raw`, iOS `NSBundle`, etc.) wraps this.
+         */
+        fun fromVocabLines(lines: Sequence<String>): Tokenizer {
             val vocab = HashMap<String, Int>(30_522)
-            context.resources.openRawResource(vocabResId).bufferedReader().useLines { lines ->
-                lines.forEachIndexed { index, raw -> vocab[raw.trim()] = index }
-            }
+            lines.forEachIndexed { index, raw -> vocab[raw.trim()] = index }
             return Tokenizer(vocab)
         }
     }

@@ -42,6 +42,7 @@ import com.lazydevs.wristotle.nlu.learning.NluDatabase
 import com.lazydevs.wristotle.speech.nlu.embedding.EmbeddingIntentClassifier
 import com.lazydevs.wristotle.speech.nlu.embedding.MiniLmEmbedder
 import com.lazydevs.wristotle.speech.nlu.embedding.Tokenizer
+import com.lazydevs.wristotle.speech.nlu.embedding.fromContext
 import com.lazydevs.wristotle.speech.nlu.model.NluModelStorage
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
 import com.lazydevs.wristotle.speech.recognizer.CompositeRecognizer
@@ -701,6 +702,10 @@ class WristotleApplication : Application() {
             val classifier = EmbeddingIntentClassifier(
                 embedder = embedder,
                 loadLearned = nluBank::loadLearned,
+                // commonMain has no android.util.Log; pipe debug lines
+                // through the same logger here so on-device debugging
+                // doesn't lose the warm-up + rebuild traces.
+                log = { msg -> Log.d("EmbeddingIntentClassifier", msg) },
             )
             cachedClassifier = path to classifier
             classifier

@@ -3,8 +3,6 @@
 
 package com.lazydevs.wristotle.speech.nlu.embedding
 
-import java.io.Closeable
-
 /**
  * Sentence-embedding contract that [EmbeddingIntentClassifier] reads
  * through. Production wires [MiniLmEmbedder] (ONNX MiniLM-L6-v2);
@@ -16,7 +14,7 @@ import java.io.Closeable
  * tokenizer through every embed call and lets the test impl ignore
  * tokenization entirely.
  */
-interface Embedder : Closeable {
+interface Embedder : AutoCloseable {
 
     /**
      * Tokenize, run the model, mean-pool, L2-normalize. The returned

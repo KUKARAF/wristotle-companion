@@ -3,7 +3,6 @@
 
 package com.lazydevs.wristotle.speech.nlu.embedding
 
-import android.util.Log
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -13,9 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.Closeable
-
-private const val TAG = "EmbeddingIntentClassifier"
 
 /**
  * Cosine-similarity intent classifier over a bank of pre-embedded examples.
@@ -46,7 +42,13 @@ class EmbeddingIntentClassifier(
      */
     private val loadLearned: suspend () -> List<LearnedExample> = { emptyList() },
     private val seeds: List<Pair<Intent, String>> = SeedExamples.all,
-) : IntentClassifier, Closeable {
+    /**
+     * Debug log sink. Defaults to no-op so the classifier stays Android-
+     * Log-free in commonMain; the Android consumer wires a one-line
+     * adapter to `android.util.Log.d` at construction.
+     */
+    private val log: (String) -> Unit = {},
+) : IntentClassifier, AutoCloseable {
 
     override val tag: String = "embedding"
 
@@ -72,12 +74,12 @@ class EmbeddingIntentClassifier(
                 val learnedEmbeds = loadLearned().mapNotNull { entry ->
                     runCatching {
                         Embedded(Intent.fromName(entry.intent), embedder.embed(entry.rawText))
-                    }.onFailure { Log.w(TAG, "skip learned entry ${entry.id}: ${it.message}") }
+                    }.onFailure { log("skip learned entry ${entry.id}: ${it.message}") }
                         .getOrNull()
                 }
                 seedEmbeds + learnedEmbeds
             }
-            Log.d(TAG, "warmUp: ${examples.size} embedded (${seeds.size} seed)")
+            log("warmUp: ${examples.size} embedded (${seeds.size} seed)")
         }
     }
 
@@ -93,7 +95,7 @@ class EmbeddingIntentClassifier(
                 }
             }
             examples = cachedSeeds + learned
-            Log.d(TAG, "rebuild: ${examples.size} embedded (${learned.size} learned)")
+            log("rebuild: ${examples.size} embedded (${learned.size} learned)")
         }
     }
 

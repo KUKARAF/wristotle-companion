@@ -61,7 +61,11 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // pure-Kotlin only — populated in S1b
+            // kotlinx-coroutines-core provides Mutex / withContext /
+            // Dispatchers.Default for every target. The Android side
+            // pulls in the android-specific Main dispatcher
+            // separately via kotlinx-coroutines-android.
+            implementation(libs.kotlinx.coroutines.core)
         }
         androidMain.dependencies {
             implementation(project(":speech"))
