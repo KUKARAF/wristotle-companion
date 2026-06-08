@@ -14,8 +14,8 @@ import com.lazydevs.wristotle.handlers.CancelReminderHandler
 import com.lazydevs.wristotle.handlers.CreateEventHandler
 import com.lazydevs.wristotle.handlers.FindPhoneHandler
 import com.lazydevs.wristotle.handlers.ConfirmSummaryBuilder
-import com.lazydevs.wristotle.handlers.HandlerRegistry
-import com.lazydevs.wristotle.handlers.HandlerRegistry.Companion.isSuccessResponse
+import com.lazydevs.wristotle.speech.nlu.handler.HandlerRegistry
+import com.lazydevs.wristotle.speech.nlu.handler.HandlerRegistry.Companion.isSuccessResponse
 import com.lazydevs.wristotle.handlers.requiresConfirm
 import com.lazydevs.wristotle.handlers.ListRemindersHandler
 import com.lazydevs.wristotle.handlers.MediaNextHandler
@@ -391,7 +391,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             watchHint == null &&
             voicePipeline.isStubClassifier
         val dispatchResult = if (noNluModel) {
-            com.lazydevs.wristotle.handlers.HandlerResult(
+            com.lazydevs.wristotle.speech.nlu.handler.HandlerResult(
                 response = getString(R.string.nlu_model_missing_response),
                 handler = "no-nlu-model",
                 success = false,

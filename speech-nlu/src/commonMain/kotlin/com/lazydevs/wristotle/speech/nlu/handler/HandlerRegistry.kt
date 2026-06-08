@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package com.lazydevs.wristotle.speech.nlu.handler
 
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -30,6 +30,9 @@ data class HandlerResult(
  * Multiple handlers claiming the same intent is a programming error —
  * Kotlin's `associateBy` will silently drop earlier ones; we throw
  * eagerly so the misconfiguration shows up at startup, not at first use.
+ *
+ * R4 batch 1 — lifted from :app. Pure dispatch — no platform
+ * dependencies. The handlers it routes to may still be platform-specific.
  */
 class HandlerRegistry(handlers: List<ActionHandler>) {
 
@@ -59,7 +62,7 @@ class HandlerRegistry(handlers: List<ActionHandler>) {
             }
         } catch (e: Exception) {
             HandlerResult(
-                response = "Error: ${e.localizedMessage ?: "Action failed"}",
+                response = "Error: ${e.message ?: "Action failed"}",
                 handler = "error",
                 success = false,
             )
@@ -67,10 +70,6 @@ class HandlerRegistry(handlers: List<ActionHandler>) {
     }
 
     companion object {
-        // Conservative prefix list — anything we send back that starts with one
-        // of these strings is treated as a failure for history badging. Keep in
-        // sync with handler response strings; over-classifying as failure is
-        // safer than under-classifying for a history-badging use case.
         private val FAILURE_PREFIXES = listOf(
             "Contact not found",
             "Couldn't",

@@ -7,6 +7,7 @@ import android.content.Context
 import com.lazydevs.wristotle.messaging.MessagingTargets
 import com.lazydevs.wristotle.messaging.isInstalled
 import com.lazydevs.wristotle.phone.ContactsRepository
+import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
