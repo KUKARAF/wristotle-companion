@@ -10,7 +10,6 @@ import android.util.Log
 import com.lazydevs.wristotle.apps.AppIndex
 import com.lazydevs.wristotle.apps.AppIndexDatabase
 import com.lazydevs.wristotle.apps.AppIndexer
-import com.lazydevs.wristotle.handlers.localeDefaultTempUnit
 import com.lazydevs.wristotle.history.ConversationAudioStore
 import com.lazydevs.wristotle.history.ConversationDatabase
 import com.lazydevs.wristotle.history.ConversationRepository
@@ -36,6 +35,7 @@ import com.lazydevs.wristotle.speech.nlu.settings.AlarmSettings
 import com.lazydevs.wristotle.speech.nlu.settings.ConversationAudioSettings
 import com.lazydevs.wristotle.speech.nlu.settings.ConversationSettings
 import com.lazydevs.wristotle.speech.nlu.settings.SttProviderMode
+import com.lazydevs.wristotle.speech.nlu.settings.localeDefaultTempUnit
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
 import com.lazydevs.wristotle.speech.nlu.slots.CalendarSlots
 import com.lazydevs.wristotle.speech.nlu.slots.CallSlots

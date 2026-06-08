@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.service
 
+import com.lazydevs.wristotle.speech.nlu.handler.ConfirmSummaryBuilder
 import com.lazydevs.wristotle.speech.nlu.transport.sendConfirmPrompt
 import com.lazydevs.wristotle.speech.nlu.transport.sendForHint
 import com.lazydevs.wristotle.speech.nlu.transport.sendReady
@@ -16,7 +17,6 @@ import com.lazydevs.wristotle.speech.nlu.handlers.CallHandler
 import com.lazydevs.wristotle.handlers.CancelReminderHandler
 import com.lazydevs.wristotle.speech.nlu.handlers.CreateEventHandler
 import com.lazydevs.wristotle.handlers.FindPhoneHandler
-import com.lazydevs.wristotle.handlers.ConfirmSummaryBuilder
 import com.lazydevs.wristotle.speech.nlu.handler.HandlerRegistry
 import com.lazydevs.wristotle.speech.nlu.handler.HandlerRegistry.Companion.isSuccessResponse
 import com.lazydevs.wristotle.speech.nlu.handler.requiresConfirm

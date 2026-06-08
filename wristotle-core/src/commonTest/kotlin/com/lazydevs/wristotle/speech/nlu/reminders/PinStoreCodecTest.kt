@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package lazydevs.wristotle.speech.nlu.reminders
 
 import com.lazydevs.wristotle.speech.nlu.reminders.PinStoreCodec
 import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.Test
 
 class PinStoreCodecTest {
 

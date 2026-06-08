@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.nlu.slots
 
+import com.lazydevs.wristotle.speech.nlu.handler.ConfirmSummaryBuilder
 import com.lazydevs.wristotle.speech.nlu.slots.*
 
 import com.lazydevs.wristotle.phone.ContactsRepository

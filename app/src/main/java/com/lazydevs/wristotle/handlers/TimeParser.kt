@@ -16,7 +16,6 @@ import java.util.Date
  *
  * Singleton because PrettyTimeParser construction is non-trivial and the
  * parser itself is thread-safe.
- *
  */
 object PrettyTimeTimeParser : TimeParser {
 

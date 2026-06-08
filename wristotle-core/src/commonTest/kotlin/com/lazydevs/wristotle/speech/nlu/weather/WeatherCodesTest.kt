@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package lazydevs.wristotle.speech.nlu.weather
 
 import com.lazydevs.wristotle.speech.nlu.weather.WeatherCodes
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.Test
 
 class WeatherCodesTest {
 

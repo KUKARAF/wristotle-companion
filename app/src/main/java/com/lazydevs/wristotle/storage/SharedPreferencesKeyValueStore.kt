@@ -15,7 +15,6 @@ import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
  * Same per-prefs-file granularity as the SharedPreferences API itself —
  * each settings class gets its own named file (matching what the
  * old `getSharedPreferences("wristotle_nlu_settings", …)` calls used).
- *
  */
 class SharedPreferencesKeyValueStore(
     context: Context,

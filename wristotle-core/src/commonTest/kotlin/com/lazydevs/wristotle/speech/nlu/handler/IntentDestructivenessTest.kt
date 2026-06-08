@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package lazydevs.wristotle.speech.nlu.handler
 
 import com.lazydevs.wristotle.speech.nlu.handler.requiresConfirm
 import com.lazydevs.wristotle.speech.nlu.Intent
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlin.test.Test
 
 /**
  * Drift-detector test for the confirm-before-dispatch destructive set. Adding
@@ -38,9 +38,9 @@ class IntentDestructivenessTest {
         for (intent in Intent.entries) {
             val expected = intent in expectedDestructive
             assertEquals(
-                "Intent.$intent should${if (expected) "" else " NOT"} require confirm",
                 expected,
                 intent.requiresConfirm(),
+                "Intent.$intent should${if (expected) "" else " NOT"} require confirm",
             )
         }
     }

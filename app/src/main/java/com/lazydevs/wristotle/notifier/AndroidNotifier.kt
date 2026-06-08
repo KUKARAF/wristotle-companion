@@ -15,7 +15,6 @@ import com.lazydevs.wristotle.speech.nlu.notifier.Notifier
  * "wristotle_default" channel and uses [String.hashCode] to derive the
  * int notification ID from the request's string ID. Best-effort: if the
  * post throws (channel disabled, permission denied), returns false.
- *
  */
 class AndroidNotifier(context: Context, private val channelId: String = DEFAULT_CHANNEL_ID) : Notifier {
 

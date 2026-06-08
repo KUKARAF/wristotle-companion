@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.nlu.slots
+package lazydevs.wristotle.speech.nlu.slots
 
 import com.lazydevs.wristotle.speech.nlu.slots.*
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.Test
 
 class SlotUtilsTest {
 
     // --- stripTrailingEmphasis ----------------------------------------------
 
-    @Test fun `single emphatic word is preserved (could be polite filler)`() {
+    @Test fun `single emphatic word is preserved - could be polite filler`() {
         // "john please" might be a polite contact suffix; one word isn't
         // enough signal to strip. The threshold is 2+ for ambiguity.
         assertEquals("john please", stripTrailingEmphasis("john please"))

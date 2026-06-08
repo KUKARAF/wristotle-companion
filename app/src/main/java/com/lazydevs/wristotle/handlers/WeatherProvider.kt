@@ -4,7 +4,6 @@
 package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
-import java.util.Locale
 
 /**
  * Provider-agnostic interface for fetching the current weather. The handler
@@ -50,13 +49,3 @@ sealed class WeatherResult {
      *  return this; open-meteo has no key. */
     data class BadKey(val message: String) : WeatherResult()
 }
-
-/** Locale-derived default unit. US / Liberia / Myanmar still report in °F;
- *  the rest of the world uses °C. Read once at handler construction; the
- *  Phase C settings card lets the user override. */
-fun localeDefaultTempUnit(): TempUnit {
-    val country = Locale.getDefault().country.uppercase()
-    return if (country in FAHRENHEIT_COUNTRIES) TempUnit.FAHRENHEIT else TempUnit.CELSIUS
-}
-
-private val FAHRENHEIT_COUNTRIES = setOf("US", "LR", "MM")

@@ -15,7 +15,6 @@ import kotlinx.coroutines.withContext
  * the JVM-only `SimpleHttp` (HttpURLConnection wrapper) and off-loads
  * to [Dispatchers.IO] so commonMain LLM clients can stay
  * dispatcher-agnostic.
- *
  */
 class AndroidHttpClient : HttpClient {
     override suspend fun request(request: HttpRequest): HttpResponse = withContext(Dispatchers.IO) {

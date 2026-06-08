@@ -13,7 +13,6 @@ import com.lazydevs.wristotle.speech.nlu.messaging.MessagingTargetInfo
  * Drops the deliver lambda, packageId, enabled flag and isInstalled
  * runtime check — slot recognition only needs displayName + spoken
  * aliases. The full target stays in :app for the handler-side dispatch.
- *
  */
 fun MessagingTarget.toInfoForSlots(): MessagingTargetInfo =
     MessagingTargetInfo(displayName = displayName, spokenAliases = spokenAliases)

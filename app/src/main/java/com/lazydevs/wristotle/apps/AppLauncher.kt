@@ -51,7 +51,6 @@ internal fun packageLabel(context: Context, packageId: String): String = try {
  * the lifted OpenAppHandler. Delegates to the file-level helpers so
  * the existing media handlers (which still call the helpers directly)
  * keep working.
- *
  */
 class AndroidAppLauncher(context: Context) : CommonAppLauncher {
     private val appContext = context.applicationContext
