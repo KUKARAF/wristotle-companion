@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.settings
+package com.lazydevs.wristotle.speech.nlu.settings
 
-import android.content.Context
-import android.content.SharedPreferences
-import com.lazydevs.wristotle.handlers.TempUnit
-import com.lazydevs.wristotle.handlers.localeDefaultTempUnit
+import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -16,20 +13,25 @@ enum class WeatherProviderId { OPEN_METEO, OPEN_WEATHER }
 /**
  * Companion-local settings for the Weather feature:
  *
- *  - **Unit** (°C / °F) — default derived from the system locale
- *    (US / LR / MM → °F, else °C); user-overridable.
+ *  - **Unit** (°C / °F) — default derived from the system locale by the
+ *    injected [localeDefaultProvider] (US / LR / MM → °F, else °C);
+ *    user-overridable.
  *  - **Provider** — open-meteo (default, no key, free) or OpenWeather
  *    (requires a free-tier API key the user pastes in).
  *  - **OpenWeather API key** — only consulted when provider == OPEN_WEATHER.
  *
- * Backed by `SharedPreferences` (not Room or the watch settings mirror —
+ * Backed by [KeyValueStore] (not Room or the watch settings mirror —
  * weather is entirely companion-resolved, no wire keys to keep in sync).
  * Exposes [StateFlow]s so the Settings card can observe + write cleanly.
+ *
+ * R3 batch 6 — lifted from :app. The Locale lookup stays in :app's
+ * `WeatherProvider.kt`, passed in here as the [localeDefaultProvider]
+ * lambda.
  */
-class WeatherSettings(context: Context) {
-
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+class WeatherSettings(
+    private val store: KeyValueStore,
+    private val localeDefaultProvider: () -> TempUnit,
+) {
 
     private val _unit = MutableStateFlow(readUnit())
     val unit: StateFlow<TempUnit> = _unit
@@ -42,40 +44,44 @@ class WeatherSettings(context: Context) {
 
     fun setUnit(value: TempUnit) {
         if (_unit.value == value) return
-        prefs.edit().putString(KEY_UNIT, value.name).apply()
+        store.putString(KEY_UNIT, value.name)
         _unit.value = value
     }
 
     fun setProvider(value: WeatherProviderId) {
         if (_provider.value == value) return
-        prefs.edit().putString(KEY_PROVIDER, value.name).apply()
+        store.putString(KEY_PROVIDER, value.name)
         _provider.value = value
     }
 
     fun setApiKey(value: String) {
         val trimmed = value.trim()
         if (_apiKey.value == trimmed) return
-        prefs.edit().putString(KEY_API_KEY, trimmed).apply()
+        store.putString(KEY_API_KEY, trimmed)
         _apiKey.value = trimmed
     }
 
     private fun readUnit(): TempUnit {
-        val name = prefs.getString(KEY_UNIT, null) ?: return localeDefaultTempUnit()
-        return runCatching { TempUnit.valueOf(name) }.getOrDefault(localeDefaultTempUnit())
+        val name = store.getString(KEY_UNIT, "")
+        if (name.isEmpty()) return localeDefaultProvider()
+        return runCatching { enumValueOf<TempUnit>(name) }
+            .getOrElse { localeDefaultProvider() }
     }
 
     private fun readProvider(): WeatherProviderId {
-        val name = prefs.getString(KEY_PROVIDER, null) ?: return WeatherProviderId.OPEN_METEO
-        return runCatching { WeatherProviderId.valueOf(name) }
+        val name = store.getString(KEY_PROVIDER, "")
+        if (name.isEmpty()) return WeatherProviderId.OPEN_METEO
+        return runCatching { enumValueOf<WeatherProviderId>(name) }
             .getOrDefault(WeatherProviderId.OPEN_METEO)
     }
 
-    private fun readApiKey(): String = prefs.getString(KEY_API_KEY, "")?.trim() ?: ""
+    private fun readApiKey(): String = store.getString(KEY_API_KEY, "").trim()
 
-    private companion object {
+    companion object {
+        /** SharedPreferences file name the Android-side store uses. */
         const val PREFS_NAME = "weather_settings"
-        const val KEY_UNIT = "unit"
-        const val KEY_PROVIDER = "provider"
-        const val KEY_API_KEY = "openweather_api_key"
+        private const val KEY_UNIT = "unit"
+        private const val KEY_PROVIDER = "provider"
+        private const val KEY_API_KEY = "openweather_api_key"
     }
 }

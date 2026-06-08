@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.handlers
 
 import android.util.Log
+import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
 import com.lazydevs.wristotle.speech.util.SimpleHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

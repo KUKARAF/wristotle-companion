@@ -50,6 +50,7 @@ import com.lazydevs.wristotle.speech.recognizer.CompositeRecognizer
 import com.lazydevs.wristotle.speech.recognizer.HttpRecognizer
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.StubRecognizer
+import com.lazydevs.wristotle.handlers.localeDefaultTempUnit
 import com.lazydevs.wristotle.speech.nlu.settings.SttProviderMode
 import com.lazydevs.wristotle.speech.whisper.ModelStorage
 import com.lazydevs.wristotle.speech.whisper.WhisperRecognizer
@@ -195,7 +196,7 @@ class WristotleApplication : Application() {
         private set
 
     /** Weather feature preferences (unit + provider + OpenWeather API key). */
-    lateinit var weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings
+    lateinit var weatherSettings: com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings
         private set
 
     /** AskAgent preferences — LLM provider + API key + model. Lazy for
@@ -471,7 +472,13 @@ class WristotleApplication : Application() {
                 com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings.PREFS_NAME,
             ),
         )
-        weatherSettings = com.lazydevs.wristotle.settings.WeatherSettings(this)
+        weatherSettings = com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings(
+            com.lazydevs.wristotle.storage.SharedPreferencesKeyValueStore(
+                this,
+                com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings.PREFS_NAME,
+            ),
+            localeDefaultProvider = ::localeDefaultTempUnit,
+        )
 
         nluDb = NluDatabase.build(this)
         nluBank = ExampleBank(nluDb.exampleDao())

@@ -383,7 +383,7 @@ private fun SettingsCategoryContent(
     backupVm: BackupViewModel,
     mcpServersVm: McpServersViewModel,
     reminderSettings: ReminderSettings,
-    weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings,
+    weatherSettings: com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings,
     askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings,
     /** Lets the 🌟 Setup card's "Open" buttons jump directly into the
      *  sub-screen for an action's [SettingsCategory] target instead of

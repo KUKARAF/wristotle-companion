@@ -10,8 +10,8 @@ import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.speech.nlu.agent.LlmProvider
 import com.lazydevs.wristotle.handlers.PinStore
 import com.lazydevs.wristotle.handlers.ReminderRecord
-import com.lazydevs.wristotle.handlers.TempUnit
-import com.lazydevs.wristotle.settings.WeatherProviderId
+import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
+import com.lazydevs.wristotle.speech.nlu.settings.WeatherProviderId
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.notes.AppendAudioMode
 import com.lazydevs.wristotle.notes.Note

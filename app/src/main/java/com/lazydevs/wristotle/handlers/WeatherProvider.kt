@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
 import java.util.Locale
 
 /**
@@ -24,8 +25,6 @@ sealed class WeatherLocation {
     data class Place(val name: String) : WeatherLocation()
     data class Coords(val lat: Double, val lon: Double) : WeatherLocation()
 }
-
-enum class TempUnit { CELSIUS, FAHRENHEIT }
 
 /** Normalised result the handler renders without caring which provider ran. */
 sealed class WeatherResult {

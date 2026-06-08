@@ -19,9 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
-import com.lazydevs.wristotle.handlers.TempUnit
-import com.lazydevs.wristotle.settings.WeatherProviderId
-import com.lazydevs.wristotle.settings.WeatherSettings
+import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
+import com.lazydevs.wristotle.speech.nlu.settings.WeatherProviderId
+import com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings
 import com.lazydevs.wristotle.ui.components.PasswordField
 
 /**
