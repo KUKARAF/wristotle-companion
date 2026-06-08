@@ -16,9 +16,6 @@ import com.lazydevs.wristotle.speech.nlu.logging.Logger
  * `:app` (which already depends on both `:speech-nlu` and `:speech`)
  * is where the wires meet.
  *
- * R3 batch 1 — wired via [WristotleApplication] for the commonMain
- * consumers (VoicePipeline, WatchHintRefiner) that took the
- * interface as a constructor param.
  */
 object WristotleLogger : Logger {
     override fun d(tag: String, msg: String) = WristotleLog.d(tag, msg)

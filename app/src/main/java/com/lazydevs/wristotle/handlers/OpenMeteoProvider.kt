@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.weather.WeatherCodes
 import android.util.Log
 import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
 import com.lazydevs.wristotle.speech.util.SimpleHttp

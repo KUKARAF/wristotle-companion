@@ -10,6 +10,7 @@ import com.lazydevs.wristotle.speech.nlu.agent.OpenAiCompatibleLlmClient
 import com.lazydevs.wristotle.speech.nlu.http.HttpClient
 import com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers
 import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
+import com.lazydevs.wristotle.speech.nlu.store.getEnum
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -119,12 +120,8 @@ class AskAgentSettings(
         LlmProvider.OPENAI_COMPATIBLE -> false
     }
 
-    private fun readProvider(): LlmProvider {
-        val name = store.getString(KEY_PROVIDER, "")
-        if (name.isEmpty()) return LlmProvider.ANTHROPIC
-        return runCatching { enumValueOf<LlmProvider>(name) }
-            .getOrDefault(LlmProvider.ANTHROPIC)
-    }
+    private fun readProvider(): LlmProvider =
+        store.getEnum(KEY_PROVIDER, LlmProvider.ANTHROPIC)
 
     private fun readOrDefault(key: String, default: String): String {
         val raw = store.getString(key, "")

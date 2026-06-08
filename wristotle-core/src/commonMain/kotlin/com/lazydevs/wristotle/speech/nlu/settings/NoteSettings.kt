@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.speech.nlu.settings
 
 import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
+import com.lazydevs.wristotle.speech.nlu.store.getEnum
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,11 +63,8 @@ class NoteSettings(private val store: KeyValueStore) : NoteSettingsView {
         _appendAudioMode.value = value
     }
 
-    private fun loadAppendAudioMode(): AppendAudioMode {
-        val name = store.getString(KEY_APPEND_AUDIO_MODE, AppendAudioMode.MERGE.name)
-        return runCatching { enumValueOf<AppendAudioMode>(name) }
-            .getOrDefault(AppendAudioMode.MERGE)
-    }
+    private fun loadAppendAudioMode(): AppendAudioMode =
+        store.getEnum(KEY_APPEND_AUDIO_MODE, AppendAudioMode.MERGE)
 
     companion object {
         /** SharedPreferences file name the Android-side store uses. */

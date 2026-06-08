@@ -3,6 +3,8 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.reminders.PinStoreCodec
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -39,7 +41,8 @@ object ReminderListFormatter {
         val targetHour = localHour(targetMs)
         val label = SimpleDateFormat("h a", Locale.getDefault()).format(Date(targetMs)) // "2 PM"
         val matches = records.filter {
-            it.timeMs != null && PinStoreCodec.isActive(it.timeMs, now) && localHour(it.timeMs) == targetHour
+            val t = it.timeMs ?: return@filter false
+            PinStoreCodec.isActive(t, now) && localHour(t) == targetHour
         }
         if (matches.isEmpty()) return "No reminder around $label"
         val header = if (matches.size == 1) "1 reminder around $label:" else "${matches.size} reminders around $label:"

@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.speech.nlu.settings
 
 import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
+import com.lazydevs.wristotle.speech.nlu.store.getEnum
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -62,18 +63,16 @@ class WeatherSettings(
     }
 
     private fun readUnit(): TempUnit {
+        // Custom default needs the lambda evaluated lazily; can't use the
+        // getEnum extension's flat default since localeDefaultProvider() is a call.
         val name = store.getString(KEY_UNIT, "")
         if (name.isEmpty()) return localeDefaultProvider()
         return runCatching { enumValueOf<TempUnit>(name) }
             .getOrElse { localeDefaultProvider() }
     }
 
-    private fun readProvider(): WeatherProviderId {
-        val name = store.getString(KEY_PROVIDER, "")
-        if (name.isEmpty()) return WeatherProviderId.OPEN_METEO
-        return runCatching { enumValueOf<WeatherProviderId>(name) }
-            .getOrDefault(WeatherProviderId.OPEN_METEO)
-    }
+    private fun readProvider(): WeatherProviderId =
+        store.getEnum(KEY_PROVIDER, WeatherProviderId.OPEN_METEO)
 
     private fun readApiKey(): String = store.getString(KEY_API_KEY, "").trim()
 

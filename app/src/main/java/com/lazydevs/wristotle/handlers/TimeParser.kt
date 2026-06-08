@@ -17,11 +17,6 @@ import java.util.Date
  * Singleton because PrettyTimeParser construction is non-trivial and the
  * parser itself is thread-safe.
  *
- * R2 batch 4 lifted the [TimeParser] interface + [ParsedTime] data class
- * (using `Instant`, not `Date`) into :speech-nlu commonMain. This class
- * is the JVM-only impl that stays in :app — its `parse()` returns
- * `Instant.fromEpochMilliseconds(date.time)` so the commonMain-side slot
- * extractors see only the multiplatform shape.
  */
 object PrettyTimeTimeParser : TimeParser {
 

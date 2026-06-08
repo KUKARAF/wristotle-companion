@@ -9,7 +9,7 @@ import android.util.Log
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.speech.nlu.agent.LlmProvider
 import com.lazydevs.wristotle.handlers.PinStore
-import com.lazydevs.wristotle.handlers.ReminderRecord
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
 import com.lazydevs.wristotle.speech.nlu.settings.WeatherProviderId
 import com.lazydevs.wristotle.history.ConversationEntry

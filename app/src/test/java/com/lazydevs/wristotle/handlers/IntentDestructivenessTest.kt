@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.handler.requiresConfirm
 import com.lazydevs.wristotle.speech.nlu.Intent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

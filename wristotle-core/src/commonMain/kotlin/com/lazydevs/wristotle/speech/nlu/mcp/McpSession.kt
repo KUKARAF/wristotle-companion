@@ -5,6 +5,10 @@ package com.lazydevs.wristotle.speech.nlu.mcp
 
 import com.lazydevs.wristotle.speech.nlu.logging.Logger
 import kotlin.concurrent.Volatile
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
@@ -34,13 +38,7 @@ class McpSession(
     suspend fun openSession() {
         openMutex.withLock {
             if (isOpen) return
-            integrations.forEach { integration ->
-                try {
-                    integration.connect()
-                } catch (t: Throwable) {
-                    log.w(TAG, "connect failed for ${integration.name}", t)
-                }
-            }
+            forEachIntegrationParallel("connect") { it.connect() }
             isOpen = true
         }
     }
@@ -48,13 +46,7 @@ class McpSession(
     suspend fun closeSession() {
         openMutex.withLock {
             if (!isOpen) return
-            integrations.forEach { integration ->
-                try {
-                    integration.close()
-                } catch (t: Throwable) {
-                    log.w(TAG, "close failed for ${integration.name}", t)
-                }
-            }
+            forEachIntegrationParallel("close") { it.close() }
             isOpen = false
         }
     }
@@ -64,23 +56,44 @@ class McpSession(
      * `integrationName` so callers don't lose routing info. Per-server
      * failures are swallowed and logged.
      */
-    suspend fun listTools(): List<McpTool> = integrations.flatMap { integration ->
-        try {
-            integration.listTools()
-        } catch (t: Throwable) {
-            log.w(TAG, "listTools failed for ${integration.name}", t)
-            emptyList()
-        }
+    suspend fun listTools(): List<McpTool> = coroutineScope {
+        integrations.map { integration ->
+            async {
+                try {
+                    integration.listTools()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (t: Throwable) {
+                    log.w(TAG, "listTools failed for ${integration.name}", t)
+                    emptyList()
+                }
+            }
+        }.awaitAll().flatten()
     }
 
     suspend fun resetCache() {
-        integrations.forEach { integration ->
-            try {
-                integration.resetCache()
-            } catch (t: Throwable) {
-                log.w(TAG, "resetCache failed for ${integration.name}", t)
+        forEachIntegrationParallel("resetCache") { it.resetCache() }
+    }
+
+    /** Fan out [block] across every integration concurrently; per-integration
+     *  failures are logged with [opLabel] and swallowed so one bad server
+     *  doesn't take down the others. Rethrows CancellationException to keep
+     *  coroutine scope teardown honest (esp. on K/N). */
+    private suspend fun forEachIntegrationParallel(
+        opLabel: String,
+        block: suspend (McpIntegration) -> Unit,
+    ) = coroutineScope {
+        integrations.map { integration ->
+            async {
+                try {
+                    block(integration)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (t: Throwable) {
+                    log.w(TAG, "$opLabel failed for ${integration.name}", t)
+                }
             }
-        }
+        }.awaitAll()
     }
 
     suspend fun callTool(

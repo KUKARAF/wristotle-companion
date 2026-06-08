@@ -29,3 +29,18 @@ interface KeyValueStore {
     fun putInt(key: String, value: Int)
     fun putBoolean(key: String, value: Boolean)
 }
+
+/**
+ * Read an enum-valued setting by its persisted `name`. Returns [default]
+ * when the key is absent (empty-string sentinel) or stored as a value
+ * that doesn't match any enum constant (manually-edited prefs file,
+ * old enum value removed in a migration).
+ *
+ * Collapses the repeated `runCatching { enumValueOf<T>(name) }.getOrDefault(default)`
+ * dance found in every lifted settings class.
+ */
+inline fun <reified T : Enum<T>> KeyValueStore.getEnum(key: String, default: T): T {
+    val name = getString(key, "")
+    if (name.isEmpty()) return default
+    return runCatching { enumValueOf<T>(name) }.getOrDefault(default)
+}

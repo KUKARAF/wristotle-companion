@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.speech.nlu.settings
 
 import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
+import com.lazydevs.wristotle.speech.nlu.store.getEnum
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -106,19 +107,11 @@ class FileSyncSettings(
         _deleteCascades.value = value
     }
 
-    private fun readFormat(): FileSyncFormat {
-        val name = store.getString(KEY_FORMAT, "")
-        if (name.isEmpty()) return FileSyncFormat.Markdown
-        return runCatching { enumValueOf<FileSyncFormat>(name) }
-            .getOrDefault(FileSyncFormat.Markdown)
-    }
+    private fun readFormat(): FileSyncFormat =
+        store.getEnum(KEY_FORMAT, FileSyncFormat.Markdown)
 
-    private fun readGranularity(): FileSyncGranularity {
-        val name = store.getString(KEY_GRANULARITY, "")
-        if (name.isEmpty()) return defaultGranularity
-        return runCatching { enumValueOf<FileSyncGranularity>(name) }
-            .getOrDefault(defaultGranularity)
-    }
+    private fun readGranularity(): FileSyncGranularity =
+        store.getEnum(KEY_GRANULARITY, defaultGranularity)
 
     companion object {
         /** Android-side prefs file name template — the scope is baked into the suffix. */

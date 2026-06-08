@@ -1,51 +1,50 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package com.lazydevs.wristotle.speech.nlu.handlers
 
-import com.lazydevs.wristotle.speech.nlu.handlers.TimeZoneResolver
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class TimeZoneResolverTest {
 
-    // --- cityMap (derived from the JVM tz table) --------------------
+    // --- cityMap (derived from kotlinx-datetime's available zones) --
 
-    @Test fun `single-word city resolves`() {
+    @Test fun singleWordCityResolves() {
         assertEquals("Asia/Tokyo", TimeZoneResolver.resolve("tokyo")?.id)
     }
 
-    @Test fun `multi-word city with underscore leaf resolves`() {
+    @Test fun multiWordCityWithUnderscoreLeafResolves() {
         assertEquals("America/New_York", TimeZoneResolver.resolve("new york")?.id)
     }
 
-    @Test fun `case and whitespace are normalised`() {
+    @Test fun caseAndWhitespaceAreNormalised() {
         assertEquals("Europe/London", TimeZoneResolver.resolve("  LONDON ")?.id)
     }
 
     // --- ALIASES (countries, abbreviations) -------------------------
 
-    @Test fun `country name resolves via alias`() {
+    @Test fun countryNameResolvesViaAlias() {
         assertEquals("Asia/Tokyo", TimeZoneResolver.resolve("japan")?.id)
     }
 
-    @Test fun `abbreviation resolves via alias`() {
+    @Test fun abbreviationResolvesViaAlias() {
         assertEquals("America/New_York", TimeZoneResolver.resolve("nyc")?.id)
         assertEquals("America/Los_Angeles", TimeZoneResolver.resolve("la")?.id)
     }
 
-    @Test fun `uk alias beats any literal zone`() {
+    @Test fun ukAliasBeatsAnyLiteralZone() {
         assertEquals("Europe/London", TimeZoneResolver.resolve("uk")?.id)
     }
 
     // --- Unresolvable ------------------------------------------------
 
-    @Test fun `gibberish resolves to null`() {
+    @Test fun gibberishResolvesToNull() {
         assertNull(TimeZoneResolver.resolve("nowhereville"))
     }
 
-    @Test fun `empty input resolves to null`() {
+    @Test fun emptyInputResolvesToNull() {
         assertNull(TimeZoneResolver.resolve("   "))
     }
 }

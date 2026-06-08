@@ -87,5 +87,14 @@ kotlin {
             implementation(libs.junit)
             implementation(libs.kotlinx.coroutines.android)
         }
+        // Pure commonTest sources run on every target — Android host
+        // tests pick them up via the kotlin.test JVM impl; iOS Sim
+        // exercises them through the same multiplatform API. Keeps
+        // pure-logic test coverage (slot extractors, calculator, time-
+        // zone resolver, etc.) symmetric across platforms.
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
+        }
     }
 }

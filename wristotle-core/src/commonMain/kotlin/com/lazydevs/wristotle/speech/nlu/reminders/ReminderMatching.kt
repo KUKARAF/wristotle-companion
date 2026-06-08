@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package com.lazydevs.wristotle.speech.nlu.reminders
 
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * Matches a spoken target ("the gym one", "my 5pm") against the pending
@@ -19,9 +19,7 @@ import java.util.Locale
  */
 object ReminderMatching {
 
-    /** A target must clear this to count as a match. Single-token targets are
-     *  all-or-nothing; a two-token target where only one token lands (0.5)
-     *  falls below, so we don't cancel the wrong reminder on a partial hit. */
+    /** A target must clear this to count as a match. */
     const val MATCH_FLOOR = 0.6f
 
     /** Best pending (not past-due) reminder for [target], or null if none clears
@@ -34,8 +32,6 @@ object ReminderMatching {
         return if (score(t, best) >= MATCH_FLOOR) best else null
     }
 
-    /** Score of [normalizedTarget] against [record], 0f..1f — the better of a
-     *  title-token match and a clock-time match. */
     internal fun score(normalizedTarget: String, record: ReminderRecord): Float {
         val titleScore = tokenScore(normalizedTarget, normalize(record.title))
         val timeScore = record.timeMs?.let { timeScore(normalizedTarget, it) } ?: 0f
@@ -56,8 +52,14 @@ object ReminderMatching {
     /** 1f when the target names this reminder's clock time ("5pm", "5 pm",
      *  "5:00pm"), else 0f. */
     private fun timeScore(target: String, timeMs: Long): Float {
-        val compact = SimpleDateFormat("ha", Locale.US).format(Date(timeMs)).lowercase()      // "5pm"
-        val withMinutes = SimpleDateFormat("h:mma", Locale.US).format(Date(timeMs)).lowercase() // "5:00pm"
+        val ldt = Instant.fromEpochMilliseconds(timeMs)
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+        val hour24 = ldt.hour
+        val hour12 = ((hour24 + 11) % 12) + 1
+        val ampm = if (hour24 < 12) "am" else "pm"
+        val mm = ldt.minute.toString().padStart(2, '0')
+        val compact = "$hour12$ampm"               // "5pm"
+        val withMinutes = "$hour12:$mm$ampm"       // "5:00pm"
         val tc = target.replace(" ", "")
         if (tc.length < 2) return 0f
         return if (tc == compact || tc == withMinutes || compact.contains(tc) || withMinutes.startsWith(tc)) 1f else 0f
@@ -74,9 +76,7 @@ private val CALENDAR_EVENT_NOUNS = listOf("meeting", "appointment", "event")
 
 /**
  * True when [target] names a calendar event ("my 3pm meeting", "the standup
- * appointment") rather than a reminder. Lets cancel/reschedule give a clear
- * "I can only … reminders, not meetings" instead of a confusing
- * "No reminder matching meeting" when the user means a calendar event.
+ * appointment") rather than a reminder.
  */
-internal fun mentionsCalendarEvent(target: String): Boolean =
+fun mentionsCalendarEvent(target: String): Boolean =
     CALENDAR_EVENT_NOUNS.any { target.contains(it, ignoreCase = true) }

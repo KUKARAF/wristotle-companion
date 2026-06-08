@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.weather.WeatherCodes
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

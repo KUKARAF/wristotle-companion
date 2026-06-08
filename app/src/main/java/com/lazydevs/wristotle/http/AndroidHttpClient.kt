@@ -16,7 +16,6 @@ import kotlinx.coroutines.withContext
  * to [Dispatchers.IO] so commonMain LLM clients can stay
  * dispatcher-agnostic.
  *
- * R5 batch 2.
  */
 class AndroidHttpClient : HttpClient {
     override suspend fun request(request: HttpRequest): HttpResponse = withContext(Dispatchers.IO) {

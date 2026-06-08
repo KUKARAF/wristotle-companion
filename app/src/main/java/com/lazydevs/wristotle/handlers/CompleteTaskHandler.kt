@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.handler.requiresConfirm
 import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
@@ -19,7 +20,7 @@ import com.lazydevs.wristotle.tasks.TaskRepository
  *   - Substring match: 0 → *"No task matching X"*, 1 → mark complete,
  *     2+ → disambiguation reply.
  *
- * Destructive ([com.lazydevs.wristotle.handlers.requiresConfirm] = true)
+ * Destructive ([com.lazydevs.wristotle.speech.nlu.handler.requiresConfirm] = true)
  * so the confirm-before-dispatch gate intercepts when enabled.
  */
 class CompleteTaskHandler(

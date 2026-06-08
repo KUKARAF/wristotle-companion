@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.backup
 
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import android.content.Context
 import android.net.Uri
 import android.os.Build
@@ -288,7 +289,7 @@ class BackupExporter(private val app: WristotleApplication) {
         }
     }
 
-    private fun readPinRecords(): List<com.lazydevs.wristotle.handlers.ReminderRecord> {
+    private fun readPinRecords(): List<com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord> {
         val store = com.lazydevs.wristotle.handlers.PinStore(app.applicationContext)
         return store.all()
     }

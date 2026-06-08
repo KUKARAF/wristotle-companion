@@ -21,8 +21,13 @@ import kotlinx.serialization.json.jsonPrimitive
  * to the flat-string branch and surface e.g. `{"message":""}` as the
  * "error message" the user sees.
  *
- * R5 batch 2 — kotlinx.serialization rewrite of the JVM-only org.json
- * version in `:speech/util/HttpUtil`. Same semantics; multiplatform.
+ * **Sibling impl note:** `:speech/util/HttpUtil.kt` carries an
+ * equivalent `providerErrorMessage` written against `org.json` (used
+ * by `HttpRecognizer` in the JVM-only `:speech` module). The two MUST
+ * stay semantically aligned — change one, change the other. The
+ * duplication is structural: `:wristotle-core/androidMain` already
+ * depends on `:speech` (via `ModelFileStorage`), so `:speech` can't
+ * depend back on `:wristotle-core` without breaking that edge first.
  */
 fun String?.providerErrorMessage(): String? {
     if (this == null) return null

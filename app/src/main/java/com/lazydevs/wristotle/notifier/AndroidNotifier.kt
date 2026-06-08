@@ -16,10 +16,6 @@ import com.lazydevs.wristotle.speech.nlu.notifier.Notifier
  * int notification ID from the request's string ID. Best-effort: if the
  * post throws (channel disabled, permission denied), returns false.
  *
- * R4 batch 2. The persistent-reminder receiver does NOT use this — it
- * keeps its own NotificationCompat.Builder call so it can wire custom
- * action-button PendingIntents that don't fit the interface. Use this
- * adapter for future generic post-a-notification flows.
  */
 class AndroidNotifier(context: Context, private val channelId: String = DEFAULT_CHANNEL_ID) : Notifier {
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.handlers
+package com.lazydevs.wristotle.speech.nlu.reminders
 
 /**
  * One scheduled reminder we've inserted as a Pebble timeline pin.
@@ -15,9 +15,9 @@ package com.lazydevs.wristotle.handlers
  * migrated from the old id-only format, which didn't store the time).
  *
  * [isPersistent] marks the reminder as one that should also nag the phone via
- * a notification at user-configured intervals after the watch pin fires (phase
- * B wires the scheduler). [attemptsRemaining] tracks how many more times the
- * scheduler is allowed to re-fire — defaults to 0 for non-persistent records.
+ * a notification at user-configured intervals after the watch pin fires.
+ * [attemptsRemaining] tracks how many more times the scheduler is allowed to
+ * re-fire — defaults to 0 for non-persistent records.
  */
 data class ReminderRecord(
     val id: String,
@@ -28,8 +28,8 @@ data class ReminderRecord(
 )
 
 /**
- * Pure (de)serialization for [PinStore], split out so it's unit-testable
- * without an Android `Context` (house style: pure JUnit, no Robolectric).
+ * Pure (de)serialization for the platform-side `PinStore`, kept here so
+ * it's commonMain-portable and unit-testable without a Context.
  *
  * Wire format is one record per line, fields separated by ASCII control chars
  * that dictated titles never contain (unit-separator U+001F between fields,
@@ -37,7 +37,7 @@ data class ReminderRecord(
  * or colon in a title (e.g. "buy milk, eggs") round-trips intact, which the
  * old comma-joined format could not have done.
  */
-internal object PinStoreCodec {
+object PinStoreCodec {
 
     private const val RS = ''   // record separator
     private const val US = ''   // field separator
@@ -80,8 +80,6 @@ internal object PinStoreCodec {
             val id = parts.getOrNull(0)?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             val title = parts.getOrNull(1).orEmpty()
             val timeMs = parts.getOrNull(2)?.toLongOrNull()
-            // Fields 4 + 5 added when persistent reminders shipped — absent in
-            // older blobs, in which case both default to "not persistent".
             val isPersistent = parts.getOrNull(3) == "1"
             val attemptsRemaining = parts.getOrNull(4)?.toIntOrNull() ?: 0
             ReminderRecord(id, title, timeMs, isPersistent, attemptsRemaining)
@@ -90,27 +88,18 @@ internal object PinStoreCodec {
 
     /**
      * How long a fired reminder stays "active" — listed, matchable, and kept in
-     * the store — after its scheduled time. A reminder you set for 2pm is still
-     * answerable ("is there a reminder at 2pm") later that day; only after a
-     * full day does it get pruned. Keeps the store from accumulating stale rows
-     * without yanking just-fired reminders out from under the user.
+     * the store — after its scheduled time.
      */
     const val RETENTION_WINDOW_MS = 24L * 60 * 60 * 1000
 
     /**
      * A reminder is active if its time hasn't passed by more than
-     * [RETENTION_WINDOW_MS]. Unknown-time records ([timeMs] null, e.g. legacy
-     * migrations) are always active — we can't prove they're old. Single source
-     * of truth for the pending/active filter used by the store, the list
-     * formatter, and the matcher.
+     * [RETENTION_WINDOW_MS]. Unknown-time records ([timeMs] null) are always
+     * active — we can't prove they're old.
      */
     fun isActive(timeMs: Long?, now: Long): Boolean =
         timeMs == null || timeMs >= now - RETENTION_WINDOW_MS
 
-    /**
-     * Drops records that have been past-due for more than [RETENTION_WINDOW_MS].
-     * Pure; the store calls this on every load so old reminders don't accumulate.
-     */
     fun prunePastDue(records: List<ReminderRecord>, now: Long): List<ReminderRecord> =
         records.filter { isActive(it.timeMs, now) }
 

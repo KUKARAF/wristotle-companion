@@ -5,6 +5,7 @@ package com.lazydevs.wristotle.speech.nlu.settings
 
 import com.lazydevs.wristotle.speech.nlu.alarms.AlarmDestination
 import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
+import com.lazydevs.wristotle.speech.nlu.store.getEnum
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,12 +31,8 @@ class AlarmSettings(private val store: KeyValueStore) {
         _defaultDestination.value = destination
     }
 
-    private fun readDestination(): AlarmDestination {
-        val raw = store.getString(KEY_DEFAULT_DESTINATION, "")
-        if (raw.isEmpty()) return AlarmDestination.Phone
-        return runCatching { enumValueOf<AlarmDestination>(raw) }
-            .getOrElse { AlarmDestination.Phone }
-    }
+    private fun readDestination(): AlarmDestination =
+        store.getEnum(KEY_DEFAULT_DESTINATION, AlarmDestination.Phone)
 
     companion object {
         const val PREFS_NAME = "wristotle_alarms"

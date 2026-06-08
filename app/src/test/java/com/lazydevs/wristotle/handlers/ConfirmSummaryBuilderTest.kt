@@ -10,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
+import kotlinx.datetime.Instant
 import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 
 /**
@@ -303,5 +304,5 @@ class ConfirmSummaryBuilderTest {
             rawQuery = "",
         )
 
-    private fun fixedDate(): Date = Date(0L)  // any non-null Date triggers the time branch
+    private fun fixedDate(): Instant = Instant.fromEpochMilliseconds(0L)  // any non-null value triggers the time branch
 }

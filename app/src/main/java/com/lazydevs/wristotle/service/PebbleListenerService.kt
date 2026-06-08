@@ -19,7 +19,7 @@ import com.lazydevs.wristotle.handlers.FindPhoneHandler
 import com.lazydevs.wristotle.handlers.ConfirmSummaryBuilder
 import com.lazydevs.wristotle.speech.nlu.handler.HandlerRegistry
 import com.lazydevs.wristotle.speech.nlu.handler.HandlerRegistry.Companion.isSuccessResponse
-import com.lazydevs.wristotle.handlers.requiresConfirm
+import com.lazydevs.wristotle.speech.nlu.handler.requiresConfirm
 import com.lazydevs.wristotle.handlers.ListRemindersHandler
 import com.lazydevs.wristotle.handlers.MediaNextHandler
 import com.lazydevs.wristotle.handlers.MediaPauseHandler
@@ -136,7 +136,6 @@ class PebbleListenerService : BasePebbleListenerService() {
             classifier = IntentClassifiers.provider(this),
             slotExtractors = app.slotExtractors,
             askAgentSubjects = { app.askAgentSettings.customTriggers.value },
-            // R3 batch 1 — pipe the Android-side ring-buffered logger
             // through the multiplatform Logger interface.
             logger = com.lazydevs.wristotle.logging.WristotleLogger,
         )

@@ -3,6 +3,10 @@
 
 package com.lazydevs.wristotle.handlers
 
+import kotlinx.datetime.Instant
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderMatching
+import com.lazydevs.wristotle.speech.nlu.reminders.mentionsCalendarEvent
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import android.content.Context
 import android.util.Log
 import com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler
@@ -41,8 +45,10 @@ class RescheduleHandler(
     override val intent: Intent = Intent.Reschedule
 
     override suspend fun handle(result: IntentResult): String {
-        val time = result.slots[SlotKeys.Time] as? Date
+        val instant = result.slots[SlotKeys.Time] as? Instant
             ?: return "Couldn't understand the new time"
+        val timeMs = instant.toEpochMilliseconds()
+        val time = Date(timeMs)
         val target = (result.slots[SlotKeys.Target] as? String)?.trim().orEmpty()
         Log.d(TAG, "reschedule: ${result.rawQuery} (target='$target' time=$time)")
 
@@ -71,7 +77,7 @@ class RescheduleHandler(
         val pin = ReminderPin(
             id = newId,
             title = record.title,
-            startEpochMillis = time.time,
+            startEpochMillis = timeMs,
         )
 
         val insertResult = transport.insertReminderPin(pin)
@@ -84,7 +90,7 @@ class RescheduleHandler(
             val moved = ReminderRecord(
                 id = newId,
                 title = record.title,
-                timeMs = time.time,
+                timeMs = timeMs,
                 isPersistent = record.isPersistent,
                 attemptsRemaining = record.attemptsRemaining,
             )

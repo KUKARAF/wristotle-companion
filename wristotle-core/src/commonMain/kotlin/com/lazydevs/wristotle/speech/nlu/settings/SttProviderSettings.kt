@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.speech.nlu.settings
 
 import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
+import com.lazydevs.wristotle.speech.nlu.store.getEnum
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -51,12 +52,8 @@ class SttProviderSettings(private val store: KeyValueStore) {
     fun setHttpApiKey(value: String) = write(KEY_HTTP_API_KEY, value.trim(), _httpApiKey)
     fun setHttpModel(value: String) = write(KEY_HTTP_MODEL, value.trim(), _httpModel)
 
-    private fun readMode(): SttProviderMode {
-        val name = store.getString(KEY_MODE, "")
-        if (name.isEmpty()) return SttProviderMode.LOCAL_ONLY
-        return runCatching { enumValueOf<SttProviderMode>(name) }
-            .getOrDefault(SttProviderMode.LOCAL_ONLY)
-    }
+    private fun readMode(): SttProviderMode =
+        store.getEnum(KEY_MODE, SttProviderMode.LOCAL_ONLY)
 
     private fun write(key: String, value: String, flow: MutableStateFlow<String>) {
         if (flow.value == value) return

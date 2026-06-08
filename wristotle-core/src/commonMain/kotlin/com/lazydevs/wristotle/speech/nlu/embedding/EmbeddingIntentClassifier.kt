@@ -8,6 +8,7 @@ import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.RankedIntent
 import com.lazydevs.wristotle.speech.nlu.seed.SeedExamples
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -74,8 +75,10 @@ class EmbeddingIntentClassifier(
                 val learnedEmbeds = loadLearned().mapNotNull { entry ->
                     runCatching {
                         Embedded(Intent.fromName(entry.intent), embedder.embed(entry.rawText))
-                    }.onFailure { log("skip learned entry ${entry.id}: ${it.message}") }
-                        .getOrNull()
+                    }.onFailure {
+                        if (it is CancellationException) throw it
+                        log("skip learned entry ${entry.id}: ${it.message}")
+                    }.getOrNull()
                 }
                 seedEmbeds + learnedEmbeds
             }
@@ -91,7 +94,8 @@ class EmbeddingIntentClassifier(
                 loadLearned().mapNotNull { entry ->
                     runCatching {
                         Embedded(Intent.fromName(entry.intent), embedder.embed(entry.rawText))
-                    }.getOrNull()
+                    }.onFailure { if (it is CancellationException) throw it }
+                        .getOrNull()
                 }
             }
             examples = cachedSeeds + learned

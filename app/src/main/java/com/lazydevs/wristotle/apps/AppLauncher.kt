@@ -52,7 +52,6 @@ internal fun packageLabel(context: Context, packageId: String): String = try {
  * the existing media handlers (which still call the helpers directly)
  * keep working.
  *
- * R4 batch 7.
  */
 class AndroidAppLauncher(context: Context) : CommonAppLauncher {
     private val appContext = context.applicationContext

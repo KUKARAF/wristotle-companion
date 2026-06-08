@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
+import kotlinx.datetime.Instant
 import com.lazydevs.wristotle.speech.nlu.settings.AlarmSettings
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.phone.ContactsRepository
@@ -181,12 +182,16 @@ object ConfirmSummaryBuilder {
             attendee != null -> "$defaultTitle with $attendee"
             else -> defaultTitle
         }
-        val time = (r.slots[SlotKeys.Time] as? Date)?.let { TIME_FMT.get()!!.format(it) }
+        val time = (r.slots[SlotKeys.Time] as? Instant)?.let {
+            TIME_FMT.get()!!.format(Date(it.toEpochMilliseconds()))
+        }
         return if (time != null) "$title @ $time" else title
     }
 
     private fun timeOrDash(r: IntentResult): String =
-        (r.slots[SlotKeys.Time] as? Date)?.let { TIME_FMT.get()!!.format(it) } ?: "-"
+        (r.slots[SlotKeys.Time] as? Instant)?.let {
+            TIME_FMT.get()!!.format(Date(it.toEpochMilliseconds()))
+        } ?: "-"
 
     /** Compact duration for SetTimer — "10m" / "1m 30s" / "45s". */
     private fun timerDuration(r: IntentResult): String {

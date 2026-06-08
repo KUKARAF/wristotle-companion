@@ -12,7 +12,7 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import com.lazydevs.wristotle.handlers.PinStore
-import com.lazydevs.wristotle.handlers.ReminderRecord
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
 
 private const val TAG = "PersistentReminder"

@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import android.content.Context
 import android.util.Log
 import com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler
@@ -16,6 +17,7 @@ import com.lazydevs.wristotle.speech.nlu.transport.TimelineSendResult
 import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import java.util.Date
 import java.util.UUID
+import kotlinx.datetime.Instant
 
 private const val TAG = "ReminderHandler"
 
@@ -41,7 +43,9 @@ class ReminderHandler(
         // ReminderSlots always populates a time — defaults to now + 30 min
         // when no explicit time was spoken — so this cast won't fail in
         // practice. Defensive null-check stays for the type system only.
-        val time = result.slots[SlotKeys.Time] as? Date ?: return "Couldn't set reminder"
+        val instant = result.slots[SlotKeys.Time] as? Instant ?: return "Couldn't set reminder"
+        val timeMs = instant.toEpochMilliseconds()
+        val time = Date(timeMs)
         val title = (result.slots[SlotKeys.Title] as? String)?.takeIf { it.isNotBlank() }
             ?: result.rawQuery.replaceFirstChar { it.uppercaseChar() }
         val isPersistent = result.slots[SlotKeys.Persistent] as? Boolean ?: false
@@ -52,7 +56,7 @@ class ReminderHandler(
         val pin = ReminderPin(
             id = pinId,
             title = title,
-            startEpochMillis = time.time,
+            startEpochMillis = timeMs,
         )
 
         val pinResult = transport.insertReminderPin(pin)
@@ -66,7 +70,7 @@ class ReminderHandler(
             val record = ReminderRecord(
                 id = pinId,
                 title = title,
-                timeMs = time.time,
+                timeMs = timeMs,
                 isPersistent = isPersistent,
                 attemptsRemaining = attemptsRemaining,
             )

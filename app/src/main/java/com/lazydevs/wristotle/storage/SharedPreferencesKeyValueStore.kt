@@ -16,8 +16,6 @@ import com.lazydevs.wristotle.speech.nlu.store.KeyValueStore
  * each settings class gets its own named file (matching what the
  * old `getSharedPreferences("wristotle_nlu_settings", …)` calls used).
  *
- * R3 batch 4 — used by NluSettings + AskAgentSettings; future lifted
- * settings classes follow the same pattern (one store-name per file).
  */
 class SharedPreferencesKeyValueStore(
     context: Context,
@@ -49,3 +47,14 @@ class SharedPreferencesKeyValueStore(
         prefs.edit { putBoolean(key, value) }
     }
 }
+
+/**
+ * Convenience constructor used at every `WristotleApplication` settings
+ * wiring site. Collapses the four-line
+ * `SharedPreferencesKeyValueStore(this, X.PREFS_NAME)` to a one-liner.
+ *
+ * Pure mechanics — the production code path through the resulting
+ * adapter is identical.
+ */
+fun Context.kvStore(prefsName: String): KeyValueStore =
+    SharedPreferencesKeyValueStore(this, prefsName)
