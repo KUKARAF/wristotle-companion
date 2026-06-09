@@ -108,6 +108,24 @@ class SendMessageSlotsTest {
         assertEquals("hi", s["body"])
     }
 
+    @Test fun `trailing question mark on body is preserved`() {
+        // Regression: per-token cleanNameToken was stripping `?` / `!` from
+        // the final body word ("lunch?" → "lunch"). Body should preserve
+        // sentence-ending punctuation since that's meaningful payload, not
+        // the contact-name hygiene cleanNameToken was meant to handle.
+        val s = extract("text dad did you have lunch?")
+        assertEquals("SMS", s["app"])
+        assertEquals("dad", s["contact"])
+        assertEquals("did you have lunch?", s["body"])
+    }
+
+    @Test fun `trailing exclamation on body is preserved`() {
+        val s = extract("text mom happy birthday!")
+        assertEquals("SMS", s["app"])
+        assertEquals("mom", s["contact"])
+        assertEquals("happy birthday!", s["body"])
+    }
+
     @Test fun `send a message to contact saying body defaults to SMS`() {
         // SmsSlots' conjunction split runs inside the fallback.
         val s = extract("send a message to mom saying running late")

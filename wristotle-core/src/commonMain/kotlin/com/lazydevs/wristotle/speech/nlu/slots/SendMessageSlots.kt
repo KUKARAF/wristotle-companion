@@ -167,12 +167,21 @@ class SendMessageSlots(
             }
         }
 
-        val words = rest.split(MULTI_WHITESPACE).map(::cleanNameToken).filter { it.isNotEmpty() }
-        for (n in minOf(MAX_NAME_WORDS, words.size) downTo 1) {
-            val candidate = words.subList(0, n).joinToString(" ")
+        // Keep raw words so trailing punctuation on the body ("did you have
+        // lunch?") survives. The candidate is per-token cleanNameToken'd
+        // only at lookup time so contacts like "John," still resolve.
+        val rawWords = rest.split(MULTI_WHITESPACE).filter { it.isNotEmpty() }
+        for (n in minOf(MAX_NAME_WORDS, rawWords.size) downTo 1) {
+            val candidate = rawWords.subList(0, n)
+                .joinToString(" ") { cleanNameToken(it) }
+                .replace(MULTI_WHITESPACE, " ")
+                .trim()
+            if (candidate.isEmpty()) continue
             val resolved = findContact(candidate)
             if (resolved != null) {
-                val body = if (n < words.size) words.subList(n, words.size).joinToString(" ").trim() else ""
+                val body = if (n < rawWords.size)
+                    rawWords.subList(n, rawWords.size).joinToString(" ").trim()
+                else ""
                 if (body.isNotEmpty()) {
                     return mapOf(
                         SlotKeys.Contact to candidate,
@@ -237,17 +246,24 @@ class SendMessageSlots(
         val cleaned = rest.replaceFirst(LEADING_CONNECTOR, "").trim()
         if (cleaned.isEmpty()) return mapOf(SlotKeys.App to appDisplay)
 
-        val words = cleaned.split(MULTI_WHITESPACE).map(::cleanNameToken).filter { it.isNotEmpty() }
+        // Keep raw words so trailing punctuation on the body ("did you have
+        // lunch?") survives. The candidate is per-token cleanNameToken'd
+        // only at lookup time so contacts like "John," still resolve.
+        val rawWords = cleaned.split(MULTI_WHITESPACE).filter { it.isNotEmpty() }
 
         // Greedy contact-name lookup — try the longest N-word prefix
         // first; the longest prefix that resolves wins, remainder is
         // the body.
-        for (n in minOf(MAX_NAME_WORDS, words.size) downTo 1) {
-            val candidate = words.subList(0, n).joinToString(" ")
+        for (n in minOf(MAX_NAME_WORDS, rawWords.size) downTo 1) {
+            val candidate = rawWords.subList(0, n)
+                .joinToString(" ") { cleanNameToken(it) }
+                .replace(MULTI_WHITESPACE, " ")
+                .trim()
+            if (candidate.isEmpty()) continue
             val resolved = findContact(candidate)
             if (resolved != null) {
-                val body = if (n < words.size)
-                    words.subList(n, words.size).joinToString(" ").trim()
+                val body = if (n < rawWords.size)
+                    rawWords.subList(n, rawWords.size).joinToString(" ").trim()
                 else ""
                 return if (body.isNotEmpty())
                     mapOf(
