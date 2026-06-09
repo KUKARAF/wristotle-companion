@@ -101,20 +101,54 @@ val MULTI_WHITESPACE = Regex("\\s+")
  * Callers that want to reject the bare article (e.g. SetTimer, to avoid
  * matching "set **a** timer" as 1) gate the word-form on an explicit unit.
  */
-val WORD_NUMBERS: Map<String, Int> = mapOf(
-    "a" to 1, "an" to 1, "one" to 1,
-    "two" to 2, "three" to 3, "four" to 4, "five" to 5,
-    "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9,
-    "ten" to 10, "fifteen" to 15, "twenty" to 20, "thirty" to 30,
-    "forty" to 40, "forty five" to 45, "forty-five" to 45, "fifty" to 50,
-    "sixty" to 60, "ninety" to 90,
-)
+val WORD_NUMBERS: Map<String, Int> = buildMap {
+    put("a", 1); put("an", 1)
+    val ones = listOf(
+        "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5,
+        "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9,
+    )
+    val teens = listOf(
+        "ten" to 10, "eleven" to 11, "twelve" to 12, "thirteen" to 13,
+        "fourteen" to 14, "fifteen" to 15, "sixteen" to 16, "seventeen" to 17,
+        "eighteen" to 18, "nineteen" to 19,
+    )
+    val tens = listOf(
+        "twenty" to 20, "thirty" to 30, "forty" to 40, "fifty" to 50,
+        "sixty" to 60, "seventy" to 70, "eighty" to 80, "ninety" to 90,
+    )
+    ones.forEach { (w, n) -> put(w, n) }
+    teens.forEach { (w, n) -> put(w, n) }
+    tens.forEach { (w, n) -> put(w, n) }
+    // Compound 21–99 in both space- and hyphen-joined shapes so Whisper's
+    // varying punctuation ("forty five" vs "forty-five" vs "forty5") all
+    // resolve. Order doesn't matter — this is a map, not a regex.
+    for ((tWord, tVal) in tens) {
+        for ((oWord, oVal) in ones) {
+            put("$tWord $oWord", tVal + oVal)
+            put("$tWord-$oWord", tVal + oVal)
+        }
+    }
+}
 
 /** Word-form alternation matching the keys of [WORD_NUMBERS]. Used by
- *  duration parsers as the number-token half of a "<n> <unit>" regex. */
-const val WORD_NUMBER_ALT =
-    "a|an|one|two|three|four|five|six|seven|eight|nine|ten|" +
-        "fifteen|twenty|thirty|forty|forty-five|forty five|fifty|sixty|ninety"
+ *  duration parsers as the number-token half of a "<n> <unit>" regex.
+ *  Compound forms (e.g. "twenty-one", "twenty one") sit before bare tens
+ *  so the longest match wins inside `\b…\b`. */
+val WORD_NUMBER_ALT: String = run {
+    val ones = listOf("one", "two", "three", "four", "five", "six", "seven", "eight", "nine")
+    val teens = listOf(
+        "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+        "sixteen", "seventeen", "eighteen", "nineteen",
+    )
+    val tens = listOf("twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety")
+    val compounds = buildList {
+        for (t in tens) for (o in ones) {
+            add("$t-$o")
+            add("$t $o")
+        }
+    }
+    (compounds + tens + teens + ones + listOf("a", "an")).joinToString("|")
+}
 
 /** Unit-token half of a duration regex. Matches seconds / minutes / hours
  *  in their long, short, and bare-letter forms. */

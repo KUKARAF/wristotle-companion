@@ -128,4 +128,26 @@ class SlotUtilsTest {
         assertEquals(45, WORD_NUMBERS["forty-five"])
         assertEquals(60, WORD_NUMBERS["sixty"])
     }
+
+    @Test fun `teens are recognised`() {
+        // Regression: "set a timer for eleven minutes" failed pre-fix because
+        // 11..19 weren't in the table. The other teens fail the same way.
+        assertEquals(11, WORD_NUMBERS["eleven"])
+        assertEquals(12, WORD_NUMBERS["twelve"])
+        assertEquals(13, WORD_NUMBERS["thirteen"])
+        assertEquals(14, WORD_NUMBERS["fourteen"])
+        assertEquals(16, WORD_NUMBERS["sixteen"])
+        assertEquals(17, WORD_NUMBERS["seventeen"])
+        assertEquals(18, WORD_NUMBERS["eighteen"])
+        assertEquals(19, WORD_NUMBERS["nineteen"])
+    }
+
+    @Test fun `compound tens work in both spacings`() {
+        assertEquals(21, WORD_NUMBERS["twenty one"])
+        assertEquals(21, WORD_NUMBERS["twenty-one"])
+        assertEquals(99, WORD_NUMBERS["ninety nine"])
+        assertEquals(99, WORD_NUMBERS["ninety-nine"])
+        assertEquals(70, WORD_NUMBERS["seventy"])
+        assertEquals(80, WORD_NUMBERS["eighty"])
+    }
 }

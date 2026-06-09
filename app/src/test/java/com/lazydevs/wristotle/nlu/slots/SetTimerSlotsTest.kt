@@ -52,6 +52,17 @@ class SetTimerSlotsTest {
         assertEquals(600, extract("timer for ten minutes")["seconds"])
     }
 
+    @Test fun `eleven minutes resolves`() {
+        // Regression — codeberg #11. WORD_NUMBERS pre-fix had a gap from
+        // 11..19; "set a timer for eleven minutes" returned no duration.
+        assertEquals(660, extract("set a timer for eleven minutes")["seconds"])
+    }
+
+    @Test fun `compound tens resolve in both spacings`() {
+        assertEquals(21 * 60, extract("set a timer for twenty one minutes")["seconds"])
+        assertEquals(45 * 60, extract("set a timer for forty-five minutes")["seconds"])
+    }
+
     @Test fun `an hour resolves to 3600`() {
         assertEquals(3600, extract("set a timer for an hour")["seconds"])
     }
