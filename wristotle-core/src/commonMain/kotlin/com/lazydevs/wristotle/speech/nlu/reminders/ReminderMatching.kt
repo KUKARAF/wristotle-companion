@@ -80,3 +80,14 @@ private val CALENDAR_EVENT_NOUNS = listOf("meeting", "appointment", "event")
  */
 fun mentionsCalendarEvent(target: String): Boolean =
     CALENDAR_EVENT_NOUNS.any { target.contains(it, ignoreCase = true) }
+
+private val TIMER_NOUNS = listOf("timer", "countdown", "stopwatch")
+
+/**
+ * True when [target] names a timer ("cancel timer", "stop the countdown") —
+ * Android exposes no public DISMISS_TIMER intent, so the cancel handler
+ * surfaces a "open the Clock app to cancel" message instead of the misleading
+ * "no reminder matching timer". See `alarm-timer.md` § "AlarmClock dead-end".
+ */
+fun mentionsTimer(target: String): Boolean =
+    TIMER_NOUNS.any { target.contains(it, ignoreCase = true) }

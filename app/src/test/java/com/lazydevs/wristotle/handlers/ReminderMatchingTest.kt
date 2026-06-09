@@ -5,6 +5,7 @@ package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.speech.nlu.reminders.ReminderMatching
 import com.lazydevs.wristotle.speech.nlu.reminders.mentionsCalendarEvent
+import com.lazydevs.wristotle.speech.nlu.reminders.mentionsTimer
 import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -94,6 +95,21 @@ class ReminderMatchingTest {
         assertFalse(mentionsCalendarEvent("gym"))
         assertFalse(mentionsCalendarEvent("call mom"))
         assertFalse(mentionsCalendarEvent("5pm"))
+    }
+
+    // --- mentionsTimer (guard for "cancel timer" platform dead-end) ---
+
+    @Test fun timerNounsDetected() {
+        assertTrue(mentionsTimer("timer"))
+        assertTrue(mentionsTimer("the timer"))
+        assertTrue(mentionsTimer("countdown"))
+        assertTrue(mentionsTimer("my stopwatch"))
+    }
+
+    @Test fun reminderTargetsNotFlaggedAsTimer() {
+        assertFalse(mentionsTimer("gym"))
+        assertFalse(mentionsTimer("call mom"))
+        assertFalse(mentionsTimer("5pm"))
     }
 
     private fun dateAt(s: String): Long =

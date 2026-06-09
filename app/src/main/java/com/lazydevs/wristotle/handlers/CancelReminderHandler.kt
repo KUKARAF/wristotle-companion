@@ -5,6 +5,7 @@ package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.speech.nlu.reminders.ReminderMatching
 import com.lazydevs.wristotle.speech.nlu.reminders.mentionsCalendarEvent
+import com.lazydevs.wristotle.speech.nlu.reminders.mentionsTimer
 import android.content.Context
 import android.util.Log
 import com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler
@@ -46,10 +47,13 @@ class CancelReminderHandler(
             pinStore.latest() ?: return "No reminders to cancel"
         } else {
             ReminderMatching.bestMatch(target, pinStore.all(), System.currentTimeMillis())
-                ?: return if (mentionsCalendarEvent(target)) {
-                    "I can only cancel reminders, not meetings"
-                } else {
-                    "No reminder matching \"$target\""
+                ?: return when {
+                    mentionsTimer(target) ->
+                        "Timers can't be cancelled by voice — open the Clock app"
+                    mentionsCalendarEvent(target) ->
+                        "I can only cancel reminders, not meetings"
+                    else ->
+                        "No reminder matching \"$target\""
                 }
         }
 
