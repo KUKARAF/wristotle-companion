@@ -106,7 +106,7 @@ jobs:
           test -s "$GITHUB_WORKSPACE/wristotle-release.keystore"
 
       - name: Run unit tests
-        run: ./gradlew --no-daemon -PskipNativeBuild=true :app:testDebugUnitTest :speech-nlu:testDebugUnitTest :speech-whisper:testDebugUnitTest
+        run: ./gradlew --no-daemon -PskipNativeBuild=true :app:testDebugUnitTest :wristotle-core:testAndroidHostTest :speech-whisper:testDebugUnitTest
 
       - name: Build release APK (skip native compile)
         env:
