@@ -1,0 +1,27 @@
+Internals: KMP refactor.
+
+Lifted the non-Android logic of the
+companion (handlers, NLU pipeline,
+settings storage, LLM clients, MCP
+client, watch transport, ~170 files
+in all) into a new :wristotle-core
+multiplatform module that builds for
+both Android and iOS Simulator.
+
+No user-visible changes — same
+features, same UI, same wire shape
+to the watch. Foundation work for a
+future iOS port; the Android app on
+your phone behaves identically to
+v1.6.0.
+
+Twelve platform-interface seams
+(KeyValueStore, Logger, HttpClient,
+WatchTransport, Telephony,
+AlarmScheduler, Notifier,
+CalendarReader, ContactsResolver,
+AppLauncher, FileSystem, TimeParser)
+keep Android-only code on the
+Android side; everything else lives
+in commonMain and compiles for iOS
+in CI on every commit.
