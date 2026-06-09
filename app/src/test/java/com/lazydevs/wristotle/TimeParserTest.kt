@@ -112,4 +112,29 @@ class TimeParserTest {
         assertNull(parseTime("remind me to buy a book"))
         assertNull(parseTime("set an alarm to call mom"))
     }
+
+    // Bug: codeberg.org/wristotle/wristotle-companion/issues/11 —
+    // sibling to the SetTimer "eleven minutes" miss. TimeParser's
+    // WORD_NUMBERS used to cover 1-12 + only multiples of 5; teens 13/14/
+    // 16-19 and most compound 21-99 fell through with no replacement.
+    // Now derived from the shared wristotle-core table.
+    @Test fun `thirteen minutes from now parses as relative thirteen minutes`() {
+        val before = System.currentTimeMillis()
+        val result = parseTime("thirteen minutes from now")
+        assertNotNull(result)
+        val ms = result!!.instant.toEpochMilliseconds() - before
+        assert(ms in 12 * 60 * 1000L..14 * 60 * 1000L) {
+            "expected ~13min from now, got ${ms / 60000}min"
+        }
+    }
+
+    @Test fun `twenty-three minutes from now parses as relative twenty-three minutes`() {
+        val before = System.currentTimeMillis()
+        val result = parseTime("twenty-three minutes from now")
+        assertNotNull(result)
+        val ms = result!!.instant.toEpochMilliseconds() - before
+        assert(ms in 22 * 60 * 1000L..24 * 60 * 1000L) {
+            "expected ~23min from now, got ${ms / 60000}min"
+        }
+    }
 }

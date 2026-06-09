@@ -5,6 +5,7 @@ package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.speech.nlu.parsing.ParsedTime
 import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
+import com.lazydevs.wristotle.speech.nlu.slots.WORD_NUMBERS as CORE_WORD_NUMBERS
 import kotlinx.datetime.Instant
 import org.ocpsoft.prettytime.nlp.PrettyTimeParser
 import java.util.Date
@@ -33,18 +34,21 @@ object PrettyTimeTimeParser : TimeParser {
 
     // ── normalisation ─────────────────────────────────────────────────
 
-    // Pebble voice transcription outputs word-form numbers; prettytime-nlp only handles digits.
-    private val WORD_NUMBERS = mapOf(
-        "twelve" to "12", "eleven" to "11", "ten" to "10",
-        "nine" to "9", "eight" to "8", "seven" to "7", "six" to "6",
-        "five" to "5", "four" to "4", "three" to "3", "two" to "2", "one" to "1",
-        "fifty-five" to "55", "fifty five" to "55", "fifty" to "50",
-        "forty-five" to "45", "forty five" to "45", "forty" to "40",
-        "thirty-five" to "35", "thirty five" to "35", "thirty" to "30",
-        "twenty-five" to "25", "twenty five" to "25", "twenty" to "20",
-        "fifteen" to "15",
-        "o'clock" to "",
-    )
+    // Pebble voice transcription outputs word-form numbers; prettytime-nlp
+    // only handles digits. Derived from the shared `:wristotle-core` table
+    // (covers 1-19 + every 10s + every compound n*10+m up to 99 in both
+    // space- and hyphen-joined forms) plus a few alarm-specific helpers
+    // ("o'clock" → empty so "set an alarm for 11 o'clock" lands as "11").
+    // The bare articles "a" / "an" are dropped — ARTICLE_BEFORE_TIME_UNIT
+    // handles them with unit context; replacing them blindly would turn
+    // "ask agent" into "ask 1gent".
+    private val WORD_NUMBERS: Map<String, String> = buildMap {
+        for ((word, value) in CORE_WORD_NUMBERS) {
+            if (word == "a" || word == "an") continue
+            put(word, value.toString())
+        }
+        put("o'clock", "")
+    }
 
     private val WORD_PATTERN = Regex(
         WORD_NUMBERS.keys.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) },
