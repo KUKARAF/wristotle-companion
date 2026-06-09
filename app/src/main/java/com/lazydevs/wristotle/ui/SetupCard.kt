@@ -36,7 +36,7 @@ import com.lazydevs.wristotle.setup.Priority
 import com.lazydevs.wristotle.setup.RecommendedAction
 import com.lazydevs.wristotle.setup.SetupDrillTarget
 import com.lazydevs.wristotle.setup.SetupHealthProvider
-import com.lazydevs.wristotle.setup.SetupSettings
+import com.lazydevs.wristotle.speech.nlu.settings.SetupSettings
 import com.lazydevs.wristotle.ui.components.ConfirmDialog
 import com.lazydevs.wristotle.ui.nav.Screen
 

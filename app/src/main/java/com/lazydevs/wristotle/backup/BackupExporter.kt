@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.backup
 
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import android.content.Context
 import android.net.Uri
 import android.os.Build
@@ -18,6 +19,8 @@ import net.lingala.zip4j.model.enums.EncryptionMethod
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import com.lazydevs.wristotle.speech.nlu.backup.BackupSelection
+import com.lazydevs.wristotle.speech.nlu.backup.BackupOptions
 
 private const val DATA_ENTRY_NOTES = "data/notes.json"
 private const val DATA_ENTRY_CONVERSATIONS = "data/conversations.json"
@@ -286,7 +289,7 @@ class BackupExporter(private val app: WristotleApplication) {
         }
     }
 
-    private fun readPinRecords(): List<com.lazydevs.wristotle.handlers.ReminderRecord> {
+    private fun readPinRecords(): List<com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord> {
         val store = com.lazydevs.wristotle.handlers.PinStore(app.applicationContext)
         return store.all()
     }

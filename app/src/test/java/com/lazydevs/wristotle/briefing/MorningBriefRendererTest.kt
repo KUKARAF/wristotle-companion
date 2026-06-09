@@ -3,8 +3,9 @@
 
 package com.lazydevs.wristotle.briefing
 
+import com.lazydevs.wristotle.speech.nlu.calendar.CalendarEvent
 import com.lazydevs.wristotle.alarms.AlarmEntity
-import com.lazydevs.wristotle.handlers.ReminderRecord
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.tasks.TaskEntity
@@ -283,7 +284,7 @@ class MorningBriefRendererTest {
     // ── helpers ────────────────────────────────────────────────────
 
     private fun event(title: String, beginMs: Long, durationMin: Int = 60) =
-        CalendarRepository.Event(
+        CalendarEvent(
             title = title,
             begin = beginMs,
             end = beginMs + durationMin * 60_000L,

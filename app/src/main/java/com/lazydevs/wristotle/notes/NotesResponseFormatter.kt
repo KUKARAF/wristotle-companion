@@ -3,7 +3,7 @@
 
 package com.lazydevs.wristotle.notes
 
-import com.lazydevs.wristotle.transport.MessageKeys
+import com.lazydevs.wristotle.speech.nlu.transport.MessageKeys
 
 /**
  * Formats the most-recent notes into the single CSTRING payload the watch

@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.handler.ConfirmSummaryBuilder
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -10,6 +11,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
+import kotlinx.datetime.Instant
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 
 /**
  * Pure-function tests for the confirm prompt summary. The body line is what
@@ -32,7 +35,7 @@ class ConfirmSummaryBuilderTest {
                 Intent.SendMessage,
                 "app" to "SMS",
                 "contact" to "x",
-                "resolvedContact" to ContactsRepository.Contact("x", "555-0100"),
+                "resolvedContact" to ResolvedContact("x", "555-0100"),
                 "body" to longBody,
             ),
         )
@@ -70,7 +73,7 @@ class ConfirmSummaryBuilderTest {
 
     @Test fun call() {
         val s = ConfirmSummaryBuilder.summary(
-            result(Intent.Call, "contact" to "alex", "resolvedContact" to ContactsRepository.Contact("alex", "555-0100")),
+            result(Intent.Call, "contact" to "alex", "resolvedContact" to ResolvedContact("alex", "555-0100")),
         )
         assertEquals("action: call\ndetails: [alex]", s)
     }
@@ -80,7 +83,7 @@ class ConfirmSummaryBuilderTest {
         // confirm prompt shows the resolved display name so the user
         // sees who they're actually about to dial.
         val s = ConfirmSummaryBuilder.summary(
-            result(Intent.Call, "contact" to "alex", "resolvedContact" to ContactsRepository.Contact("Alex Smith", "555-0100")),
+            result(Intent.Call, "contact" to "alex", "resolvedContact" to ResolvedContact("Alex Smith", "555-0100")),
         )
         assertEquals("action: call\ndetails: [Alex Smith]", s)
     }
@@ -241,7 +244,7 @@ class ConfirmSummaryBuilderTest {
                 Intent.SendMessage,
                 "app" to "WhatsApp",
                 "contact" to "mom",
-                "resolvedContact" to ContactsRepository.Contact("mom", "555-0100"),
+                "resolvedContact" to ResolvedContact("mom", "555-0100"),
                 "body" to "on my way",
             ),
         )
@@ -257,7 +260,7 @@ class ConfirmSummaryBuilderTest {
                 Intent.SendMessage,
                 "app" to "SMS",
                 "contact" to "mom",
-                "resolvedContact" to ContactsRepository.Contact("mom", "555-0100"),
+                "resolvedContact" to ResolvedContact("mom", "555-0100"),
                 "body" to "hi",
             ),
         )
@@ -270,7 +273,7 @@ class ConfirmSummaryBuilderTest {
                 Intent.SendMessage,
                 "app" to "WhatsApp",
                 "contact" to "mom",
-                "resolvedContact" to ContactsRepository.Contact("mom", "555-0100"),
+                "resolvedContact" to ResolvedContact("mom", "555-0100"),
             ),
         )
         assertEquals("action: whatsapp\ndetails: [mom]", s)
@@ -284,7 +287,7 @@ class ConfirmSummaryBuilderTest {
             result(
                 Intent.SendMessage,
                 "contact" to "mom",
-                "resolvedContact" to ContactsRepository.Contact("mom", "555-0100"),
+                "resolvedContact" to ResolvedContact("mom", "555-0100"),
                 "body" to "hi",
             ),
         )
@@ -302,5 +305,5 @@ class ConfirmSummaryBuilderTest {
             rawQuery = "",
         )
 
-    private fun fixedDate(): Date = Date(0L)  // any non-null Date triggers the time branch
+    private fun fixedDate(): Instant = Instant.fromEpochMilliseconds(0L)  // any non-null value triggers the time branch
 }

@@ -3,9 +3,12 @@
 
 package com.lazydevs.wristotle.mcp
 
+import com.lazydevs.wristotle.speech.nlu.mcp.*
+
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.lazydevs.wristotle.speech.nlu.mcp.looksLikeFullAuthHeader
 
 class AuthHeaderValidationTest {
 

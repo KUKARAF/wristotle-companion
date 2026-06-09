@@ -10,39 +10,24 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.CalendarContract
 import androidx.core.content.ContextCompat
+import com.lazydevs.wristotle.speech.nlu.calendar.CalendarEvent
+import com.lazydevs.wristotle.speech.nlu.calendar.CalendarReader
+import com.lazydevs.wristotle.speech.nlu.calendar.CreateEventResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.TimeZone
 
 /** Read + create access to the device calendar via CalendarContract. */
-class CalendarRepository(private val context: Context) {
-
-    /** A single calendar event/instance. [begin]/[end] are epoch millis. */
-    data class Event(
-        val title: String,
-        val begin: Long,
-        val end: Long,
-        val location: String?,
-        val allDay: Boolean,
-    )
-
-    /** Outcome of [createEvent]. */
-    sealed interface CreateResult {
-        data class Success(val title: String, val begin: Long, val end: Long) : CreateResult
-        /** No writable calendar found on the device. */
-        data object NoCalendar : CreateResult
-        /** The insert returned no row / threw. */
-        data object Failed : CreateResult
-    }
+class CalendarRepository(private val context: Context) : CalendarReader {
 
     /** Returns true if READ_CALENDAR permission has been granted. */
-    fun hasPermission(): Boolean =
+    override fun hasPermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) ==
             PackageManager.PERMISSION_GRANTED
 
     /** Returns true if WRITE_CALENDAR permission has been granted. */
-    fun hasWritePermission(): Boolean =
+    override fun hasWritePermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR) ==
             PackageManager.PERMISSION_GRANTED
 
@@ -50,7 +35,7 @@ class CalendarRepository(private val context: Context) {
      * The next [limit] events starting from now, within [WINDOW_DAYS] ahead,
      * ordered soonest-first. Empty when nothing is scheduled in the window.
      */
-    suspend fun upcoming(limit: Int): List<Event> {
+    override suspend fun upcoming(limit: Int): List<CalendarEvent> {
         val now = System.currentTimeMillis()
         val end = now + WINDOW_DAYS * DAY_MS
         return queryInstances(now, end).take(limit.coerceAtLeast(1))
@@ -60,9 +45,9 @@ class CalendarRepository(private val context: Context) {
      * All events overlapping the calendar day that contains [dayMillis]
      * (local midnight-to-midnight), ordered soonest-first.
      */
-    suspend fun onDay(dayMillis: Long): List<Event> {
+    override suspend fun onDay(dayEpochMs: Long): List<CalendarEvent> {
         val cal = Calendar.getInstance().apply {
-            timeInMillis = dayMillis
+            timeInMillis = dayEpochMs
             set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
         }
@@ -77,7 +62,7 @@ class CalendarRepository(private val context: Context) {
      * one row per occurrence — and the time range is encoded in the URI
      * path, not the selection. Runs on IO; ContentResolver is blocking.
      */
-    private suspend fun queryInstances(from: Long, to: Long): List<Event> =
+    private suspend fun queryInstances(from: Long, to: Long): List<CalendarEvent> =
         withContext(Dispatchers.IO) {
             if (!hasPermission()) return@withContext emptyList()
 
@@ -98,12 +83,12 @@ class CalendarRepository(private val context: Context) {
                 "${CalendarContract.Instances.BEGIN} ASC",
             ) ?: return@withContext emptyList()
 
-            val events = ArrayList<Event>()
+            val events = ArrayList<CalendarEvent>()
             cursor.use { c ->
                 while (c.moveToNext()) {
                     val title = c.getString(0)?.takeIf { it.isNotBlank() } ?: "(no title)"
                     events.add(
-                        Event(
+                        CalendarEvent(
                             title = title,
                             begin = c.getLong(1),
                             end = c.getLong(2),
@@ -121,27 +106,27 @@ class CalendarRepository(private val context: Context) {
      * [durationMinutes], on the device's primary (or first writable)
      * calendar. Runs on IO; ContentResolver is blocking.
      */
-    suspend fun createEvent(
+    override suspend fun createEvent(
         title: String,
-        begin: Long,
+        beginEpochMs: Long,
         durationMinutes: Int,
-    ): CreateResult = withContext(Dispatchers.IO) {
-        if (!hasWritePermission()) return@withContext CreateResult.Failed
-        val calendarId = writableCalendarId() ?: return@withContext CreateResult.NoCalendar
-        val end = begin + durationMinutes * 60_000L
+    ): CreateEventResult = withContext(Dispatchers.IO) {
+        if (!hasWritePermission()) return@withContext CreateEventResult.Failed
+        val calendarId = writableCalendarId() ?: return@withContext CreateEventResult.NoCalendar
+        val end = beginEpochMs + durationMinutes * 60_000L
 
         val values = ContentValues().apply {
             put(CalendarContract.Events.CALENDAR_ID, calendarId)
             put(CalendarContract.Events.TITLE, title)
-            put(CalendarContract.Events.DTSTART, begin)
+            put(CalendarContract.Events.DTSTART, beginEpochMs)
             put(CalendarContract.Events.DTEND, end)
             put(CalendarContract.Events.EVENT_TIMEZONE, TimeZone.getDefault().id)
         }
         val uri = runCatching {
             context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
-        }.getOrNull() ?: return@withContext CreateResult.Failed
-        if (ContentUris.parseId(uri) <= 0) return@withContext CreateResult.Failed
-        CreateResult.Success(title, begin, end)
+        }.getOrNull() ?: return@withContext CreateEventResult.Failed
+        if (ContentUris.parseId(uri) <= 0) return@withContext CreateEventResult.Failed
+        CreateEventResult.Success(title, beginEpochMs, end)
     }
 
     /**

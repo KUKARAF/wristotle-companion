@@ -3,6 +3,9 @@
 
 package com.lazydevs.wristotle.sync
 
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncFormat
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncFormatOptions
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncGranularity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test

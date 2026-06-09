@@ -22,6 +22,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import com.lazydevs.wristotle.speech.nlu.mcp.McpIntegration
+import com.lazydevs.wristotle.speech.nlu.mcp.McpTool
+import com.lazydevs.wristotle.speech.nlu.mcp.ToolCallResult
 
 /**
  * HTTP MCP integration over the official kotlin-sdk client + Ktor

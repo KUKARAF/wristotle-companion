@@ -3,14 +3,20 @@
 
 package com.lazydevs.wristotle.handlers
 
-import com.lazydevs.wristotle.agent.AgentLoop
-import com.lazydevs.wristotle.agent.AskAgentSettings
-import com.lazydevs.wristotle.agent.LlmResult
+import com.lazydevs.wristotle.speech.nlu.transport.sendAgentStatus
+import com.lazydevs.wristotle.speech.nlu.transport.sendResponse
+import com.lazydevs.wristotle.logging.WristotleLogger
+import com.lazydevs.wristotle.mcp.HttpMcpIntegration
 import com.lazydevs.wristotle.mcp.McpServerRepository
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.agent.AgentLoop
+import com.lazydevs.wristotle.speech.nlu.agent.LlmResult
+import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
+import com.lazydevs.wristotle.speech.nlu.mcp.McpServerConfig
+import com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 
 /**
  * Read-only by construction — not in the confirm-before-dispatch set.
@@ -22,7 +28,7 @@ import com.lazydevs.wristotle.transport.PebbleTransport
  *    aggregated tool list, up to 5 rounds.
  *
  * In the agent-loop path, intermediate "🛠 <toolName>" status lines
- * are sent to the watch via [PebbleTransport.sendResponse] so the
+ * are sent to the watch via [WatchTransport.sendResponse] so the
  * user sees what the LLM is doing across rounds. Each shows up as a
  * separate chat bubble — chatty but informative, matches the
  * Pebble-Wrist-AI reference pattern. The final answer returns via
@@ -35,7 +41,7 @@ import com.lazydevs.wristotle.transport.PebbleTransport
 class AskAgentHandler(
     private val settings: AskAgentSettings,
     private val mcpServers: McpServerRepository,
-    private val transport: PebbleTransport,
+    private val transport: WatchTransport,
 ) : ActionHandler {
 
     override val tag: String = "ask-agent"
@@ -60,11 +66,30 @@ class AskAgentHandler(
             return renderComplete(client.complete(query, systemPrompt)).trimForWatch()
         }
 
-        val loop = AgentLoop(client)
+        val loop = AgentLoop(
+            llm = client,
+            integrationFactory = { cfg ->
+                HttpMcpIntegration(
+                    name = cfg.name,
+                    url = cfg.url,
+                    streamable = cfg.streamable,
+                    authHeader = cfg.authHeader,
+                )
+            },
+            log = WristotleLogger,
+        )
+        val serverConfigs = enabled.map { entity ->
+            McpServerConfig(
+                name = entity.name,
+                url = entity.url,
+                streamable = entity.streamable,
+                authHeader = entity.authHeader,
+            )
+        }
         val outcome = loop.run(
             userQuery = query,
             systemPrompt = systemPrompt,
-            servers = enabled,
+            servers = serverConfigs,
             // Per-round watch status (B3): goes to the hint-bar slot via
             // sendAgentStatus, NOT sendResponse. The chat surface only
             // renders one bubble per query — using the response key here
@@ -105,7 +130,7 @@ class AskAgentHandler(
      *  form (`integration.tool`) for the watch's hint-bar status line.
      *  Falls back to the raw wireName when the prefix isn't present. */
     private fun friendly(wireName: String): String =
-        com.lazydevs.wristotle.agent.LlmTool.parseWireName(wireName)
+        com.lazydevs.wristotle.speech.nlu.agent.LlmTool.parseWireName(wireName)
             ?.let { (integration, tool) -> "$integration.$tool" }
             ?: wireName
 

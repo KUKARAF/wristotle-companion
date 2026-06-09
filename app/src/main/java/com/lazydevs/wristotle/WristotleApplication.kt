@@ -10,47 +10,52 @@ import android.util.Log
 import com.lazydevs.wristotle.apps.AppIndex
 import com.lazydevs.wristotle.apps.AppIndexDatabase
 import com.lazydevs.wristotle.apps.AppIndexer
-import com.lazydevs.wristotle.history.ConversationAudioSettings
 import com.lazydevs.wristotle.history.ConversationAudioStore
 import com.lazydevs.wristotle.history.ConversationDatabase
 import com.lazydevs.wristotle.history.ConversationRepository
-import com.lazydevs.wristotle.history.ConversationSettings
 import com.lazydevs.wristotle.media.ActiveMediaSession
+import com.lazydevs.wristotle.messaging.toInfoForSlots
 import com.lazydevs.wristotle.nlu.LearningCollector
-import com.lazydevs.wristotle.nlu.NluSettings
-import com.lazydevs.wristotle.nlu.slots.CalendarSlots
-import com.lazydevs.wristotle.nlu.slots.CallSlots
-import com.lazydevs.wristotle.nlu.slots.CancelSlots
-import com.lazydevs.wristotle.nlu.slots.CreateEventSlots
-import com.lazydevs.wristotle.nlu.slots.FindPhoneSlots
-import com.lazydevs.wristotle.nlu.slots.ListRemindersSlots
-import com.lazydevs.wristotle.nlu.slots.MediaPlaySlots
-import com.lazydevs.wristotle.nlu.slots.MediaSeekSlots
-import com.lazydevs.wristotle.nlu.slots.MediaTargetSlots
-import com.lazydevs.wristotle.nlu.slots.OpenAppSlots
-import com.lazydevs.wristotle.nlu.slots.ReminderSlots
-import com.lazydevs.wristotle.nlu.slots.RescheduleSlots
+import com.lazydevs.wristotle.nlu.learning.ExampleBank
+import com.lazydevs.wristotle.nlu.learning.NluDatabase
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.settings.WatchSettingsRepository
 import com.lazydevs.wristotle.speech.Recognizers
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
+import com.lazydevs.wristotle.speech.nlu.NluSettings
 import com.lazydevs.wristotle.speech.nlu.StubIntentClassifier
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleBank
-import com.lazydevs.wristotle.speech.nlu.bank.NluDatabase
 import com.lazydevs.wristotle.speech.nlu.embedding.EmbeddingIntentClassifier
 import com.lazydevs.wristotle.speech.nlu.embedding.MiniLmEmbedder
 import com.lazydevs.wristotle.speech.nlu.embedding.Tokenizer
+import com.lazydevs.wristotle.speech.nlu.embedding.fromContext
 import com.lazydevs.wristotle.speech.nlu.model.NluModelStorage
+import com.lazydevs.wristotle.speech.nlu.settings.AlarmSettings
+import com.lazydevs.wristotle.speech.nlu.settings.ConversationAudioSettings
+import com.lazydevs.wristotle.speech.nlu.settings.ConversationSettings
+import com.lazydevs.wristotle.speech.nlu.settings.SttProviderMode
+import com.lazydevs.wristotle.speech.nlu.settings.localeDefaultTempUnit
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
+import com.lazydevs.wristotle.speech.nlu.slots.CalendarSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CallSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CancelSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CreateEventSlots
+import com.lazydevs.wristotle.speech.nlu.slots.FindPhoneSlots
+import com.lazydevs.wristotle.speech.nlu.slots.ListRemindersSlots
+import com.lazydevs.wristotle.speech.nlu.slots.MediaPlaySlots
+import com.lazydevs.wristotle.speech.nlu.slots.MediaSeekSlots
+import com.lazydevs.wristotle.speech.nlu.slots.MediaTargetSlots
+import com.lazydevs.wristotle.speech.nlu.slots.OpenAppSlots
+import com.lazydevs.wristotle.speech.nlu.slots.ReminderSlots
+import com.lazydevs.wristotle.speech.nlu.slots.RescheduleSlots
 import com.lazydevs.wristotle.speech.recognizer.CompositeRecognizer
 import com.lazydevs.wristotle.speech.recognizer.HttpRecognizer
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
 import com.lazydevs.wristotle.speech.recognizer.StubRecognizer
-import com.lazydevs.wristotle.stt.SttProviderMode
 import com.lazydevs.wristotle.speech.whisper.ModelStorage
 import com.lazydevs.wristotle.speech.whisper.WhisperRecognizer
+import com.lazydevs.wristotle.storage.kvStore
 import com.lazydevs.wristotle.transport.PebbleTransport
 import com.lazydevs.wristotle.util.hasPermission
 import kotlinx.coroutines.CoroutineScope
@@ -100,7 +105,7 @@ class WristotleApplication : Application() {
     /** Notes data layer (Phase A — watch-dictated text + optional .wav). */
     lateinit var noteRepository: com.lazydevs.wristotle.notes.NoteRepository
         private set
-    lateinit var noteSettings: com.lazydevs.wristotle.notes.NoteSettings
+    lateinit var noteSettings: com.lazydevs.wristotle.speech.nlu.settings.NoteSettings
         private set
     lateinit var notesAudioStore: com.lazydevs.wristotle.notes.NotesAudioStore
         private set
@@ -109,7 +114,7 @@ class WristotleApplication : Application() {
      *  [FileSyncCoordinator] per syncable entity scope; conversations
      *  follow when needed. The coordinator is held so the Settings
      *  card's "Sync now" button can call [syncNow]. */
-    lateinit var notesSyncSettings: com.lazydevs.wristotle.sync.FileSyncSettings
+    lateinit var notesSyncSettings: com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings
         private set
     lateinit var notesSyncCoordinator:
         com.lazydevs.wristotle.sync.FileSyncCoordinator<com.lazydevs.wristotle.notes.Note>
@@ -119,7 +124,7 @@ class WristotleApplication : Application() {
      *  notes; user can pick the same folder OR a different one.
      *  Default granularity = AppendToSingleFile (daily-log shape) since
      *  per-query files would flood any vault. */
-    lateinit var conversationsSyncSettings: com.lazydevs.wristotle.sync.FileSyncSettings
+    lateinit var conversationsSyncSettings: com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings
         private set
     lateinit var conversationsSyncCoordinator:
         com.lazydevs.wristotle.sync.FileSyncCoordinator<com.lazydevs.wristotle.history.ConversationEntry>
@@ -143,8 +148,10 @@ class WristotleApplication : Application() {
     val alarmDispatcher: com.lazydevs.wristotle.alarms.AlarmDispatcher by lazy {
         com.lazydevs.wristotle.alarms.AlarmDispatcher(this, transport, alarmRepository)
     }
-    val alarmSettings: com.lazydevs.wristotle.alarms.AlarmSettings by lazy {
-        com.lazydevs.wristotle.alarms.AlarmSettings(this)
+    val alarmSettings: AlarmSettings by lazy {
+        AlarmSettings(
+            kvStore(AlarmSettings.PREFS_NAME),
+        )
     }
 
     /** Persistent-reminder scheduler — owns AlarmManager handles + the
@@ -165,8 +172,10 @@ class WristotleApplication : Application() {
         com.lazydevs.wristotle.notifications.NotificationLogDatabase.build(this)
     }
     val notificationLogSettings:
-        com.lazydevs.wristotle.notifications.NotificationLogSettings by lazy {
-        com.lazydevs.wristotle.notifications.NotificationLogSettings(this)
+        com.lazydevs.wristotle.speech.nlu.settings.NotificationLogSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.NotificationLogSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.NotificationLogSettings.PREFS_NAME),
+        )
     }
     val notificationLogStore:
         com.lazydevs.wristotle.notifications.NotificationLogStore by lazy {
@@ -189,30 +198,37 @@ class WristotleApplication : Application() {
     }
 
     /** Reminder feature preferences (default offset when no time is spoken). */
-    lateinit var reminderSettings: com.lazydevs.wristotle.handlers.ReminderSettings
+    lateinit var reminderSettings: com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
         private set
 
     /** Weather feature preferences (unit + provider + OpenWeather API key). */
-    lateinit var weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings
+    lateinit var weatherSettings: com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings
         private set
 
     /** AskAgent preferences — LLM provider + API key + model. Lazy for
      *  the same reason as [mcpDb]: only touched when the user opens the
      *  Settings card, fires an AskAgent intent, or runs a backup. */
-    val askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings by lazy {
-        com.lazydevs.wristotle.agent.AskAgentSettings(this)
+    val askAgentSettings: com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings(
+            store = kvStore(com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings.PREFS_NAME),
+            http = com.lazydevs.wristotle.http.AndroidHttpClient(),
+        )
     }
 
     /** STT-provider preferences. See `wristotle-companion/stt-providers.md`. */
-    val sttProviderSettings: com.lazydevs.wristotle.stt.SttProviderSettings by lazy {
-        com.lazydevs.wristotle.stt.SttProviderSettings(this)
+    val sttProviderSettings: com.lazydevs.wristotle.speech.nlu.settings.SttProviderSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.SttProviderSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.SttProviderSettings.PREFS_NAME),
+        )
     }
 
     /** First-launch wizard's dismissed flag + reactive surface. Lives
      *  in its own SharedPrefs (`setup_state`) deliberately so it never
      *  travels in backups — see `setup-flow.md`. */
-    val setupSettings: com.lazydevs.wristotle.setup.SetupSettings by lazy {
-        com.lazydevs.wristotle.setup.SetupSettings(this)
+    val setupSettings: com.lazydevs.wristotle.speech.nlu.settings.SetupSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.SetupSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.SetupSettings.PREFS_NAME),
+        )
     }
 
     /** Pending recommended-setup actions for the Settings → 🌟 Setup
@@ -232,7 +248,7 @@ class WristotleApplication : Application() {
             contactAliasCount = { contactAliasStore.all().size },
             isSpeechProviderConfigured = {
                 sttProviderSettings.mode.value !=
-                    com.lazydevs.wristotle.stt.SttProviderMode.LOCAL_ONLY ||
+                    com.lazydevs.wristotle.speech.nlu.settings.SttProviderMode.LOCAL_ONLY ||
                     sttProviderSettings.httpBaseUrl.value.isNotEmpty()
             },
             isAskAgentConfigured = {
@@ -258,7 +274,7 @@ class WristotleApplication : Application() {
         private set
     lateinit var notesDb: com.lazydevs.wristotle.notes.NoteDatabase
         private set
-    lateinit var nluDb: com.lazydevs.wristotle.speech.nlu.bank.NluDatabase
+    lateinit var nluDb: com.lazydevs.wristotle.nlu.learning.NluDatabase
         private set
 
     /**
@@ -325,8 +341,10 @@ class WristotleApplication : Application() {
 
     /** Diagnostics-export preferences. Lazy — only consulted when the
      *  user actually runs an export from the Settings card. */
-    val diagnosticsSettings: com.lazydevs.wristotle.diagnostics.DiagnosticsSettings by lazy {
-        com.lazydevs.wristotle.diagnostics.DiagnosticsSettings(this)
+    val diagnosticsSettings: com.lazydevs.wristotle.speech.nlu.settings.DiagnosticsSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.DiagnosticsSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.DiagnosticsSettings.PREFS_NAME),
+        )
     }
 
     /** Which BLE companion is paired (rePebble / microPebble / unknown).
@@ -378,8 +396,12 @@ class WristotleApplication : Application() {
         persistentReminderScheduler.ensureNotificationChannel()
 
         conversationDb = ConversationDatabase.build(this)
-        conversationSettings = ConversationSettings(this)
-        conversationAudioSettings = ConversationAudioSettings(this)
+        conversationSettings = ConversationSettings(
+            kvStore(ConversationSettings.PREFS_NAME),
+        )
+        conversationAudioSettings = ConversationAudioSettings(
+            kvStore(ConversationAudioSettings.PREFS_NAME),
+        )
         conversationAudioStore = ConversationAudioStore(this)
         conversationRepository = ConversationRepository(
             dao = conversationDb.conversationDao(),
@@ -395,7 +417,9 @@ class WristotleApplication : Application() {
         // in case the user lowered the keep-last-N cap while the app was off.
         notesDb = com.lazydevs.wristotle.notes.NoteDatabase.build(this)
         notesAudioStore = com.lazydevs.wristotle.notes.NotesAudioStore(this)
-        noteSettings = com.lazydevs.wristotle.notes.NoteSettings(this)
+        noteSettings = com.lazydevs.wristotle.speech.nlu.settings.NoteSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.NoteSettings.PREFS_NAME),
+        )
         noteRepository = com.lazydevs.wristotle.notes.NoteRepository(
             dao = notesDb.noteDao(),
             audioStore = notesAudioStore,
@@ -419,7 +443,10 @@ class WristotleApplication : Application() {
         // on the long-lived app scope. The coordinator no-ops until the
         // user enables sync + picks a folder; subscription drops cleanly
         // when either flips off.
-        notesSyncSettings = com.lazydevs.wristotle.sync.FileSyncSettings(this, scope = "notes")
+        notesSyncSettings = com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings.prefsName("notes"),
+            ),
+        )
         notesSyncCoordinator = com.lazydevs.wristotle.sync.FileSyncCoordinator(
             context = this,
             settings = notesSyncSettings,
@@ -431,10 +458,10 @@ class WristotleApplication : Application() {
         )
         notesSyncCoordinator.start()
 
-        conversationsSyncSettings = com.lazydevs.wristotle.sync.FileSyncSettings(
-            context = this,
-            scope = "conversations",
-            defaultGranularity = com.lazydevs.wristotle.sync.FileSyncGranularity.AppendToSingleFile,
+        conversationsSyncSettings = com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings(
+            store = kvStore(com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings.prefsName("conversations"),
+            ),
+            defaultGranularity = com.lazydevs.wristotle.speech.nlu.settings.FileSyncGranularity.AppendToSingleFile,
         )
         conversationsSyncCoordinator = com.lazydevs.wristotle.sync.FileSyncCoordinator(
             context = this,
@@ -454,12 +481,21 @@ class WristotleApplication : Application() {
         // mcpDb / mcpServerRepository / askAgentSettings / diagnosticsSettings
         // are `by lazy` — first access pays the init.
 
-        reminderSettings = com.lazydevs.wristotle.handlers.ReminderSettings(this)
-        weatherSettings = com.lazydevs.wristotle.settings.WeatherSettings(this)
+        reminderSettings = com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings.PREFS_NAME),
+        )
+        weatherSettings = com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings.PREFS_NAME),
+            localeDefaultProvider = ::localeDefaultTempUnit,
+        )
 
         nluDb = NluDatabase.build(this)
         nluBank = ExampleBank(nluDb.exampleDao())
-        nluSettings = NluSettings(this)
+        // SharedPreferences-backed store using the existing file name so
+        // the persisted "learning enabled" toggle survives the upgrade.
+        nluSettings = NluSettings(
+            kvStore(NluSettings.PREFS_NAME),
+        )
 
         activeMediaSession = ActiveMediaSession(this)
 
@@ -489,13 +525,21 @@ class WristotleApplication : Application() {
         val mediaTargetSlots = MediaTargetSlots()
         slotExtractors = SlotExtractorRegistry(mapOf(
             Intent.Call to CallSlots(),
-            Intent.SendMessage to com.lazydevs.wristotle.nlu.slots.SendMessageSlots(contacts),
+            // Android-side MessagingTarget projects down via toInfo() and
+            // the contacts repo's findContact slots into the lambda
+            // signature the lifted slot accepts.
+            Intent.SendMessage to com.lazydevs.wristotle.speech.nlu.slots.SendMessageSlots(
+                targets = com.lazydevs.wristotle.messaging.MessagingTargets.NAMED.map { it.toInfoForSlots() },
+                smsDisplayName = com.lazydevs.wristotle.messaging.MessagingTargets.Sms.displayName,
+                findContact = contacts::findContact,
+            ),
             Intent.Reminder to ReminderSlots(
+                timeParser = com.lazydevs.wristotle.handlers.PrettyTimeTimeParser,
                 defaultOffsetMinProvider = { reminderSettings.defaultOffsetMin.value },
             ),
             Intent.Cancel to CancelSlots(),
-            Intent.ListReminders to ListRemindersSlots(),
-            Intent.Reschedule to RescheduleSlots(),
+            Intent.ListReminders to ListRemindersSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
+            Intent.Reschedule to RescheduleSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
             Intent.FindPhone to FindPhoneSlots(),
             Intent.MediaPlay to MediaPlaySlots(),
             Intent.MediaPause to mediaTargetSlots,
@@ -504,27 +548,27 @@ class WristotleApplication : Application() {
             Intent.MediaSeekForward to mediaSeekSlots,
             Intent.MediaSeekBackward to mediaSeekSlots,
             Intent.OpenApp to OpenAppSlots(),
-            Intent.Calendar to CalendarSlots(),
-            Intent.CreateEvent to CreateEventSlots(),
-            Intent.Note to com.lazydevs.wristotle.nlu.slots.NoteSlots(),
-            Intent.AppendNote to com.lazydevs.wristotle.nlu.slots.AppendNoteSlots(),
-            Intent.AddTask to com.lazydevs.wristotle.nlu.slots.AddTaskSlots(),
-            Intent.ListTasks to com.lazydevs.wristotle.nlu.slots.ListTasksSlots(),
+            Intent.Calendar to CalendarSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
+            Intent.CreateEvent to CreateEventSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
+            Intent.Note to com.lazydevs.wristotle.speech.nlu.slots.NoteSlots(),
+            Intent.AppendNote to com.lazydevs.wristotle.speech.nlu.slots.AppendNoteSlots(),
+            Intent.AddTask to com.lazydevs.wristotle.speech.nlu.slots.AddTaskSlots(),
+            Intent.ListTasks to com.lazydevs.wristotle.speech.nlu.slots.ListTasksSlots(),
             // CompleteTask + DeleteTask share the same target-extraction logic
             // — the slot extractor strips both complete-style and delete-style
             // verbs; the handlers differ only in what they DO with the matched task.
-            Intent.CompleteTask to com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots(),
-            Intent.DeleteTask to com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots(),
-            Intent.CancelAlarm to com.lazydevs.wristotle.nlu.slots.CancelAlarmSlots(),
-            Intent.SetAlarm to com.lazydevs.wristotle.nlu.slots.SetAlarmSlots(),
-            Intent.SetTimer to com.lazydevs.wristotle.nlu.slots.SetTimerSlots(),
-            Intent.WorldTime to com.lazydevs.wristotle.nlu.slots.WorldTimeSlots(),
-            Intent.Calculate to com.lazydevs.wristotle.nlu.slots.CalculateSlots(),
-            Intent.Weather to com.lazydevs.wristotle.nlu.slots.WeatherSlots(),
-            Intent.AskAgent to com.lazydevs.wristotle.nlu.slots.AskAgentSlots(
+            Intent.CompleteTask to com.lazydevs.wristotle.speech.nlu.slots.CompleteTaskSlots(),
+            Intent.DeleteTask to com.lazydevs.wristotle.speech.nlu.slots.CompleteTaskSlots(),
+            Intent.CancelAlarm to com.lazydevs.wristotle.speech.nlu.slots.CancelAlarmSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
+            Intent.SetAlarm to com.lazydevs.wristotle.speech.nlu.slots.SetAlarmSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
+            Intent.SetTimer to com.lazydevs.wristotle.speech.nlu.slots.SetTimerSlots(),
+            Intent.WorldTime to com.lazydevs.wristotle.speech.nlu.slots.WorldTimeSlots(),
+            Intent.Calculate to com.lazydevs.wristotle.speech.nlu.slots.CalculateSlots(),
+            Intent.Weather to com.lazydevs.wristotle.speech.nlu.slots.WeatherSlots(),
+            Intent.AskAgent to com.lazydevs.wristotle.speech.nlu.slots.AskAgentSlots(
                 extrasProvider = { askAgentSettings.customTriggers.value },
             ),
-            Intent.MorningBrief to com.lazydevs.wristotle.nlu.slots.MorningBriefSlots(),
+            Intent.MorningBrief to com.lazydevs.wristotle.speech.nlu.slots.MorningBriefSlots(),
         ))
 
         learningCollector = LearningCollector(
@@ -693,7 +737,19 @@ class WristotleApplication : Application() {
             Log.d(TAG, "creating intent classifier for active model: $path")
             val tokenizer = Tokenizer.fromContext(this, com.lazydevs.wristotle.speech.nlu.R.raw.minilm_vocab)
             val embedder = MiniLmEmbedder(modelPath = path, tokenizer = tokenizer)
-            val classifier = EmbeddingIntentClassifier(embedder, nluBank)
+            // The classifier no longer takes the Room-backed ExampleBank
+            // directly — it asks for learned rows via a pure lambda so
+            // the :speech-nlu module can stay free of Android persistence.
+            // ExampleBank.loadLearned() returns the LearnedExample shape
+            // the classifier expects.
+            val classifier = EmbeddingIntentClassifier(
+                embedder = embedder,
+                loadLearned = nluBank::loadLearned,
+                // commonMain has no android.util.Log; pipe debug lines
+                // through the same logger here so on-device debugging
+                // doesn't lose the warm-up + rebuild traces.
+                log = { msg -> Log.d("EmbeddingIntentClassifier", msg) },
+            )
             cachedClassifier = path to classifier
             classifier
         }

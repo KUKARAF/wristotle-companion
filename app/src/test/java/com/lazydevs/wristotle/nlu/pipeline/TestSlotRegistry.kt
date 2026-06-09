@@ -3,33 +3,36 @@
 
 package com.lazydevs.wristotle.nlu.pipeline
 
-import com.lazydevs.wristotle.nlu.slots.AddTaskSlots
-import com.lazydevs.wristotle.nlu.slots.AppendNoteSlots
-import com.lazydevs.wristotle.nlu.slots.AskAgentSlots
-import com.lazydevs.wristotle.nlu.slots.CalculateSlots
-import com.lazydevs.wristotle.nlu.slots.CalendarSlots
-import com.lazydevs.wristotle.nlu.slots.CallSlots
-import com.lazydevs.wristotle.nlu.slots.CancelSlots
-import com.lazydevs.wristotle.nlu.slots.CompleteTaskSlots
-import com.lazydevs.wristotle.nlu.slots.CreateEventSlots
-import com.lazydevs.wristotle.nlu.slots.FindPhoneSlots
-import com.lazydevs.wristotle.nlu.slots.ListRemindersSlots
-import com.lazydevs.wristotle.nlu.slots.ListTasksSlots
-import com.lazydevs.wristotle.nlu.slots.MediaPlaySlots
-import com.lazydevs.wristotle.nlu.slots.MediaSeekSlots
-import com.lazydevs.wristotle.nlu.slots.MediaTargetSlots
-import com.lazydevs.wristotle.nlu.slots.NoteSlots
-import com.lazydevs.wristotle.nlu.slots.OpenAppSlots
-import com.lazydevs.wristotle.nlu.slots.ReminderSlots
-import com.lazydevs.wristotle.nlu.slots.RescheduleSlots
-import com.lazydevs.wristotle.nlu.slots.SendMessageSlots
-import com.lazydevs.wristotle.nlu.slots.CancelAlarmSlots
-import com.lazydevs.wristotle.nlu.slots.SetTimerSlots
-import com.lazydevs.wristotle.nlu.slots.WeatherSlots
-import com.lazydevs.wristotle.nlu.slots.WorldTimeSlots
+import com.lazydevs.wristotle.speech.nlu.slots.AddTaskSlots
+import com.lazydevs.wristotle.speech.nlu.slots.*
+import com.lazydevs.wristotle.speech.nlu.slots.AppendNoteSlots
+import com.lazydevs.wristotle.speech.nlu.slots.AskAgentSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CalculateSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CalendarSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CallSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CancelSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CompleteTaskSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CreateEventSlots
+import com.lazydevs.wristotle.speech.nlu.slots.FindPhoneSlots
+import com.lazydevs.wristotle.speech.nlu.slots.ListRemindersSlots
+import com.lazydevs.wristotle.speech.nlu.slots.ListTasksSlots
+import com.lazydevs.wristotle.speech.nlu.slots.MediaPlaySlots
+import com.lazydevs.wristotle.speech.nlu.slots.MediaSeekSlots
+import com.lazydevs.wristotle.speech.nlu.slots.MediaTargetSlots
+import com.lazydevs.wristotle.speech.nlu.slots.NoteSlots
+import com.lazydevs.wristotle.speech.nlu.slots.OpenAppSlots
+import com.lazydevs.wristotle.speech.nlu.slots.ReminderSlots
+import com.lazydevs.wristotle.speech.nlu.slots.RescheduleSlots
+import com.lazydevs.wristotle.speech.nlu.slots.SendMessageSlots
+import com.lazydevs.wristotle.speech.nlu.slots.CancelAlarmSlots
+import com.lazydevs.wristotle.speech.nlu.slots.SetTimerSlots
+import com.lazydevs.wristotle.speech.nlu.slots.WeatherSlots
+import com.lazydevs.wristotle.speech.nlu.slots.WorldTimeSlots
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
+import com.lazydevs.wristotle.messaging.toInfoForSlots
 
 /**
  * Build a [SlotExtractorRegistry] for pipeline tests that mirrors the
@@ -50,7 +53,7 @@ import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
  * point of the harness.
  */
 fun testSlotRegistry(
-    findContact: suspend (String) -> ContactsRepository.Contact? = { null },
+    findContact: suspend (String) -> ResolvedContact? = { null },
     reminderOffsetMin: () -> Int = { 30 },
     askAgentSubjects: () -> List<String> = { emptyList() },
 ): SlotExtractorRegistry {
@@ -58,11 +61,11 @@ fun testSlotRegistry(
     val mediaSeekSlots = MediaSeekSlots()
     return SlotExtractorRegistry(mapOf(
         Intent.Call to CallSlots(),
-        Intent.SendMessage to SendMessageSlots(findContact = findContact),
-        Intent.Reminder to ReminderSlots(defaultOffsetMinProvider = reminderOffsetMin),
+        Intent.SendMessage to SendMessageSlots(targets = com.lazydevs.wristotle.messaging.MessagingTargets.NAMED.map { it.toInfoForSlots() }, smsDisplayName = com.lazydevs.wristotle.messaging.MessagingTargets.Sms.displayName, findContact = findContact),
+        Intent.Reminder to ReminderSlots(timeParser = com.lazydevs.wristotle.handlers.PrettyTimeTimeParser, defaultOffsetMinProvider = reminderOffsetMin),
         Intent.Cancel to CancelSlots(),
-        Intent.ListReminders to ListRemindersSlots(),
-        Intent.Reschedule to RescheduleSlots(),
+        Intent.ListReminders to ListRemindersSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
+        Intent.Reschedule to RescheduleSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
         Intent.FindPhone to FindPhoneSlots(),
         Intent.MediaPlay to MediaPlaySlots(),
         Intent.MediaPause to mediaTargetSlots,
@@ -71,15 +74,15 @@ fun testSlotRegistry(
         Intent.MediaSeekForward to mediaSeekSlots,
         Intent.MediaSeekBackward to mediaSeekSlots,
         Intent.OpenApp to OpenAppSlots(),
-        Intent.Calendar to CalendarSlots(),
-        Intent.CreateEvent to CreateEventSlots(),
+        Intent.Calendar to CalendarSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
+        Intent.CreateEvent to CreateEventSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
         Intent.Note to NoteSlots(),
         Intent.AppendNote to AppendNoteSlots(),
         Intent.AddTask to AddTaskSlots(),
         Intent.ListTasks to ListTasksSlots(),
         Intent.CompleteTask to CompleteTaskSlots(),
         Intent.DeleteTask to CompleteTaskSlots(),
-        Intent.CancelAlarm to CancelAlarmSlots(),
+        Intent.CancelAlarm to CancelAlarmSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser),
         Intent.SetTimer to SetTimerSlots(),
         Intent.WorldTime to WorldTimeSlots(),
         Intent.Calculate to CalculateSlots(),

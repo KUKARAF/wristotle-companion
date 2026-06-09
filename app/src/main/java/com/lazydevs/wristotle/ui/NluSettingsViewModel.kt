@@ -7,10 +7,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.nlu.NluSettings
+import com.lazydevs.wristotle.speech.nlu.NluSettings
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
 import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleBank
+import com.lazydevs.wristotle.nlu.learning.ExampleBank
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

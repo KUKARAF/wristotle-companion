@@ -3,10 +3,12 @@
 
 package com.lazydevs.wristotle.handlers
 
-import com.lazydevs.wristotle.nlu.slots.weatherLocation
+import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
+import com.lazydevs.wristotle.speech.nlu.slots.weatherLocation
 import com.lazydevs.wristotle.phone.PhoneLocation
-import com.lazydevs.wristotle.settings.WeatherProviderId
-import com.lazydevs.wristotle.settings.WeatherSettings
+import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
+import com.lazydevs.wristotle.speech.nlu.settings.WeatherProviderId
+import com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import kotlin.math.roundToInt

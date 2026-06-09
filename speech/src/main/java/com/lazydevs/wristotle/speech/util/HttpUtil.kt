@@ -51,6 +51,15 @@ fun bucketFor(status: Int): HttpFailureBucket = when {
  * to the flat-string branch, where `optString("error")` stringifies the
  * inner JSON object and surfaces e.g. `{"message":""}` as the "error
  * message" displayed to the user.
+ *
+ * **Sibling impl note:** the multiplatform LLM clients in
+ * `:wristotle-core/.../speech/nlu/http/ProviderErrorMessage.kt` carry
+ * an equivalent `providerErrorMessage` written against
+ * `kotlinx.serialization.json` (since commonMain can't reach `org.json`).
+ * The two MUST stay semantically aligned — change one, change the other.
+ * The duplication is structural: `:wristotle-core/androidMain` already
+ * depends on `:speech` (via `ModelFileStorage`), so `:speech` can't
+ * depend back on `:wristotle-core` without breaking that edge first.
  */
 fun String?.providerErrorMessage(): String? {
     if (this == null) return null

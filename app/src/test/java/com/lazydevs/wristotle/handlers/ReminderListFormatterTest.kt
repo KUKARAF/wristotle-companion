@@ -3,6 +3,8 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderListFormatter
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

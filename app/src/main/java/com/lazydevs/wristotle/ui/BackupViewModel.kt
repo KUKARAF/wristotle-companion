@@ -15,8 +15,8 @@ import com.lazydevs.wristotle.backup.BackupExporter
 import com.lazydevs.wristotle.backup.BackupImportResult
 import com.lazydevs.wristotle.backup.BackupImporter
 import com.lazydevs.wristotle.backup.BackupManifest
-import com.lazydevs.wristotle.backup.BackupOptions
-import com.lazydevs.wristotle.backup.BackupSelection
+import com.lazydevs.wristotle.speech.nlu.backup.BackupOptions
+import com.lazydevs.wristotle.speech.nlu.backup.BackupSelection
 import com.lazydevs.wristotle.backup.PeekResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

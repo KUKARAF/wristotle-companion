@@ -7,17 +7,17 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.agent.LlmProvider
+import com.lazydevs.wristotle.speech.nlu.agent.LlmProvider
 import com.lazydevs.wristotle.handlers.PinStore
-import com.lazydevs.wristotle.handlers.ReminderRecord
-import com.lazydevs.wristotle.handlers.TempUnit
-import com.lazydevs.wristotle.settings.WeatherProviderId
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
+import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
+import com.lazydevs.wristotle.speech.nlu.settings.WeatherProviderId
 import com.lazydevs.wristotle.history.ConversationEntry
-import com.lazydevs.wristotle.notes.AppendAudioMode
 import com.lazydevs.wristotle.notes.Note
+import com.lazydevs.wristotle.speech.nlu.settings.AppendAudioMode
 import com.lazydevs.wristotle.notes.NoteAudioPaths
 import com.lazydevs.wristotle.phone.ContactRef
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
+import com.lazydevs.wristotle.nlu.learning.ExampleEntry
 import com.lazydevs.wristotle.tasks.TaskEntity
 import android.provider.ContactsContract
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +25,8 @@ import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
 import org.json.JSONObject
 import java.io.File
+import com.lazydevs.wristotle.speech.nlu.backup.BackupSelection
+import com.lazydevs.wristotle.speech.nlu.backup.BackupOptions
 
 private const val TAG = "BackupImporter"
 
@@ -520,7 +522,7 @@ class BackupImporter(private val app: WristotleApplication) {
 
         if (sel.sttProviderSetup) {
             p.sttProvider?.let { s ->
-                runCatching { com.lazydevs.wristotle.stt.SttProviderMode.valueOf(s.mode) }
+                runCatching { com.lazydevs.wristotle.speech.nlu.settings.SttProviderMode.valueOf(s.mode) }
                     .onSuccess { app.sttProviderSettings.setMode(it) }
                 app.sttProviderSettings.setHttpBaseUrl(s.httpBaseUrl)
                 app.sttProviderSettings.setHttpModel(s.httpModel)

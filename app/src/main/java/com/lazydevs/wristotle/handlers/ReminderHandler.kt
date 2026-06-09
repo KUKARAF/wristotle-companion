@@ -3,21 +3,21 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import android.content.Context
 import android.util.Log
 import com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
+import com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import com.lazydevs.wristotle.transport.PebbleTransport
-import io.rebble.pebblekit2.common.model.TimelineLayout
-import io.rebble.pebblekit2.common.model.TimelineLayoutType
-import io.rebble.pebblekit2.common.model.TimelinePin
-import io.rebble.pebblekit2.common.model.TimelineResult
+import com.lazydevs.wristotle.speech.nlu.transport.ReminderPin
+import com.lazydevs.wristotle.speech.nlu.transport.TimelineSendResult
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import java.util.Date
 import java.util.UUID
-import kotlin.time.ExperimentalTime
-import kotlin.time.toKotlinInstant
+import kotlinx.datetime.Instant
 
 private const val TAG = "ReminderHandler"
 
@@ -27,10 +27,9 @@ private const val TAG = "ReminderHandler"
  * populated by `ReminderSlots`, which wraps the legacy TimeParser + the
  * title-stripping regex from this file's history.
  */
-@OptIn(ExperimentalTime::class)
 class ReminderHandler(
     context: Context,
-    private val transport: PebbleTransport,
+    private val transport: WatchTransport,
     private val persistentScheduler: PersistentReminderScheduler,
     private val defaultMaxAttemptsProvider: () -> Int = { ReminderSettings.DEFAULT_MAX_ATTEMPTS },
 ) : ActionHandler {
@@ -44,7 +43,9 @@ class ReminderHandler(
         // ReminderSlots always populates a time — defaults to now + 30 min
         // when no explicit time was spoken — so this cast won't fail in
         // practice. Defensive null-check stays for the type system only.
-        val time = result.slots[SlotKeys.Time] as? Date ?: return "Couldn't set reminder"
+        val instant = result.slots[SlotKeys.Time] as? Instant ?: return "Couldn't set reminder"
+        val timeMs = instant.toEpochMilliseconds()
+        val time = Date(timeMs)
         val title = (result.slots[SlotKeys.Title] as? String)?.takeIf { it.isNotBlank() }
             ?: result.rawQuery.replaceFirstChar { it.uppercaseChar() }
         val isPersistent = result.slots[SlotKeys.Persistent] as? Boolean ?: false
@@ -52,20 +53,16 @@ class ReminderHandler(
         Log.d(TAG, "date=$time  title=$title  persistent=$isPersistent")
 
         val pinId = UUID.randomUUID().toString()
-        val pin = TimelinePin(
+        val pin = ReminderPin(
             id = pinId,
-            startTime = time.toInstant().toKotlinInstant(),
-            layout = TimelineLayout(
-                type = TimelineLayoutType.GENERIC_PIN,
-                title = title,
-                tinyIcon = "system://images/NOTIFICATION_REMINDER",
-            )
+            title = title,
+            startEpochMillis = timeMs,
         )
 
-        val pinResult = transport.insertReminder(pin)
+        val pinResult = transport.insertReminderPin(pin)
         Log.d(TAG, "insertTimelinePin: $pinResult")
 
-        return if (pinResult == TimelineResult.Success) {
+        return if (pinResult is TimelineSendResult.Success) {
             // attemptsRemaining is 0 for non-persistent reminders so phase B's
             // scheduler skips them without an explicit isPersistent check.
             val attemptsRemaining =
@@ -73,7 +70,7 @@ class ReminderHandler(
             val record = ReminderRecord(
                 id = pinId,
                 title = title,
-                timeMs = time.time,
+                timeMs = timeMs,
                 isPersistent = isPersistent,
                 attemptsRemaining = attemptsRemaining,
             )

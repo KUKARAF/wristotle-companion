@@ -57,7 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.handlers.ReminderSettings
+import com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
 import com.lazydevs.wristotle.ui.components.ConfirmDialog
 import kotlinx.coroutines.launch
 
@@ -383,8 +383,8 @@ private fun SettingsCategoryContent(
     backupVm: BackupViewModel,
     mcpServersVm: McpServersViewModel,
     reminderSettings: ReminderSettings,
-    weatherSettings: com.lazydevs.wristotle.settings.WeatherSettings,
-    askAgentSettings: com.lazydevs.wristotle.agent.AskAgentSettings,
+    weatherSettings: com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings,
+    askAgentSettings: com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings,
     /** Lets the 🌟 Setup card's "Open" buttons jump directly into the
      *  sub-screen for an action's [SettingsCategory] target instead of
      *  bouncing the user back to the landing page. */
@@ -481,7 +481,7 @@ private fun SettingsCategoryContent(
                 val notifLogEnabled by app.notificationLogSettings.enabled.collectAsState()
                 val notifLogCount by remember {
                     app.notificationLogDb.notificationPostDao()
-                        .observeCountSince(com.lazydevs.wristotle.briefing.TodayRange.now().startMs)
+                        .observeCountSince(com.lazydevs.wristotle.speech.nlu.briefing.TodayRange.now().startMs)
                 }.collectAsState(initial = 0)
                 MorningBriefCard(
                     logEnabled = notifLogEnabled,

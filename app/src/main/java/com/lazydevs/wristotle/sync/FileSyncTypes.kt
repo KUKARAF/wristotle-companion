@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.sync
 
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncFormatOptions
 import java.io.File
 
 /**
@@ -58,29 +59,6 @@ enum class WriteMode { Overwrite, Append }
 interface FileSyncRenderer<T> {
     fun render(entity: T, options: FileSyncFormatOptions): RenderedEntry
 }
-
-/**
- * Per-render flags the user picked in Settings. Passed through to the
- * renderer so it can choose markdown vs plain text vs JSON and one-file
- * vs append. Kept as a value class rather than two enums in the
- * renderer signature so future knobs (Obsidian-flavour wikilinks,
- * frontmatter on/off, etc.) land without breaking callers.
- */
-data class FileSyncFormatOptions(
-    val format: FileSyncFormat = FileSyncFormat.Markdown,
-    val granularity: FileSyncGranularity = FileSyncGranularity.OneFilePerEntity,
-)
-
-/**
- * Wire format for the rendered payload. CommonMark-clean Markdown is
- * the default; tool-specific syntax (Obsidian `[[…]]` wikilinks,
- * Logseq block refs, Joplin `:/id` resource refs, etc.) is deliberately
- * NOT supported by default to keep one canonical baseline that
- * round-trips across every tool.
- */
-enum class FileSyncFormat { Markdown, PlainText, Json }
-
-enum class FileSyncGranularity { OneFilePerEntity, AppendToSingleFile }
 
 /**
  * Outcome of the most recent sync pass — published by the coordinator

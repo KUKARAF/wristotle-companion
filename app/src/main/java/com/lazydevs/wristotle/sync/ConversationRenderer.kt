@@ -3,6 +3,9 @@
 
 package com.lazydevs.wristotle.sync
 
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncFormat
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncGranularity
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncFormatOptions
 import com.lazydevs.wristotle.history.ConversationEntry
 import java.io.File
 import java.time.Instant

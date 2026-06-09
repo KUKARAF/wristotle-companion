@@ -3,7 +3,7 @@
 
 package com.lazydevs.wristotle.tasks
 
-import com.lazydevs.wristotle.transport.MessageKeys
+import com.lazydevs.wristotle.speech.nlu.transport.MessageKeys
 
 /**
  * Encodes / decodes the [MessageKeys.TASKS_RESPONSE] CSTRING payload —

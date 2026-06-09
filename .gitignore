@@ -37,3 +37,8 @@ CLAUDE.md
 # Local feature-request tracker — not published
 FEATURE_REQUESTS.md
 TODO.md
+
+# kotlin.cocoapods generates these per KMP module on the spike branch.
+# Not part of R2 source.
+speech-nlu/speech_nlu.podspec
+ios-spike-shell/

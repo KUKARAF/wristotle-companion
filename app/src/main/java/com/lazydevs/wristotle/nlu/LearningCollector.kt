@@ -5,8 +5,9 @@ package com.lazydevs.wristotle.nlu
 
 import android.util.Log
 import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.NluSettings
 import com.lazydevs.wristotle.speech.nlu.IntentClassifier
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleBank
+import com.lazydevs.wristotle.nlu.learning.ExampleBank
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

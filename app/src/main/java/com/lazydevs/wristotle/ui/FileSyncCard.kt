@@ -45,9 +45,9 @@ import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.sync.FileSyncCoordinator
-import com.lazydevs.wristotle.sync.FileSyncFormat
-import com.lazydevs.wristotle.sync.FileSyncGranularity
-import com.lazydevs.wristotle.sync.FileSyncSettings
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncFormat
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncGranularity
+import com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings
 import com.lazydevs.wristotle.sync.LastSyncResult
 import kotlinx.coroutines.launch
 

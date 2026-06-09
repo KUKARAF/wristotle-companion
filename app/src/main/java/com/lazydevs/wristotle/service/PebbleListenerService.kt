@@ -3,20 +3,23 @@
 
 package com.lazydevs.wristotle.service
 
+import com.lazydevs.wristotle.speech.nlu.handler.ConfirmSummaryBuilder
+import com.lazydevs.wristotle.speech.nlu.transport.sendConfirmPrompt
+import com.lazydevs.wristotle.speech.nlu.transport.sendForHint
+import com.lazydevs.wristotle.speech.nlu.transport.sendReady
 import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.R
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.handlers.CalendarHandler
-import com.lazydevs.wristotle.handlers.CallHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.CalendarHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.CallHandler
 import com.lazydevs.wristotle.handlers.CancelReminderHandler
-import com.lazydevs.wristotle.handlers.CreateEventHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.CreateEventHandler
 import com.lazydevs.wristotle.handlers.FindPhoneHandler
-import com.lazydevs.wristotle.handlers.ConfirmSummaryBuilder
-import com.lazydevs.wristotle.handlers.HandlerRegistry
-import com.lazydevs.wristotle.handlers.HandlerRegistry.Companion.isSuccessResponse
-import com.lazydevs.wristotle.handlers.requiresConfirm
+import com.lazydevs.wristotle.speech.nlu.handler.HandlerRegistry
+import com.lazydevs.wristotle.speech.nlu.handler.HandlerRegistry.Companion.isSuccessResponse
+import com.lazydevs.wristotle.speech.nlu.handler.requiresConfirm
 import com.lazydevs.wristotle.handlers.ListRemindersHandler
 import com.lazydevs.wristotle.handlers.MediaNextHandler
 import com.lazydevs.wristotle.handlers.MediaPauseHandler
@@ -26,7 +29,7 @@ import com.lazydevs.wristotle.handlers.MediaPreviousHandler
 import com.lazydevs.wristotle.handlers.MediaSeekHandler
 import com.lazydevs.wristotle.handlers.AppendNoteHandler
 import com.lazydevs.wristotle.handlers.NoteHandler
-import com.lazydevs.wristotle.handlers.OpenAppHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.OpenAppHandler
 import com.lazydevs.wristotle.handlers.ReminderHandler
 import com.lazydevs.wristotle.handlers.CancelAlarmHandler
 import com.lazydevs.wristotle.handlers.SetTimerHandler
@@ -34,8 +37,8 @@ import com.lazydevs.wristotle.handlers.RescheduleHandler
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.history.ConversationRepository
 import com.lazydevs.wristotle.nlu.LearningCollector
-import com.lazydevs.wristotle.nlu.NluSettings
-import com.lazydevs.wristotle.nlu.VoicePipeline
+import com.lazydevs.wristotle.speech.nlu.NluSettings
+import com.lazydevs.wristotle.speech.nlu.VoicePipeline
 import com.lazydevs.wristotle.phone.CalendarRepository
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.settings.WatchSettingsRepository
@@ -43,8 +46,8 @@ import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentClassifiers
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
-import com.lazydevs.wristotle.transport.MessageKeys
-import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.speech.nlu.transport.MessageKeys
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import com.lazydevs.wristotle.transport.boolFlag
 import com.lazydevs.wristotle.transport.int32
 import com.lazydevs.wristotle.transport.text
@@ -57,6 +60,7 @@ import java.util.UUID
 import android.content.Intent as AndroidIntent
 import android.os.Binder
 import android.os.IBinder
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 
 /**
  * Receives AppMessages from the Pebble watch via rePebble/microPebble.
@@ -77,7 +81,7 @@ class PebbleListenerService : BasePebbleListenerService() {
      *  live inside [onMessageReceived] don't fire on every inbound
      *  packet. Use this to reach any Application-scoped repository. */
     private lateinit var app: WristotleApplication
-    private lateinit var transport: PebbleTransport
+    private lateinit var transport: WatchTransport
     private lateinit var conversationRepository: ConversationRepository
     private lateinit var registry: HandlerRegistry
     private lateinit var voicePipeline: VoicePipeline
@@ -132,6 +136,8 @@ class PebbleListenerService : BasePebbleListenerService() {
             classifier = IntentClassifiers.provider(this),
             slotExtractors = app.slotExtractors,
             askAgentSubjects = { app.askAgentSettings.customTriggers.value },
+            // through the multiplatform Logger interface.
+            logger = com.lazydevs.wristotle.logging.WristotleLogger,
         )
         nluSettings = app.nluSettings
         learningCollector = app.learningCollector
@@ -143,7 +149,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         val appIndex = app.appIndex
         val calendarRepo = CalendarRepository(this)
         registry = HandlerRegistry(listOf(
-            CallHandler(this, contacts),
+            CallHandler(contacts, com.lazydevs.wristotle.telephony.AndroidTelephony(this)),
             com.lazydevs.wristotle.handlers.SendMessageHandler(this, contacts),
             ReminderHandler(
                 this,
@@ -162,7 +168,11 @@ class PebbleListenerService : BasePebbleListenerService() {
             MediaPreviousHandler(this, media, appIndex),
             MediaSeekHandler(media, intent = com.lazydevs.wristotle.speech.nlu.Intent.MediaSeekForward),
             MediaSeekHandler(media, intent = com.lazydevs.wristotle.speech.nlu.Intent.MediaSeekBackward),
-            OpenAppHandler(this, appIndex),
+            OpenAppHandler(
+                com.lazydevs.wristotle.apps.AndroidAppLauncher(this),
+                appIndex,
+                emptyIndexHint = com.lazydevs.wristotle.handlers.EMPTY_INDEX_HINT,
+            ),
             CalendarHandler(calendarRepo),
             CreateEventHandler(calendarRepo),
             NoteHandler(app.noteRepository),
@@ -182,8 +192,8 @@ class PebbleListenerService : BasePebbleListenerService() {
                 settings = app.alarmSettings,
             ),
             SetTimerHandler(this),
-            com.lazydevs.wristotle.handlers.WorldTimeHandler(),
-            com.lazydevs.wristotle.handlers.CalculateHandler(),
+            com.lazydevs.wristotle.speech.nlu.handlers.WorldTimeHandler(),
+            com.lazydevs.wristotle.speech.nlu.handlers.CalculateHandler(),
             com.lazydevs.wristotle.handlers.WeatherHandler(
                 openMeteo = com.lazydevs.wristotle.handlers.OpenMeteoProvider(),
                 openWeatherFactory = { key -> com.lazydevs.wristotle.handlers.OpenWeatherProvider(key) },
@@ -387,7 +397,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             watchHint == null &&
             voicePipeline.isStubClassifier
         val dispatchResult = if (noNluModel) {
-            com.lazydevs.wristotle.handlers.HandlerResult(
+            com.lazydevs.wristotle.speech.nlu.handler.HandlerResult(
                 response = getString(R.string.nlu_model_missing_response),
                 handler = "no-nlu-model",
                 success = false,
@@ -482,13 +492,13 @@ class PebbleListenerService : BasePebbleListenerService() {
      * fail honestly with *"Contact not found"*.
      *
      * Short-circuits when the slot extractor already stashed a
-     * [ContactsRepository.Contact] (SendMessage's multi-word loop
+     * [ResolvedContact] (SendMessage's multi-word loop
      * resolves the contact during extraction). For Call, CallSlots
      * doesn't pre-resolve, so this still does the lookup.
      */
     private suspend fun enrichResolvedContact(routed: IntentResult): IntentResult {
         if (routed.intent != Intent.Call && routed.intent != Intent.SendMessage) return routed
-        if (routed.slots[SlotKeys.ResolvedContact] is ContactsRepository.Contact) return routed
+        if (routed.slots[SlotKeys.ResolvedContact] is ResolvedContact) return routed
         val spoken = (routed.slots[SlotKeys.Contact] as? String)?.trim().orEmpty()
         if (spoken.isEmpty()) return routed
         if (!contacts.hasPermission()) return routed

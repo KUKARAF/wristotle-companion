@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.service
 
+import com.lazydevs.wristotle.speech.nlu.transport.sendReady
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.ServiceInfo
@@ -14,7 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import com.lazydevs.wristotle.AppConstants
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.WristotleApplication
-import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import kotlinx.coroutines.launch
 
 /**
@@ -25,7 +26,7 @@ import kotlinx.coroutines.launch
  */
 class WatchMessageService : LifecycleService() {
 
-    private lateinit var transport: PebbleTransport
+    private lateinit var transport: WatchTransport
 
     override fun onCreate() {
         super.onCreate()

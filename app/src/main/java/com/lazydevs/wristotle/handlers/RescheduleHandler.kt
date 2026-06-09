@@ -3,21 +3,22 @@
 
 package com.lazydevs.wristotle.handlers
 
+import kotlinx.datetime.Instant
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderMatching
+import com.lazydevs.wristotle.speech.nlu.reminders.mentionsCalendarEvent
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import android.content.Context
 import android.util.Log
 import com.lazydevs.wristotle.handlers.persistent.PersistentReminderScheduler
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import com.lazydevs.wristotle.transport.PebbleTransport
-import io.rebble.pebblekit2.common.model.TimelineLayout
-import io.rebble.pebblekit2.common.model.TimelineLayoutType
-import io.rebble.pebblekit2.common.model.TimelinePin
-import io.rebble.pebblekit2.common.model.TimelineResult
+import com.lazydevs.wristotle.speech.nlu.transport.ReminderPin
+import com.lazydevs.wristotle.speech.nlu.transport.TimelineSendResult
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import java.util.Date
 import java.util.UUID
-import kotlin.time.ExperimentalTime
-import kotlin.time.toKotlinInstant
 
 private const val TAG = "RescheduleHandler"
 
@@ -32,10 +33,9 @@ private const val TAG = "RescheduleHandler"
  * The new time is relative to *now* ("in 10 minutes" = 10 minutes from now),
  * not to the original reminder's time.
  */
-@OptIn(ExperimentalTime::class)
 class RescheduleHandler(
     context: Context,
-    private val transport: PebbleTransport,
+    private val transport: WatchTransport,
     private val persistentScheduler: PersistentReminderScheduler,
 ) : ActionHandler {
 
@@ -45,8 +45,10 @@ class RescheduleHandler(
     override val intent: Intent = Intent.Reschedule
 
     override suspend fun handle(result: IntentResult): String {
-        val time = result.slots[SlotKeys.Time] as? Date
+        val instant = result.slots[SlotKeys.Time] as? Instant
             ?: return "Couldn't understand the new time"
+        val timeMs = instant.toEpochMilliseconds()
+        val time = Date(timeMs)
         val target = (result.slots[SlotKeys.Target] as? String)?.trim().orEmpty()
         Log.d(TAG, "reschedule: ${result.rawQuery} (target='$target' time=$time)")
 
@@ -61,8 +63,8 @@ class RescheduleHandler(
                 }
         }
 
-        val deleteResult = transport.deleteReminder(record.id)
-        if (deleteResult !is TimelineResult.Success) {
+        val deleteResult = transport.deleteReminderPin(record.id)
+        if (deleteResult !is TimelineSendResult.Success) {
             Log.w(TAG, "delete during reschedule failed: $deleteResult")
             return "Failed to reschedule ($deleteResult)"
         }
@@ -72,27 +74,23 @@ class RescheduleHandler(
         persistentScheduler.cancel(record.id)
 
         val newId = UUID.randomUUID().toString()
-        val pin = TimelinePin(
+        val pin = ReminderPin(
             id = newId,
-            startTime = time.toInstant().toKotlinInstant(),
-            layout = TimelineLayout(
-                type = TimelineLayoutType.GENERIC_PIN,
-                title = record.title,
-                tinyIcon = "system://images/NOTIFICATION_REMINDER",
-            ),
+            title = record.title,
+            startEpochMillis = timeMs,
         )
 
-        val insertResult = transport.insertReminder(pin)
+        val insertResult = transport.insertReminderPin(pin)
         Log.d(TAG, "re-insert result: $insertResult")
 
-        return if (insertResult == TimelineResult.Success) {
+        return if (insertResult is TimelineSendResult.Success) {
             // Carry forward persistence so a "remind me at 3pm" → "make that
             // 4pm" doesn't quietly downgrade a persistent reminder. The
             // attempts counter resets too — the new pin starts a fresh chain.
             val moved = ReminderRecord(
                 id = newId,
                 title = record.title,
-                timeMs = time.time,
+                timeMs = timeMs,
                 isPersistent = record.isPersistent,
                 attemptsRemaining = record.attemptsRemaining,
             )

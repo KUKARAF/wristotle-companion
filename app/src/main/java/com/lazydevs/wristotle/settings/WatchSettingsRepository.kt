@@ -3,9 +3,12 @@
 
 package com.lazydevs.wristotle.settings
 
+import com.lazydevs.wristotle.speech.nlu.transport.sendBoolSetting
+import com.lazydevs.wristotle.speech.nlu.transport.sendIntSetting
+import com.lazydevs.wristotle.speech.nlu.transport.sendSettingsRequest
 import com.lazydevs.wristotle.logging.WristotleLog as Log
-import com.lazydevs.wristotle.transport.MessageKeys
-import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.speech.nlu.transport.MessageKeys
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import io.rebble.pebblekit2.common.model.PebbleDictionary
 import io.rebble.pebblekit2.common.model.PebbleDictionaryItem
 import kotlinx.coroutines.CoroutineScope
@@ -67,7 +70,7 @@ enum class StaleReason {
  *  CoroutineScope. Outbound sends use Dispatchers.IO via the transport.
  */
 class WatchSettingsRepository(
-    private val transport: PebbleTransport,
+    private val transport: WatchTransport,
     private val scope: CoroutineScope,
 ) {
 

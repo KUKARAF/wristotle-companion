@@ -3,6 +3,10 @@
 
 package com.lazydevs.wristotle.nlu.slots
 
+import kotlinx.datetime.Instant
+
+import com.lazydevs.wristotle.speech.nlu.slots.*
+
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -14,7 +18,7 @@ import java.util.Date
 class ReminderSlotsTest {
 
     private fun slots(query: String): Map<String, Any> = runBlocking {
-        ReminderSlots().extract(query)
+        ReminderSlots(timeParser = com.lazydevs.wristotle.handlers.PrettyTimeTimeParser, defaultOffsetMinProvider = { 30 }).extract(query)
     }
 
     private fun title(query: String): String? = slots(query)["title"] as String?
@@ -41,12 +45,12 @@ class ReminderSlotsTest {
     // capturing 'now' and the extractor doing the same.
     @Test fun `missing time defaults to about 30 minutes from now`() {
         val before = System.currentTimeMillis()
-        val time = slots("remind me to buy milk")["time"] as? Date
+        val time = slots("remind me to buy milk")["time"] as? Instant
         val after = System.currentTimeMillis()
 
         assertNotNull("expected default time slot to be populated", time)
-        val offsetMin = (time!!.time - before) / 60_000.0
-        val maxOffsetMin = (time.time - after) / 60_000.0
+        val offsetMin = (time!!.toEpochMilliseconds() - before) / 60_000.0
+        val maxOffsetMin = (time.toEpochMilliseconds() - after) / 60_000.0
         assertTrue(
             "expected ~30 min offset, got $offsetMin..$maxOffsetMin",
             offsetMin in 29.5..30.5 && maxOffsetMin in 29.5..30.5,

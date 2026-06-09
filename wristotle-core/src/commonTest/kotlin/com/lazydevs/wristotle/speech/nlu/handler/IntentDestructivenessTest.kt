@@ -1,0 +1,80 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2025-2026 Lazy Devs
+
+package lazydevs.wristotle.speech.nlu.handler
+
+import com.lazydevs.wristotle.speech.nlu.handler.requiresConfirm
+import com.lazydevs.wristotle.speech.nlu.Intent
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlin.test.Test
+
+/**
+ * Drift-detector test for the confirm-before-dispatch destructive set. Adding
+ * a new value to [Intent] must explicitly choose a side; the when-expression
+ * inside [requiresConfirm] is exhaustive, so this test merely formalises the
+ * intent (pun unavoidable) and gives a single place to review whether a new
+ * intent should require a confirm prompt or not.
+ */
+class IntentDestructivenessTest {
+
+    @Test fun destructiveSetMatchesPlan() {
+        val expectedDestructive = setOf(
+            Intent.Call,
+            Intent.SendMessage, // Covers SMS + WhatsApp + Telegram + Signal
+            //                    after Phase A3 collapsed Intent.Sms into it.
+            Intent.Reminder,
+            Intent.Cancel,
+            Intent.Reschedule,
+            Intent.CreateEvent,
+            Intent.OpenApp,
+            Intent.MediaPlay,
+            Intent.CompleteTask, // marks user-data row done
+            Intent.DeleteTask,   // removes user-data row
+            Intent.SetAlarm,     // misheard time wakes you at the wrong hour
+            Intent.SetTimer,     // misheard duration annoying to catch after
+        )
+        for (intent in Intent.entries) {
+            val expected = intent in expectedDestructive
+            assertEquals(
+                expected,
+                intent.requiresConfirm(),
+                "Intent.$intent should${if (expected) "" else " NOT"} require confirm",
+            )
+        }
+    }
+
+    @Test fun readOnlyIntentsDoNotConfirm() {
+        // Spot-check the read-only set — these MUST stay false even when
+        // the user has the confirm toggle on, otherwise basic local commands
+        // become annoying.
+        assertFalse(Intent.Time.requiresConfirm())
+        assertFalse(Intent.Battery.requiresConfirm())
+        assertFalse(Intent.Steps.requiresConfirm())
+        assertFalse(Intent.FindPhone.requiresConfirm())
+        assertFalse(Intent.ListReminders.requiresConfirm())
+        assertFalse(Intent.Calendar.requiresConfirm())
+        assertFalse(Intent.Unknown.requiresConfirm())
+    }
+
+    @Test fun mediaTogglesDoNotConfirm() {
+        // Pause/Next/Previous/Seek aren't destructive in the user-data
+        // sense — they just toggle music. Only MediaPlay confirms (it
+        // launches/focuses an app).
+        assertTrue(Intent.MediaPlay.requiresConfirm())
+        assertFalse(Intent.MediaPause.requiresConfirm())
+        assertFalse(Intent.MediaPlayPause.requiresConfirm())
+        assertFalse(Intent.MediaNext.requiresConfirm())
+        assertFalse(Intent.MediaPrevious.requiresConfirm())
+        assertFalse(Intent.MediaSeekForward.requiresConfirm())
+        assertFalse(Intent.MediaSeekBackward.requiresConfirm())
+    }
+
+    @Test fun notesAreNotDestructive() {
+        // Notes are personal data, undo-by-delete is cheap, often dictated
+        // in bursts. Confirm-gating each one would be annoying.
+        assertFalse(Intent.Note.requiresConfirm())
+        assertFalse(Intent.AppendNote.requiresConfirm())
+    }
+}

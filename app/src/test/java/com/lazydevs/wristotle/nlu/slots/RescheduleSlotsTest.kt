@@ -3,6 +3,8 @@
 
 package com.lazydevs.wristotle.nlu.slots
 
+import com.lazydevs.wristotle.speech.nlu.slots.*
+
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -13,11 +15,14 @@ import java.util.Date
 class RescheduleSlotsTest {
 
     private fun slots(query: String): Map<String, Any> = runBlocking {
-        RescheduleSlots().extract(query)
+        RescheduleSlots(com.lazydevs.wristotle.handlers.PrettyTimeTimeParser).extract(query)
     }
 
     private fun target(query: String) = slots(query)["target"] as String?
-    private fun time(query: String) = slots(query)["time"] as Date?
+    // R2 batch 4 — slot value type changed Date → Instant. Convert at the
+    // test boundary so the rest of this Date-using test body stays the same.
+    private fun time(query: String) =
+        (slots(query)["time"] as? kotlinx.datetime.Instant)?.let { Date(it.toEpochMilliseconds()) }
 
     // --- target extraction (time clause + verbs + fillers stripped) ---
 

@@ -10,8 +10,8 @@ import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.mcp.HttpMcpIntegration
 import com.lazydevs.wristotle.mcp.McpServerEntity
 import com.lazydevs.wristotle.mcp.McpServerRepository
-import com.lazydevs.wristotle.mcp.McpTool
-import com.lazydevs.wristotle.mcp.ToolCallResult
+import com.lazydevs.wristotle.speech.nlu.mcp.McpTool
+import com.lazydevs.wristotle.speech.nlu.mcp.ToolCallResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

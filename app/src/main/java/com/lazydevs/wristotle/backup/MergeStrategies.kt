@@ -3,12 +3,12 @@
 
 package com.lazydevs.wristotle.backup
 
-import com.lazydevs.wristotle.handlers.ReminderRecord
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.mcp.McpServerEntity
 import com.lazydevs.wristotle.notes.Note
 import com.lazydevs.wristotle.phone.ContactRef
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
+import com.lazydevs.wristotle.nlu.learning.ExampleEntry
 import com.lazydevs.wristotle.tasks.TaskEntity
 
 /**

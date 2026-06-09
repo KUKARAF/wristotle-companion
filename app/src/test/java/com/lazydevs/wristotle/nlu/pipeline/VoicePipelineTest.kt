@@ -3,10 +3,12 @@
 
 package com.lazydevs.wristotle.nlu.pipeline
 
-import com.lazydevs.wristotle.nlu.VoicePipeline
-import com.lazydevs.wristotle.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.VoicePipeline
+import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
+import com.lazydevs.wristotle.speech.nlu.slots.*
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.PrefixHints
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -14,11 +16,12 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 
 /**
  * End-to-end voice routing tests — query in, (intent, slots) out, no
  * Android / PebbleKit / Whisper in the loop. Each row exercises the
- * full classifier → [com.lazydevs.wristotle.nlu.WatchHintRefiner] →
+ * full classifier → [com.lazydevs.wristotle.speech.nlu.WatchHintRefiner] →
  * slot-extractor seam. See `tests.md` for how to add a row.
  */
 class VoicePipelineTest {
@@ -28,7 +31,7 @@ class VoicePipelineTest {
         watchHint: Intent? = null,
         classifier: FakeIntentClassifier = FakeIntentClassifier(),
         askAgentSubjects: List<String> = emptyList(),
-        findContact: suspend (String) -> ContactsRepository.Contact? = { null },
+        findContact: suspend (String) -> ResolvedContact? = { null },
     ): VoicePipeline.Routed = runBlocking {
         val subjectsProvider = { askAgentSubjects }
         VoicePipeline(
@@ -265,7 +268,7 @@ class VoicePipelineTest {
             "WhatsApp mom on my way",
             findContact = { name ->
                 if (name.lowercase() == "mom") {
-                    ContactsRepository.Contact(name = "Mom", number = "555-0100")
+                    ResolvedContact(name = "Mom", number = "555-0100")
                 } else null
             },
         )

@@ -39,7 +39,7 @@ import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.backup.BackupCounts
 import com.lazydevs.wristotle.backup.BackupExportResult
 import com.lazydevs.wristotle.backup.BackupManifest
-import com.lazydevs.wristotle.backup.BackupSelection
+import com.lazydevs.wristotle.speech.nlu.backup.BackupSelection
 import com.lazydevs.wristotle.ui.components.ConfirmDialog
 import com.lazydevs.wristotle.ui.components.InfoDialog
 import com.lazydevs.wristotle.ui.components.PasswordField

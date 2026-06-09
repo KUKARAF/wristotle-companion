@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.apps
 
+import com.lazydevs.wristotle.speech.nlu.apps.AppLookup
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test

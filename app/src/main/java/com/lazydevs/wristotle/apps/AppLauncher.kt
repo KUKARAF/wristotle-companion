@@ -6,6 +6,7 @@ package com.lazydevs.wristotle.apps
 import android.content.Context
 import android.content.Intent
 import com.lazydevs.wristotle.logging.WristotleLog as Log
+import com.lazydevs.wristotle.speech.nlu.apps.AppLauncher as CommonAppLauncher
 
 private const val TAG = "AppLauncher"
 
@@ -43,4 +44,16 @@ internal fun packageLabel(context: Context, packageId: String): String = try {
     pm.getApplicationLabel(pm.getApplicationInfo(packageId, 0)).toString()
 } catch (t: Throwable) {
     packageId
+}
+
+/**
+ * Android impl of the multiplatform [CommonAppLauncher] seam used by
+ * the lifted OpenAppHandler. Delegates to the file-level helpers so
+ * the existing media handlers (which still call the helpers directly)
+ * keep working.
+ */
+class AndroidAppLauncher(context: Context) : CommonAppLauncher {
+    private val appContext = context.applicationContext
+    override fun launchApp(packageId: String): Boolean = launchApp(appContext, packageId)
+    override fun packageLabel(packageId: String): String = packageLabel(appContext, packageId)
 }

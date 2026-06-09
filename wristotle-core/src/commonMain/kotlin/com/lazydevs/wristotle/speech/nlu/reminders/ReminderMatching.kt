@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2025-2026 Lazy Devs
+
+package com.lazydevs.wristotle.speech.nlu.reminders
+
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+
+/**
+ * Matches a spoken target ("the gym one", "my 5pm") against the pending
+ * reminders, so cancel / reschedule can act on a *specific* reminder instead
+ * of blindly the latest. Pure + unit-testable.
+ *
+ * Deliberately conservative: a named target that matches nothing returns null
+ * so the caller can say "no reminder matching that" rather than silently
+ * acting on the wrong one — the same not-found-beats-wrong-guess principle as
+ * the contact-match floor.
+ */
+object ReminderMatching {
+
+    /** A target must clear this to count as a match. */
+    const val MATCH_FLOOR = 0.6f
+
+    /** Best pending (not past-due) reminder for [target], or null if none clears
+     *  the floor. [now] is epoch-millis; past-due reminders are excluded. */
+    fun bestMatch(target: String, records: List<ReminderRecord>, now: Long): ReminderRecord? {
+        val t = normalize(target)
+        if (t.isEmpty()) return null
+        val pending = records.filter { PinStoreCodec.isActive(it.timeMs, now) }
+        val best = pending.maxByOrNull { score(t, it) } ?: return null
+        return if (score(t, best) >= MATCH_FLOOR) best else null
+    }
+
+    internal fun score(normalizedTarget: String, record: ReminderRecord): Float {
+        val titleScore = tokenScore(normalizedTarget, normalize(record.title))
+        val timeScore = record.timeMs?.let { timeScore(normalizedTarget, it) } ?: 0f
+        return maxOf(titleScore, timeScore)
+    }
+
+    /** Fraction of target tokens that prefix-match a title token. */
+    private fun tokenScore(target: String, title: String): Float {
+        val targetTokens = target.split(' ').filter { it.isNotEmpty() }
+        val titleTokens = title.split(' ').filter { it.isNotEmpty() }
+        if (targetTokens.isEmpty() || titleTokens.isEmpty()) return 0f
+        val matched = targetTokens.count { q ->
+            titleTokens.any { it == q || it.startsWith(q) || q.startsWith(it) }
+        }
+        return matched.toFloat() / targetTokens.size
+    }
+
+    /** 1f when the target names this reminder's clock time ("5pm", "5 pm",
+     *  "5:00pm"), else 0f. */
+    private fun timeScore(target: String, timeMs: Long): Float {
+        val ldt = Instant.fromEpochMilliseconds(timeMs)
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+        val hour24 = ldt.hour
+        val hour12 = ((hour24 + 11) % 12) + 1
+        val ampm = if (hour24 < 12) "am" else "pm"
+        val mm = ldt.minute.toString().padStart(2, '0')
+        val compact = "$hour12$ampm"               // "5pm"
+        val withMinutes = "$hour12:$mm$ampm"       // "5:00pm"
+        val tc = target.replace(" ", "")
+        if (tc.length < 2) return 0f
+        return if (tc == compact || tc == withMinutes || compact.contains(tc) || withMinutes.startsWith(tc)) 1f else 0f
+    }
+
+    private val MULTI_WS = Regex("\\s+")
+    private fun normalize(s: String): String = s.trim().lowercase().replace(MULTI_WS, " ")
+}
+
+/** Nouns that name a calendar event, not a reminder. Reminders (PinStore pins)
+ *  and calendar events (CalendarContract) are separate stores; reschedule/cancel
+ *  only act on reminders. */
+private val CALENDAR_EVENT_NOUNS = listOf("meeting", "appointment", "event")
+
+/**
+ * True when [target] names a calendar event ("my 3pm meeting", "the standup
+ * appointment") rather than a reminder.
+ */
+fun mentionsCalendarEvent(target: String): Boolean =
+    CALENDAR_EVENT_NOUNS.any { target.contains(it, ignoreCase = true) }

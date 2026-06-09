@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.nlu
 
 import com.lazydevs.wristotle.speech.nlu.Intent
+import com.lazydevs.wristotle.speech.nlu.PrefixHints
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

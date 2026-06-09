@@ -3,7 +3,9 @@
 
 package com.lazydevs.wristotle.backup
 
-import com.lazydevs.wristotle.speech.nlu.bank.ExampleEntry
+import com.lazydevs.wristotle.speech.nlu.backup.*
+
+import com.lazydevs.wristotle.nlu.learning.ExampleEntry
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

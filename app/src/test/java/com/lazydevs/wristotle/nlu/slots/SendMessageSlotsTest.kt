@@ -3,19 +3,24 @@
 
 package com.lazydevs.wristotle.nlu.slots
 
+import com.lazydevs.wristotle.speech.nlu.handler.ConfirmSummaryBuilder
+import com.lazydevs.wristotle.speech.nlu.slots.*
+
 import com.lazydevs.wristotle.phone.ContactsRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
+import com.lazydevs.wristotle.messaging.toInfoForSlots
 
 class SendMessageSlotsTest {
 
     private fun extractor(knownContacts: Set<String> = emptySet()) =
-        SendMessageSlots(findContact = { query ->
+        SendMessageSlots(targets = com.lazydevs.wristotle.messaging.MessagingTargets.NAMED.map { it.toInfoForSlots() }, smsDisplayName = com.lazydevs.wristotle.messaging.MessagingTargets.Sms.displayName, findContact = { query ->
             if (query.lowercase() in knownContacts.map(String::lowercase))
-                ContactsRepository.Contact(name = query, number = "555-0100")
+                ResolvedContact(name = query, number = "555-0100")
             else null
         })
 
@@ -164,14 +169,14 @@ class SendMessageSlotsTest {
      */
     @Test fun `multi-word lookup stashes resolved contact in slots`() {
         val s = extract("text mom on my way")
-        val resolved = s["resolvedContact"] as? ContactsRepository.Contact
+        val resolved = s["resolvedContact"] as? ResolvedContact
         assertEquals("mom", resolved?.name)
         assertEquals("555-0100", resolved?.number)
     }
 
     @Test fun `conjunction split stashes resolved contact in slots`() {
         val s = extract("text dad saying running late")
-        val resolved = s["resolvedContact"] as? ContactsRepository.Contact
+        val resolved = s["resolvedContact"] as? ResolvedContact
         assertEquals("dad", resolved?.name)
     }
 

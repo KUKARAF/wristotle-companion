@@ -15,8 +15,8 @@ class TimeParserTest {
     private fun Calendar.minute() = get(Calendar.MINUTE)
 
     private fun parsedCal(text: String): Calendar? {
-        val date = parseTime(text)?.date ?: return null
-        return Calendar.getInstance().apply { time = date }
+        val instant = parseTime(text)?.instant ?: return null
+        return Calendar.getInstance().apply { timeInMillis = instant.toEpochMilliseconds() }
     }
 
     @Test fun `ten pm parses as 22h`() {
@@ -62,7 +62,7 @@ class TimeParserTest {
         val before = System.currentTimeMillis()
         val result = parseTime("remind me in thirty minutes")
         assertNotNull(result)
-        val ms = result!!.date.time - before
+        val ms = result!!.instant.toEpochMilliseconds() - before
         assert(ms in 29 * 60 * 1000L..31 * 60 * 1000L) { "expected ~30min from now, got ${ms/60000}min" }
     }
 
@@ -89,9 +89,9 @@ class TimeParserTest {
         val before = System.currentTimeMillis()
         val result = parseTime("an hour from now")
         assertNotNull(result)
-        val ms = result!!.date.time - before
+        val ms = result!!.instant.toEpochMilliseconds() - before
         assert(ms in 55 * 60 * 1000L..65 * 60 * 1000L) {
-            "expected ~1h from now, got ${ms / 60000}min (delta ${ms}ms, parsed=${result.date})"
+            "expected ~1h from now, got ${ms / 60000}min (delta ${ms}ms, parsed=${result.instant})"
         }
     }
 
@@ -99,7 +99,7 @@ class TimeParserTest {
         val before = System.currentTimeMillis()
         val result = parseTime("a minute from now")
         assertNotNull(result)
-        val ms = result!!.date.time - before
+        val ms = result!!.instant.toEpochMilliseconds() - before
         assert(ms in 50 * 1000L..70 * 1000L) {
             "expected ~1min from now, got ${ms / 1000}s"
         }

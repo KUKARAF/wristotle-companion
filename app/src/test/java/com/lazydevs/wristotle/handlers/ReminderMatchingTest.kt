@@ -3,6 +3,9 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderMatching
+import com.lazydevs.wristotle.speech.nlu.reminders.mentionsCalendarEvent
+import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

@@ -3,11 +3,14 @@
 
 package com.lazydevs.wristotle.alarms
 
+import com.lazydevs.wristotle.speech.nlu.alarms.AlarmDestination
+import com.lazydevs.wristotle.speech.nlu.transport.sendAlarmCancel
+import com.lazydevs.wristotle.speech.nlu.transport.sendAlarmSet
 import android.content.Context
 import android.content.Intent
 import android.provider.AlarmClock
 import com.lazydevs.wristotle.logging.WristotleLog as Log
-import com.lazydevs.wristotle.transport.PebbleTransport
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import java.util.Calendar
 
 /**
@@ -23,14 +26,14 @@ import java.util.Calendar
  * remembers the user's intent so the UI can show "this alarm goes to
  * the phone too" even though we can't verify it's still there.
  *
- * Watch leg: [PebbleTransport.sendAlarmSet] with epoch SECONDS. Pebble's
+ * Watch leg: [WatchTransport.sendAlarmSet] with epoch SECONDS. Pebble's
  * `wakeup_service` requires ≥ 30 s lead and global ±60 s spacing across
  * apps; we add a 5 s safety to the lead, and surface scheduling failures
  * via the watch's ALARM_SET_RESULT callback (not from this call's return).
  */
 class AlarmDispatcher(
     private val context: Context,
-    private val transport: PebbleTransport,
+    private val transport: WatchTransport,
     private val repository: AlarmRepository,
 ) {
 

@@ -3,6 +3,8 @@
 
 package com.lazydevs.wristotle.nlu.slots
 
+import com.lazydevs.wristotle.speech.nlu.slots.*
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
