@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-6-2-voice-fixes",
+      "date": "2026-06-09",
+      "companion_version": "v1.6.2",
+      "watch_version": null,
+      "title": "Voice fixes — punctuation, word numbers, cancel timer",
+      "description": "Sent text messages preserve the trailing ? / ! you said. SetTimer / SetAlarm / Reminder all recognise 11-19 and 21-99 as word-form durations (\"set a timer for eleven minutes\"). \"Cancel timer\" now points to the Clock app instead of claiming there's no reminder by that name (#11).",
+      "sample_query": "set a timer for eleven minutes",
+      "docs_path": "voice-commands/"
+    },
+    {
       "id": "v1-6-0-notif-log",
       "date": "2026-06-07",
       "companion_version": "v1.6.0",

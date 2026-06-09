@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-6-2-voice-fixes",
+            date = "2026-06-09",
+            companionVersion = "v1.6.2",
+            watchVersion = null,
+            title = "Voice fixes — punctuation, word numbers, cancel timer",
+            description = "Sent text messages preserve the trailing ? / ! you said. SetTimer / SetAlarm / Reminder all recognise 11-19 and 21-99 as word-form durations (\"set a timer for eleven minutes\"). \"Cancel timer\" now points to the Clock app instead of claiming there's no reminder by that name (#11).",
+            sampleQuery = "set a timer for eleven minutes",
+            docsPath = "voice-commands/",
+        ),
+        FeatureEntry(
             id = "v1-6-0-notif-log",
             date = "2026-06-07",
             companionVersion = "v1.6.0",

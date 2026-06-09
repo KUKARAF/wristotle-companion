@@ -1,0 +1,29 @@
+Voice fixes — four bug fixes
+landed in voice handling.
+
+• Sent text messages now keep the
+  trailing ? or ! you said. Saying
+  "text dad did you have lunch?" no
+  longer sends "did you have lunch".
+
+• SetTimer recognises 11-19 and the
+  compound tens (twenty-one through
+  ninety-nine) as word-form durations.
+  "Set a timer for eleven minutes"
+  used to return "Couldn't understand
+  the duration"; now it works (#11).
+
+• Same word-number coverage extends
+  to Reminder, SetAlarm, Reschedule,
+  CreateEvent, and Calendar — anything
+  that flows through the time parser.
+  "Set an alarm for thirteen minutes"
+  works for the first time.
+
+• "Cancel timer" now points you at
+  the Clock app instead of insisting
+  there's no reminder by that name.
+  Android has no public DISMISS_TIMER
+  intent, so cancelling a timer has
+  always required the Clock app —
+  this just tells you that honestly.
