@@ -144,6 +144,10 @@ jobs:
 
           api() { curl -sS -w '\n%{http_code}' "$@"; }
 
+          # See release.yml for the full rationale — PATCH leaves the tag-auto
+          # release's `created_at = 1970-01-01` intact, which sinks the entry
+          # to the bottom of the date-sorted releases page. Always DELETE +
+          # POST so the release surfaces with the right timestamp.
           LOOKUP=$(api \
             "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" \
             -H "Authorization: token ${CODEBERG_TOKEN}")
@@ -151,23 +155,19 @@ jobs:
           LOOKUP_STATUS=$(printf '%s' "$LOOKUP" | tail -n1)
 
           if [ "$LOOKUP_STATUS" = "200" ]; then
-            RELEASE_ID=$(echo "$LOOKUP_BODY" | jq -r '.id')
-            curl -fsS -X PATCH \
-              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
-              -H "Authorization: token ${CODEBERG_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d "$(jq -n --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
-                    '{name: $name, body: $body, draft: false, prerelease: false}')" \
-              > /dev/null
-          else
-            CREATE=$(curl -fsS -X POST \
-              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases" \
-              -H "Authorization: token ${CODEBERG_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d "$(jq -n --arg tag "$TAG" --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
-                    '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: false}')")
-            RELEASE_ID=$(echo "$CREATE" | jq -r '.id')
+            OLD_ID=$(echo "$LOOKUP_BODY" | jq -r '.id')
+            curl -fsS -X DELETE \
+              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${OLD_ID}" \
+              -H "Authorization: token ${CODEBERG_TOKEN}"
           fi
+
+          CREATE=$(curl -fsS -X POST \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases" \
+            -H "Authorization: token ${CODEBERG_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg tag "$TAG" --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
+                  '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: false}')")
+          RELEASE_ID=$(echo "$CREATE" | jq -r '.id')
 
           ASSETS=$(curl -fsS \
             "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets" \

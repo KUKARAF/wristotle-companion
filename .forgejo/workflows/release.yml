@@ -216,10 +216,14 @@ jobs:
 
           api() { curl -sS -w '\n%{http_code}' "$@"; }
 
-          # Codeberg auto-creates a release entry for every pushed tag, so a
-          # release for $TAG already exists by the time this workflow runs.
-          # Look it up first; only create if the lookup 404s. The release we
-          # find (or create) carries an id we use to attach the APK asset.
+          # Codeberg auto-creates a release entry for every pushed tag, but
+          # that stub gets `created_at = 1970-01-01` and PATCH doesn't refresh
+          # the timestamp — so the release sinks to the bottom of the
+          # date-sorted releases list (caught after the v1.6.1 retag, when
+          # the page appeared empty even though the assets were attached).
+          # Workaround: always DELETE the stub (or any prior release for this
+          # tag, including a previous re-run) and POST a fresh one. The asset
+          # upload loop below re-attaches the APK + sha256 on the new id.
           RELEASE_LOOKUP=$(api \
             "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" \
             -H "Authorization: token ${CODEBERG_TOKEN}")
@@ -227,26 +231,21 @@ jobs:
           LOOKUP_STATUS=$(printf '%s' "$RELEASE_LOOKUP" | tail -n1)
 
           if [ "$LOOKUP_STATUS" = "200" ]; then
-            RELEASE_ID=$(echo "$LOOKUP_BODY" | jq -r '.id')
-            echo "Found existing release ${RELEASE_ID} for ${TAG}; updating name + body."
-            # Refresh name/body so the auto-created entry shows useful info.
-            curl -fsS -X PATCH \
-              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
-              -H "Authorization: token ${CODEBERG_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d "$(jq -n --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
-                    '{name: $name, body: $body, draft: false, prerelease: false}')" \
-              > /dev/null
-          else
-            echo "No existing release for ${TAG} (lookup status ${LOOKUP_STATUS}); creating."
-            CREATE_RESP=$(curl -fsS -X POST \
-              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases" \
-              -H "Authorization: token ${CODEBERG_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d "$(jq -n --arg tag "$TAG" --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
-                    '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: false}')")
-            RELEASE_ID=$(echo "$CREATE_RESP" | jq -r '.id')
+            OLD_ID=$(echo "$LOOKUP_BODY" | jq -r '.id')
+            echo "Removing prior release ${OLD_ID} for ${TAG} so the new one gets a fresh created_at."
+            curl -fsS -X DELETE \
+              "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases/${OLD_ID}" \
+              -H "Authorization: token ${CODEBERG_TOKEN}"
           fi
+
+          echo "Creating fresh release for ${TAG}."
+          CREATE_RESP=$(curl -fsS -X POST \
+            "https://codeberg.org/api/v1/repos/${GITHUB_REPOSITORY}/releases" \
+            -H "Authorization: token ${CODEBERG_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg tag "$TAG" --arg name "Wristotle Companion $VERSION" --arg body "$BODY" \
+                  '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: false}')")
+          RELEASE_ID=$(echo "$CREATE_RESP" | jq -r '.id')
 
           if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
             echo "Couldn't resolve a release id."
