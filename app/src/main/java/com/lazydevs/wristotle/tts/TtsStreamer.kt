@@ -12,6 +12,12 @@ import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import com.lazydevs.wristotle.speech.nlu.tts.PebblePcmConverter
 import com.lazydevs.wristotle.speech.nlu.tts.TtsProvider
 import com.lazydevs.wristotle.speech.nlu.tts.TtsResult
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 
 private const val TAG = "TtsStreamer"
 
@@ -27,31 +33,103 @@ class TtsStreamer(
     private val provider: TtsProvider,
 ) {
 
-    /** Synthesize [text] → PCM → chunked send. Suspends until the last
-     *  chunk has been ACKed. Returns `null` on success; a short
-     *  user-facing reason string on failure (so the Settings card and
-     *  any future error UI can show what went wrong without forcing
-     *  the user into logcat). */
-    suspend fun speak(text: String, chunkBytes: Int = DEFAULT_CHUNK_BYTES): String? {
-        return when (val synth = provider.synthesizeToWav(text)) {
-            is TtsResult.Failure -> {
-                Log.w(TAG, "${provider.displayName} failed: ${synth.reason}")
-                synth.reason
+    /**
+     * Synthesize [text] → PCM → chunked send. Splits [text] on sentence
+     * boundaries and runs synthesis for later sentences IN PARALLEL with
+     * playback of earlier ones, so time-to-first-audio is bounded by the
+     * first sentence's synth time, not the whole phrase's.
+     *
+     * Streaming pacing state is shared across sentences so playback is
+     * gapless — the watch sees the concatenated PCM as one stream.
+     * Returns `null` on success, a short reason on failure.
+     */
+    suspend fun speak(text: String, chunkBytes: Int = DEFAULT_CHUNK_BYTES): String? =
+        coroutineScope {
+            val speakStartMs = System.currentTimeMillis()
+            val sentences = splitIntoSentences(text)
+            if (sentences.isEmpty()) return@coroutineScope "empty text"
+
+            // Foreground synth for sentence 0 — needed before we can stream
+            // anything.
+            val first = synthesizeToPcm(sentences[0])
+            val firstPcm = first.pcm ?: return@coroutineScope first.failureReason
+            Log.i(TAG, "tts: +${System.currentTimeMillis() - speakStartMs}ms sentence 0 synth done (${firstPcm.size}B)")
+
+            // Pipelined-sequential synthesis: kick off sentence N+1's synth
+            // RIGHT BEFORE we start streaming sentence N, so the next synth
+            // overlaps with the current stream's playback time. Only one
+            // synth is in flight at any moment — required because the
+            // Android `TextToSpeech` engine can't service concurrent
+            // synthesizeToFile calls on the same provider instance (the
+            // listener is per-instance, so requests collide and all but
+            // one return empty WAVs).
+            val cs: CoroutineScope = this
+            fun synthAsync(i: Int): Deferred<SynthResult> =
+                cs.async(Dispatchers.Default) { synthesizeToPcm(sentences[i]) }
+
+            var nextSynth: Deferred<SynthResult>? =
+                if (sentences.size > 1) synthAsync(1) else null
+            Log.i(TAG, "speak(${sentences.size} sentences): sentence 0 ready ${firstPcm.size}B" +
+                (if (nextSynth != null) ", sentence 1 synth started" else ""))
+
+            val state = StreamState()
+            if (!streamPcmContinuation(firstPcm, chunkBytes, state, isFirst = true, isLast = sentences.size == 1)) {
+                return@coroutineScope "watch send failed (BLE disconnected?)"
             }
-            is TtsResult.Success -> {
-                val wavBytes = synth.wavBytes
-                val decoded = PebblePcmConverter.decodeWavToMonoS16(wavBytes, WristotleLogger)
-                if (decoded == null) {
-                    Log.w(TAG, "wav decode failed (bytes=${wavBytes.size})")
-                    return "WAV decode failed (${wavBytes.size} B response — wrong response_format?)"
+
+            for (i in 1 until sentences.size) {
+                val result = nextSynth!!.await()
+                // Pre-kick the FOLLOWING synth before streaming this one so
+                // it runs in parallel with playback rather than after.
+                nextSynth = if (i + 1 < sentences.size) synthAsync(i + 1) else null
+                val pcm = result.pcm
+                if (pcm == null) {
+                    Log.w(TAG, "sentence $i synth failed: ${result.failureReason}")
+                    continue
                 }
-                val (s16, srcRate) = decoded
-                val pcm = PebblePcmConverter.convert(s16, srcRate, WristotleLogger)
-                Log.i(TAG, "synthesized ${text.length} chars → ${pcm.size} bytes 8kHz/8bit PCM")
-                if (streamChunks(pcm, chunkBytes)) null
-                else "watch send failed (BLE disconnected?)"
+                val isLast = i == sentences.size - 1
+                if (!streamPcmContinuation(pcm, chunkBytes, state, isFirst = false, isLast = isLast)) {
+                    return@coroutineScope "watch send failed mid-stream"
+                }
+            }
+            null
+        }
+
+    private data class SynthResult(val pcm: ByteArray?, val failureReason: String?)
+
+    /** Provider call + DSP pipeline → 8 kHz s8 PCM. */
+    private suspend fun synthesizeToPcm(text: String): SynthResult =
+        when (val synth = provider.synthesizeToWav(text)) {
+            is TtsResult.Failure -> SynthResult(null, synth.reason)
+            is TtsResult.Success -> {
+                val decoded = PebblePcmConverter.decodeWavToMonoS16(synth.wavBytes, WristotleLogger)
+                if (decoded == null) {
+                    SynthResult(null, "WAV decode failed (${synth.wavBytes.size} B; wrong response_format?)")
+                } else {
+                    val (s16, srcRate) = decoded
+                    SynthResult(PebblePcmConverter.convert(s16, srcRate, WristotleLogger), null)
+                }
             }
         }
+
+    /**
+     * Sentence splitter. Keeps the terminating punctuation with the sentence
+     * so the TTS engine still hears "Hi." instead of "Hi". Decimals + times
+     * are unaffected because they lack the trailing space.
+     *
+     * Newlines also delimit — morning-brief style replies use one section
+     * per line with no terminating period, and without this they'd come
+     * through as a single multi-line "sentence" and burn the whole synth
+     * before audio could start. The splitter is intentionally aggressive:
+     * over-splitting just trades one parallel synth call for one shorter
+     * one, while under-splitting kills time-to-first-audio.
+     */
+    private fun splitIntoSentences(text: String): List<String> {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return emptyList()
+        return trimmed.split(Regex("(?<=[.!?])\\s+|\\n+"))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
     }
 
     // ── Spike-card diagnostics ─────────────────────────────────────────
@@ -134,48 +212,95 @@ class TtsStreamer(
 
     // ── Streaming ──────────────────────────────────────────────────────
 
-    private suspend fun streamChunks(pcm: ByteArray, chunkBytes: Int): Boolean {
-        val t0 = System.currentTimeMillis()
+    /** Shared pacing state across multiple `streamPcmContinuation` calls.
+     *  Tracked in terms of ring-usage rather than wall-vs-expected-audio
+     *  so the between-sentence await gap doesn't trick the pacing into
+     *  burst-catching-up (which overflows the 12 KB watch ring and drops
+     *  bytes silently). */
+    private class StreamState {
+        var startMs: Long = 0L              // first chunk wall time
+        var totalSent: Int = 0              // bytes shipped, all sentences
+        var hasStarted: Boolean = false
+        var speakerStartMs: Long = 0L       // wall time prebuffer was met
+        var hasPrimed: Boolean = false
+    }
+
+    /**
+     * Send [pcm] as a continuation of an ongoing watch stream. Pacing is
+     * keyed off [state]'s cumulative totals so back-to-back sentences play
+     * gaplessly: the watch sees one virtually-uninterrupted PCM stream.
+     *
+     * `tts_start=1` and `tts_end=1` flags are gated by [isFirst]/[isLast]
+     * AT THE PER-STREAM level — not per-sentence — so the watch's state
+     * machine sees a single BUFFERING → PLAYING → FINISHING cycle across
+     * the whole speech.
+     */
+    private suspend fun streamPcmContinuation(
+        pcm: ByteArray,
+        chunkBytes: Int,
+        state: StreamState,
+        isFirst: Boolean,
+        isLast: Boolean,
+    ): Boolean {
+        if (!state.hasStarted) {
+            state.startMs = System.currentTimeMillis()
+            state.hasStarted = true
+        }
         var offset = 0
         var chunkIdx = 0
         while (offset < pcm.size) {
             val end = minOf(offset + chunkBytes, pcm.size)
+            val chunkSize = end - offset
             val chunk = pcm.copyOfRange(offset, end)
-            val isFirst = offset == 0
-            val isLast  = end == pcm.size
-            val ok = transport.sendTtsChunk(chunk, start = isFirst, end = isLast)
+            val isFirstChunkOverall = isFirst && offset == 0
+            val isLastChunkOverall  = isLast  && end == pcm.size
+            val ok = transport.sendTtsChunk(chunk, start = isFirstChunkOverall, end = isLastChunkOverall)
             if (!ok) {
-                Log.w(TAG, "chunk $chunkIdx send failed at offset $offset")
+                Log.w(TAG, "chunk $chunkIdx send failed at totalSent=${state.totalSent}")
                 return false
             }
             offset = end
             chunkIdx++
+            val prevTotal = state.totalSent
+            state.totalSent += chunkSize
+            if (!state.hasPrimed && state.totalSent >= WATCH_PREBUFFER_BYTES) {
+                state.speakerStartMs = System.currentTimeMillis()
+                state.hasPrimed = true
+                Log.i(TAG, "tts: +${state.speakerStartMs - state.startMs}ms prebuffer (${WATCH_PREBUFFER_BYTES}B) sent — watch should open speaker now")
+            }
 
-            // ── Backpressure: don't outrun the watch's 8 kHz playback ──
-            // Watch ring is 12 KB and pre-buffer threshold is 11 KB. The
-            // companion can blast at ~12 KB/s while the speaker only
-            // drains at 8 KB/s. Once we're past the pre-buffer, the
-            // ring overflows and `prv_ring_write` silently drops the
-            // tail of every chunk — audible as "first sentence clear,
-            // rest garbled and sped up" because sequential samples
-            // skip in the audio stream.
+            // Cap watch-ring usage rather than chase wall-vs-expected-audio
+            // pacing. The latter falls apart across sentence boundaries
+            // (await advances wall time but not totalSent, then the next
+            // sentence's first chunks burst at BLE rate into a near-full
+            // ring → overflow → dropped bytes → audible cuts mid-message).
             //
-            // Burst-send while ramping up to the watch's pre-buffer
-            // threshold so playback can start quickly; after that,
-            // pace each send so cumulative bytes-out stays under the
-            // 8 KB/s playback rate (the speaker's natural ceiling).
-            if (offset >= WATCH_PREBUFFER_BYTES && offset < pcm.size) {
-                val expectedAudioMs = (offset - WATCH_PREBUFFER_BYTES) * 1000L / PLAYBACK_BYTES_PER_SEC
-                val actualWallMs = System.currentTimeMillis() - t0
-                val leadMs = expectedAudioMs - actualWallMs
-                if (leadMs > 0) kotlinx.coroutines.delay(leadMs)
+            // Ring-usage = bytes sent - bytes the speaker has drained since
+            // it opened. Hold below MAX_RING so the next chunk has somewhere
+            // safe to land. When we're behind (under MAX), send freely —
+            // BLE caps the catch-up rate naturally at ~10-12 KB/s.
+            if (state.hasPrimed && !(isLast && offset == pcm.size)) {
+                val playedMs = (System.currentTimeMillis() - state.speakerStartMs)
+                    .coerceAtLeast(0L)
+                val playedBytes = playedMs * PLAYBACK_BYTES_PER_SEC / 1000L
+                val ringUsage = state.totalSent - playedBytes
+                if (ringUsage > MAX_RING_USAGE) {
+                    val overshoot = ringUsage - MAX_RING_USAGE
+                    val drainMs = overshoot * 1000L / PLAYBACK_BYTES_PER_SEC
+                    delay(drainMs)
+                }
             }
         }
-        val elapsed = System.currentTimeMillis() - t0
-        val bps = if (elapsed > 0) pcm.size * 1000L / elapsed else 0L
-        Log.i(TAG, "sent ${pcm.size}B in $chunkIdx chunks in ${elapsed}ms (${bps} B/s)")
+        val wall = System.currentTimeMillis() - state.startMs
+        Log.i(TAG, "stream stage done: +${pcm.size}B total=${state.totalSent}B wall=${wall}ms first=$isFirst last=$isLast")
         return true
     }
+
+    /** Single-shot stream — sentence-pipelining isn't relevant for the
+     *  diagnostic tone path, but we route through the same pacing code
+     *  so back-pressure behaviour matches what real TTS sees. */
+    private suspend fun streamChunks(pcm: ByteArray, chunkBytes: Int): Boolean =
+        streamPcmContinuation(pcm, chunkBytes, StreamState(), isFirst = true, isLast = true)
 
     companion object {
         // AppMessage inbox on emery is `app_message_inbox_size_maximum()`,
@@ -191,5 +316,11 @@ class TtsStreamer(
 
         /** emery speaker fixed rate: 8 kHz × 1 byte/sample = 8000 B/s. */
         private const val PLAYBACK_BYTES_PER_SEC = 8000L
+
+        /** Cap on watch ring usage during streaming — keeps us safely under
+         *  the 12 KB ring cap (TTS_RING_BYTES) so the next chunk has room
+         *  to land. ~600 B headroom = 75 ms of audio at 8 kHz, well below
+         *  BLE jitter so we don't oversubscribe. */
+        private const val MAX_RING_USAGE = 11500L
     }
 }
