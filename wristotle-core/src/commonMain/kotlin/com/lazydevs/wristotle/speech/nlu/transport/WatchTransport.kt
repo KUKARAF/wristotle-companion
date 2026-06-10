@@ -31,6 +31,14 @@ interface WatchTransport {
     /** Presence-only ping — sends `1u` as a UInt8 on [key]. */
     suspend fun sendPresence(key: UInt): Boolean
 
+    /**
+     * Send a raw byte payload on [key] (optionally with [start]/[end] presence
+     * flags in the same AppMessage so the watch can open/close a stream around
+     * the chunk in one round-trip). Added for the TTS spike — see
+     * `on-watch-tts.md`.
+     */
+    suspend fun sendTtsChunk(bytes: ByteArray, start: Boolean, end: Boolean): Boolean
+
     /** Insert (or replace) a reminder pin on the watch's timeline. */
     suspend fun insertReminderPin(pin: ReminderPin): TimelineSendResult
 

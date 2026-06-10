@@ -525,8 +525,10 @@ private fun SettingsCategoryContent(
             SettingsCategory.AskAgent ->
                 AskAgentSettingsCard(settings = askAgentSettings)
 
-            SettingsCategory.Diagnostics ->
+            SettingsCategory.Diagnostics -> {
                 DiagnosticsCard(vm = diagnosticsVm)
+                TtsSpikeCard()
+            }
 
             SettingsCategory.Help -> {
                 // Pass the captured highlight version to HelpCard
