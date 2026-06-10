@@ -120,16 +120,31 @@ class TtsStreamer(
      * Newlines also delimit — morning-brief style replies use one section
      * per line with no terminating period, and without this they'd come
      * through as a single multi-line "sentence" and burn the whole synth
-     * before audio could start. The splitter is intentionally aggressive:
-     * over-splitting just trades one parallel synth call for one shorter
-     * one, while under-splitting kills time-to-first-audio.
+     * before audio could start.
+     *
+     * Additionally, if the first sentence after the standard split is long
+     * and has a comma, split off a leading clause so time-to-first-audio
+     * drops to one short synth instead of waiting for the whole long
+     * sentence. Trades a small intonation seam at the first comma for
+     * 2-4 seconds of perceived latency. Only applies to the FIRST
+     * sentence — subsequent sentences pipeline behind playback so their
+     * synth time is hidden.
      */
     private fun splitIntoSentences(text: String): List<String> {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return emptyList()
-        return trimmed.split(Regex("(?<=[.!?])\\s+|\\n+"))
+        val base = trimmed.split(Regex("(?<=[.!?])\\s+|\\n+"))
             .map { it.trim() }
             .filter { it.isNotEmpty() }
+        if (base.isEmpty()) return base
+
+        val first = base[0]
+        if (first.length <= FAST_START_MIN_LENGTH) return base
+        val commaIdx = first.indexOf(',')
+        if (commaIdx !in FAST_START_MIN_PREFIX..FAST_START_MAX_PREFIX) return base
+        val firstChunk = first.substring(0, commaIdx + 1)
+        val rest = first.substring(commaIdx + 1).trim()
+        return listOf(firstChunk, rest) + base.drop(1)
     }
 
     // ── Spike-card diagnostics ─────────────────────────────────────────
@@ -311,11 +326,23 @@ class TtsStreamer(
         const val DEFAULT_CHUNK_BYTES = 6144
 
         /** Watch ring pre-buffer threshold — keep in sync with
-         *  `TTS_START_THRESHOLD` in `tts/tts.c`. */
-        private const val WATCH_PREBUFFER_BYTES = 11264
+         *  `TTS_START_THRESHOLD` in `tts/tts.c`. Lower = faster
+         *  time-to-first-audio (~500 ms at 4 KB vs ~1.4 s at 11 KB).
+         *  Ring-usage pacing keeps the ring topped up regardless of
+         *  where we open the speaker, so we don't need a big upfront
+         *  buffer for underrun protection. */
+        private const val WATCH_PREBUFFER_BYTES = 4096
 
         /** emery speaker fixed rate: 8 kHz × 1 byte/sample = 8000 B/s. */
         private const val PLAYBACK_BYTES_PER_SEC = 8000L
+
+        /** Aggressive first-sentence comma-split thresholds. Only activates
+         *  if the first sentence is long enough that comma-splitting saves
+         *  meaningful synth time AND the comma sits in a sane position
+         *  (not the second character, not the last). */
+        private const val FAST_START_MIN_LENGTH = 60   // chars
+        private const val FAST_START_MIN_PREFIX = 15   // shortest leading clause
+        private const val FAST_START_MAX_PREFIX = 80   // longest leading clause
 
         /** Cap on watch ring usage during streaming — keeps us safely under
          *  the 12 KB ring cap (TTS_RING_BYTES) so the next chunk has room
