@@ -153,6 +153,26 @@ class TtsStreamer(
             }
             offset = end
             chunkIdx++
+
+            // ── Backpressure: don't outrun the watch's 8 kHz playback ──
+            // Watch ring is 12 KB and pre-buffer threshold is 11 KB. The
+            // companion can blast at ~12 KB/s while the speaker only
+            // drains at 8 KB/s. Once we're past the pre-buffer, the
+            // ring overflows and `prv_ring_write` silently drops the
+            // tail of every chunk — audible as "first sentence clear,
+            // rest garbled and sped up" because sequential samples
+            // skip in the audio stream.
+            //
+            // Burst-send while ramping up to the watch's pre-buffer
+            // threshold so playback can start quickly; after that,
+            // pace each send so cumulative bytes-out stays under the
+            // 8 KB/s playback rate (the speaker's natural ceiling).
+            if (offset >= WATCH_PREBUFFER_BYTES && offset < pcm.size) {
+                val expectedAudioMs = (offset - WATCH_PREBUFFER_BYTES) * 1000L / PLAYBACK_BYTES_PER_SEC
+                val actualWallMs = System.currentTimeMillis() - t0
+                val leadMs = expectedAudioMs - actualWallMs
+                if (leadMs > 0) kotlinx.coroutines.delay(leadMs)
+            }
         }
         val elapsed = System.currentTimeMillis() - t0
         val bps = if (elapsed > 0) pcm.size * 1000L / elapsed else 0L
@@ -167,5 +187,12 @@ class TtsStreamer(
         // callback fires less often, which reduces opportunities for
         // jitter that costs the watch a buffer top-up.
         const val DEFAULT_CHUNK_BYTES = 6144
+
+        /** Watch ring pre-buffer threshold — keep in sync with
+         *  `TTS_START_THRESHOLD` in `tts/tts.c`. */
+        private const val WATCH_PREBUFFER_BYTES = 11264
+
+        /** emery speaker fixed rate: 8 kHz × 1 byte/sample = 8000 B/s. */
+        private const val PLAYBACK_BYTES_PER_SEC = 8000L
     }
 }

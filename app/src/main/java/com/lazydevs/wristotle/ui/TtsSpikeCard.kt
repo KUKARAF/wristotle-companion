@@ -43,10 +43,21 @@ fun TtsSpikeCard() {
     val app = context.applicationContext as WristotleApplication
     val scope = rememberCoroutineScope()
 
-    var text by remember { mutableStateOf("Hello, this is Wristotle speaking from your watch.") }
+    var text by remember {
+        mutableStateOf(
+            "Hello, this is Wristotle speaking from your watch. " +
+            "The current time is 3:42, the weather is partly cloudy with a high of 72 degrees, " +
+            "and you have 4 unread messages waiting for you."
+        )
+    }
     var status by remember { mutableStateOf("idle") }
 
-    val streamer = remember { TtsStreamer(context, app.transport, app.buildTtsProvider()) }
+    // Build the streamer per-click — `remember { … buildTtsProvider() }` would
+    // cache the provider from the moment this composable was first read, so
+    // any mode / URL / voice changes the user made in TtsProviderCard since
+    // then would be silently ignored and the spike card would play whatever
+    // the provider had been when the page first opened.
+    fun freshStreamer() = TtsStreamer(context, app.transport, app.buildTtsProvider())
 
     Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -69,7 +80,7 @@ fun TtsSpikeCard() {
                 onClick = {
                     status = "synthesizing…"
                     scope.launch {
-                        val reason = runCatching { streamer.speak(text) }.getOrElse {
+                        val reason = runCatching { freshStreamer().speak(text) }.getOrElse {
                             status = "error: ${it.message ?: it.javaClass.simpleName}"
                             return@launch
                         }
@@ -83,7 +94,7 @@ fun TtsSpikeCard() {
                 onClick = {
                     status = "streaming 440 Hz to watch…"
                     scope.launch {
-                        val ok = runCatching { streamer.playTestTone(seconds = 3.0) }.getOrElse {
+                        val ok = runCatching { freshStreamer().playTestTone(seconds = 3.0) }.getOrElse {
                             status = "error: ${it.message ?: it.javaClass.simpleName}"
                             return@launch
                         }
@@ -99,7 +110,7 @@ fun TtsSpikeCard() {
                 onClick = {
                     status = "synthesizing → phone…"
                     scope.launch {
-                        val ok = runCatching { streamer.speakOnPhone(text) }.getOrElse {
+                        val ok = runCatching { freshStreamer().speakOnPhone(text) }.getOrElse {
                             status = "error: ${it.message ?: it.javaClass.simpleName}"
                             return@launch
                         }
@@ -112,7 +123,7 @@ fun TtsSpikeCard() {
             OutlinedButton(
                 onClick = {
                     status = "tone → phone"
-                    streamer.playTonePhone(seconds = 3.0)
+                    freshStreamer().playTonePhone(seconds = 3.0)
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Play 440 Hz tone on phone") }

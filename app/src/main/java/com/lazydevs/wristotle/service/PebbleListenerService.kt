@@ -409,6 +409,20 @@ class PebbleListenerService : BasePebbleListenerService() {
 
         transport.sendForHint(watchHint, dispatchResult.response)
 
+        // Per-intent TTS on the watch speaker. Master + per-intent toggle
+        // both gate via `shouldSpeak`. Fire-and-forget — we don't want
+        // synthesis latency or BLE jitter to delay the dispatch report.
+        if (app.ttsProviderSettings.shouldSpeak(routed.intent.name)) {
+            coroutineScope.launch {
+                val streamer = com.lazydevs.wristotle.tts.TtsStreamer(
+                    this@PebbleListenerService, transport, app.buildTtsProvider(),
+                )
+                val reason = runCatching { streamer.speak(dispatchResult.response) }
+                    .getOrElse { it.message ?: it.javaClass.simpleName }
+                if (reason != null) Log.w(TAG, "tts speak failed: $reason")
+            }
+        }
+
         if (dispatchResult.success) {
             // Fire-and-forget learning: doesn't block the response, doesn't
             // surface to the user. NluSettings gates whether anything sticks.

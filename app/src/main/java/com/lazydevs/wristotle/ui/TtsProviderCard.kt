@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -36,6 +37,59 @@ import com.lazydevs.wristotle.tts.LocalTtsProvider
 import com.lazydevs.wristotle.tts.TtsStreamer
 import com.lazydevs.wristotle.ui.components.PasswordField
 import kotlinx.coroutines.launch
+
+/**
+ * Display rows for the per-intent checkboxes, grouped so the user can
+ * scan by category. The id strings come from [TtsProviderSettings]
+ * constants so handlers can check the toggle with the same key the UI
+ * writes.
+ */
+private data class IntentGroup(val title: String, val entries: List<Pair<String, String>>)
+
+private val INTENT_GROUPS = listOf(
+    IntentGroup(
+        "Long replies",
+        listOf(
+            TtsProviderSettings.INTENT_ASK_AGENT to "Ask Agent",
+            TtsProviderSettings.INTENT_MORNING_BRIEF to "Morning brief",
+        ),
+    ),
+    IntentGroup(
+        "Quick lookups",
+        listOf(
+            TtsProviderSettings.INTENT_WEATHER to "Weather",
+            TtsProviderSettings.INTENT_WORLD_TIME to "World time",
+            TtsProviderSettings.INTENT_TIME to "Time",
+            TtsProviderSettings.INTENT_BATTERY to "Battery",
+            TtsProviderSettings.INTENT_CALCULATE to "Calculator",
+        ),
+    ),
+    IntentGroup(
+        "Communications",
+        listOf(
+            TtsProviderSettings.INTENT_CALL to "Call confirmations",
+            TtsProviderSettings.INTENT_SEND_MESSAGE to "Message confirmations",
+        ),
+    ),
+    IntentGroup(
+        "Time & schedule",
+        listOf(
+            TtsProviderSettings.INTENT_REMINDER to "Reminder confirmations",
+            TtsProviderSettings.INTENT_SET_ALARM to "Alarm confirmations",
+            TtsProviderSettings.INTENT_SET_TIMER to "Timer confirmations",
+            TtsProviderSettings.INTENT_CALENDAR to "Calendar list",
+            TtsProviderSettings.INTENT_CREATE_EVENT to "Event confirmations",
+        ),
+    ),
+    IntentGroup(
+        "Capture",
+        listOf(
+            TtsProviderSettings.INTENT_NOTE to "Note confirmations",
+            TtsProviderSettings.INTENT_ADD_TASK to "Task add confirmations",
+            TtsProviderSettings.INTENT_LIST_TASKS to "Task list",
+        ),
+    ),
+)
 
 /**
  * Settings → 🔊 Speech (or wherever it lands) — chooses how Ask-Agent and
@@ -70,6 +124,7 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
     val apiKey by settings.httpApiKey.collectAsState()
     val model by settings.httpModel.collectAsState()
     val voice by settings.httpVoice.collectAsState()
+    val intents by settings.intentsEnabled.collectAsState()
 
     var status by remember { mutableStateOf("") }
 
@@ -92,6 +147,30 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
             }
 
             if (enabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Speak which replies?", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Per-intent — pick what the watch reads aloud. Nothing is spoken by default.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                INTENT_GROUPS.forEachIndexed { idx, group ->
+                    if (idx > 0) Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        group.title,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    group.entries.forEach { (id, label) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = id in intents,
+                                onCheckedChange = { settings.setIntentEnabled(id, it) },
+                            )
+                            Text(label)
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Mode", style = MaterialTheme.typography.titleSmall)
                 RadioRow(
