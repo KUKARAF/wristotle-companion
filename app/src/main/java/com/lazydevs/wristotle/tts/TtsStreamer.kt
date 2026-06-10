@@ -3,7 +3,6 @@
 
 package com.lazydevs.wristotle.tts
 
-import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
@@ -13,7 +12,6 @@ import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 import com.lazydevs.wristotle.speech.nlu.tts.PebblePcmConverter
 import com.lazydevs.wristotle.speech.nlu.tts.TtsProvider
 import com.lazydevs.wristotle.speech.nlu.tts.TtsResult
-import java.io.File
 
 private const val TAG = "TtsStreamer"
 
@@ -25,11 +23,9 @@ private const val TAG = "TtsStreamer"
  * and drains it to `speaker_stream_write`.
  */
 class TtsStreamer(
-    context: Context,
     private val transport: WatchTransport,
     private val provider: TtsProvider,
 ) {
-    private val appContext = context.applicationContext
 
     /** Synthesize [text] → PCM → chunked send. Suspends until the last
      *  chunk has been ACKed. Returns `null` on success; a short
@@ -75,7 +71,6 @@ class TtsStreamer(
         val (s16, srcRate) = PebblePcmConverter.decodeWavToMonoS16(synth.wavBytes, WristotleLogger)
             ?: return false
         val pcm = PebblePcmConverter.convert(s16, srcRate, WristotleLogger)
-        runCatching { File(appContext.cacheDir, "tts_spike.pcm").writeBytes(pcm) }
         playPcmOnPhone(pcm)
         return true
     }
@@ -128,11 +123,13 @@ class TtsStreamer(
         track.write(s16, 0, s16.size)
         track.play()
         Log.i(TAG, "playing ${s8Pcm.size} bytes through phone AudioTrack")
+        // Daemon so it doesn't keep the JVM alive if the app process is
+        // shutting down mid-playback.
         Thread {
             try { Thread.sleep((s8Pcm.size * 1000L / sampleRate) + 200L) } catch (_: InterruptedException) {}
             track.stop()
             track.release()
-        }.start()
+        }.apply { isDaemon = true; name = "TtsAudioTrackRelease" }.start()
     }
 
     // ── Streaming ──────────────────────────────────────────────────────

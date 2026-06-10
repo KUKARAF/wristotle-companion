@@ -246,7 +246,7 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
                                 TtsProviderMode.LOCAL_PRIMARY -> LocalTtsProvider(context)
                                 TtsProviderMode.CLOUD_PRIMARY -> HttpTtsClient(settings)
                             }
-                            val streamer = TtsStreamer(context, app.transport, primary)
+                            val streamer = TtsStreamer(app.transport, primary)
                             val reason = runCatching { streamer.speak("Hello from Wristotle.") }
                                 .getOrElse {
                                     status = "$primaryLabel error: ${it.message ?: it.javaClass.simpleName}"

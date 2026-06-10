@@ -415,7 +415,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         if (app.ttsProviderSettings.shouldSpeak(routed.intent.name)) {
             coroutineScope.launch {
                 val streamer = com.lazydevs.wristotle.tts.TtsStreamer(
-                    this@PebbleListenerService, transport, app.buildTtsProvider(),
+                    transport, app.buildTtsProvider(),
                 )
                 val reason = runCatching { streamer.speak(dispatchResult.response) }
                     .getOrElse { it.message ?: it.javaClass.simpleName }

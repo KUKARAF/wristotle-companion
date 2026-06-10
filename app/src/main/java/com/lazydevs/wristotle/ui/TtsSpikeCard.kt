@@ -57,7 +57,7 @@ fun TtsSpikeCard() {
     // any mode / URL / voice changes the user made in TtsProviderCard since
     // then would be silently ignored and the spike card would play whatever
     // the provider had been when the page first opened.
-    fun freshStreamer() = TtsStreamer(context, app.transport, app.buildTtsProvider())
+    fun freshStreamer() = TtsStreamer(app.transport, app.buildTtsProvider())
 
     Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
