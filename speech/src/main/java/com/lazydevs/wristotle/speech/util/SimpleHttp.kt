@@ -98,4 +98,48 @@ object SimpleHttp {
         connectTimeoutMs = connectTimeoutMs,
         readTimeoutMs = readTimeoutMs,
     )
+
+    /**
+     * Binary-response variant for endpoints that return audio / images /
+     * other non-text payloads (TTS WAV downloads, etc.). On 2xx returns the
+     * raw response body bytes; on non-2xx returns the (text) error body so
+     * the caller can decode provider errors the same way the text variant
+     * does. Returns `null` on transport failure, mirroring [request].
+     */
+    fun requestBytes(
+        url: String,
+        method: String = "GET",
+        headers: Map<String, String> = emptyMap(),
+        body: ByteArray? = null,
+        connectTimeoutMs: Int = 10_000,
+        readTimeoutMs: Int = 60_000,
+    ): Triple<Int, ByteArray?, String?>? {
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            connectTimeout = connectTimeoutMs
+            readTimeout = readTimeoutMs
+            setRequestProperty("User-Agent", WRISTOTLE_USER_AGENT)
+            headers.forEach { (k, v) -> setRequestProperty(k, v) }
+            if (body != null) {
+                doOutput = true
+                setFixedLengthStreamingMode(body.size)
+            }
+        }
+        return try {
+            if (body != null) conn.outputStream.use { it.write(body) }
+            val code = conn.responseCode
+            if (code in 200..299) {
+                val bytes = conn.inputStream.use { it.readBytes() }
+                Triple(code, bytes, null)
+            } else {
+                val errText = conn.errorStream?.bufferedReader()?.use { it.readText() }
+                Triple(code, null, errText)
+            }
+        } catch (e: IOException) {
+            Log.w(TAG, "$method $url failed: ${e.message}")
+            null
+        } finally {
+            conn.disconnect()
+        }
+    }
 }

@@ -84,6 +84,7 @@ enum class SettingsCategory(@param:StringRes val labelRes: Int, val emoji: Strin
     Backup(R.string.settings_section_backup, "💾"),
     Mcp(R.string.settings_section_mcp, "🔌"),
     AskAgent(R.string.settings_section_askagent, "✨"),
+    Speech(R.string.settings_section_speech, "🔊"),
     Diagnostics(R.string.settings_section_diagnostics, "🔧"),
     Help(R.string.settings_section_help, "❓"),
     Support(R.string.settings_section_support, "❤️"),
@@ -525,10 +526,13 @@ private fun SettingsCategoryContent(
             SettingsCategory.AskAgent ->
                 AskAgentSettingsCard(settings = askAgentSettings)
 
-            SettingsCategory.Diagnostics -> {
-                DiagnosticsCard(vm = diagnosticsVm)
+            SettingsCategory.Speech -> {
+                TtsProviderCard(settings = app.ttsProviderSettings)
                 TtsSpikeCard()
             }
+
+            SettingsCategory.Diagnostics ->
+                DiagnosticsCard(vm = diagnosticsVm)
 
             SettingsCategory.Help -> {
                 // Pass the captured highlight version to HelpCard

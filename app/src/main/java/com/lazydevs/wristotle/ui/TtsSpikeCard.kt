@@ -46,7 +46,7 @@ fun TtsSpikeCard() {
     var text by remember { mutableStateOf("Hello, this is Wristotle speaking from your watch.") }
     var status by remember { mutableStateOf("idle") }
 
-    val streamer = remember { TtsStreamer(context, app.transport) }
+    val streamer = remember { TtsStreamer(context, app.transport, app.buildTtsProvider()) }
 
     Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -69,11 +69,11 @@ fun TtsSpikeCard() {
                 onClick = {
                     status = "synthesizing…"
                     scope.launch {
-                        val ok = runCatching { streamer.speak(text) }.getOrElse {
+                        val reason = runCatching { streamer.speak(text) }.getOrElse {
                             status = "error: ${it.message ?: it.javaClass.simpleName}"
                             return@launch
                         }
-                        status = if (ok) "sent — check watch + logcat" else "failed"
+                        status = if (reason == null) "sent — check watch + logcat" else "failed: $reason"
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

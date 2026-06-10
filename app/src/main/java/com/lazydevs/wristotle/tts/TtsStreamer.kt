@@ -6,97 +6,76 @@ package com.lazydevs.wristotle.tts
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
-import android.media.AudioManager
 import android.media.AudioTrack
-import android.os.Bundle
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import com.lazydevs.wristotle.logging.WristotleLogger
 import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
+import com.lazydevs.wristotle.speech.nlu.tts.PebblePcmConverter
+import com.lazydevs.wristotle.speech.nlu.tts.TtsProvider
+import com.lazydevs.wristotle.speech.nlu.tts.TtsResult
 import java.io.File
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.suspendCancellableCoroutine
 
 private const val TAG = "TtsStreamer"
 
 /**
- * Spike (2026-06-09) — Path B sender. Drives Android's [TextToSpeech] to
- * synthesize text to a WAV file, downsamples/requantizes to the emery
- * speaker's 8 kHz signed 8-bit mono format, then ships the PCM to the watch
- * in chunked AppMessages via [WatchTransport.sendTtsChunk].
- *
- * Spike scope: hardcoded chunk size, no error UI, single-shot. The
- * goal is to measure the watch-side throughput from the log line that
- * `tts.c::prv_end` emits at stream close.
+ * Path B: ask the configured [TtsProvider] for a WAV, run it through
+ * [PebblePcmConverter] (DSP pipeline → 8 kHz signed 8-bit mono PCM), and
+ * ship the PCM to the watch in chunked AppMessages via
+ * [WatchTransport.sendTtsChunk]. The watch's `tts/tts.c` module buffers
+ * and drains it to `speaker_stream_write`.
  */
 class TtsStreamer(
     context: Context,
     private val transport: WatchTransport,
+    private val provider: TtsProvider,
 ) {
     private val appContext = context.applicationContext
 
-    /**
-     * Synthesize [text] → PCM → chunked send. Suspends until the last chunk
-     * has been ACKed. Returns true on success, false on TTS or send failure.
-     */
-    suspend fun speak(text: String, chunkBytes: Int = DEFAULT_CHUNK_BYTES): Boolean {
-        val wavFile = File(appContext.cacheDir, "tts_spike.wav")
-        if (wavFile.exists()) wavFile.delete()
-
-        val tts = waitForInit()
-        try {
-            if (!synthesizeBlocking(tts, text, wavFile)) {
-                Log.w(TAG, "synthesize failed")
-                return false
+    /** Synthesize [text] → PCM → chunked send. Suspends until the last
+     *  chunk has been ACKed. Returns `null` on success; a short
+     *  user-facing reason string on failure (so the Settings card and
+     *  any future error UI can show what went wrong without forcing
+     *  the user into logcat). */
+    suspend fun speak(text: String, chunkBytes: Int = DEFAULT_CHUNK_BYTES): String? {
+        return when (val synth = provider.synthesizeToWav(text)) {
+            is TtsResult.Failure -> {
+                Log.w(TAG, "${provider.displayName} failed: ${synth.reason}")
+                synth.reason
             }
-        } finally {
-            tts.shutdown()
+            is TtsResult.Success -> {
+                val wavBytes = synth.wavBytes
+                val decoded = PebblePcmConverter.decodeWavToMonoS16(wavBytes, WristotleLogger)
+                if (decoded == null) {
+                    Log.w(TAG, "wav decode failed (bytes=${wavBytes.size})")
+                    return "WAV decode failed (${wavBytes.size} B response — wrong response_format?)"
+                }
+                val (s16, srcRate) = decoded
+                val pcm = PebblePcmConverter.convert(s16, srcRate, WristotleLogger)
+                Log.i(TAG, "synthesized ${text.length} chars → ${pcm.size} bytes 8kHz/8bit PCM")
+                if (streamChunks(pcm, chunkBytes)) null
+                else "watch send failed (BLE disconnected?)"
+            }
         }
-
-        val pcm = wavToPebblePcm(wavFile) ?: run {
-            Log.w(TAG, "wav→pcm conversion failed (file=${wavFile.length()} bytes)")
-            return false
-        }
-        Log.i(TAG, "synthesized ${text.length} chars → ${pcm.size} bytes 8kHz/8bit PCM")
-
-        return streamChunks(pcm, chunkBytes)
     }
 
-    /**
-     * Diagnostic — bypass TTS entirely and stream a synthesized 440 Hz sine
-     * wave through the same chunking pipeline. If THIS plays cleanly,
-     * crackle/hiss in [speak] is the TTS source's fault. If this still
-     * crackles, the buffer/BLE-pacing path is the culprit.
-     */
+    // ── Spike-card diagnostics ─────────────────────────────────────────
+
     suspend fun playTestTone(seconds: Double = 3.0, chunkBytes: Int = DEFAULT_CHUNK_BYTES): Boolean {
         val pcm = makeSineWave(seconds, 440.0)
         Log.i(TAG, "test tone: 440Hz, ${seconds}s, ${pcm.size} bytes")
         return streamChunks(pcm, chunkBytes)
     }
 
-    /**
-     * Play the *exact* PCM we would ship to the watch through the phone's
-     * speaker via [AudioTrack] at 8 kHz. Lets us A/B watch playback against
-     * what the source PCM actually sounds like at this sample rate / bit
-     * depth — if the phone playback is clean and the watch's crackly, the
-     * watch's playback path is at fault. If the phone is also crackly, the
-     * conversion pipeline is.
-     */
+    /** Synthesize via the configured provider, play through phone AudioTrack.
+     *  Lets us A/B watch playback against what the source PCM sounds like
+     *  at this sample rate / bit depth, independent of the BLE / watch
+     *  speaker path. */
     suspend fun speakOnPhone(text: String): Boolean {
-        val wavFile = File(appContext.cacheDir, "tts_spike.wav")
-        if (wavFile.exists()) wavFile.delete()
-        val tts = waitForInit()
-        try {
-            if (!synthesizeBlocking(tts, text, wavFile)) return false
-        } finally {
-            tts.shutdown()
-        }
-        val pcm = wavToPebblePcm(wavFile) ?: return false
-        // Also dump the s8 PCM to cache so we can pull + analyse outside.
-        runCatching {
-            File(appContext.cacheDir, "tts_spike.pcm").writeBytes(pcm)
-        }
+        val synth = provider.synthesizeToWav(text) as? TtsResult.Success ?: return false
+        val (s16, srcRate) = PebblePcmConverter.decodeWavToMonoS16(synth.wavBytes, WristotleLogger)
+            ?: return false
+        val pcm = PebblePcmConverter.convert(s16, srcRate, WristotleLogger)
+        runCatching { File(appContext.cacheDir, "tts_spike.pcm").writeBytes(pcm) }
         playPcmOnPhone(pcm)
         return true
     }
@@ -108,20 +87,22 @@ class TtsStreamer(
     private fun makeSineWave(seconds: Double, freq: Double): ByteArray {
         val numSamples = (seconds * 8000).toInt()
         val pcm = ByteArray(numSamples)
+        var rng = 0x1234L
         for (i in 0 until numSamples) {
             val s = kotlin.math.sin(2.0 * kotlin.math.PI * freq * i / 8000.0)
-            pcm[i] = (s * 100.0).toInt().toByte()
+            val u1 = ((rng ushr 11) and ((1L shl 53) - 1)).toDouble() / (1L shl 53).toDouble()
+            rng = rng * 6364136223846793005L + 1442695040888963407L
+            val u2 = ((rng ushr 11) and ((1L shl 53) - 1)).toDouble() / (1L shl 53).toDouble()
+            rng = rng * 6364136223846793005L + 1442695040888963407L
+            val dither = u1 - u2
+            pcm[i] = (s * 100.0 + dither).toInt().toByte()
         }
         return pcm
     }
 
     private fun playPcmOnPhone(s8Pcm: ByteArray) {
-        // Convert signed 8-bit → signed 16-bit by left-shift. AudioTrack
-        // supports PCM_8BIT but expects UNSIGNED 8-bit (silence at 128);
-        // PCM_16BIT is universally supported and lossless from our s8 input.
         val s16 = ShortArray(s8Pcm.size)
         for (i in s8Pcm.indices) s16[i] = (s8Pcm[i].toInt() shl 8).toShort()
-
         val sampleRate = 8000
         val minBuf = AudioTrack.getMinBufferSize(
             sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
@@ -147,57 +128,11 @@ class TtsStreamer(
         track.write(s16, 0, s16.size)
         track.play()
         Log.i(TAG, "playing ${s8Pcm.size} bytes through phone AudioTrack")
-        // Schedule release after playback would have finished.
         Thread {
             try { Thread.sleep((s8Pcm.size * 1000L / sampleRate) + 200L) } catch (_: InterruptedException) {}
             track.stop()
             track.release()
         }.start()
-    }
-
-    // ── Android TextToSpeech glue ──────────────────────────────────────
-
-    private suspend fun waitForInit(): TextToSpeech = suspendCancellableCoroutine { cont ->
-        // Prefer Google TTS when present — it's usually higher-quality source
-        // than vendor / Open-Source-only engines. Fall back to whatever is
-        // default if Google's not installed.
-        val preferred = "com.google.android.tts"
-        var triedFallback = false
-        lateinit var tts: TextToSpeech
-        fun build(engine: String?) {
-            tts = TextToSpeech(appContext, { status ->
-                if (status == TextToSpeech.SUCCESS) {
-                    val available = tts.engines.joinToString { it.name }
-                    Log.i(TAG, "TTS engine in use: ${tts.defaultEngine} (available: $available)")
-                    cont.resume(tts)
-                } else if (!triedFallback) {
-                    triedFallback = true
-                    Log.w(TAG, "preferred TTS engine '$engine' failed → falling back to default")
-                    tts.shutdown()
-                    build(null)
-                } else {
-                    cont.resumeWithException(IllegalStateException("TTS init failed: $status"))
-                }
-            }, engine)
-        }
-        build(preferred)
-    }
-
-    private suspend fun synthesizeBlocking(
-        tts: TextToSpeech,
-        text: String,
-        out: File,
-    ): Boolean = suspendCancellableCoroutine { cont ->
-        val utteranceId = "tts-spike-${System.currentTimeMillis()}"
-        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(id: String) = Unit
-            override fun onDone(id: String) { cont.resume(true) }
-            @Deprecated("legacy callback")
-            override fun onError(id: String) { cont.resume(false) }
-            override fun onError(id: String, errorCode: Int) { cont.resume(false) }
-        })
-        val r = tts.synthesizeToFile(text, Bundle(), out, utteranceId)
-        if (r != TextToSpeech.SUCCESS) cont.resume(false)
     }
 
     // ── Streaming ──────────────────────────────────────────────────────
@@ -226,11 +161,11 @@ class TtsStreamer(
     }
 
     companion object {
-        // AppMessage inbox on emery is `app_message_inbox_size_maximum()` —
-        // around 8 KB. 1 KB / chunk = ~128 ms of audio at 8 kHz, small enough
-        // that each ~50-300 ms AppMessage round-trip refills the speaker
-        // buffer well before it drains. 4 KB chunks left 500 ms of audio in
-        // flight per round-trip → audible gaps when delivery lagged.
-        const val DEFAULT_CHUNK_BYTES = 1024
+        // AppMessage inbox on emery is `app_message_inbox_size_maximum()`,
+        // around 8 KB. 6 KB / chunk leaves room for the start/end UInt8
+        // tuples + key headers. Fewer, larger chunks means the inbox
+        // callback fires less often, which reduces opportunities for
+        // jitter that costs the watch a buffer top-up.
+        const val DEFAULT_CHUNK_BYTES = 6144
     }
 }
