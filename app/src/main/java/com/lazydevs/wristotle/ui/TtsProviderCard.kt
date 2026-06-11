@@ -34,8 +34,6 @@ import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.speech.nlu.settings.TtsProviderMode
 import com.lazydevs.wristotle.speech.nlu.settings.TtsProviderSettings
-import com.lazydevs.wristotle.tts.HttpTtsClient
-import com.lazydevs.wristotle.tts.LocalTtsProvider
 import com.lazydevs.wristotle.tts.TtsStreamer
 import com.lazydevs.wristotle.ui.components.PasswordField
 import kotlinx.coroutines.launch
@@ -165,16 +163,11 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
 
     // Build a streamer fresh per click so it always sees the latest mode +
     // URL + voice config rather than a cached snapshot from first compose.
+    // Provider construction lives on WristotleApplication so this composable
+    // never reaches into LocalTtsProvider / HttpTtsClient constructors —
+    // those are app-wiring concerns, not UI concerns.
     fun freshStreamer(primaryOnly: Boolean = true): TtsStreamer {
-        val provider = if (primaryOnly) {
-            when (mode) {
-                TtsProviderMode.LOCAL_ONLY,
-                TtsProviderMode.LOCAL_PRIMARY -> LocalTtsProvider(context)
-                TtsProviderMode.CLOUD_PRIMARY -> HttpTtsClient(settings)
-            }
-        } else {
-            app.buildTtsProvider()
-        }
+        val provider = if (primaryOnly) app.buildPrimaryTtsProvider() else app.buildTtsProvider()
         return TtsStreamer(app.transport, provider)
     }
 

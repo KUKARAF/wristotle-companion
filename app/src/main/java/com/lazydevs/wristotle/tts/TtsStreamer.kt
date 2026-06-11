@@ -130,22 +130,8 @@ class TtsStreamer(
      * sentence — subsequent sentences pipeline behind playback so their
      * synth time is hidden.
      */
-    private fun splitIntoSentences(text: String): List<String> {
-        val trimmed = text.trim()
-        if (trimmed.isEmpty()) return emptyList()
-        val base = trimmed.split(Regex("(?<=[.!?])\\s+|\\n+"))
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-        if (base.isEmpty()) return base
-
-        val first = base[0]
-        if (first.length <= FAST_START_MIN_LENGTH) return base
-        val commaIdx = first.indexOf(',')
-        if (commaIdx !in FAST_START_MIN_PREFIX..FAST_START_MAX_PREFIX) return base
-        val firstChunk = first.substring(0, commaIdx + 1)
-        val rest = first.substring(commaIdx + 1).trim()
-        return listOf(firstChunk, rest) + base.drop(1)
-    }
+    private fun splitIntoSentences(text: String): List<String> =
+        com.lazydevs.wristotle.speech.nlu.tts.splitTtsIntoSentences(text)
 
     // ── Spike-card diagnostics ─────────────────────────────────────────
 
@@ -276,7 +262,6 @@ class TtsStreamer(
             }
             offset = end
             chunkIdx++
-            val prevTotal = state.totalSent
             state.totalSent += chunkSize
             if (!state.hasPrimed && state.totalSent >= WATCH_PREBUFFER_BYTES) {
                 state.speakerStartMs = System.currentTimeMillis()
@@ -336,18 +321,15 @@ class TtsStreamer(
         /** emery speaker fixed rate: 8 kHz × 1 byte/sample = 8000 B/s. */
         private const val PLAYBACK_BYTES_PER_SEC = 8000L
 
-        /** Aggressive first-sentence comma-split thresholds. Only activates
-         *  if the first sentence is long enough that comma-splitting saves
-         *  meaningful synth time AND the comma sits in a sane position
-         *  (not the second character, not the last). */
-        private const val FAST_START_MIN_LENGTH = 60   // chars
-        private const val FAST_START_MIN_PREFIX = 15   // shortest leading clause
-        private const val FAST_START_MAX_PREFIX = 80   // longest leading clause
-
         /** Cap on watch ring usage during streaming — keeps us safely under
          *  the 12 KB ring cap (TTS_RING_BYTES) so the next chunk has room
          *  to land. ~600 B headroom = 75 ms of audio at 8 kHz, well below
          *  BLE jitter so we don't oversubscribe. */
         private const val MAX_RING_USAGE = 11500L
+
+        // Sentence-splitter constants + regex now live in
+        // com.lazydevs.wristotle.speech.nlu.tts.SentenceSplitter (commonMain)
+        // so they're testable from commonTest. TtsStreamer calls the lifted
+        // helper from splitIntoSentences above.
     }
 }

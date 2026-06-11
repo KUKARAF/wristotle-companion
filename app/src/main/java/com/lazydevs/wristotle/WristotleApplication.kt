@@ -240,6 +240,23 @@ class WristotleApplication : Application() {
             log = com.lazydevs.wristotle.logging.WristotleLogger,
         )
 
+    /** Primary-only variant — returns just the engine the user picked
+     *  as primary, with no fallback wrapper. Used by the Test surface
+     *  on the Speech settings card so "Speak via primary only" actually
+     *  tests the primary even when the composite would normally fall
+     *  back. The mode-to-provider mapping mirrors
+     *  [com.lazydevs.wristotle.speech.nlu.tts.CompositeTtsProvider.forMode]
+     *  but stops at the first engine — keeping both factories on the
+     *  app side so the UI never reaches into provider constructors. */
+    fun buildPrimaryTtsProvider(): com.lazydevs.wristotle.speech.nlu.tts.TtsProvider =
+        when (ttsProviderSettings.mode.value) {
+            com.lazydevs.wristotle.speech.nlu.settings.TtsProviderMode.LOCAL_ONLY,
+            com.lazydevs.wristotle.speech.nlu.settings.TtsProviderMode.LOCAL_PRIMARY ->
+                com.lazydevs.wristotle.tts.LocalTtsProvider(this)
+            com.lazydevs.wristotle.speech.nlu.settings.TtsProviderMode.CLOUD_PRIMARY ->
+                com.lazydevs.wristotle.tts.HttpTtsClient(ttsProviderSettings)
+        }
+
     /** First-launch wizard's dismissed flag + reactive surface. Lives
      *  in its own SharedPrefs (`setup_state`) deliberately so it never
      *  travels in backups — see `setup-flow.md`. */

@@ -33,14 +33,7 @@ class HttpTtsClient(private val settings: TtsProviderSettings) : TtsProvider {
         if (baseUrl.isBlank()) {
             return@withContext TtsResult.Failure("base URL not set")
         }
-        // Accept either shape: bare base (e.g. `https://api.openai.com/v1`)
-        // OR the full endpoint (`…/v1/audio/speech`). The full-endpoint form
-        // is a common UX trap — user copies the example from the provider's
-        // docs and we'd otherwise double-append → 404. Treat both as the
-        // same thing.
-        val trimmed = baseUrl.trimEnd('/')
-        val url = if (trimmed.endsWith("/audio/speech")) trimmed
-                  else "$trimmed/audio/speech"
+        val url = com.lazydevs.wristotle.speech.nlu.tts.resolveSpeechEndpoint(baseUrl)
         val model = settings.httpModel.value.ifBlank { "tts-1" }
         val voice = settings.httpVoice.value.ifBlank { "alloy" }
         val payload = JSONObject().apply {
