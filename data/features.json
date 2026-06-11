@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-7-0-on-watch-tts",
+      "date": "2026-06-10",
+      "companion_version": "v1.7.0",
+      "watch_version": "v1.2.0",
+      "title": "Speak replies on the watch (experimental)",
+      "description": "Settings → 🔊 Speech turns voice replies on. Pick which intents speak (Ask Agent / Morning brief / Reminders / Tasks / Notes / Calendar / Lookups / …), pick a TTS engine (Android local, or any OpenAI-compatible /v1/audio/speech endpoint), and test it in the same card. Cloud TTS hits ~1 s time-to-first-audio. Pebble Time 2 + Pebble Round 2 only — every other watch model drops the chunks silently. Off by default.",
+      "sample_query": "ask agent what is the capital of france",
+      "docs_path": "voice-commands/#speak-on-watch"
+    },
+    {
       "id": "v1-6-2-voice-fixes",
       "date": "2026-06-09",
       "companion_version": "v1.6.2",

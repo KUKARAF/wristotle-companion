@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-7-0-on-watch-tts",
+            date = "2026-06-10",
+            companionVersion = "v1.7.0",
+            watchVersion = "v1.2.0",
+            title = "Speak replies on the watch (experimental)",
+            description = "Settings → 🔊 Speech turns voice replies on. Pick which intents speak (Ask Agent / Morning brief / Reminders / Tasks / Notes / Calendar / Lookups / …), pick a TTS engine (Android local, or any OpenAI-compatible /v1/audio/speech endpoint), and test it in the same card. Cloud TTS hits ~1 s time-to-first-audio. Pebble Time 2 + Pebble Round 2 only — every other watch model drops the chunks silently. Off by default.",
+            sampleQuery = "ask agent what is the capital of france",
+            docsPath = "voice-commands/#speak-on-watch",
+        ),
+        FeatureEntry(
             id = "v1-6-2-voice-fixes",
             date = "2026-06-09",
             companionVersion = "v1.6.2",
