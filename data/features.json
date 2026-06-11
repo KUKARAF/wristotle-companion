@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-7-2-alarm-time-fixes",
+      "date": "2026-06-11",
+      "companion_version": "v1.7.2",
+      "watch_version": null,
+      "title": "SetAlarm accepts compound durations + dotted AM/PM",
+      "description": "\"Set an alarm for one hour and four minutes from now\" now sets an alarm 64 minutes ahead instead of erroring (closes #12). \"Set an alarm for 7:51 p.m.\" parses the same as \"7:51 pm\" — the dots in a.m./p.m. no longer break the time parser. SetTimer + SetAlarm now share one duration-parsing helper so they can't drift apart again.",
+      "sample_query": "set an alarm for one hour and four minutes from now",
+      "docs_path": "voice-commands/#set-alarm"
+    },
+    {
       "id": "v1-7-1-tts-backup",
       "date": "2026-06-10",
       "companion_version": "v1.7.1",

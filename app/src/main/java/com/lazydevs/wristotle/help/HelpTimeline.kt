@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-7-2-alarm-time-fixes",
+            date = "2026-06-11",
+            companionVersion = "v1.7.2",
+            watchVersion = null,
+            title = "SetAlarm accepts compound durations + dotted AM/PM",
+            description = "\"Set an alarm for one hour and four minutes from now\" now sets an alarm 64 minutes ahead instead of erroring (closes #12). \"Set an alarm for 7:51 p.m.\" parses the same as \"7:51 pm\" — the dots in a.m./p.m. no longer break the time parser. SetTimer + SetAlarm now share one duration-parsing helper so they can't drift apart again.",
+            sampleQuery = "set an alarm for one hour and four minutes from now",
+            docsPath = "voice-commands/#set-alarm",
+        ),
+        FeatureEntry(
             id = "v1-7-1-tts-backup",
             date = "2026-06-10",
             companionVersion = "v1.7.1",

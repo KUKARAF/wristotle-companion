@@ -155,6 +155,54 @@ val WORD_NUMBER_ALT: String = run {
 const val DURATION_UNIT_ALT =
     "seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h"
 
+private val DURATION_DIGIT_UNIT = Regex("(\\d+)\\s*($DURATION_UNIT_ALT)?\\b")
+private val DURATION_WORD_UNIT = Regex("\\b($WORD_NUMBER_ALT)\\s*($DURATION_UNIT_ALT)?\\b")
+
+/** Empty / absent unit defaults to MINUTES — matches SetTimerSlots' lossy
+ *  but practical convention ("timer for 10" means 10 minutes). */
+private fun durationUnitSeconds(unit: String): Int = when {
+    unit.startsWith("sec") || unit == "s" -> 1
+    unit.startsWith("hour") || unit.startsWith("hr") || unit == "h" -> 3600
+    else -> 60
+}
+
+/**
+ * Sums every `<n> <unit>` pair in [text] and returns the total in seconds,
+ * or null when no recognisable duration is present. Handles both digit
+ * forms ("1 hour 30 minutes") and word forms ("an hour and four minutes").
+ *
+ * Used by [SetTimerSlots] for "timer for …" and by [SetAlarmSlots] to
+ * accept "set an alarm for one hour and four minutes from now" — both
+ * paths share this single source of truth so they can't drift again
+ * (the same rule the v1.6.2 voice-fixes batch enforced for word-form
+ * numbers via [WORD_NUMBERS]).
+ *
+ * Word-form path REQUIRES an explicit unit. Without it, "a" / "an" /
+ * "one" would match the article in "set **a** timer" and add a phantom
+ * minute. So only "ten minutes" / "an hour" counts, never bare "a" / "ten".
+ */
+fun parseDurationSeconds(text: String): Int? {
+    val lower = text.lowercase()
+    var total = 0
+    var matchedAny = false
+
+    DURATION_DIGIT_UNIT.findAll(lower).forEach { m ->
+        val n = m.groupValues[1].toIntOrNull() ?: return@forEach
+        total += n * durationUnitSeconds(m.groupValues[2])
+        matchedAny = true
+    }
+    if (matchedAny) return total
+
+    DURATION_WORD_UNIT.findAll(lower).forEach { m ->
+        val unit = m.groupValues[2]
+        if (unit.isEmpty()) return@forEach
+        val n = WORD_NUMBERS[m.groupValues[1].trim()] ?: return@forEach
+        total += n * durationUnitSeconds(unit)
+        matchedAny = true
+    }
+    return if (matchedAny) total else null
+}
+
 /**
  * Builds a regex matching a trailing " <lead-in> <rest>" time/target clause,
  * for peeling a spoken time off the end of a title/target ("call mom at 5pm"

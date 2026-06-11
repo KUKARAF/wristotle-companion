@@ -75,4 +75,39 @@ class SetAlarmSlotsTest {
             ms in 29 * 60 * 1000L..31 * 60 * 1000L,
         )
     }
+
+    @Test fun `compound relative duration sets alarm at the sum`() {
+        // Closes codeberg #12 (regression report). Pre-fix this returned
+        // "Couldn't understand the time" because prettytime-nlp can't sum
+        // "one hour and four minutes". SetTimer handled it via the shared
+        // parseDurationSeconds helper, SetAlarm now does the same.
+        val before = System.currentTimeMillis()
+        val date = extractDate("set an alarm for one hour and four minutes from now")
+        assertNotNull("expected non-null date for compound duration", date)
+        val ms = date!!.time - before
+        // 1h4m = 64 minutes = 3,840,000 ms. Allow ±60s clock jitter.
+        assertTrue(
+            "expected ~64min ahead, got ${ms / 60000}min",
+            ms in 63 * 60 * 1000L..65 * 60 * 1000L,
+        )
+    }
+
+    @Test fun `pm with dots parses the same as pm`() {
+        // Closes codeberg #12 (regression report). "7:51 p.m." used to
+        // fail because the dots broke prettytime-nlp's AM/PM tokenizer.
+        // The slot extractor now normalises "p.m." → "pm" before parsing.
+        val date = extractDate("set an alarm for 7:51 p.m.")
+        assertNotNull("expected non-null date for 7:51 p.m.", date)
+        val cal = Calendar.getInstance().apply { time = date!! }
+        assertEquals(19, cal.get(Calendar.HOUR_OF_DAY))
+        assertEquals(51, cal.get(Calendar.MINUTE))
+    }
+
+    @Test fun `am with dots parses the same as am`() {
+        val date = extractDate("set an alarm for 6:30 a.m.")
+        assertNotNull(date)
+        val cal = Calendar.getInstance().apply { time = date!! }
+        assertEquals(6, cal.get(Calendar.HOUR_OF_DAY))
+        assertEquals(30, cal.get(Calendar.MINUTE))
+    }
 }
