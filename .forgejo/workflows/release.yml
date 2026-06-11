@@ -106,10 +106,25 @@ jobs:
         run: |
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
+      - name: Cache Android NDK + CMake install
+        # NDK 30.0.14904198 is a ~1.6 GB download; CMake 3.22.1 is ~30 MB.
+        # On a runner that doesn't persist $ANDROID_HOME between builds
+        # (Codeberg's self-hosted runner appears not to), every release
+        # spent 3-5 minutes re-downloading. Cache the install dirs and
+        # the subsequent `sdkmanager --install` becomes a no-op on hit.
+        # Key is pinned to the exact versions so a future bump auto-misses.
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/ndk/30.0.14904198
+            ${{ env.ANDROID_HOME }}/cmake/3.22.1
+          key: android-ndk-30.0.14904198-cmake-3.22.1-v1
+
       - name: Install pinned NDK + CMake
         # The :speech-whisper module pins ndkVersion = 30.0.14904198 and
         # CMake 3.22.1. Install them explicitly so the build doesn't
         # transparently fall back to whatever setup-android brought down.
+        # No-op on cache hit; ~3-5 min download on cache miss.
         run: |
           sdkmanager --install "ndk;30.0.14904198" "cmake;3.22.1"
 
