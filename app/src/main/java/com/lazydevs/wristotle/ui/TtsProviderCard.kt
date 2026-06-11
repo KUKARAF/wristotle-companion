@@ -316,6 +316,17 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
                 onClick = {
                     status = "testing $primaryLabel…"
                     scope.launch {
+                        // Pre-warm the watch's TTS state machine BEFORE the
+                        // synth round-trip — same shape as the real dispatch
+                        // hook in PebbleListenerService.dispatchAndReport.
+                        // Without this, the test's first audio chunk lands
+                        // while the watch is still mid-handshake; you hear
+                        // garbled audio even though real intent dispatch is
+                        // clean. Empty body, start=true, end=false: watch
+                        // enters BUFFERING; prv_handle_start is idempotent
+                        // against the real first chunk's tts_start that
+                        // follows.
+                        app.transport.sendTtsChunk(ByteArray(0), start = true, end = false)
                         val reason = runCatching { freshStreamer().speak(testPhrase) }
                             .getOrElse {
                                 status = "$primaryLabel error: ${it.message ?: it.javaClass.simpleName}"
