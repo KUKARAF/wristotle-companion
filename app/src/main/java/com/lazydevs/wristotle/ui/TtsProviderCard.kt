@@ -362,12 +362,26 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
                 onClick = {
                     status = "streaming 440 Hz to watch…"
                     scope.launch {
-                        val ok = runCatching { freshStreamer().playTestTone(seconds = 3.0) }
-                            .getOrElse {
-                                status = "tone error: ${it.message ?: it.javaClass.simpleName}"
-                                return@launch
+                        // Pre-warm + NonCancellable terminal tts_end same as
+                        // the speak-on-watch button — if BLE drops mid-tone
+                        // or the user navigates away, the watch state
+                        // machine still closes cleanly instead of stranding
+                        // tts_is_active() true.
+                        app.transport.sendTtsChunk(ByteArray(0), start = true, end = false)
+                        try {
+                            val ok = runCatching { freshStreamer().playTestTone(seconds = 3.0) }
+                                .getOrElse {
+                                    status = "tone error: ${it.message ?: it.javaClass.simpleName}"
+                                    return@launch
+                                }
+                            status = if (ok) "tone sent to watch" else "tone failed"
+                        } finally {
+                            withContext(NonCancellable) {
+                                runCatching {
+                                    app.transport.sendTtsChunk(ByteArray(0), start = false, end = true)
+                                }
                             }
-                        status = if (ok) "tone sent to watch" else "tone failed"
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

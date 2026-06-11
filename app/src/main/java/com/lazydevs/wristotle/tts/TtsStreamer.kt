@@ -15,9 +15,11 @@ import com.lazydevs.wristotle.speech.nlu.tts.TtsResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 private const val TAG = "TtsStreamer"
 
@@ -42,8 +44,20 @@ class TtsStreamer(
      * Streaming pacing state is shared across sentences so playback is
      * gapless — the watch sees the concatenated PCM as one stream.
      * Returns `null` on success, a short reason on failure.
+     *
+     * Always ensures the watch's TTS state machine is closed before
+     * returning — wraps the whole pipeline in a try/finally that sends
+     * a terminal `tts_end=true` inside `NonCancellable`. On the success
+     * path that's a duplicate of the end-flag carried by the last audio
+     * chunk; the watch's `prv_handle_end` is idempotent (a second close
+     * on an already-IDLE/FINISHING stream is a no-op), so the duplicate
+     * is safe and the failure paths get clean teardown for free.
+     * Centralising the cleanup here means new callers don't have to
+     * remember the NonCancellable wrap — the only thing a caller is
+     * responsible for is the pre-warm `tts_start` (which has to happen
+     * BEFORE speak so the watch is in BUFFERING when synth finishes).
      */
-    suspend fun speak(text: String, chunkBytes: Int = DEFAULT_CHUNK_BYTES): String? =
+    suspend fun speak(text: String, chunkBytes: Int = DEFAULT_CHUNK_BYTES): String? = try {
         coroutineScope {
             val speakStartMs = System.currentTimeMillis()
             val sentences = splitIntoSentences(text)
@@ -94,6 +108,19 @@ class TtsStreamer(
             }
             null
         }
+    } finally {
+        // Idempotent terminal close — on success this duplicates the
+        // end-flag carried by the last audio chunk (watch-side
+        // prv_handle_end no-ops on already-IDLE/FINISHING). On failure
+        // (synth fail, BLE drop, coroutine cancellation) it's the only
+        // close the watch sees, so the state machine doesn't strand
+        // BUFFERING with tts_is_active() stuck true.
+        withContext(NonCancellable) {
+            runCatching {
+                transport.sendTtsChunk(ByteArray(0), start = false, end = true)
+            }
+        }
+    }
 
     private data class SynthResult(val pcm: ByteArray?, val failureReason: String?)
 
