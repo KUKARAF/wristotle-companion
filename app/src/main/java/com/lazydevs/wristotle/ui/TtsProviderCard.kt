@@ -188,7 +188,7 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
             // ─── Master toggle + per-intent picker ──────────────────────
             Text("Speak on watch", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Read replies aloud on the Pebble Time 2 speaker (emery only). Off until you turn it on.",
+                "Read replies aloud through the watch speaker. Hardware-gated: only Pebble Time 2 and Pebble Round 2 have a speaker — on every other model the chunks are dropped silently. Off until you turn it on.",
                 style = MaterialTheme.typography.bodySmall,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
