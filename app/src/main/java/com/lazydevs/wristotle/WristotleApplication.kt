@@ -374,6 +374,22 @@ class WristotleApplication : Application() {
     lateinit var appIndexer: AppIndexer
         private set
 
+    /** Stats screen data source. Lazy — first access on Settings → 📊 Stats
+     *  open builds the small adapter; the underlying DAOs are already live.
+     *  See `:wristotle-core`'s `stats/StatsSource` for the seam. */
+    val statsSource: com.lazydevs.wristotle.speech.nlu.stats.StatsSource by lazy {
+        com.lazydevs.wristotle.stats.RoomStatsSource(
+            conversationDao = conversationDb.conversationDao(),
+            noteDao = notesDb.noteDao(),
+            taskDao = tasksDb.taskDao(),
+            alarmDao = alarmsDb.alarmDao(),
+            exampleDao = nluDb.exampleDao(),
+            appAliasCount = { aliasStore.all().size },
+            contactAliasCount = { contactAliasStore.all().size },
+            reminderCount = { com.lazydevs.wristotle.handlers.PinStore(this).all().size },
+        )
+    }
+
     /** Diagnostics-export preferences. Lazy — only consulted when the
      *  user actually runs an export from the Settings card. */
     val diagnosticsSettings: com.lazydevs.wristotle.speech.nlu.settings.DiagnosticsSettings by lazy {
