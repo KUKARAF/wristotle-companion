@@ -77,7 +77,7 @@ object WristotleLog {
 
     private fun append(level: Char, tag: String, msg: String, throwable: Throwable?) {
         val ts = synchronized(timeFormat) { timeFormat.format(Date()) }
-        val line = buildString {
+        val raw = buildString {
             append(ts); append(' '); append(level); append(' '); append(tag); append("  ").append(msg)
             if (throwable != null) {
                 append("\n    ")
@@ -85,6 +85,11 @@ object WristotleLog {
                 throwable.message?.let { append(": ").append(it) }
             }
         }
+        // Defence in depth: scrub before the line ever enters the
+        // ring buffer. Wristotle's own code is audited not to log
+        // keys, but third-party `Throwable.message` content can still
+        // embed them — see SensitiveScrub for the cases covered.
+        val line = SensitiveScrub.redact(raw)
         synchronized(lock) {
             if (buffer.size >= BUFFER_LIMIT) buffer.removeFirst()
             buffer.addLast(line)

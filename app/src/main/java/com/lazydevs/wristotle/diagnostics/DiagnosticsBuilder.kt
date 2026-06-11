@@ -80,6 +80,7 @@ class DiagnosticsBuilder(
             appendConversationAudioSection(redact)
             appendConversationSection(recentEntries, redact)
             if (audioFiles.isNotEmpty()) appendAudioSection(audioFiles)
+            appendCrashSection(redact)
             appendLogSection(logDump)
         }
         DiagnosticsBundle(markdown, audioFiles)
@@ -307,6 +308,35 @@ class DiagnosticsBuilder(
         appendLine()
     }
 
+    /**
+     * Stack traces written by [CrashLogStore] from the last process
+     * crash(es). Most installs have none; when the user finally hits
+     * a crash this is where the trace surfaces in the bug report so
+     * they don't have to dig in `filesDir/crashes/` manually.
+     */
+    private fun StringBuilder.appendCrashSection(redact: Boolean) {
+        val files = CrashLogStore.recent(context.filesDir, CRASH_FILES)
+        appendLine("### Recent crashes")
+        if (files.isEmpty()) {
+            appendLine("_(none)_")
+            appendLine()
+            return
+        }
+        for (f in files) {
+            appendLine("- `${f.name}`")
+        }
+        appendLine()
+        for (f in files) {
+            appendLine("#### ${f.name}")
+            appendLine()
+            appendLine("````")
+            val body = runCatching { f.readText() }.getOrElse { "(unreadable: ${it.javaClass.simpleName})" }
+            appendLine(if (redact) redactDigits(body) else body)
+            appendLine("````")
+            appendLine()
+        }
+    }
+
     private fun StringBuilder.appendLogSection(logDump: String) {
         appendLine("### Recent logs (last $LOG_LINES lines)")
         appendLine()
@@ -414,6 +444,7 @@ class DiagnosticsBuilder(
         const val RECENT_ENTRIES = 10
         const val LOG_LINES = 200
         const val AUDIO_ATTACHMENTS = 3
+        const val CRASH_FILES = 3
         const val VOICE_RECOGNITION_SERVICE = "voice_recognition_service"
 
         val TIME_FORMAT = SimpleDateFormat("MMM d HH:mm", Locale.US)

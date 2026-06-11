@@ -422,6 +422,11 @@ class WristotleApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Install the uncaught-exception handler before anything else
+        // so init-time crashes (DB build, model storage, etc.) still
+        // land on disk for the next bug-report export. Pure-JVM only —
+        // native SEGVs in whisper.cpp / ONNX still tombstone silently.
+        com.lazydevs.wristotle.diagnostics.CrashLogStore.install(filesDir)
         transport = PebbleTransport(this)
         modelStorage = ModelStorage(this)
         nluModelStorage = NluModelStorage(this)
