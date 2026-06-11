@@ -94,6 +94,7 @@ data class BackupManifest(
         val weather: WeatherPrefs? = null,
         val askAgent: AskAgentPrefs? = null,
         val sttProvider: SttProviderPrefs? = null,
+        val ttsProvider: TtsProviderPrefs? = null,
     )
     data class NotesPrefs(val keepLast: Int, val appendAudioMode: String)
     data class ConversationPrefs(val retentionDays: Int)
@@ -144,6 +145,21 @@ data class BackupManifest(
         val mode: String,
         val httpBaseUrl: String,
         val httpModel: String,
+        val httpApiKey: String? = null,
+    )
+
+    /** TTS provider — master toggle + mode + base URL + model + voice +
+     *  the comma-joined intent opt-in set travel with the non-sensitive
+     *  "TTS provider setup" category. `httpApiKey` rides only when the
+     *  secret checkbox is ticked. The intent CSV mirrors the on-disk
+     *  shape `TtsProviderSettings` already uses. */
+    data class TtsProviderPrefs(
+        val enabled: Boolean,
+        val mode: String,
+        val httpBaseUrl: String,
+        val httpModel: String,
+        val httpVoice: String,
+        val intentsCsv: String,
         val httpApiKey: String? = null,
     )
 
@@ -231,10 +247,12 @@ object BackupManifestCodec {
             put("mcp_servers", m.selected.mcpServers)
             put("ask_agent_setup", m.selected.askAgentSetup)
             put("stt_provider_setup", m.selected.sttProviderSetup)
+            put("tts_provider_setup", m.selected.ttsProviderSetup)
             put("weather_api_key", m.selected.weatherApiKey)
             put("mcp_auth_headers", m.selected.mcpAuthHeaders)
             put("ask_agent_api_keys", m.selected.askAgentApiKeys)
             put("stt_provider_api_key", m.selected.sttProviderApiKey)
+            put("tts_provider_api_key", m.selected.ttsProviderApiKey)
         })
         // Each block is omitted entirely when null (category wasn't
         // selected on export); the decoder treats absence as "no change
@@ -318,6 +336,17 @@ object BackupManifestCodec {
                     put("http_base_url", s.httpBaseUrl)
                     put("http_model", s.httpModel)
                     if (s.httpApiKey != null) put("http_api_key", s.httpApiKey)
+                })
+            }
+            m.prefs.ttsProvider?.let { t ->
+                put("tts_provider_settings", JSONObject().apply {
+                    put("enabled", t.enabled)
+                    put("mode", t.mode)
+                    put("http_base_url", t.httpBaseUrl)
+                    put("http_model", t.httpModel)
+                    put("http_voice", t.httpVoice)
+                    put("intents_enabled", t.intentsCsv)
+                    if (t.httpApiKey != null) put("http_api_key", t.httpApiKey)
                 })
             }
         })
@@ -491,6 +520,17 @@ object BackupManifestCodec {
                         httpApiKey = s.optString("http_api_key").takeIf { it.isNotEmpty() },
                     )
                 },
+                ttsProvider = prefs.optJSONObject("tts_provider_settings")?.let { t ->
+                    BackupManifest.TtsProviderPrefs(
+                        enabled = t.optBoolean("enabled", false),
+                        mode = t.optString("mode", "LOCAL_ONLY"),
+                        httpBaseUrl = t.optString("http_base_url", ""),
+                        httpModel = t.optString("http_model", ""),
+                        httpVoice = t.optString("http_voice", ""),
+                        intentsCsv = t.optString("intents_enabled", ""),
+                        httpApiKey = t.optString("http_api_key").takeIf { it.isNotEmpty() },
+                    )
+                },
             ),
             reminderPins = (0 until pinsArr.length()).map { i ->
                 val p = pinsArr.getJSONObject(i)
@@ -532,10 +572,12 @@ object BackupManifestCodec {
                     mcpServers = sel.optBoolean("mcp_servers", true),
                     askAgentSetup = sel.optBoolean("ask_agent_setup", true),
                     sttProviderSetup = sel.optBoolean("stt_provider_setup", true),
+                    ttsProviderSetup = sel.optBoolean("tts_provider_setup", true),
                     weatherApiKey = sel.optBoolean("weather_api_key", false),
                     mcpAuthHeaders = sel.optBoolean("mcp_auth_headers", false),
                     askAgentApiKeys = sel.optBoolean("ask_agent_api_keys", false),
                     sttProviderApiKey = sel.optBoolean("stt_provider_api_key", false),
+                    ttsProviderApiKey = sel.optBoolean("tts_provider_api_key", false),
                 )
             } ?: BackupSelection.LEGACY_FULL,
         )

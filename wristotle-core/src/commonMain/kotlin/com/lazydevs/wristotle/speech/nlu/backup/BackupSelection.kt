@@ -34,12 +34,14 @@ data class BackupSelection(
     val mcpServers: Boolean = true,
     val askAgentSetup: Boolean = true,
     val sttProviderSetup: Boolean = true,
+    val ttsProviderSetup: Boolean = true,
 
     // Secrets — default OFF
     val weatherApiKey: Boolean = false,
     val mcpAuthHeaders: Boolean = false,
     val askAgentApiKeys: Boolean = false,
     val sttProviderApiKey: Boolean = false,
+    val ttsProviderApiKey: Boolean = false,
 ) {
     /** True when EVERY category — content, settings, and secrets — is ticked.
      *  [ALL] is the only value that satisfies this. */
@@ -47,7 +49,9 @@ data class BackupSelection(
         get() = notes && tasks && conversations && reminders && nluLearned &&
             appAliases && contactAliases && audioRecordings &&
             appPreferences && weatherSettings && mcpServers && askAgentSetup && sttProviderSetup &&
-            weatherApiKey && mcpAuthHeaders && askAgentApiKeys && sttProviderApiKey
+            ttsProviderSetup &&
+            weatherApiKey && mcpAuthHeaders && askAgentApiKeys && sttProviderApiKey &&
+            ttsProviderApiKey
 
     /** True when every content + settings box is ticked, regardless of
      *  whether the user opted any secrets in. Drives the master "Select
@@ -57,19 +61,23 @@ data class BackupSelection(
     val allContentAndSettingsSelected: Boolean
         get() = notes && tasks && conversations && reminders && nluLearned &&
             appAliases && contactAliases && audioRecordings &&
-            appPreferences && weatherSettings && mcpServers && askAgentSetup && sttProviderSetup
+            appPreferences && weatherSettings && mcpServers && askAgentSetup && sttProviderSetup &&
+            ttsProviderSetup
 
     /** True when nothing is selected — used to disable the Export button. */
     val noneSelected: Boolean
         get() = !(notes || tasks || conversations || reminders || nluLearned ||
             appAliases || contactAliases || audioRecordings ||
             appPreferences || weatherSettings || mcpServers || askAgentSetup || sttProviderSetup ||
-            weatherApiKey || mcpAuthHeaders || askAgentApiKeys || sttProviderApiKey)
+            ttsProviderSetup ||
+            weatherApiKey || mcpAuthHeaders || askAgentApiKeys || sttProviderApiKey ||
+            ttsProviderApiKey)
 
     /** True when any secret category is ticked — used to gate the
      *  "plaintext secrets?" confirm dialog when no password is set. */
     val anySecretSelected: Boolean
-        get() = weatherApiKey || mcpAuthHeaders || askAgentApiKeys || sttProviderApiKey
+        get() = weatherApiKey || mcpAuthHeaders || askAgentApiKeys || sttProviderApiKey ||
+            ttsProviderApiKey
 
     /** Per-field AND of two selections. Used by the restore preview to
      *  clamp the user's requested selection against what's actually in
@@ -90,10 +98,12 @@ data class BackupSelection(
         mcpServers = mcpServers && other.mcpServers,
         askAgentSetup = askAgentSetup && other.askAgentSetup,
         sttProviderSetup = sttProviderSetup && other.sttProviderSetup,
+        ttsProviderSetup = ttsProviderSetup && other.ttsProviderSetup,
         weatherApiKey = weatherApiKey && other.weatherApiKey,
         mcpAuthHeaders = mcpAuthHeaders && other.mcpAuthHeaders,
         askAgentApiKeys = askAgentApiKeys && other.askAgentApiKeys,
         sttProviderApiKey = sttProviderApiKey && other.sttProviderApiKey,
+        ttsProviderApiKey = ttsProviderApiKey && other.ttsProviderApiKey,
     )
 
     companion object {
@@ -103,6 +113,7 @@ data class BackupSelection(
             mcpAuthHeaders = true,
             askAgentApiKeys = true,
             sttProviderApiKey = true,
+            ttsProviderApiKey = true,
         )
 
         /** Every category off — used by the master deselect. */
@@ -111,7 +122,7 @@ data class BackupSelection(
             nluLearned = false, appAliases = false, contactAliases = false,
             audioRecordings = false,
             appPreferences = false, weatherSettings = false, mcpServers = false,
-            askAgentSetup = false, sttProviderSetup = false,
+            askAgentSetup = false, sttProviderSetup = false, ttsProviderSetup = false,
         )
 
         /** Older ZIPs (schema < 2) didn't carry a selection field — treat
@@ -129,9 +140,9 @@ data class BackupSelection(
             nluLearned = true, appAliases = true, contactAliases = true,
             audioRecordings = true,
             appPreferences = true, weatherSettings = true, mcpServers = true,
-            askAgentSetup = true, sttProviderSetup = true,
+            askAgentSetup = true, sttProviderSetup = true, ttsProviderSetup = true,
             weatherApiKey = true, mcpAuthHeaders = true, askAgentApiKeys = true,
-            sttProviderApiKey = true,
+            sttProviderApiKey = true, ttsProviderApiKey = true,
         )
     }
 }

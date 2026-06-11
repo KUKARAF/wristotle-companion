@@ -364,6 +364,16 @@ class BackupExporter(private val app: WristotleApplication) {
                 httpApiKey = app.sttProviderSettings.httpApiKey.value
                     .takeIf { sel.sttProviderApiKey && it.isNotEmpty() },
             ) else null,
+            ttsProvider = if (sel.ttsProviderSetup) BackupManifest.TtsProviderPrefs(
+                enabled = app.ttsProviderSettings.enabled.value,
+                mode = app.ttsProviderSettings.mode.value.name,
+                httpBaseUrl = app.ttsProviderSettings.httpBaseUrl.value,
+                httpModel = app.ttsProviderSettings.httpModel.value,
+                httpVoice = app.ttsProviderSettings.httpVoice.value,
+                intentsCsv = app.ttsProviderSettings.intentsEnabled.value.joinToString(","),
+                httpApiKey = app.ttsProviderSettings.httpApiKey.value
+                    .takeIf { sel.ttsProviderApiKey && it.isNotEmpty() },
+            ) else null,
         )
 }
 

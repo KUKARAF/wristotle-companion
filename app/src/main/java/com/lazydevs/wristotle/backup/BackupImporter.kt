@@ -531,6 +531,23 @@ class BackupImporter(private val app: WristotleApplication) {
                 }
             }
         }
+
+        if (sel.ttsProviderSetup) {
+            p.ttsProvider?.let { t ->
+                app.ttsProviderSettings.setEnabled(t.enabled)
+                runCatching { com.lazydevs.wristotle.speech.nlu.settings.TtsProviderMode.valueOf(t.mode) }
+                    .onSuccess { app.ttsProviderSettings.setMode(it) }
+                app.ttsProviderSettings.setHttpBaseUrl(t.httpBaseUrl)
+                app.ttsProviderSettings.setHttpModel(t.httpModel)
+                app.ttsProviderSettings.setHttpVoice(t.httpVoice)
+                val intents = t.intentsCsv.split(',')
+                    .map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                app.ttsProviderSettings.setIntentsEnabled(intents)
+                if (sel.ttsProviderApiKey) {
+                    t.httpApiKey?.let { app.ttsProviderSettings.setHttpApiKey(it) }
+                }
+            }
+        }
     }
 
     private fun applyPins(incoming: List<BackupManifest.PinRecord>): EntityStats {

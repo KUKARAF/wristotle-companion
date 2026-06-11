@@ -283,6 +283,9 @@ private fun BackupSelectionEditor(
         CatRow(R.string.settings_backup_cat_stt_provider_setup, selection.sttProviderSetup, available?.sttProviderSetup) {
             onChange(selection.copy(sttProviderSetup = it))
         }
+        CatRow(R.string.settings_backup_cat_tts_provider_setup, selection.ttsProviderSetup, available?.ttsProviderSetup) {
+            onChange(selection.copy(ttsProviderSetup = it))
+        }
 
         SectionHeader(stringResource(R.string.settings_backup_section_secrets))
         Text(
@@ -302,6 +305,9 @@ private fun BackupSelectionEditor(
         }
         CatRow(R.string.settings_backup_cat_stt_provider_api_key, selection.sttProviderApiKey, available?.sttProviderApiKey) {
             onChange(selection.copy(sttProviderApiKey = it))
+        }
+        CatRow(R.string.settings_backup_cat_tts_provider_api_key, selection.ttsProviderApiKey, available?.ttsProviderApiKey) {
+            onChange(selection.copy(ttsProviderApiKey = it))
         }
     }
 }
@@ -689,12 +695,14 @@ private fun BackupSelectionSections(selection: BackupSelection, isExport: Boolea
         if (selection.mcpServers) R.string.settings_backup_summary_cat_mcp_servers else null,
         if (selection.askAgentSetup) R.string.settings_backup_summary_cat_ask_agent_setup else null,
         if (selection.sttProviderSetup) R.string.settings_backup_summary_cat_stt_provider_setup else null,
+        if (selection.ttsProviderSetup) R.string.settings_backup_summary_cat_tts_provider_setup else null,
     )
     val secrets = listOfNotNull(
         if (selection.weatherApiKey) R.string.settings_backup_summary_cat_weather_api_key else null,
         if (selection.mcpAuthHeaders) R.string.settings_backup_summary_cat_mcp_auth_headers else null,
         if (selection.askAgentApiKeys) R.string.settings_backup_summary_cat_ask_agent_api_keys else null,
         if (selection.sttProviderApiKey) R.string.settings_backup_summary_cat_stt_provider_api_key else null,
+        if (selection.ttsProviderApiKey) R.string.settings_backup_summary_cat_tts_provider_api_key else null,
     )
 
     if (settings.isNotEmpty()) {
