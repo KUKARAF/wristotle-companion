@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-7-1-tts-backup",
+      "date": "2026-06-10",
+      "companion_version": "v1.7.1",
+      "watch_version": null,
+      "title": "TTS settings now travel in backups + diagnostics",
+      "description": "Settings → 🔊 Speech is now included in Backup & Restore — mode, endpoint, voice, model, and per-intent toggles all survive a phone reset. The API key rides only when you tick the secret checkbox (off by default), same as every other key. The Diagnostics bug-report export also captures the TTS provider state (set/empty only — never the key value).",
+      "sample_query": null,
+      "docs_path": null
+    },
+    {
       "id": "v1-7-0-on-watch-tts",
       "date": "2026-06-10",
       "companion_version": "v1.7.0",

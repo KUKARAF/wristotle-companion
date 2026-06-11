@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-7-1-tts-backup",
+            date = "2026-06-10",
+            companionVersion = "v1.7.1",
+            watchVersion = null,
+            title = "TTS settings now travel in backups + diagnostics",
+            description = "Settings → 🔊 Speech is now included in Backup & Restore — mode, endpoint, voice, model, and per-intent toggles all survive a phone reset. The API key rides only when you tick the secret checkbox (off by default), same as every other key. The Diagnostics bug-report export also captures the TTS provider state (set/empty only — never the key value).",
+            sampleQuery = null,
+            docsPath = null,
+        ),
+        FeatureEntry(
             id = "v1-7-0-on-watch-tts",
             date = "2026-06-10",
             companionVersion = "v1.7.0",
