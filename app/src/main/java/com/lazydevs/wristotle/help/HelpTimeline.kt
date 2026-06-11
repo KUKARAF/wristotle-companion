@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-8-0-stats",
+            date = "2026-06-11",
+            companionVersion = "v1.8.0",
+            watchVersion = null,
+            title = "On-device activity stats page",
+            description = "Settings → 📊 Stats surfaces top intents, active hours, accuracy, and where Wristotle stumbles — all computed on-device.",
+            sampleQuery = null,
+            docsPath = "voice-commands/#on-device-stats",
+        ),
+        FeatureEntry(
             id = "v1-7-2-alarm-time-fixes",
             date = "2026-06-11",
             companionVersion = "v1.7.2",
