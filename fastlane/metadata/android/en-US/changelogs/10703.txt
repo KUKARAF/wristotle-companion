@@ -1,0 +1,16 @@
+Speech card test buttons + stream
+hardening.
+
+The "Speak on watch" and tone test
+buttons on Settings → Speech were
+producing garbled audio because they
+skipped a pre-warm step real voice
+replies always sent. Now they mirror
+the dispatch path.
+
+Plus defensive stream cleanup: the
+watch's TTS stream now always closes
+on every exit (success, synth fail,
+BLE drop, cancellation), so the watch
+can never get stuck mid-stream
+waiting for a close that never came.

@@ -1,0 +1,15 @@
+Speak settings now travel in
+backups.
+
+Settings → Speech (mode, endpoint,
+model, voice, per-intent toggles)
+are now included in Backup & Restore
+so they survive a phone reset. The
+HTTP API key rides only when you
+tick the secret checkbox, off by
+default like every other key.
+
+Diagnostics bug-report export also
+captures the Speak provider state
+(set / empty only — never the key
+value itself).

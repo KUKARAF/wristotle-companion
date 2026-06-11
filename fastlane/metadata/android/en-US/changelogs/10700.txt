@@ -1,0 +1,18 @@
+Speak replies on the watch.
+
+Experimental: have the watch read
+replies aloud through its built-in
+speaker. Only Pebble Time 2 and
+Pebble Round 2 have a speaker —
+every other model drops the audio.
+
+Settings → Speech. Off by default.
+Pick which intents speak (Reminders,
+Tasks, Notes, Ask Agent, Morning
+brief, etc.) and pick an engine:
+
+• Local — phone's Android TTS.
+  No network, ~4 s to first audio.
+• Cloud — any OpenAI-compatible
+  /v1/audio/speech endpoint. ~1 s
+  to first audio.

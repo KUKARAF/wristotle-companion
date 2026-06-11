@@ -1,0 +1,15 @@
+On-device activity stats.
+
+New Settings → Stats card surfaces
+what you've been asking Wristotle
+for and how well it understood.
+Everything is computed locally —
+nothing leaves your phone.
+
+Six panels: streak, top intents
+(30d), when you talk to Wristotle
+(24-hour chart), accuracy (30d +
+lifetime + NLU confidence), where
+Wristotle stumbles (top three to
+teach), and notes / tasks /
+reminders / alarms on your phone.

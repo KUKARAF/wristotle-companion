@@ -1,0 +1,16 @@
+SetAlarm bug fixes (closes #12).
+
+• "Set an alarm for one hour and
+  four minutes from now" used to
+  return "Couldn't understand the
+  time". Now sums compound durations
+  the same way SetTimer always did.
+
+• "Set an alarm for 7:51 p.m."
+  parses the same as "7:51 pm" —
+  the dots in a.m. / p.m. no longer
+  break the time parser.
+
+SetTimer + SetAlarm now share one
+duration-parsing helper so they
+can't drift apart again.
