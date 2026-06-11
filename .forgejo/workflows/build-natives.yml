@@ -50,7 +50,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Set up Android SDK
-        uses: https://github.com/android-actions/setup-android@v3
+        # Pinned to v3.2.2 — see release.yml for the same fix's rationale.
+        uses: https://github.com/android-actions/setup-android@v3.2.2
+        with:
+          accept-android-sdk-licenses: true
+
+      - name: Re-accept Android SDK licenses (defensive)
+        run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
       - name: Install pinned NDK + CMake
         run: sdkmanager --install "ndk;30.0.14904198" "cmake;3.22.1"

@@ -78,7 +78,28 @@ jobs:
         # of upstream actions, and android-actions/setup-android isn't
         # among them. Use the GitHub URL explicitly — Forgejo Actions
         # accepts the full https://github.com/owner/repo@ref form.
-        uses: https://github.com/android-actions/setup-android@v3
+        #
+        # Pinned to v3.2.2 because the floating `@v3` ref changed under
+        # us between v1.7.0 (success at 03:06) and v1.7.1 (failure at
+        # 03:22) — the new release's internal `sdkmanager --licenses`
+        # prompt hung the runner. v3.2.2 is the last release where the
+        # license auto-accept is known to work reliably on Forgejo's
+        # self-hosted runner.
+        uses: https://github.com/android-actions/setup-android@v3.2.2
+        with:
+          accept-android-sdk-licenses: true
+
+      - name: Re-accept Android SDK licenses (defensive)
+        # Belt-and-braces. The runner's cmdline-tools install carries
+        # state across builds, so even with setup-android telling us
+        # licenses are accepted, the *next* sdkmanager invocation can
+        # find a mismatch when the bundled cmdline-tools version changes
+        # under it. Pipe `yes` to license acceptance unconditionally;
+        # cheap (a few seconds) and inoculates the subsequent install
+        # step against the "7 of 7 licenses not accepted" interactive
+        # prompt that cancelled v1.7.1's first build.
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
       - name: Install pinned NDK + CMake
         # The :speech-whisper module pins ndkVersion = 30.0.14904198 and

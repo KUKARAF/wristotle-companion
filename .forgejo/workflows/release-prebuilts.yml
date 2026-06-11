@@ -62,7 +62,13 @@ jobs:
 
       - name: Set up Android SDK
         # No NDK or CMake needed — we're skipping the C++ build entirely.
-        uses: https://github.com/android-actions/setup-android@v3
+        # Pinned to v3.2.2 — see release.yml for the same fix's rationale.
+        uses: https://github.com/android-actions/setup-android@v3.2.2
+        with:
+          accept-android-sdk-licenses: true
+
+      - name: Re-accept Android SDK licenses (defensive)
+        run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
       - name: Download prebuilt natives for current whisper.cpp SHA
         env:
