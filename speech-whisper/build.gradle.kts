@@ -42,6 +42,16 @@ android {
                     //     otherwise lands in every shared library.
                     cppFlags += "-ffile-prefix-map=${rootDir}=."
                     cppFlags += "-ffile-prefix-map=${projectDir}=."
+                    // ggml.c / whisper.cpp internals are C, not C++ —
+                    // `cppFlags` doesn't reach `.c` files, so without
+                    // mirroring into `cFlags` the absolute build path
+                    // leaked into libggml-base.so / libggml-cpu.so /
+                    // libggml.so / libwhisper.so via __FILE__ inside
+                    // GGML_ASSERT macros, breaking F-Droid
+                    // reproducibility (v1.8.0 two-worktree diffoscope
+                    // confirmed this).
+                    cFlags += "-ffile-prefix-map=${rootDir}=."
+                    cFlags += "-ffile-prefix-map=${projectDir}=."
                     arguments += listOf(
                         "-DANDROID_STL=c++_shared",
                         "-DANDROID_ARM_NEON=ON",
