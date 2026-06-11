@@ -3,12 +3,16 @@
 
 package com.lazydevs.wristotle.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,13 +20,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.speech.nlu.stats.Stats
 import java.text.SimpleDateFormat
@@ -67,6 +72,7 @@ fun StatsCard(vm: StatsViewModel) {
                     TopIntentsPanel(stats.window30d)
                     ActiveHoursPanel(stats.window30d)
                     SuccessRatePanel(lifetime = stats.lifetime, window30d = stats.window30d)
+                    StumblesPanel(stats.lifetime)
                     PersonalisationPanel(stats.personalisation)
                     LifetimeTallyPanel(stats.tally)
                 }
@@ -116,21 +122,22 @@ private fun StreakPanel(stats: Stats) {
         val dayLabel = if (first != null) "🔥 Day ${daysSince(first) + 1} with Wristotle"
                        else "🔥 Wristotle"
         Text(dayLabel, style = MaterialTheme.typography.titleSmall)
-
-        val totals = "${formatInt(stats.lifetime.totalQueries)} voice queries · " +
-            "${formatInt(stats.lifetime.wordsDictated)} words"
-        Text(totals, style = MaterialTheme.typography.bodyMedium)
-
-        val minutes = (stats.lifetime.wordsDictated / WORDS_PER_MINUTE).toInt()
-        if (minutes > 0) {
-            Text("≈ ${formatDuration(minutes)} of dictation", style = MaterialTheme.typography.bodySmall)
-        }
         if (first != null) {
             Text(
                 "Since ${shortDate(first)}",
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Spacer(Modifier.height(4.dp))
+        val minutes = (stats.lifetime.wordsDictated / WORDS_PER_MINUTE).toInt()
+        StatTileRow(
+            tiles = buildList {
+                add(StatTileSpec(formatInt(stats.lifetime.totalQueries), "queries"))
+                add(StatTileSpec(formatInt(stats.lifetime.wordsDictated), "words"))
+                if (minutes > 0) add(StatTileSpec(formatDuration(minutes), "dictated"))
+            },
+        )
     }
 }
 
@@ -166,17 +173,48 @@ private fun ActiveHoursPanel(window: Stats.Aggregate) {
         Text("When you talk to Wristotle", style = MaterialTheme.typography.titleSmall)
         val peakHour = hours.withIndex().maxByOrNull { it.value }?.index ?: 0
         Text("Peak hour: ${formatHour(peakHour)}", style = MaterialTheme.typography.bodyMedium)
-        Text(renderHourStrip(hours),
-            style = MaterialTheme.typography.bodyMedium,
-            fontFamily = FontFamily.Monospace,
-        )
-        Text("0          12          23",
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-        )
+
+        HourBarChart(hours)
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text("12 AM", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            Text("12 PM", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+            Text("11 PM", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+        }
+
         if (days.sum() > 0) {
             val busiestDay = days.withIndex().maxByOrNull { it.value }?.index ?: 0
             Text("Busiest day: ${DAY_LABELS[busiestDay]}", style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+/**
+ * 24-bar chart, one bar per hour-of-day in local time. Each bar takes
+ * equal width via Row weighting so the chart aligns to the labels
+ * underneath regardless of font metrics. Empty hours render as a thin
+ * baseline so the column structure stays visible.
+ */
+@Composable
+private fun HourBarChart(hours: List<Int>) {
+    val max = hours.max().coerceAtLeast(1)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(BAR_CHART_HEIGHT_DP.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        for (count in hours) {
+            val fraction = if (count == 0) BAR_EMPTY_FRACTION else (count.toFloat() / max).coerceAtLeast(BAR_MIN_FILLED_FRACTION)
+            val color = if (count == 0) MaterialTheme.colorScheme.surfaceVariant
+                        else MaterialTheme.colorScheme.primary
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(fraction)
+                    .background(color, RoundedCornerShape(2.dp)),
+            )
         }
     }
 }
@@ -185,25 +223,88 @@ private fun ActiveHoursPanel(window: Stats.Aggregate) {
 private fun SuccessRatePanel(lifetime: Stats.Aggregate, window30d: Stats.Aggregate) {
     StatsPanel {
         Text("How well it works", style = MaterialTheme.typography.titleSmall)
-        Text(
-            "30-day: ${percent(window30d.successRate)}   ·   Lifetime: ${percent(lifetime.successRate)}",
-            style = MaterialTheme.typography.bodyMedium,
+        StatTileRow(
+            tiles = buildList {
+                add(StatTileSpec(percent(window30d.successRate), "last 30 days"))
+                add(StatTileSpec(percent(lifetime.successRate), "lifetime"))
+                lifetime.avgNluConfidence?.let {
+                    add(StatTileSpec("%.2f".format(it), "NLU confidence"))
+                }
+            },
         )
-        lifetime.avgNluConfidence?.let {
-            Text(
-                "Average NLU confidence: ${"%.2f".format(it)}",
-                style = MaterialTheme.typography.bodySmall,
+    }
+}
+
+/**
+ * Top-3 lifetime intents with the lowest success rate — surfaced as
+ * a dedicated panel so the user can see *what* to teach Wristotle
+ * about, not just a single anonymous "hardest intent" tag.
+ *
+ * Each row carries the success rate as a severity-tinted bar (error
+ * / tertiary / primary depending on the band), the absolute breakdown
+ * ("X of Y succeeded"), and a percentage on the right. We hide the
+ * panel entirely when there isn't enough data to be useful
+ * (every candidate handler needs ≥[HARDEST_MIN_SAMPLES] queries).
+ */
+@Composable
+private fun StumblesPanel(lifetime: Stats.Aggregate) {
+    val hardest = lifetime.handlerSuccess
+        .filter { it.total >= HARDEST_MIN_SAMPLES && it.handler !in HANDLER_BLOCKLIST && it.rate != null }
+        .sortedBy { it.rate!! }
+        .take(STUMBLES_LIMIT)
+    if (hardest.isEmpty()) return
+    StatsPanel {
+        Text("Where Wristotle stumbles", style = MaterialTheme.typography.titleSmall)
+        Text(
+            "Lifetime intents with the lowest success rate. Add phrasings under Settings → 🎓 Learning to improve.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        for (h in hardest) {
+            StumbleRow(handler = h.handler, total = h.total, successful = h.successful, rate = h.rate!!)
+        }
+    }
+}
+
+@Composable
+private fun StumbleRow(handler: String, total: Int, successful: Int, rate: Float) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(INTENT_BAR_WIDTH_DP.dp)
+                .height(INTENT_BAR_HEIGHT_DP.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(3.dp)),
+        ) {
+            val fillColor = when {
+                rate < SEVERITY_HIGH -> MaterialTheme.colorScheme.error
+                rate < SEVERITY_LOW -> MaterialTheme.colorScheme.tertiary
+                else -> MaterialTheme.colorScheme.primary
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(rate.coerceAtLeast(INTENT_BAR_MIN_FRACTION))
+                    .fillMaxHeight()
+                    .background(fillColor, RoundedCornerShape(3.dp)),
             )
         }
-        val hardest = lifetime.handlerSuccess
-            .filter { it.total >= HARDEST_MIN_SAMPLES && it.handler !in HANDLER_BLOCKLIST && it.rate != null }
-            .minByOrNull { it.rate!! }
-        if (hardest != null) {
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(handlerDisplayName(handler), style = MaterialTheme.typography.bodyMedium)
             Text(
-                "Hardest intent: ${handlerDisplayName(hardest.handler)} (${percent(hardest.rate)})",
+                "$successful of $total succeeded",
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Text(
+            percent(rate),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }
 
@@ -212,14 +313,12 @@ private fun PersonalisationPanel(p: Stats.Personalisation) {
     if (p.learnedNluPhrases == 0 && p.appAliases == 0 && p.contactAliases == 0) return
     StatsPanel {
         Text("Personalised for you", style = MaterialTheme.typography.titleSmall)
-        Text(
-            "${pluralN(p.learnedNluPhrases, "phrasing", "phrasings")} learned",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Text(
-            "${pluralN(p.appAliases, "app alias", "app aliases")} · " +
-                "${pluralN(p.contactAliases, "contact alias", "contact aliases")}",
-            style = MaterialTheme.typography.bodySmall,
+        StatTileRow(
+            tiles = listOf(
+                StatTileSpec(formatInt(p.learnedNluPhrases), "phrasings"),
+                StatTileSpec(formatInt(p.appAliases), "app aliases"),
+                StatTileSpec(formatInt(p.contactAliases), "contact aliases"),
+            ),
         )
     }
 }
@@ -227,16 +326,19 @@ private fun PersonalisationPanel(p: Stats.Personalisation) {
 @Composable
 private fun LifetimeTallyPanel(t: Stats.LifetimeTally) {
     StatsPanel {
-        Text("Lifetime tally", style = MaterialTheme.typography.titleSmall)
-        Text(
-            "${pluralN(t.notes, "note", "notes")} · " +
-                "${pluralN(t.tasksCompleted, "task done", "tasks done")}",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Text(
-            "${pluralN(t.reminders, "reminder pending", "reminders pending")} · " +
-                "${pluralN(t.alarms, "alarm", "alarms")}",
-            style = MaterialTheme.typography.bodySmall,
+        // "On your phone" is an intentionally honest name — these are
+        // current-state counts (deleting a task or cancelling a
+        // reminder reduces them), not lifetime-create totals. See
+        // RoomStatsSource — every input here comes from a "right now"
+        // query, never from a persistent counter.
+        Text("On your phone", style = MaterialTheme.typography.titleSmall)
+        StatTileRow(
+            tiles = listOf(
+                StatTileSpec(formatInt(t.notes), "notes"),
+                StatTileSpec(formatInt(t.tasksCompleted), "tasks done"),
+                StatTileSpec(formatInt(t.reminders), "reminders"),
+                StatTileSpec(formatInt(t.alarms), "alarms"),
+            ),
         )
     }
 }
@@ -251,6 +353,44 @@ private fun StatsPanel(content: @Composable ColumnScope.() -> Unit) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
             content = content,
         )
+    }
+}
+
+/**
+ * One stat tile — big number on top, small label underneath. Used by
+ * panels that have 2-4 datapoints to surface. The big-number-first
+ * shape reads faster than narrative text and keeps the panels
+ * uniform without dropping any data.
+ */
+private data class StatTileSpec(val value: String, val label: String)
+
+@Composable
+private fun StatTileRow(tiles: List<StatTileSpec>) {
+    if (tiles.isEmpty()) return
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        for (t in tiles) {
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    t.value,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    t.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
     }
 }
 
@@ -269,34 +409,49 @@ private fun PrivacyChip() {
     }
 }
 
+/**
+ * One row of the "Top intents" panel: a fixed-width horizontal bar
+ * (filled proportionally to count/max), the handler's display label
+ * taking the rest of the width, and a right-aligned count. All three
+ * use Row weighting / fixed widths so they line up across rows
+ * regardless of label length or font metrics.
+ */
 @Composable
 private fun BarLine(label: String, count: Int, max: Int) {
-    val filled = if (max == 0) 0 else (count.toDouble() * BAR_WIDTH / max).toInt().coerceAtLeast(1)
-    val bar = "█".repeat(filled) + "░".repeat(BAR_WIDTH - filled)
-    Text(
-        "$bar  ${label.padEnd(LABEL_WIDTH).take(LABEL_WIDTH)} ${formatInt(count).padStart(5)}",
-        style = MaterialTheme.typography.bodyMedium,
-        fontFamily = FontFamily.Monospace,
-    )
-}
-
-// ─── Pure helpers ───────────────────────────────────────────────────
-
-private fun renderHourStrip(buckets: List<Int>): String {
-    val max = buckets.max()
-    if (max == 0) return " ".repeat(24)
-    return buildString {
-        for (n in buckets) append(densityChar(n, max))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(INTENT_BAR_WIDTH_DP.dp)
+                .height(INTENT_BAR_HEIGHT_DP.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(3.dp)),
+        ) {
+            val fraction = if (max == 0) 0f
+                           else (count.toFloat() / max).coerceAtLeast(INTENT_BAR_MIN_FRACTION)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(3.dp)),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            formatInt(count),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.End,
+        )
     }
 }
 
-private fun densityChar(count: Int, max: Int): Char = when {
-    count == 0 -> ' '
-    count * 4 <= max -> '░'
-    count * 2 <= max -> '▒'
-    count * 4 <= max * 3 -> '▓'
-    else -> '█'
-}
+// ─── Pure helpers ───────────────────────────────────────────────────
 
 private fun daysSince(epochMs: Long): Long {
     val deltaMs = System.currentTimeMillis() - epochMs
@@ -324,9 +479,6 @@ private fun formatDuration(minutes: Int): String = when {
 
 private fun percent(rate: Float?): String =
     rate?.let { "${(it * 100).toInt()}%" } ?: "—"
-
-private fun pluralN(n: Int, singular: String, plural: String): String =
-    "${formatInt(n)} ${if (n == 1) singular else plural}"
 
 /**
  * Map a [com.lazydevs.wristotle.history.ConversationEntry.handler] tag
@@ -383,7 +535,14 @@ private val DAY_LABELS = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thu
 private const val EMPTY_THRESHOLD = 10
 private const val TOP_INTENTS_LIMIT = 5
 private const val HARDEST_MIN_SAMPLES = 5
-private const val BAR_WIDTH = 14
-private const val LABEL_WIDTH = 18
 private const val WORDS_PER_MINUTE = 135L
 private const val DAY_MS = 24L * 60 * 60 * 1000
+private const val BAR_CHART_HEIGHT_DP = 48
+private const val BAR_EMPTY_FRACTION = 0.05f
+private const val BAR_MIN_FILLED_FRACTION = 0.12f
+private const val INTENT_BAR_WIDTH_DP = 96
+private const val INTENT_BAR_HEIGHT_DP = 10
+private const val INTENT_BAR_MIN_FRACTION = 0.04f
+private const val STUMBLES_LIMIT = 3
+private const val SEVERITY_HIGH = 0.5f
+private const val SEVERITY_LOW = 0.75f
