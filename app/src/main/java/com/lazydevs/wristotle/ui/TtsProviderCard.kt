@@ -5,6 +5,8 @@ package com.lazydevs.wristotle.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,7 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -48,14 +50,66 @@ private data class IntentGroup(val title: String, val entries: List<Pair<String,
 
 private val INTENT_GROUPS = listOf(
     IntentGroup(
-        "Long replies",
+        "Ask Agent",
+        listOf(TtsProviderSettings.INTENT_ASK_AGENT to "Reply"),
+    ),
+    IntentGroup(
+        "Morning brief",
+        listOf(TtsProviderSettings.INTENT_MORNING_BRIEF to "Read out"),
+    ),
+    IntentGroup(
+        "Reminders",
         listOf(
-            TtsProviderSettings.INTENT_ASK_AGENT to "Ask Agent",
-            TtsProviderSettings.INTENT_MORNING_BRIEF to "Morning brief",
+            TtsProviderSettings.INTENT_REMINDER to "Create",
+            TtsProviderSettings.INTENT_LIST_REMINDERS to "List",
+            TtsProviderSettings.INTENT_CANCEL to "Cancel",
+            TtsProviderSettings.INTENT_RESCHEDULE to "Reschedule",
         ),
     ),
     IntentGroup(
-        "Quick lookups",
+        "Alarms",
+        listOf(
+            TtsProviderSettings.INTENT_SET_ALARM to "Set",
+            TtsProviderSettings.INTENT_CANCEL_ALARM to "Cancel",
+        ),
+    ),
+    IntentGroup(
+        "Timer",
+        listOf(TtsProviderSettings.INTENT_SET_TIMER to "Set"),
+    ),
+    IntentGroup(
+        "Tasks",
+        listOf(
+            TtsProviderSettings.INTENT_ADD_TASK to "Add",
+            TtsProviderSettings.INTENT_LIST_TASKS to "List",
+            TtsProviderSettings.INTENT_COMPLETE_TASK to "Complete",
+            TtsProviderSettings.INTENT_DELETE_TASK to "Delete",
+        ),
+    ),
+    IntentGroup(
+        "Notes",
+        listOf(
+            TtsProviderSettings.INTENT_NOTE to "Create",
+            TtsProviderSettings.INTENT_APPEND_NOTE to "Append",
+        ),
+    ),
+    IntentGroup(
+        "Calendar",
+        listOf(
+            TtsProviderSettings.INTENT_CREATE_EVENT to "Create event",
+            TtsProviderSettings.INTENT_CALENDAR to "List events",
+        ),
+    ),
+    IntentGroup(
+        "Messaging",
+        listOf(TtsProviderSettings.INTENT_SEND_MESSAGE to "Send"),
+    ),
+    IntentGroup(
+        "Calls",
+        listOf(TtsProviderSettings.INTENT_CALL to "Place"),
+    ),
+    IntentGroup(
+        "Lookups",
         listOf(
             TtsProviderSettings.INTENT_WEATHER to "Weather",
             TtsProviderSettings.INTENT_WORLD_TIME to "World time",
@@ -64,54 +118,34 @@ private val INTENT_GROUPS = listOf(
             TtsProviderSettings.INTENT_CALCULATE to "Calculator",
         ),
     ),
-    IntentGroup(
-        "Communications",
-        listOf(
-            TtsProviderSettings.INTENT_CALL to "Call confirmations",
-            TtsProviderSettings.INTENT_SEND_MESSAGE to "Message confirmations",
-        ),
-    ),
-    IntentGroup(
-        "Time & schedule",
-        listOf(
-            TtsProviderSettings.INTENT_REMINDER to "Reminder confirmations",
-            TtsProviderSettings.INTENT_SET_ALARM to "Alarm confirmations",
-            TtsProviderSettings.INTENT_SET_TIMER to "Timer confirmations",
-            TtsProviderSettings.INTENT_CALENDAR to "Calendar list",
-            TtsProviderSettings.INTENT_CREATE_EVENT to "Event confirmations",
-        ),
-    ),
-    IntentGroup(
-        "Capture",
-        listOf(
-            TtsProviderSettings.INTENT_NOTE to "Note confirmations",
-            TtsProviderSettings.INTENT_ADD_TASK to "Task add confirmations",
-            TtsProviderSettings.INTENT_LIST_TASKS to "Task list",
-        ),
-    ),
 )
 
+private val ALL_INTENT_IDS: Set<String> =
+    INTENT_GROUPS.flatMap { group -> group.entries.map { it.first } }.toSet()
+
+private const val DEFAULT_TEST_PHRASE =
+    "Hello, this is Wristotle speaking from your watch. " +
+    "The current time is 3:42, the weather is partly cloudy with a high of 72 degrees, " +
+    "and you have 4 unread messages waiting for you."
+
 /**
- * Settings → 🔊 Speech (or wherever it lands) — chooses how Ask-Agent and
- * other on-watch readouts are synthesized. Mirrors [SttProviderCard] so
- * users see the same mental model on the input + output sides of the
- * voice loop.
+ * Settings → 🔊 Speech card. Two sections, stacked top-down:
  *
- *  - **Master toggle** — when off, no watch TTS is attempted regardless
- *    of mode. Default off (opt-in feature, emery-only speaker).
- *  - **Local only** — Android `TextToSpeech` (whatever engine the device
- *    has installed). No network.
- *  - **Local primary** — Android first, HTTP fallback on init / synth failure.
- *  - **Cloud primary** — HTTP first, Android fallback on transport / 4xx /
- *    5xx failure. Right default for users with a self-hosted server or
- *    paid API who want best-quality output but don't want to lose voice
- *    on a network blip.
+ *  1. **Mode + testing** (always visible). Picks the provider mode + HTTP
+ *     config + a free-form test phrase + four test buttons (watch primary
+ *     / 440 Hz watch tone / phone playback of the same PCM / 440 Hz phone
+ *     tone). Lets the user configure and verify the pipeline end-to-end
+ *     without having to first toggle the master switch on.
  *
- * The HTTP block covers every OpenAI-compatible `/v1/audio/speech` provider:
- * OpenAI itself (alloy / nova / shimmer / …), self-hosted Piper /
- * OpenedAI Speech, LiteLLM proxies. Empty defaults by design (see
- * `feedback_no_prefilled_provider_defaults`).
+ *  2. **Speak on watch** (master toggle + per-intent picker). The actual
+ *     dispatch hook only fires TTS when the master is on AND the routed
+ *     intent has its per-intent checkbox enabled.
+ *
+ * The Mode block covers every OpenAI-compatible `/v1/audio/speech`
+ * provider (OpenAI, OpenedAI Speech, LiteLLM in front of Piper, …). Empty
+ * defaults by design — see `feedback_no_prefilled_provider_defaults`.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TtsProviderCard(settings: TtsProviderSettings) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -126,20 +160,37 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
     val voice by settings.httpVoice.collectAsState()
     val intents by settings.intentsEnabled.collectAsState()
 
+    var testPhrase by remember { mutableStateOf(DEFAULT_TEST_PHRASE) }
     var status by remember { mutableStateOf("") }
+
+    // Build a streamer fresh per click so it always sees the latest mode +
+    // URL + voice config rather than a cached snapshot from first compose.
+    fun freshStreamer(primaryOnly: Boolean = true): TtsStreamer {
+        val provider = if (primaryOnly) {
+            when (mode) {
+                TtsProviderMode.LOCAL_ONLY,
+                TtsProviderMode.LOCAL_PRIMARY -> LocalTtsProvider(context)
+                TtsProviderMode.CLOUD_PRIMARY -> HttpTtsClient(settings)
+            }
+        } else {
+            app.buildTtsProvider()
+        }
+        return TtsStreamer(app.transport, provider)
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
 
     Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // ─── Master toggle + per-intent picker ──────────────────────
             Text("Speak on watch", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Read Ask Agent replies on the Pebble Time 2 speaker (emery only). Off until you turn it on.",
+                "Read replies aloud on the Pebble Time 2 speaker (emery only). Off until you turn it on.",
                 style = MaterialTheme.typography.bodySmall,
             )
-
-            // ── Master toggle ─────────────────────────────────────────
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Switch(checked = enabled, onCheckedChange = { settings.setEnabled(it) })
                 Spacer(modifier = Modifier.width(8.dp))
@@ -153,6 +204,17 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
                     "Per-intent — pick what the watch reads aloud. Nothing is spoken by default.",
                     style = MaterialTheme.typography.bodySmall,
                 )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = { settings.setIntentsEnabled(ALL_INTENT_IDS) },
+                    ) { Text("Select all") }
+                    OutlinedButton(
+                        onClick = { settings.setIntentsEnabled(emptySet()) },
+                    ) { Text("Deselect all") }
+                }
                 INTENT_GROUPS.forEachIndexed { idx, group ->
                     if (idx > 0) Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -160,116 +222,166 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
                         style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(top = 4.dp),
                     )
-                    group.entries.forEach { (id, label) ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = id in intents,
-                                onCheckedChange = { settings.setIntentEnabled(id, it) },
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(0.dp),
+                    ) {
+                        group.entries.forEach { (id, label) ->
+                            FilterChip(
+                                selected = id in intents,
+                                onClick = { settings.setIntentEnabled(id, id !in intents) },
+                                label = { Text(label) },
                             )
-                            Text(label)
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Mode", style = MaterialTheme.typography.titleSmall)
-                RadioRow(
-                    label = "Local only — Android TTS",
-                    selected = mode == TtsProviderMode.LOCAL_ONLY,
-                    onSelect = { settings.setMode(TtsProviderMode.LOCAL_ONLY) },
-                )
-                RadioRow(
-                    label = "Local primary — Android first, HTTP fallback",
-                    selected = mode == TtsProviderMode.LOCAL_PRIMARY,
-                    onSelect = { settings.setMode(TtsProviderMode.LOCAL_PRIMARY) },
-                )
-                RadioRow(
-                    label = "Cloud primary — HTTP first, Android fallback",
-                    selected = mode == TtsProviderMode.CLOUD_PRIMARY,
-                    onSelect = { settings.setMode(TtsProviderMode.CLOUD_PRIMARY) },
-                )
+        }
+    }
 
-                if (mode != TtsProviderMode.LOCAL_ONLY) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("HTTP endpoint", style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        "Any OpenAI-compatible /v1/audio/speech provider — OpenAI, OpenedAI Speech, LiteLLM in front of Piper.",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    OutlinedTextField(
-                        value = baseUrl,
-                        onValueChange = { settings.setHttpBaseUrl(it) },
-                        label = { Text("Base URL") },
-                        placeholder = { Text("https://api.openai.com/v1") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    PasswordField(
-                        value = apiKey,
-                        onChange = { settings.setHttpApiKey(it) },
-                        label = "API key (optional for self-hosted)",
-                    )
-                    OutlinedTextField(
-                        value = model,
-                        onValueChange = { settings.setHttpModel(it) },
-                        label = { Text("Model") },
-                        placeholder = { Text("tts-1") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    OutlinedTextField(
-                        value = voice,
-                        onValueChange = { settings.setHttpVoice(it) },
-                        label = { Text("Voice") },
-                        placeholder = { Text("alloy") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                }
+    Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // ─── Mode ───────────────────────────────────────────────────
+            Text("Mode", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Choose which TTS engine produces the audio. You can test the configuration here without enabling the watch dispatch above.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            RadioRow(
+                label = "Local only — Android TTS",
+                selected = mode == TtsProviderMode.LOCAL_ONLY,
+                onSelect = { settings.setMode(TtsProviderMode.LOCAL_ONLY) },
+            )
+            RadioRow(
+                label = "Local primary — Android first, HTTP fallback",
+                selected = mode == TtsProviderMode.LOCAL_PRIMARY,
+                onSelect = { settings.setMode(TtsProviderMode.LOCAL_PRIMARY) },
+            )
+            RadioRow(
+                label = "Cloud primary — HTTP first, Android fallback",
+                selected = mode == TtsProviderMode.CLOUD_PRIMARY,
+                onSelect = { settings.setMode(TtsProviderMode.CLOUD_PRIMARY) },
+            )
 
-                // ── Test "Hello from Wristotle" ───────────────────────
-                // Tests the PRIMARY provider for the selected mode only.
-                // If the cloud endpoint is misconfigured we want the test
-                // to fail visibly here, not silently fall back to Android
-                // TTS and look like the cloud worked.
-                Spacer(modifier = Modifier.height(8.dp))
-                val primaryLabel = when (mode) {
-                    TtsProviderMode.LOCAL_ONLY, TtsProviderMode.LOCAL_PRIMARY -> "Android TTS"
-                    TtsProviderMode.CLOUD_PRIMARY -> "HTTP endpoint"
-                }
-                OutlinedButton(
-                    onClick = {
-                        status = "testing $primaryLabel…"
-                        scope.launch {
-                            val primary = when (mode) {
-                                TtsProviderMode.LOCAL_ONLY,
-                                TtsProviderMode.LOCAL_PRIMARY -> LocalTtsProvider(context)
-                                TtsProviderMode.CLOUD_PRIMARY -> HttpTtsClient(settings)
-                            }
-                            val streamer = TtsStreamer(app.transport, primary)
-                            val reason = runCatching { streamer.speak("Hello from Wristotle.") }
-                                .getOrElse {
-                                    status = "$primaryLabel error: ${it.message ?: it.javaClass.simpleName}"
-                                    return@launch
-                                }
-                            status = if (reason == null) {
-                                "$primaryLabel: ok — check watch"
-                            } else {
-                                "$primaryLabel failed: $reason"
-                            }
-                        }
-                    },
+            if (mode != TtsProviderMode.LOCAL_ONLY) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("HTTP endpoint", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Any OpenAI-compatible /v1/audio/speech provider — OpenAI, OpenedAI Speech, LiteLLM in front of Piper.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedTextField(
+                    value = baseUrl,
+                    onValueChange = { settings.setHttpBaseUrl(it) },
+                    label = { Text("Base URL") },
+                    placeholder = { Text("https://api.openai.com/v1") },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Test primary on watch") }
+                    singleLine = true,
+                )
+                PasswordField(
+                    value = apiKey,
+                    onChange = { settings.setHttpApiKey(it) },
+                    label = "API key (optional for self-hosted)",
+                )
+                OutlinedTextField(
+                    value = model,
+                    onValueChange = { settings.setHttpModel(it) },
+                    label = { Text("Model") },
+                    placeholder = { Text("tts-1") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = voice,
+                    onValueChange = { settings.setHttpVoice(it) },
+                    label = { Text("Voice") },
+                    placeholder = { Text("alloy") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+            }
 
-                if (status.isNotEmpty()) {
-                    Text(
-                        status,
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                    )
-                }
+            // ─── Test surface ───────────────────────────────────────────
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Test", style = MaterialTheme.typography.titleSmall)
+            OutlinedTextField(
+                value = testPhrase,
+                onValueChange = { testPhrase = it },
+                label = { Text("Phrase to speak") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 3,
+            )
+            val primaryLabel = when (mode) {
+                TtsProviderMode.LOCAL_ONLY, TtsProviderMode.LOCAL_PRIMARY -> "Android TTS"
+                TtsProviderMode.CLOUD_PRIMARY -> "HTTP endpoint"
+            }
+            OutlinedButton(
+                onClick = {
+                    status = "testing $primaryLabel…"
+                    scope.launch {
+                        val reason = runCatching { freshStreamer().speak(testPhrase) }
+                            .getOrElse {
+                                status = "$primaryLabel error: ${it.message ?: it.javaClass.simpleName}"
+                                return@launch
+                            }
+                        status = if (reason == null) {
+                            "$primaryLabel: ok — check watch"
+                        } else {
+                            "$primaryLabel failed: $reason"
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Speak on watch (primary only)") }
+            OutlinedButton(
+                onClick = {
+                    status = "streaming 440 Hz to watch…"
+                    scope.launch {
+                        val ok = runCatching { freshStreamer().playTestTone(seconds = 3.0) }
+                            .getOrElse {
+                                status = "tone error: ${it.message ?: it.javaClass.simpleName}"
+                                return@launch
+                            }
+                        status = if (ok) "tone sent to watch" else "tone failed"
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Play 440 Hz tone on watch") }
+            OutlinedButton(
+                onClick = {
+                    status = "synthesizing → phone…"
+                    scope.launch {
+                        val ok = runCatching { freshStreamer().speakOnPhone(testPhrase) }
+                            .getOrElse {
+                                status = "phone error: ${it.message ?: it.javaClass.simpleName}"
+                                return@launch
+                            }
+                        status = if (ok) "phone playing — clean here = watch path issue if watch crackles"
+                                  else "phone playback failed"
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Speak on phone (same PCM as watch)") }
+            OutlinedButton(
+                onClick = {
+                    status = "tone → phone"
+                    freshStreamer().playTonePhone(seconds = 3.0)
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Play 440 Hz tone on phone") }
+
+            if (status.isNotEmpty()) {
+                Text(
+                    status,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                )
             }
         }
     }
-}
 
+    }   // outer Column wrap
+}

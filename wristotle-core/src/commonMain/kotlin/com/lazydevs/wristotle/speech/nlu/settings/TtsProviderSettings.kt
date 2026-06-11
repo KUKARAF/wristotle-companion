@@ -78,6 +78,14 @@ class TtsProviderSettings(private val store: KeyValueStore) {
         _intentsEnabled.value = next
     }
 
+    /** Bulk replace — used by Settings card's "Select all" / "Deselect all"
+     *  buttons so we hit prefs once instead of once-per-intent. */
+    fun setIntentsEnabled(intents: Set<String>) {
+        if (_intentsEnabled.value == intents) return
+        store.putString(KEY_INTENTS_ENABLED, intents.joinToString(","))
+        _intentsEnabled.value = intents
+    }
+
     /** Master + per-intent gate the handler side checks before calling
      *  the streamer. Keeps the conditional out of every handler. */
     fun shouldSpeak(intent: String): Boolean =
@@ -129,21 +137,34 @@ class TtsProviderSettings(private val store: KeyValueStore) {
         const val INTENT_BATTERY = "Battery"
         const val INTENT_CALCULATE = "Calculate"
 
-        // Communication confirmations
+        // Communication
         const val INTENT_CALL = "Call"
         const val INTENT_SEND_MESSAGE = "SendMessage"
 
-        // Time + schedule confirmations / lists
+        // Reminders
         const val INTENT_REMINDER = "Reminder"
+        const val INTENT_LIST_REMINDERS = "ListReminders"
+        const val INTENT_CANCEL = "Cancel"
+        const val INTENT_RESCHEDULE = "Reschedule"
+
+        // Alarms + timers
         const val INTENT_SET_ALARM = "SetAlarm"
+        const val INTENT_CANCEL_ALARM = "CancelAlarm"
         const val INTENT_SET_TIMER = "SetTimer"
+
+        // Calendar
         const val INTENT_CALENDAR = "Calendar"
         const val INTENT_CREATE_EVENT = "CreateEvent"
 
-        // Capture confirmations / lists
+        // Notes
         const val INTENT_NOTE = "Note"
+        const val INTENT_APPEND_NOTE = "AppendNote"
+
+        // Tasks
         const val INTENT_ADD_TASK = "AddTask"
         const val INTENT_LIST_TASKS = "ListTasks"
+        const val INTENT_COMPLETE_TASK = "CompleteTask"
+        const val INTENT_DELETE_TASK = "DeleteTask"
     }
 }
 
