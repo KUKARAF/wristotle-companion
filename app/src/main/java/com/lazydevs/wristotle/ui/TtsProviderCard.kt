@@ -36,7 +36,9 @@ import com.lazydevs.wristotle.speech.nlu.settings.TtsProviderMode
 import com.lazydevs.wristotle.speech.nlu.settings.TtsProviderSettings
 import com.lazydevs.wristotle.tts.TtsStreamer
 import com.lazydevs.wristotle.ui.components.PasswordField
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Display rows for the per-intent checkboxes, grouped so the user can
@@ -327,15 +329,30 @@ fun TtsProviderCard(settings: TtsProviderSettings) {
                         // against the real first chunk's tts_start that
                         // follows.
                         app.transport.sendTtsChunk(ByteArray(0), start = true, end = false)
-                        val reason = runCatching { freshStreamer().speak(testPhrase) }
-                            .getOrElse {
-                                status = "$primaryLabel error: ${it.message ?: it.javaClass.simpleName}"
-                                return@launch
+                        try {
+                            val reason = runCatching { freshStreamer().speak(testPhrase) }
+                                .getOrElse {
+                                    status = "$primaryLabel error: ${it.message ?: it.javaClass.simpleName}"
+                                    return@launch
+                                }
+                            status = if (reason == null) {
+                                "$primaryLabel: ok — check watch"
+                            } else {
+                                "$primaryLabel failed: $reason"
                             }
-                        status = if (reason == null) {
-                            "$primaryLabel: ok — check watch"
-                        } else {
-                            "$primaryLabel failed: $reason"
+                        } finally {
+                            // Always close the stream so the watch doesn't
+                            // stay in BUFFERING (and tts_is_active() doesn't
+                            // stay true blocking quick-launch auto-exit)
+                            // when speak() throws / fails / the coroutine is
+                            // cancelled. Mirrors the dispatch hook's
+                            // NonCancellable terminal tts_end — see
+                            // PebbleListenerService.dispatchAndReport.
+                            withContext(NonCancellable) {
+                                runCatching {
+                                    app.transport.sendTtsChunk(ByteArray(0), start = false, end = true)
+                                }
+                            }
                         }
                     }
                 },
