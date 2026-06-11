@@ -88,6 +88,11 @@ jobs:
         uses: https://github.com/android-actions/setup-android@v3.2.2
         with:
           accept-android-sdk-licenses: true
+          # Without this the action streams the full text of every
+          # accepted license into the CI log (~200 lines per build).
+          # Suppress — we've already legally accepted them, no need
+          # to re-print the text every release.
+          log-accepted-android-sdk-licenses: false
 
       - name: Re-accept Android SDK licenses (defensive)
         # Belt-and-braces. The runner's cmdline-tools install carries

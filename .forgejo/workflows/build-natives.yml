@@ -54,6 +54,7 @@ jobs:
         uses: https://github.com/android-actions/setup-android@v3.2.2
         with:
           accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
 
       - name: Re-accept Android SDK licenses (defensive)
         run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
