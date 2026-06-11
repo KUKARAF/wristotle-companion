@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
     private val watchSettingsVm: WatchSettingsViewModel by viewModels()
     private val backupVm: com.lazydevs.wristotle.ui.BackupViewModel by viewModels()
     private val mcpServersVm: com.lazydevs.wristotle.ui.McpServersViewModel by viewModels()
+    private val statsVm: com.lazydevs.wristotle.ui.StatsViewModel by viewModels()
 
     // Registered once; result arrives asynchronously and triggers a permission refresh.
     // After the runtime perms dialog resolves, chain into the battery-optimization
@@ -187,6 +188,7 @@ class MainActivity : ComponentActivity() {
                     watchSettingsVm = watchSettingsVm,
                     backupVm = backupVm,
                     mcpServersVm = mcpServersVm,
+                    statsVm = statsVm,
                     onRequestWatchPermissions = ::requestWatchPermissions,
                     onRequestVoicePermissions = ::requestVoicePermissions,
                     onRequestLocationPermission = ::requestLocationPermission,

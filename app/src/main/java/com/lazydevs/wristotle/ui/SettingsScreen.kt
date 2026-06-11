@@ -92,6 +92,7 @@ enum class SettingsCategory(
     Mcp(R.string.settings_section_mcp, "🔌"),
     AskAgent(R.string.settings_section_askagent, "✨"),
     Speech(R.string.settings_section_speech, "🔊", experimental = true),
+    Stats(R.string.settings_section_stats, "📊"),
     Diagnostics(R.string.settings_section_diagnostics, "🔧"),
     Help(R.string.settings_section_help, "❓"),
     Support(R.string.settings_section_support, "❤️"),
@@ -120,6 +121,7 @@ fun SettingsScreen(
     watchSettingsVm: WatchSettingsViewModel,
     backupVm: BackupViewModel,
     mcpServersVm: McpServersViewModel,
+    statsVm: StatsViewModel,
     attentionByCategory: Map<SettingsCategory, Boolean> = emptyMap(),
     /** Non-null when the app launched into a version it hasn't seen
      *  before — drill straight into [SettingsCategory.Help] and have
@@ -234,6 +236,7 @@ fun SettingsScreen(
                 watchSettingsVm = watchSettingsVm,
                 backupVm = backupVm,
                 mcpServersVm = mcpServersVm,
+                statsVm = statsVm,
                 reminderSettings = reminderSettings,
                 weatherSettings = weatherSettings,
                 askAgentSettings = askAgentSettings,
@@ -404,6 +407,7 @@ private fun SettingsCategoryContent(
     watchSettingsVm: WatchSettingsViewModel,
     backupVm: BackupViewModel,
     mcpServersVm: McpServersViewModel,
+    statsVm: StatsViewModel,
     reminderSettings: ReminderSettings,
     weatherSettings: com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings,
     askAgentSettings: com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings,
@@ -549,6 +553,9 @@ private fun SettingsCategoryContent(
 
             SettingsCategory.Speech ->
                 TtsProviderCard(settings = app.ttsProviderSettings)
+
+            SettingsCategory.Stats ->
+                StatsCard(vm = statsVm)
 
             SettingsCategory.Diagnostics ->
                 DiagnosticsCard(vm = diagnosticsVm)

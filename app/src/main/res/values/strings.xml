@@ -193,6 +193,7 @@
     <string name="settings_section_learning">Learning</string>
     <string name="settings_section_conversation">Conversation</string>
     <string name="settings_section_diagnostics">Diagnostics</string>
+    <string name="settings_section_stats">Stats</string>
     <string name="settings_section_speech">Speech</string>
     <string name="settings_section_notes">Notes</string>
     <string name="settings_section_reminders">Alarms &amp; Reminders</string>
