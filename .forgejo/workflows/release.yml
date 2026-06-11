@@ -64,14 +64,54 @@ jobs:
           echo "name=$VERSION" >> "$GITHUB_OUTPUT"
           echo "code=$EXPECTED_CODE" >> "$GITHUB_OUTPUT"
 
+      - name: Set up persistent runner caches
+        # The Codeberg runner's working dir is wiped per job, but $HOME
+        # is persistent across builds. Point every heavy-download tool
+        # (Android SDK, Gradle deps, Kotlin/Native toolchain, whisper.cpp
+        # build outputs) at fixed paths under $HOME/.wristotle-ci-cache.
+        # On first run after a fresh runner: downloads everything (~10
+        # min total). Every subsequent build: caches are warm, downloads
+        # skip themselves.
+        #
+        # This replaces the previous actions/cache steps, which need a
+        # cache backend Codeberg Actions doesn't reliably expose and added
+        # tar/upload/download overhead even when they worked.
+        run: |
+          CACHE_ROOT="$HOME/.wristotle-ci-cache"
+          mkdir -p \
+            "$CACHE_ROOT/android-sdk" \
+            "$CACHE_ROOT/gradle" \
+            "$CACHE_ROOT/kotlin-konan" \
+            "$CACHE_ROOT/speech-whisper-cxx" \
+            "$CACHE_ROOT/speech-whisper-cxx-intermediates"
+          {
+            echo "WRISTOTLE_CI_CACHE_ROOT=$CACHE_ROOT"
+            echo "ANDROID_HOME=$CACHE_ROOT/android-sdk"
+            echo "ANDROID_SDK_ROOT=$CACHE_ROOT/android-sdk"
+            echo "GRADLE_USER_HOME=$CACHE_ROOT/gradle"
+            echo "KONAN_DATA_DIR=$CACHE_ROOT/kotlin-konan"
+          } >> $GITHUB_ENV
+          # Pipe .cxx build artefacts through symlinks into the persistent
+          # cache. AGP writes through the symlinks; the next build inherits
+          # the .o files without re-running CMake's configure step.
+          ln -snf "$CACHE_ROOT/speech-whisper-cxx" speech-whisper/.cxx
+          mkdir -p speech-whisper/build/intermediates
+          ln -snf "$CACHE_ROOT/speech-whisper-cxx-intermediates" speech-whisper/build/intermediates/cxx
+          du -sh "$CACHE_ROOT"/* 2>/dev/null || true
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle (with build cache)
+      - name: Set up Gradle
+        # Skip gradle/actions/setup-gradle's built-in build cache — we're
+        # already pointing GRADLE_USER_HOME at the persistent runner cache
+        # above. Just install Gradle itself.
         uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-disabled: true
 
       - name: Set up Android SDK
         # Forgejo's action mirror (data.forgejo.org) only carries a subset
@@ -80,65 +120,29 @@ jobs:
         # accepts the full https://github.com/owner/repo@ref form.
         #
         # Pinned to v3.2.2 because the floating `@v3` ref changed under
-        # us between v1.7.0 (success at 03:06) and v1.7.1 (failure at
-        # 03:22) — the new release's internal `sdkmanager --licenses`
-        # prompt hung the runner. v3.2.2 is the last release where the
-        # license auto-accept is known to work reliably on Forgejo's
-        # self-hosted runner.
+        # us between v1.7.0 (success) and v1.7.1 (failure) and its
+        # internal sdkmanager started prompting interactively.
+        #
+        # Reads ANDROID_HOME from the env we set above, so cmdline-tools
+        # land in the persistent cache. First run: downloads cmdline-tools.
+        # Subsequent runs: sees existing install, fast-skips download.
         uses: https://github.com/android-actions/setup-android@v3.2.2
         with:
           accept-android-sdk-licenses: true
-          # Without this the action streams the full text of every
-          # accepted license into the CI log (~200 lines per build).
-          # Suppress — we've already legally accepted them, no need
-          # to re-print the text every release.
           log-accepted-android-sdk-licenses: false
 
       - name: Re-accept Android SDK licenses (defensive)
-        # Belt-and-braces. The runner's cmdline-tools install carries
-        # state across builds, so even with setup-android telling us
-        # licenses are accepted, the *next* sdkmanager invocation can
-        # find a mismatch when the bundled cmdline-tools version changes
-        # under it. Pipe `yes` to license acceptance unconditionally;
-        # cheap (a few seconds) and inoculates the subsequent install
-        # step against the "7 of 7 licenses not accepted" interactive
-        # prompt that cancelled v1.7.1's first build.
-        run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-
-      - name: Cache Android NDK + CMake install
-        # NDK 30.0.14904198 is a ~1.6 GB download; CMake 3.22.1 is ~30 MB.
-        # On a runner that doesn't persist $ANDROID_HOME between builds
-        # (Codeberg's self-hosted runner appears not to), every release
-        # spent 3-5 minutes re-downloading. Cache the install dirs and
-        # the subsequent `sdkmanager --install` becomes a no-op on hit.
-        # Key is pinned to the exact versions so a future bump auto-misses.
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.ANDROID_HOME }}/ndk/30.0.14904198
-            ${{ env.ANDROID_HOME }}/cmake/3.22.1
-          key: android-ndk-30.0.14904198-cmake-3.22.1-v1
+        # Belt-and-braces against runner state drift — cmdline-tools
+        # version changes under us can leave previously-accepted licenses
+        # mismatched. Pipe `yes` defensively; cheap (~1s).
+        run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
       - name: Install pinned NDK + CMake
         # The :speech-whisper module pins ndkVersion = 30.0.14904198 and
-        # CMake 3.22.1. Install them explicitly so the build doesn't
-        # transparently fall back to whatever setup-android brought down.
-        # No-op on cache hit; ~3-5 min download on cache miss.
-        run: |
-          sdkmanager --install "ndk;30.0.14904198" "cmake;3.22.1"
-
-      - name: Cache CMake / .cxx build output
-        uses: actions/cache@v4
-        with:
-          path: |
-            speech-whisper/.cxx
-            speech-whisper/build/intermediates/cxx
-          # whisper.cpp source rarely changes; cache key is whichever pinned
-          # version the submodule resolves to.
-          key: cxx-${{ runner.os }}-${{ hashFiles('speech-whisper/src/main/cpp/whisper.cpp/CMakeLists.txt') }}
-          restore-keys: |
-            cxx-${{ runner.os }}-
+        # CMake 3.22.1. sdkmanager is idempotent — first run downloads
+        # (~1.6 GB NDK), subsequent runs see existing install at
+        # $ANDROID_HOME/ndk/30.0.14904198 and skip.
+        run: sdkmanager --install "ndk;30.0.14904198" "cmake;3.22.1"
 
       - name: Decode release keystore
         env:
