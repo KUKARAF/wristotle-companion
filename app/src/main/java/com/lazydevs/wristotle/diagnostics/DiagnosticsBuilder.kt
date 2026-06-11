@@ -72,6 +72,7 @@ class DiagnosticsBuilder(
             appendPermissionsSection()
             appendModelsSection()
             appendSttProviderSection(redact)
+            appendTtsProviderSection(redact)
             appendAskAgentSection()
             appendMcpServersSection(redact)
             appendWatchSettingsSection()
@@ -184,6 +185,24 @@ class DiagnosticsBuilder(
         appendLine("- HTTP base URL: ${urlOrSetState(s.httpBaseUrl.value, redact)}")
         appendLine("- HTTP model: ${nonEmpty(s.httpModel.value)}")
         appendLine("- HTTP key: ${setState(s.httpApiKey.value)}")
+        appendLine()
+    }
+
+    private fun StringBuilder.appendTtsProviderSection(redact: Boolean) {
+        appendLine("### Speech provider (TTS, on-watch — Experimental)")
+        val t = app.ttsProviderSettings
+        val intents = t.intentsEnabled.value
+        appendLine("- Master toggle: ${if (t.enabled.value) "on" else "off"}")
+        appendLine("- Mode: ${t.mode.value}")
+        appendLine("- HTTP base URL: ${urlOrSetState(t.httpBaseUrl.value, redact)}")
+        appendLine("- HTTP model: ${nonEmpty(t.httpModel.value)}")
+        appendLine("- HTTP voice: ${nonEmpty(t.httpVoice.value)}")
+        appendLine("- HTTP key: ${setState(t.httpApiKey.value)}")
+        // Count + alphabetical name list — useful for "Speak on watch is on
+        // but Reminders don't speak" bug reports. Names aren't PII, no need
+        // to redact.
+        appendLine("- Speaking intents: ${intents.size}" +
+            if (intents.isNotEmpty()) " (${intents.sorted().joinToString(", ")})" else "")
         appendLine()
     }
 
