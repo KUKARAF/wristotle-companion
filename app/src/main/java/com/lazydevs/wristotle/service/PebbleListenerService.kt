@@ -409,6 +409,48 @@ class PebbleListenerService : BasePebbleListenerService() {
 
         transport.sendForHint(watchHint, dispatchResult.response)
 
+        // Per-intent TTS on the watch speaker. Master + per-intent toggle
+        // both gate via `shouldSpeak`.
+        if (app.ttsProviderSettings.shouldSpeak(routed.intent.name)) {
+            val ttsStartMs = System.currentTimeMillis()
+            coroutineScope.launch {
+                Log.d(TAG, "tts: t+0ms dispatch hook fired (intent=${routed.intent.name})")
+                // Pre-warm the watch BEFORE the ~7 s Android TTS round-trip:
+                // an empty `start=true` chunk parks the watch in BUFFERING
+                // so its quick-launch auto-exit gate (which only knows TTS
+                // is "active" while the state machine is non-idle) holds
+                // for the whole synthesis window. Without this the auto-
+                // exit fires at its configured 5-ish-second mark — before
+                // any audio bytes arrive — and the app exits before the
+                // speaker ever opens.
+                transport.sendTtsChunk(ByteArray(0), start = true, end = false)
+                Log.d(TAG, "tts: t+${System.currentTimeMillis() - ttsStartMs}ms pre-warm sent")
+                val streamer = com.lazydevs.wristotle.tts.TtsStreamer(
+                    transport, app.buildTtsProvider(),
+                )
+                try {
+                    val reason = runCatching { streamer.speak(dispatchResult.response) }
+                        .getOrElse { it.message ?: it.javaClass.simpleName }
+                    if (reason != null) Log.w(TAG, "tts speak failed: $reason")
+                } finally {
+                    // Always send a terminal `tts_end` so the watch can return
+                    // to IDLE if synthesis failed mid-flight or this coroutine
+                    // got cancelled (service teardown). Without it the watch
+                    // would stay in BUFFERING and `tts_is_active()` would
+                    // keep `quick_launch` from ever auto-exiting again.
+                    // Successful speak() already sends end=true; the watch's
+                    // handler no-ops on IDLE, so the duplicate is harmless.
+                    // NonCancellable ensures the send runs even when the
+                    // parent scope is being cancelled.
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                        runCatching {
+                            transport.sendTtsChunk(ByteArray(0), start = false, end = true)
+                        }
+                    }
+                }
+            }
+        }
+
         if (dispatchResult.success) {
             // Fire-and-forget learning: doesn't block the response, doesn't
             // surface to the user. NluSettings gates whether anything sticks.

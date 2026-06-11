@@ -6,6 +6,7 @@ package com.lazydevs.wristotle.transport
 import android.content.Context
 import android.util.Log
 import com.lazydevs.wristotle.AppConstants
+import com.lazydevs.wristotle.speech.nlu.transport.MessageKeys
 import com.lazydevs.wristotle.speech.nlu.transport.ReminderPin
 import com.lazydevs.wristotle.speech.nlu.transport.TimelineSendResult
 import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
@@ -48,6 +49,15 @@ class PebbleTransport(context: Context) : WatchTransport, java.io.Closeable {
     override suspend fun sendPresence(key: UInt): Boolean = sendWithNackRetry(
         mapOf(key to PebbleDictionaryItem.UInt8(1u))
     )
+
+    override suspend fun sendTtsChunk(bytes: ByteArray, start: Boolean, end: Boolean): Boolean {
+        val payload = mutableMapOf<UInt, PebbleDictionaryItem>()
+        if (start) payload[MessageKeys.TTS_START] = PebbleDictionaryItem.UInt8(1u)
+        if (bytes.isNotEmpty()) payload[MessageKeys.TTS_PCM_CHUNK] = PebbleDictionaryItem.Bytes(bytes)
+        if (end) payload[MessageKeys.TTS_END] = PebbleDictionaryItem.UInt8(1u)
+        if (payload.isEmpty()) return true
+        return sendWithNackRetry(payload)
+    }
 
     override suspend fun insertReminderPin(pin: ReminderPin): TimelineSendResult =
         sender.insertTimelinePin(

@@ -110,6 +110,17 @@ object MessageKeys {
     /** Mid-query status from AskAgent's MCP tool-calling loop. */
     val AGENT_STATUS: UInt = 10041u
 
+    // ── TTS spike (2026-06-09) — emery-only, validate BLE bandwidth ─────
+    /** Open the speaker stream. UInt8(1) payload, no other data. Sent in the
+     *  same AppMessage as the first chunk so the round-trip cost is paid once. */
+    val TTS_START: UInt = 10054u
+    /** Raw 8 kHz / 8-bit signed mono PCM. Up to ~6 KB per chunk on emery
+     *  (inbox is sized to `app_message_inbox_size_maximum()`). */
+    val TTS_PCM_CHUNK: UInt = 10055u
+    /** Flush + close the speaker stream. UInt8(1) payload. Watch logs
+     *  throughput stats on receipt — that's the spike's measurement signal. */
+    val TTS_END: UInt = 10056u
+
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE]. */
     const val NOTE_DETAIL_MAX_CHARS: Int = 540
 

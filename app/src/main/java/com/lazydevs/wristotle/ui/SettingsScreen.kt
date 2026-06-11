@@ -71,7 +71,14 @@ import kotlinx.coroutines.launch
  * landing visually distinct from Material's standard chrome and avoids
  * pulling in `material-icons-extended` symbols just for eight glyphs.
  */
-enum class SettingsCategory(@param:StringRes val labelRes: Int, val emoji: String) {
+enum class SettingsCategory(
+    @param:StringRes val labelRes: Int,
+    val emoji: String,
+    /** Marks the category as work-in-progress; the landing list shows an
+     *  "Experimental" pill next to the label so users know to set
+     *  expectations before opening it. */
+    val experimental: Boolean = false,
+) {
     Setup(R.string.settings_section_setup, "🌟"),
     Watch(R.string.settings_section_watch, "⌚"),
     Conversation(R.string.settings_section_conversation, "💬"),
@@ -84,6 +91,7 @@ enum class SettingsCategory(@param:StringRes val labelRes: Int, val emoji: Strin
     Backup(R.string.settings_section_backup, "💾"),
     Mcp(R.string.settings_section_mcp, "🔌"),
     AskAgent(R.string.settings_section_askagent, "✨"),
+    Speech(R.string.settings_section_speech, "🔊", experimental = true),
     Diagnostics(R.string.settings_section_diagnostics, "🔧"),
     Help(R.string.settings_section_help, "❓"),
     Support(R.string.settings_section_support, "❤️"),
@@ -324,6 +332,20 @@ private fun SettingsLanding(
                                     modifier = Modifier.size(8.dp),
                                 )
                             }
+                            if (cat.experimental) {
+                                Spacer(Modifier.width(8.dp))
+                                androidx.compose.material3.Surface(
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                ) {
+                                    Text(
+                                        "Experimental",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    )
+                                }
+                            }
                         }
                     },
                     trailingContent = {
@@ -524,6 +546,9 @@ private fun SettingsCategoryContent(
 
             SettingsCategory.AskAgent ->
                 AskAgentSettingsCard(settings = askAgentSettings)
+
+            SettingsCategory.Speech ->
+                TtsProviderCard(settings = app.ttsProviderSettings)
 
             SettingsCategory.Diagnostics ->
                 DiagnosticsCard(vm = diagnosticsVm)

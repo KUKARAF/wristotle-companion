@@ -222,6 +222,24 @@ class WristotleApplication : Application() {
         )
     }
 
+    /** TTS-provider preferences for the watch-side TTS feature. Mirrors
+     *  the STT shape; CompositeTtsProvider chooses Local vs HTTP per [mode]. */
+    val ttsProviderSettings: com.lazydevs.wristotle.speech.nlu.settings.TtsProviderSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.TtsProviderSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.TtsProviderSettings.PREFS_NAME),
+        )
+    }
+
+    /** Active TTS provider, rebuilt cheaply per call so the user's
+     *  Settings changes take effect immediately without restart. */
+    fun buildTtsProvider(): com.lazydevs.wristotle.speech.nlu.tts.TtsProvider =
+        com.lazydevs.wristotle.speech.nlu.tts.CompositeTtsProvider.forMode(
+            mode = ttsProviderSettings.mode.value,
+            local = com.lazydevs.wristotle.tts.LocalTtsProvider(this),
+            http = com.lazydevs.wristotle.tts.HttpTtsClient(ttsProviderSettings),
+            log = com.lazydevs.wristotle.logging.WristotleLogger,
+        )
+
     /** First-launch wizard's dismissed flag + reactive surface. Lives
      *  in its own SharedPrefs (`setup_state`) deliberately so it never
      *  travels in backups — see `setup-flow.md`. */
