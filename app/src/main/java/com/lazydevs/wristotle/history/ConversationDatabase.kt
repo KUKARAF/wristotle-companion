@@ -22,21 +22,20 @@ abstract class ConversationDatabase : RoomDatabase() {
         /**
          * Built once per process by `WristotleApplication`.
          *
-         * Schema is frozen at v1 — every column that exists on
-         * [ConversationEntry] is part of the v1 definition. Migrations
-         * from earlier dev-only v2 / v3 schemas were collapsed away
-         * before any public install. [fallbackToDestructiveMigration]
-         * is the belt-and-suspenders for any stray dev-build database
-         * still on disk: Room will drop and recreate the table rather
-         * than crash on "cannot find a migration."
+         * Schema is frozen at v1 — every column on [ConversationEntry] is part
+         * of the v1 definition, and the app now ships to real users, so this is
+         * the locked baseline. Any future column addition MUST register a proper
+         * Migration here.
          *
-         * Once we start shipping to real users we treat this as the
-         * locked baseline — any future column addition gets a proper
-         * Migration registered here, never another destructive reset.
+         * We deliberately do NOT use `fallbackToDestructiveMigration`: dropping
+         * the table would silently wipe the user's conversation history on a
+         * version mismatch. Without a registered migration Room throws instead —
+         * a loud failure that forces us to ship the migration rather than lose
+         * user data. (Earlier dev-only v2/v3 schemas predate any public install,
+         * so no real user's DB needs the destructive escape hatch.)
          */
         fun build(context: Context): ConversationDatabase =
             Room.databaseBuilder(context.applicationContext, ConversationDatabase::class.java, DB_NAME)
-                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }
 }
