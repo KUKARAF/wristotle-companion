@@ -30,12 +30,8 @@ class RescheduleSlots(
 
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
-        // Rescheduling moves a reminder to a future time — roll a past bare
-        // clock time to its next occurrence the same way the other scheduling
-        // intents do (issue #13 family).
-        timeParser.parse(query)?.let {
-            out[SlotKeys.Time] = it.instant.rolledToNextFutureOccurrence(clock.now(), query)
-        }
+        // Shared parse-and-roll — rescheduling moves a reminder to a future time.
+        timeParser.resolveClockTime(query, clock)?.let { out[SlotKeys.Time] = it }
         val target = stripVerbBody(query.replace(STRIP_TIME_CLAUSE, ""), VERBS, FILLERS)
         if (target.isNotBlank()) out[SlotKeys.Target] = target
         return out

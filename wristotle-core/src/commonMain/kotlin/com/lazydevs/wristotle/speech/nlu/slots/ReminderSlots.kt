@@ -37,13 +37,10 @@ class ReminderSlots(
 
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
-        // A clock time the user named resolves onto today's date, which may
-        // already be in the past — roll it to the next occurrence so the
-        // reminder doesn't fire in the past (issue #13). A bare hour ("at 8")
-        // rolls to the next 8 o'clock; an explicit "1 a.m." rolls to tomorrow.
-        out[SlotKeys.Time] = timeParser.parse(query)?.instant
-            ?.rolledToNextFutureOccurrence(clock.now(), query)
-            ?: defaultedInstant()
+        // Shared parse-and-roll: bare "at 8" → next 8 o'clock, explicit
+        // "1 a.m." → tomorrow (issue #13). Defaults to now + offset when no
+        // time was spoken.
+        out[SlotKeys.Time] = timeParser.resolveClockTime(query, clock) ?: defaultedInstant()
         if (DETECT_PERSISTENT.containsMatchIn(query)) out[SlotKeys.Persistent] = true
         val title = buildTitle(query)
         if (title.isNotBlank()) out[SlotKeys.Title] = title

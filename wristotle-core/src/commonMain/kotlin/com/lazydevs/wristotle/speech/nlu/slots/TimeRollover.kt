@@ -3,10 +3,30 @@
 
 package com.lazydevs.wristotle.speech.nlu.slots
 
+import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
+import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
+
+/**
+ * The single time-resolution entry point for slot extractors: parse [query] to a
+ * wall-clock time and roll it to its next occurrence in one step.
+ *
+ * Every CRUD intent that reads a clock time — create (Reminder / CreateEvent),
+ * update (Reschedule), delete (CancelAlarm), query (ListReminders) — goes through
+ * here, so "at 8" resolves identically everywhere ("next 8 o'clock") and an intent
+ * can't be silently opted out by forgetting to roll. Returns null when the query
+ * names no time.
+ *
+ * One documented exception: [SetAlarmSlots] must strip its verb prefix before
+ * parsing ("set an alarm for an hour from now" confuses prettytime otherwise), so
+ * it parses a stripped string and applies [rolledToNextFutureOccurrence] directly
+ * — same roll, different parse input.
+ */
+fun TimeParser.resolveClockTime(query: String, clock: Clock): Instant? =
+    parse(query)?.instant?.rolledToNextFutureOccurrence(clock.now(), query)
 
 /**
  * Roll a clock time that has already passed onto its next occurrence.

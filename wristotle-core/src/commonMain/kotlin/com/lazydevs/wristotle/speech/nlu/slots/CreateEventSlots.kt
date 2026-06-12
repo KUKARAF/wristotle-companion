@@ -31,12 +31,8 @@ class CreateEventSlots(
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
 
-        // A clock time resolves onto today's date — roll a past one to its next
-        // occurrence so we don't create the event in the past (same class of
-        // bug as reminder issue #13).
-        timeParser.parse(query)?.let {
-            out[SlotKeys.Time] = it.instant.rolledToNextFutureOccurrence(clock.now(), query)
-        }
+        // Shared parse-and-roll so a past clock time isn't created in the past.
+        timeParser.resolveClockTime(query, clock)?.let { out[SlotKeys.Time] = it }
 
         // Title/attendee are read off the raw query — both regexes are
         // keyword-anchored (called/titled/about, with), so a time phrase
