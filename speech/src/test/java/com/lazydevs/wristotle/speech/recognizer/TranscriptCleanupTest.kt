@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025-2026 Lazy Devs
 
-package com.lazydevs.wristotle.speech.whisper
+package com.lazydevs.wristotle.speech.recognizer
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Regression tests for [dedupeRepeatedPhrases].
+ * Regression tests for [dedupeRepeatedPhrases] + [stripAnnotationOnly].
  *
- * Most of these cases came from real Whisper output during dictation
- * testing — and three of the assertions here would have failed on
- * earlier iterations of the implementation. Kept in this exact shape so
- * future tweaks have to keep them passing.
+ * Most of these cases came from real Whisper output during dictation testing —
+ * and three of the assertions here would have failed on earlier iterations of
+ * the implementation. Kept in this exact shape so future tweaks have to keep
+ * them passing. (Moved from :speech-whisper to :speech when the filters were
+ * lifted so the cloud HttpRecognizer path could share them.)
  */
-class TranscriptDedupTest {
+class TranscriptCleanupTest {
 
     // --- Cases that should collapse --------------------------------------
 
@@ -47,14 +48,7 @@ class TranscriptDedupTest {
     // --- Cases that should NOT collapse (user intent preserved) ----------
 
     @Test fun `single-word repeats survive (no min-2 unit)`() {
-        // The user genuinely said "yes yes yes yes" for emphasis. An earlier
-        // version detected ["yes","yes"] as a 2-token unit repeating twice
-        // and halved the count; the all-same-token guard now keeps every
-        // copy.
-        assertEquals(
-            "yes yes yes yes",
-            dedupeRepeatedPhrases("yes yes yes yes"),
-        )
+        assertEquals("yes yes yes yes", dedupeRepeatedPhrases("yes yes yes yes"))
     }
 
     @Test fun `three single-word repeats survive via size-lt-4 early return`() {
@@ -62,18 +56,11 @@ class TranscriptDedupTest {
     }
 
     @Test fun `silence hallucination of single token is left alone`() {
-        // "dio dio dio" — 3 tokens, raw.size < 4 early return.
-        // The harmless cost is "Unknown command: dio dio dio" routing.
         assertEquals("dio dio dio", dedupeRepeatedPhrases("dio dio dio"))
     }
 
     @Test fun `four copies of single token survive (all-same guard)`() {
-        // 4 tokens, k=2 would detect ["dio","dio"] repeating, but the
-        // all-same-token guard skips it. Run is preserved.
-        assertEquals(
-            "dio dio dio dio",
-            dedupeRepeatedPhrases("dio dio dio dio"),
-        )
+        assertEquals("dio dio dio dio", dedupeRepeatedPhrases("dio dio dio dio"))
     }
 
     @Test fun `clean transcript with no repeats passes through unchanged`() {
@@ -88,9 +75,6 @@ class TranscriptDedupTest {
     }
 
     @Test fun `trailing punctuation differences don't block detection`() {
-        // Whichever copy is kept, its tokens are emitted verbatim — including
-        // whatever punctuation Whisper attached. The comparison normaliser
-        // only affects MATCH eligibility, not what's emitted.
         assertEquals("text dad,", dedupeRepeatedPhrases("text dad, text dad."))
     }
 
@@ -114,8 +98,6 @@ class TranscriptDedupTest {
     }
 
     @Test fun `chained annotations of mixed flavours collapse to empty`() {
-        // Whisper occasionally chains multiple sound-effect annotations
-        // when given a quiet-but-noisy clip.
         assertEquals("", stripAnnotationOnly("*sigh* [cough] (silence)"))
         assertEquals("", stripAnnotationOnly("*DING* *DING*"))
     }
@@ -127,9 +109,6 @@ class TranscriptDedupTest {
     }
 
     @Test fun `mixed annotation plus real speech returns original unchanged`() {
-        // Conservative: don't damage real queries that happen to contain
-        // an annotation token. Better to leak one stray "*sigh*" than to
-        // silently drop "call mom" from "*sigh* call mom".
         assertEquals("*sigh* call mom", stripAnnotationOnly("*sigh* call mom"))
         assertEquals("call mom *please*", stripAnnotationOnly("call mom *please*"))
     }

@@ -114,11 +114,14 @@ class HttpRecognizer(
             val text = withContext(Dispatchers.IO) { postTranscription(wav) }
             val elapsedMs = System.currentTimeMillis() - startMs
             Log.d(TAG, "transcribed in ${elapsedMs} ms: '$text'")
-            if (text.isBlank()) {
+            // Same hallucination cleanup the local Whisper path applies: collapse
+            // repeated-phrase loops, then drop annotation-only output ("*DING*").
+            val cleaned = stripAnnotationOnly(dedupeRepeatedPhrases(text.trim()))
+            if (cleaned.isBlank()) {
                 emit(TranscriptionEvent.Error(SpeechRecognizer.ERROR_NO_MATCH, "empty transcript"))
                 return@flow
             }
-            emit(TranscriptionEvent.Final(text.trim()))
+            emit(TranscriptionEvent.Final(cleaned))
         } catch (e: CancellationException) {
             throw e
         } catch (e: HttpRecognizerException) {

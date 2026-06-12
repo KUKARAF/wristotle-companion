@@ -8,6 +8,8 @@ import com.lazydevs.wristotle.logging.WristotleLog as Log
 import com.lazydevs.wristotle.speech.audio.AudioSource
 import com.lazydevs.wristotle.speech.audio.flatten
 import com.lazydevs.wristotle.speech.recognizer.Recognizer
+import com.lazydevs.wristotle.speech.recognizer.dedupeRepeatedPhrases
+import com.lazydevs.wristotle.speech.recognizer.stripAnnotationOnly
 import com.lazydevs.wristotle.speech.recognizer.TranscriptionEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
