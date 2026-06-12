@@ -81,7 +81,7 @@ class CreateEventSlots(
         // A trailing " at/on/… <rest>" clause to peel off a greedily-captured
         // title. The leading \s+ means a title-initial keyword ("next steps")
         // is left intact.
-        val TRAILING_TIME = Regex("""(?i)\s+(?:at|on|by|in|from|tomorrow|today|tonight|next|this)\b.*$""")
+        val TRAILING_TIME = Regex("""(?i)\s+(?:at|on|by|in|from|next|this|$DAY_TOKEN_ALT)\b.*$""")
 
         val HALF_HOUR = Regex("""(?i)\bhalf (?:an )?hour\b""")
         val HOURS = Regex("""(?i)\b(\d{1,2}|one|two|three|four|five|six)\s*(?:hour|hr)s?\b""")

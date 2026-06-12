@@ -93,9 +93,12 @@ class ReminderSlots(
         // "in two hours to check the tables", and STRIP_TIME_PHRASES
         // (anchored at end-of-string with a leading \s+) can't reach a
         // time clause that sits at the START. This regex peels a
-        // leading time lead-in up to the task-introducing "to ".
+        // leading time lead-in up to the task-introducing "to ". Day tokens
+        // (weekday / month / today / tomorrow / tonight) are pulled from the
+        // shared DAY_TOKENS so "remind me Friday at 8pm to call mom" → "Call mom"
+        // instead of "Friday".
         val STRIP_LEADING_TIME_THEN_TO = Regex(
-            """(?i)^\s*\b(in|at|by|on|tomorrow|next|this|every|later|tonight)\b[\w\s:.,]*?\bto\b\s+""",
+            """(?i)^\s*\b(in|at|by|on|next|this|every|later|$DAY_TOKEN_ALT)\b[\w\s:.,]*?\bto\b\s+""",
         )
         // Note: "to" is intentionally NOT a lead-in — "remind me TO call" uses
         // "to" to introduce the task, not a time.

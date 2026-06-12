@@ -50,11 +50,11 @@ class CalendarSlots(
         val COUNT_WORD = Regex("""(?i)\bnext\s+(two|three|four|five|six|seven|eight|nine|ten)\s+(?:meeting|appointment|event)""")
         // Day tokens that justify parsing a concrete date. Deliberately
         // excludes bare "on"/"next" so counts and generic "what's on my
-        // calendar" don't trigger a spurious date parse.
+        // calendar" don't trigger a spurious date parse. The weekday/month/
+        // relative-day vocabulary is the shared DAY_TOKENS; the "this …" phrases
+        // are calendar-specific and stay here.
         val DATE_HINT = Regex(
-            """(?i)\b(today|tonight|tomorrow|this (?:morning|afternoon|evening|week|weekend)|""" +
-                """monday|tuesday|wednesday|thursday|friday|saturday|sunday|""" +
-                """january|february|march|april|may|june|july|august|september|october|november|december)\b"""
+            """(?i)\b(this (?:morning|afternoon|evening|week|weekend)|$DAY_TOKEN_ALT)\b"""
         )
     }
 }

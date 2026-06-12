@@ -150,14 +150,17 @@ fun isOnlyTimeExpression(text: String): Boolean {
         .map { it.trim('.', ',', '!', '?', ';') }
         .filter { it.isNotEmpty() }
     if (tokens.isEmpty()) return true
-    return tokens.all { it in TIME_ONLY_WORDS || it in WORD_NUMBERS || CLOCK_NUMBER.matches(it) }
+    return tokens.all {
+        it in TIME_ONLY_WORDS || it in DAY_TOKENS || it in WORD_NUMBERS || CLOCK_NUMBER.matches(it)
+    }
 }
 
 private val WHITESPACE = Regex("""\s+""")
 // A whole token that is a clock number: "8", "8:30", "8.30", "8pm", "8:30pm".
 private val CLOCK_NUMBER = Regex("""(?i)\d{1,2}([:.]\d{2})?(a\.?m\.?|p\.?m\.?)?""")
 private val TIME_ONLY_WORDS = setOf(
-    "at", "for", "in", "around", "by", "to", "from", "now", "past", "quarter", "half",
+    "at", "for", "in", "on", "around", "by", "to", "from", "now", "past", "quarter", "half",
+    "next", "this", "every", "later",
     "am", "a.m.", "a.m", "pm", "p.m.", "p.m",
     "o'clock", "oclock",
     "noon", "midnight", "morning", "afternoon", "evening", "tonight", "night",
@@ -167,6 +170,24 @@ private val TIME_ONLY_WORDS = setOf(
     "second", "seconds", "sec", "secs", "day", "days",
     "week", "weeks", "month", "months", "year", "years",
 )
+
+/**
+ * Single-word tokens that name a calendar day — weekdays, months, and the common
+ * relative-day words. **The one shared date vocabulary**, so the day-token list
+ * can't drift between the extractors that need it: [isOnlyTimeExpression] (blank
+ * a day-only reminder title), ReminderSlots' leading-time strip, CreateEventSlots'
+ * trailing-time strip, and CalendarSlots' date-hint gate. Embed via [DAY_TOKEN_ALT].
+ */
+val DAY_TOKENS: Set<String> = buildSet {
+    addAll(listOf("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"))
+    addAll(listOf("january", "february", "march", "april", "may", "june", "july",
+        "august", "september", "october", "november", "december"))
+    addAll(listOf("today", "tomorrow", "tonight"))
+}
+
+/** [DAY_TOKENS] as a regex alternation (`monday|tuesday|…`) for embedding in a
+ *  larger pattern. Already lowercase; callers use `(?i)`. */
+val DAY_TOKEN_ALT: String = DAY_TOKENS.joinToString("|")
 
 /** Word-form alternation matching the keys of [WORD_NUMBERS]. Used by
  *  duration parsers as the number-token half of a "<n> <unit>" regex.

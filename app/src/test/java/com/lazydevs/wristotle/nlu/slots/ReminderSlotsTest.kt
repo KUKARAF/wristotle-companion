@@ -85,6 +85,20 @@ class ReminderSlotsTest {
         assertEquals("Pay the bill", title("remind me next week to pay the bill"))
     }
 
+    // On-device probe: a leading weekday/month wasn't in the strip vocabulary, so
+    // "remind me Friday at 8pm to call mom" titled the reminder "Friday". The
+    // shared DAY_TOKENS now cover weekday + month + relative-day tokens.
+    @Test fun `leading weekday clause before to is stripped`() {
+        assertEquals("Call mom", title("remind me Friday at 8 pm to call mom"))
+        assertEquals("Pay rent", title("remind me June 5 to pay rent"))
+    }
+
+    @Test fun `day-only reminder has no title`() {
+        // "remind me Friday at 8 pm" — no task, so it must blank, not title "Friday".
+        assertNull(slots("remind me Friday at 8 pm")["title"])
+        assertNull(slots("remind me on monday")["title"])
+    }
+
     // Make sure the new leading-clause regex doesn't fire when the
     // first word is a "to"-prefixed task — i.e. doesn't see "in" inside
     // "finish" or similar mid-word matches.
