@@ -7,7 +7,6 @@ import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.Reminder]:
@@ -43,11 +42,7 @@ class ReminderSlots(
         // reminder doesn't fire in the past (issue #13). A bare hour ("at 8")
         // rolls to the next 8 o'clock; an explicit "1 a.m." rolls to tomorrow.
         out[SlotKeys.Time] = timeParser.parse(query)?.instant
-            ?.rolledToNextFutureOccurrence(
-                clock.now(),
-                TimeZone.currentSystemDefault(),
-                ambiguousMeridiem = !queryHasExplicitMeridiem(query),
-            )
+            ?.rolledToNextFutureOccurrence(clock.now(), query)
             ?: defaultedInstant()
         if (DETECT_PERSISTENT.containsMatchIn(query)) out[SlotKeys.Persistent] = true
         val title = buildTitle(query)

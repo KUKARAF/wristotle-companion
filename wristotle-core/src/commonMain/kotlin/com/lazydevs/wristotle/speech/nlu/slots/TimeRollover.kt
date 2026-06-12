@@ -49,6 +49,20 @@ fun Instant.rolledToNextFutureOccurrence(
 }
 
 /**
+ * Convenience overload for the scheduling slot extractors: rolls [this] using
+ * the system zone and infers meridiem ambiguity from [query], so each caller
+ * doesn't repeat the `TimeZone.currentSystemDefault()` + `queryHasExplicitMeridiem`
+ * boilerplate. Shared by ReminderSlots, CreateEventSlots, SetAlarmSlots and
+ * RescheduleSlots. The 3-arg primitive stays for tests that pin the zone.
+ */
+fun Instant.rolledToNextFutureOccurrence(now: Instant, query: String): Instant =
+    rolledToNextFutureOccurrence(
+        now,
+        TimeZone.currentSystemDefault(),
+        ambiguousMeridiem = !queryHasExplicitMeridiem(query),
+    )
+
+/**
  * True if [query] disambiguates the half of the day a clock time falls in —
  * "a.m." / "p.m.", or a day-part word ("noon", "tonight", "in the morning").
  * A bare hour ("at 8", "8 o'clock") is ambiguous and returns false.

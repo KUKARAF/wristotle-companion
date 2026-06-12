@@ -7,7 +7,6 @@ import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.CreateEvent]:
@@ -36,11 +35,7 @@ class CreateEventSlots(
         // occurrence so we don't create the event in the past (same class of
         // bug as reminder issue #13).
         timeParser.parse(query)?.let {
-            out[SlotKeys.Time] = it.instant.rolledToNextFutureOccurrence(
-                clock.now(),
-                TimeZone.currentSystemDefault(),
-                ambiguousMeridiem = !queryHasExplicitMeridiem(query),
-            )
+            out[SlotKeys.Time] = it.instant.rolledToNextFutureOccurrence(clock.now(), query)
         }
 
         // Title/attendee are read off the raw query — both regexes are
