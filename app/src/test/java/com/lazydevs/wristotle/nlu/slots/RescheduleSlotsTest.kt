@@ -3,9 +3,13 @@
 
 package com.lazydevs.wristotle.nlu.slots
 
+import com.lazydevs.wristotle.speech.nlu.parsing.ParsedTime
+import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
 import com.lazydevs.wristotle.speech.nlu.slots.*
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -50,5 +54,34 @@ class RescheduleSlotsTest {
 
     @Test fun `clock time is parsed`() {
         assertNotNull(time("reschedule my reminder to six pm"))
+    }
+
+    // --- past-time rollover (issue #13 family, reschedule) ---
+
+    private fun rolledTime(parsed: Instant, now: Instant, query: String): Instant? = runBlocking {
+        RescheduleSlots(
+            timeParser = object : TimeParser {
+                override fun parse(query: String): ParsedTime? = ParsedTime(parsed, "")
+            },
+            clock = object : Clock { override fun now(): Instant = now },
+        ).extract(query)["time"] as? Instant
+    }
+
+    @Test fun `bare hour reschedule past this morning rolls to this evening`() {
+        val now = Instant.parse("2026-06-12T09:00:00Z")
+        val eightAmToday = Instant.parse("2026-06-12T08:00:00Z")
+        assertEquals(
+            Instant.parse("2026-06-12T20:00:00Z"),
+            rolledTime(eightAmToday, now, "move my reminder to 8"),
+        )
+    }
+
+    @Test fun `explicit am reschedule rolls to tomorrow`() {
+        val now = Instant.parse("2026-06-12T09:00:00Z")
+        val eightAmToday = Instant.parse("2026-06-12T08:00:00Z")
+        assertEquals(
+            Instant.parse("2026-06-13T08:00:00Z"),
+            rolledTime(eightAmToday, now, "move my reminder to 8 am"),
+        )
     }
 }

@@ -3,8 +3,11 @@
 
 package com.lazydevs.wristotle.nlu.slots
 
+import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
+import com.lazydevs.wristotle.speech.nlu.parsing.ParsedTime
+import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
 import com.lazydevs.wristotle.speech.nlu.slots.*
 
 import kotlinx.coroutines.runBlocking
@@ -90,6 +93,32 @@ class ReminderSlotsTest {
         assertEquals("Check email", title("remind me to check email at 3pm"))
     }
 
+    // --- time-only reminders must not get a time-shaped title ---
+
+    @Test fun `time-only reminder has no title`() {
+        // "set a reminder for 8pm" — there's no task, so the leftover "8pm"
+        // must not become the title. Slot absent → handler defaults it.
+        assertNull(slots("set a reminder for 8pm")["title"])
+        assertNull(slots("set a reminder for 8 pm")["title"])
+        assertNull(slots("remind me at 8pm")["title"])
+    }
+
+    @Test fun `time-only reminder in spoken form has no title`() {
+        assertNull(slots("set a reminder for eight pm")["title"])
+        assertNull(slots("set a reminder for noon")["title"])
+        assertNull(slots("remind me at eight o'clock")["title"])
+    }
+
+    @Test fun `time-only reminder still populates the time slot`() {
+        assertNotNull(slots("set a reminder for 8pm")["time"])
+    }
+
+    @Test fun `a real task with a time keeps its title`() {
+        // Guard: the time-only blanking must not eat titles that contain a time.
+        assertEquals("Call mom", title("remind me to call mom at 8pm"))
+        assertEquals("Take meds", title("remind me to take meds at noon"))
+    }
+
     // --- persistent reminders ---
 
     @Test fun `plain reminder does not set persistent slot`() {
@@ -134,5 +163,50 @@ class ReminderSlotsTest {
         // The detector uses \b boundaries; "persistent" / "persistently" are
         // the only forms it accepts.
         assertNull(slots("remind me about persistence training at 4pm")["persistent"])
+    }
+
+    // --- past-time rollover (issue #13) ---
+    //
+    // Deterministic: a fake parser returns a fixed instant and a fixed clock
+    // pins "now", so these don't depend on when the suite runs. The query still
+    // matters — the slot reads it to decide whether the meridiem was explicit.
+    // June 12 is nowhere near a DST transition, so the steps are exact in UTC.
+
+    private fun timeSlot(parsed: Instant?, now: Instant, query: String): Instant? = runBlocking {
+        ReminderSlots(
+            timeParser = object : TimeParser {
+                override fun parse(q: String): ParsedTime? = parsed?.let { ParsedTime(it, "") }
+            },
+            defaultOffsetMinProvider = { 30 },
+            clock = object : Clock { override fun now(): Instant = now },
+        ).extract(query)["time"] as? Instant
+    }
+
+    @Test fun `bare hour past this morning rolls to this evening`() {
+        // "remind me at 8" at 9 a.m. — next 8 o'clock is 8 p.m. today, NOT
+        // tomorrow 8 a.m. (the reported follow-up to issue #13).
+        val now = Instant.parse("2026-06-12T09:00:00Z")
+        val eightAmToday = Instant.parse("2026-06-12T08:00:00Z")
+        assertEquals(
+            Instant.parse("2026-06-12T20:00:00Z"),
+            timeSlot(eightAmToday, now, "remind me at 8 to take meds"),
+        )
+    }
+
+    @Test fun `explicit am time rolls to tomorrow, not the afternoon`() {
+        // "remind me at 1 a.m." at 11 a.m. — the user named a.m., so it's
+        // tomorrow 1 a.m., not today 1 p.m. (original issue #13 shape).
+        val now = Instant.parse("2026-06-12T11:00:00Z")
+        val oneAmToday = Instant.parse("2026-06-12T01:00:00Z")
+        assertEquals(
+            Instant.parse("2026-06-13T01:00:00Z"),
+            timeSlot(oneAmToday, now, "remind me at 1 a.m. to take meds"),
+        )
+    }
+
+    @Test fun `future time is left untouched`() {
+        val now = Instant.parse("2026-06-12T20:00:00Z")
+        val laterToday = Instant.parse("2026-06-12T23:30:00Z")
+        assertEquals(laterToday, timeSlot(laterToday, now, "remind me at 11 30 pm to sleep"))
     }
 }

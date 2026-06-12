@@ -10,6 +10,8 @@ import com.lazydevs.wristotle.alarms.AlarmEntity
 import com.lazydevs.wristotle.alarms.AlarmRepository
 import com.lazydevs.wristotle.alarms.DispatchResult
 import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.DefaultTitles
+import com.lazydevs.wristotle.speech.nlu.handlers.formatClock12h
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -50,7 +52,7 @@ class SetAlarmHandler(
         val draft = AlarmEntity(
             hour = hour,
             minute = minute,
-            label = "Alarm",
+            label = DefaultTitles.ALARM,
             destination = destination.name,
             wireEpoch = null,
             enabled = true,
@@ -60,7 +62,7 @@ class SetAlarmHandler(
         val saved = repository.getById(id) ?: draft.copy(id = id)
         val dispatchResult = dispatcher.schedule(saved)
 
-        val clock = formatClock(hour, minute)
+        val clock = formatClock12h(hour, minute)
         val destLabel = destinationLabel(destination)
         return when (dispatchResult) {
             is DispatchResult.Success ->
@@ -76,13 +78,4 @@ class SetAlarmHandler(
         AlarmDestination.Both  -> "phone + watch"
     }
 
-    private fun formatClock(hour: Int, minute: Int): String {
-        val period = if (hour < 12) "AM" else "PM"
-        val h12 = when {
-            hour == 0 -> 12
-            hour > 12 -> hour - 12
-            else -> hour
-        }
-        return "%d:%02d %s".format(h12, minute, period)
-    }
 }

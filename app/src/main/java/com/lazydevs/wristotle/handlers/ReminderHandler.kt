@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
+import com.lazydevs.wristotle.speech.nlu.handlers.DefaultTitles
 import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
 import android.content.Context
 import android.util.Log
@@ -46,8 +47,10 @@ class ReminderHandler(
         val instant = result.slots[SlotKeys.Time] as? Instant ?: return "Couldn't set reminder"
         val timeMs = instant.toEpochMilliseconds()
         val time = Date(timeMs)
-        val title = (result.slots[SlotKeys.Title] as? String)?.takeIf { it.isNotBlank() }
-            ?: result.rawQuery.replaceFirstChar { it.uppercaseChar() }
+        // ReminderSlots already blanks a time-only / contextless title; the
+        // shared resolver then supplies the "Wristotle Reminder" placeholder
+        // (same one the confirm preview uses) rather than echoing the raw query.
+        val title = DefaultTitles.composeReminderTitle(result.slots[SlotKeys.Title] as? String)
         val isPersistent = result.slots[SlotKeys.Persistent] as? Boolean ?: false
 
         Log.d(TAG, "date=$time  title=$title  persistent=$isPersistent")

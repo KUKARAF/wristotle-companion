@@ -116,13 +116,11 @@ class ConfirmSummaryBuilderTest {
     }
 
     @Test fun reminderWithoutTitleUsesDefault() {
-        // ReminderHandler defaults to no-fixed-title-but-fails-on-no-time.
-        // Confirm body uses a generic placeholder so it reads as something
-        // rather than "?".
+        // No title context at all → the "Wristotle Reminder" placeholder.
         val s = ConfirmSummaryBuilder.summary(
             result(Intent.Reminder, "time" to fixedDate()),
         )
-        assertTrue(s.startsWith("action: reminder\ndetails: Reminder @ "))
+        assertTrue(s.startsWith("action: reminder\ndetails: Wristotle Reminder @ "))
     }
 
     @Test fun reminderWithoutTime() {
@@ -136,12 +134,19 @@ class ConfirmSummaryBuilderTest {
     }
 
     @Test fun createEventDefaultsTitleToMeeting() {
-        // CreateEventHandler defaults title to "Meeting" when no "called X"
-        // clause is present. Confirm must mirror that so it doesn't show "?".
+        // No title and no attendee context → "Wristotle Meeting".
         val s = ConfirmSummaryBuilder.summary(
             result(Intent.CreateEvent, "time" to fixedDate()),
         )
-        assertTrue(s.startsWith("action: schedule\ndetails: Meeting @ "))
+        assertTrue(s.startsWith("action: schedule\ndetails: Wristotle Meeting @ "))
+    }
+
+    @Test fun createEventWithAttendeeKeepsContextNoPrefix() {
+        // Attendee is context, so it stays "Meeting with Alex" — NOT prefixed.
+        val s = ConfirmSummaryBuilder.summary(
+            result(Intent.CreateEvent, "attendee" to "Alex", "time" to fixedDate()),
+        )
+        assertTrue(s.startsWith("action: schedule\ndetails: Meeting with Alex @ "))
     }
 
     @Test fun createEventUsesScheduleVerb() {

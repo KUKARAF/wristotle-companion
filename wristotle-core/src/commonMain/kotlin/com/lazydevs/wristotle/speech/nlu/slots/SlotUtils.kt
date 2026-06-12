@@ -130,6 +130,34 @@ val WORD_NUMBERS: Map<String, Int> = buildMap {
     }
 }
 
+/**
+ * True when [text] is nothing but a clock-time expression — a leftover like
+ * "8pm" / "8 p.m." / "eight o'clock" / "noon" after the reminder prefix and
+ * task are stripped. Used by [ReminderSlots] so a time-only reminder ("set a
+ * reminder for 8 p.m.") isn't given the title "8pm" (the handler then applies
+ * its own default instead).
+ *
+ * Every whitespace-delimited token must be time-ish: a clock number ("8",
+ * "8:30", "8.30", "8pm"), a number word (eight, thirty, …), a meridiem /
+ * day-part word, "o'clock", or a connector ("at" / "for"). An empty/blank
+ * string counts as time-only — nothing meaningful is left.
+ */
+fun isOnlyTimeExpression(text: String): Boolean {
+    val tokens = text.trim().lowercase().split(WHITESPACE).filter { it.isNotEmpty() }
+    if (tokens.isEmpty()) return true
+    return tokens.all { it in TIME_ONLY_WORDS || it in WORD_NUMBERS || CLOCK_NUMBER.matches(it) }
+}
+
+private val WHITESPACE = Regex("""\s+""")
+// A whole token that is a clock number: "8", "8:30", "8.30", "8pm", "8:30pm".
+private val CLOCK_NUMBER = Regex("""(?i)\d{1,2}([:.]\d{2})?(a\.?m\.?|p\.?m\.?)?""")
+private val TIME_ONLY_WORDS = setOf(
+    "at", "for", "around", "by", "to", "past", "quarter", "half",
+    "am", "a.m.", "a.m", "pm", "p.m.", "p.m",
+    "o'clock", "oclock",
+    "noon", "midnight", "morning", "afternoon", "evening", "tonight", "night",
+)
+
 /** Word-form alternation matching the keys of [WORD_NUMBERS]. Used by
  *  duration parsers as the number-token half of a "<n> <unit>" regex.
  *  Compound forms (e.g. "twenty-one", "twenty one") sit before bare tens

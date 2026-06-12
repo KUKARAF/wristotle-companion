@@ -10,6 +10,7 @@ import com.lazydevs.wristotle.alarms.AlarmDispatcher
 import com.lazydevs.wristotle.alarms.AlarmEntity
 import com.lazydevs.wristotle.alarms.AlarmRepository
 import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.formatClock12h
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -100,7 +101,7 @@ class CancelAlarmHandler(
     private suspend fun cancelAtTime(hour: Int, minute: Int): String {
         val matches = repository.getByHourMinute(hour, minute).filter { it.enabled }
         if (matches.isEmpty()) {
-            return "No alarm at ${formatClock(hour, minute)}."
+            return "No alarm at ${formatClock12h(hour, minute)}."
         }
 
         var watchCancels = 0
@@ -117,7 +118,7 @@ class CancelAlarmHandler(
             repository.delete(alarm.id)
         }
 
-        val time = formatClock(hour, minute)
+        val time = formatClock12h(hour, minute)
         return when {
             bothCancels > 0 ->
                 "Watch alarm at $time cancelled.\nPhone alarm still pending."
@@ -132,13 +133,4 @@ class CancelAlarmHandler(
         runCatching { AlarmDestination.valueOf(alarm.destination) }
             .getOrElse { AlarmDestination.Phone }
 
-    private fun formatClock(hour: Int, minute: Int): String {
-        val period = if (hour < 12) "AM" else "PM"
-        val h12 = when {
-            hour == 0 -> 12
-            hour > 12 -> hour - 12
-            else -> hour
-        }
-        return "%d:%02d %s".format(h12, minute, period)
-    }
 }

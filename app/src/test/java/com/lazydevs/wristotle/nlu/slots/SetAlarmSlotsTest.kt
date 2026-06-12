@@ -3,8 +3,11 @@
 
 package com.lazydevs.wristotle.nlu.slots
 
+import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
+import com.lazydevs.wristotle.speech.nlu.parsing.ParsedTime
+import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
 import com.lazydevs.wristotle.speech.nlu.slots.*
 
 import kotlinx.coroutines.runBlocking
@@ -109,5 +112,37 @@ class SetAlarmSlotsTest {
         val cal = Calendar.getInstance().apply { time = date!! }
         assertEquals(6, cal.get(Calendar.HOUR_OF_DAY))
         assertEquals(30, cal.get(Calendar.MINUTE))
+    }
+
+    // --- past-time rollover (issue #13 family, alarms) ---
+    // Deterministic via a fake parser + fixed clock.
+
+    private fun rolledTime(parsed: Instant, now: Instant, query: String): Instant? = runBlocking {
+        SetAlarmSlots(
+            timeParser = object : TimeParser {
+                override fun parse(query: String): ParsedTime? = ParsedTime(parsed, "")
+            },
+            clock = object : Clock { override fun now(): Instant = now },
+        ).extract(query)["time"] as? Instant
+    }
+
+    @Test fun `bare hour alarm past this morning rolls to this evening`() {
+        // "set an alarm for 8" at 9 a.m. → next 8 o'clock is 8 p.m. today,
+        // NOT tomorrow 8 a.m.
+        val now = Instant.parse("2026-06-12T09:00:00Z")
+        val eightAmToday = Instant.parse("2026-06-12T08:00:00Z")
+        assertEquals(
+            Instant.parse("2026-06-12T20:00:00Z"),
+            rolledTime(eightAmToday, now, "set an alarm for 8"),
+        )
+    }
+
+    @Test fun `explicit am alarm rolls to tomorrow, not the afternoon`() {
+        val now = Instant.parse("2026-06-12T09:00:00Z")
+        val eightAmToday = Instant.parse("2026-06-12T08:00:00Z")
+        assertEquals(
+            Instant.parse("2026-06-13T08:00:00Z"),
+            rolledTime(eightAmToday, now, "set an alarm for 8 am"),
+        )
     }
 }
