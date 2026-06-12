@@ -72,7 +72,7 @@ object SimpleHttp {
             val resp = stream?.bufferedReader()?.use { it.readText() }
             code to resp
         } catch (e: IOException) {
-            Log.w(TAG, "$method $url failed: ${e.message}")
+            Log.w(TAG, "$method ${redactSecrets(url)} failed: ${e.message}")
             null
         } finally {
             conn.disconnect()
@@ -136,10 +136,22 @@ object SimpleHttp {
                 Triple(code, null, errText)
             }
         } catch (e: IOException) {
-            Log.w(TAG, "$method $url failed: ${e.message}")
+            Log.w(TAG, "$method ${redactSecrets(url)} failed: ${e.message}")
             null
         } finally {
             conn.disconnect()
         }
     }
+
+    // Some providers (e.g. OpenWeather) carry the API key in the query string
+    // as `?appid=…` / `?api_key=…`. Never let that reach a log line — strip the
+    // value of any secret-looking query param before logging the URL. Standing
+    // rule: no API key in any log, ever (feedback_no_api_keys_in_logs).
+    internal fun redactSecrets(url: String): String =
+        SECRET_QUERY_PARAM.replace(url) { it.groupValues[1] + "<redacted>" }
+
+    private val SECRET_QUERY_PARAM = Regex(
+        "([?&](?:appid|api[_-]?key|access[_-]?token|token|secret|sig|signature|password|auth|key)=)[^&#]*",
+        RegexOption.IGNORE_CASE,
+    )
 }
