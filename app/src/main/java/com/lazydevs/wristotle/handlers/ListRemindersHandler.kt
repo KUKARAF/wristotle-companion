@@ -9,7 +9,7 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import java.util.Date
+import kotlinx.datetime.Instant
 
 /**
  * Handles [Intent.ListReminders] — reads the local [PinStore] and reports the
@@ -30,9 +30,9 @@ class ListRemindersHandler(context: Context) : ActionHandler {
     override suspend fun handle(result: IntentResult): String {
         val now = System.currentTimeMillis()
         val all = pinStore.all()
-        val time = result.slots[SlotKeys.Time] as? Date
+        val time = result.slots[SlotKeys.Time] as? Instant
         return if (time != null) {
-            ReminderListFormatter.formatAtTime(all, time.time, now)
+            ReminderListFormatter.formatAtTime(all, time.toEpochMilliseconds(), now)
         } else {
             ReminderListFormatter.format(all, now)
         }
