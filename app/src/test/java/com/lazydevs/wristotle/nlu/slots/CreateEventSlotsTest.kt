@@ -67,6 +67,13 @@ class CreateEventSlotsTest {
         assertEquals("Sam", extract("book a meeting with Sam")["attendee"])
     }
 
+    // On-device report: "schedule a meeting at 3 p.m. with Alex." dropped Alex
+    // because dictation's trailing period broke the end-of-string anchor.
+    @Test fun `attendee after the time clause is captured despite trailing period`() {
+        assertEquals("Alex", extract("schedule a meeting at 3 p.m. with Alex.")["attendee"])
+        assertEquals("Alex", extract("schedule a meeting at 3 p.m. with Alex")["attendee"])
+    }
+
     @Test fun `no attendee yields no slot`() {
         assertNull(extract("schedule a meeting tomorrow at three pm")["attendee"])
     }

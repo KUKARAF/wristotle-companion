@@ -79,7 +79,9 @@ class CreateEventSlots(
         val TITLE = Regex("""(?i)\b(called|titled|about)\s+(.+)$""")
         // "with Alex" / "with the team" — stop before a trailing time/date
         // clause OR a title keyword ("with Alex called standup" → "Alex").
-        val ATTENDEE = Regex("""(?i)\bwith\s+([A-Za-z][\w' ]*?)(?:\s+(?:on|at|tomorrow|today|tonight|next|this|called|titled|about)\b|$)""")
+        // Trailing `[.!?,]*\s*$` lets "…with Alex." (dictation's trailing period)
+        // still anchor the name, not just a bare end-of-string.
+        val ATTENDEE = Regex("""(?i)\bwith\s+([A-Za-z][\w' ]*?)(?:\s+(?:on|at|tomorrow|today|tonight|next|this|called|titled|about)\b|[.!?,]*\s*$)""")
         // A trailing " at/on/… <rest>" clause to peel off a greedily-captured
         // title. The leading \s+ means a title-initial keyword ("next steps")
         // is left intact.

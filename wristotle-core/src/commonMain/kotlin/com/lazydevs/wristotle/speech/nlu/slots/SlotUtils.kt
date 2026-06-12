@@ -143,7 +143,12 @@ val WORD_NUMBERS: Map<String, Int> = buildMap {
  * string counts as time-only — nothing meaningful is left.
  */
 fun isOnlyTimeExpression(text: String): Boolean {
-    val tokens = text.trim().lowercase().split(WHITESPACE).filter { it.isNotEmpty() }
+    // Dictation tacks sentence punctuation onto the last token ("at 8." / "8 p.m.")
+    // — strip leading/trailing .,!?; per token so "8." still reads as the clock
+    // number 8 (interior ':' in "8:30" is kept).
+    val tokens = text.trim().lowercase().split(WHITESPACE)
+        .map { it.trim('.', ',', '!', '?', ';') }
+        .filter { it.isNotEmpty() }
     if (tokens.isEmpty()) return true
     return tokens.all { it in TIME_ONLY_WORDS || it in WORD_NUMBERS || CLOCK_NUMBER.matches(it) }
 }
@@ -152,10 +157,15 @@ private val WHITESPACE = Regex("""\s+""")
 // A whole token that is a clock number: "8", "8:30", "8.30", "8pm", "8:30pm".
 private val CLOCK_NUMBER = Regex("""(?i)\d{1,2}([:.]\d{2})?(a\.?m\.?|p\.?m\.?)?""")
 private val TIME_ONLY_WORDS = setOf(
-    "at", "for", "around", "by", "to", "past", "quarter", "half",
+    "at", "for", "in", "around", "by", "to", "from", "now", "past", "quarter", "half",
     "am", "a.m.", "a.m", "pm", "p.m.", "p.m",
     "o'clock", "oclock",
     "noon", "midnight", "morning", "afternoon", "evening", "tonight", "night",
+    // duration units, so "remind me for eight minutes" / "in 8 minutes" (a
+    // relative reminder with no task) also blanks to the default title.
+    "minute", "minutes", "min", "mins", "hour", "hours", "hr", "hrs",
+    "second", "seconds", "sec", "secs", "day", "days",
+    "week", "weeks", "month", "months", "year", "years",
 )
 
 /** Word-form alternation matching the keys of [WORD_NUMBERS]. Used by

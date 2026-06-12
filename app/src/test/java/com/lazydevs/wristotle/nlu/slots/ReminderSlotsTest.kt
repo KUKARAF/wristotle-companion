@@ -109,6 +109,14 @@ class ReminderSlotsTest {
         assertNull(slots("remind me at eight o'clock")["title"])
     }
 
+    // Dictation tacks a trailing period onto the last word ("Remind me at 8.")
+    // — it used to leak through as the title "At 8." (on-device report).
+    @Test fun `time-only reminder with trailing period has no title`() {
+        assertNull(slots("remind me at 8.")["title"])
+        assertNull(slots("set a reminder for 8 p.m.")["title"])
+        assertNull(slots("set a reminder for eight minutes.")["title"])
+    }
+
     @Test fun `time-only reminder still populates the time slot`() {
         assertNotNull(slots("set a reminder for 8pm")["time"])
     }
