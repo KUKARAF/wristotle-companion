@@ -3,7 +3,7 @@
 
 package com.lazydevs.wristotle.handlers
 
-import kotlinx.datetime.Instant
+import com.lazydevs.wristotle.speech.nlu.instantSlot
 import com.lazydevs.wristotle.speech.nlu.alarms.AlarmDestination
 import com.lazydevs.wristotle.speech.nlu.transport.sendAlarmCancel
 import com.lazydevs.wristotle.alarms.AlarmDispatcher
@@ -55,7 +55,7 @@ class CancelAlarmHandler(
     override val intent: Intent = Intent.CancelAlarm
 
     override suspend fun handle(result: IntentResult): String {
-        val instant = result.slots[SlotKeys.Time] as? Instant
+        val instant = result.instantSlot(SlotKeys.Time)
         return if (instant == null) {
             cancelAll()
         } else {

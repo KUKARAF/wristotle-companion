@@ -11,7 +11,8 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
+import com.lazydevs.wristotle.speech.nlu.contactSlot
+import com.lazydevs.wristotle.speech.nlu.stringSlot
 
 /**
  * Handles [Intent.SendMessage] — the single voice path for sending a
@@ -56,7 +57,7 @@ class SendMessageHandler(
     override val intent: Intent = Intent.SendMessage
 
     override suspend fun handle(result: IntentResult): String {
-        val appName = (result.slots[SlotKeys.App] as? String)?.trim().orEmpty()
+        val appName = result.stringSlot(SlotKeys.App)
         if (appName.isEmpty()) return "Don't know that messaging app"
 
         val target = MessagingTargets.findByDisplayName(appName)
@@ -73,14 +74,14 @@ class SendMessageHandler(
 
         if (!contacts.hasPermission()) return "Contacts permission not granted"
 
-        val contactName = (result.slots[SlotKeys.Contact] as? String)?.trim().orEmpty()
-        val body = (result.slots[SlotKeys.Body] as? String)?.trim().orEmpty()
+        val contactName = result.stringSlot(SlotKeys.Contact)
+        val body = result.stringSlot(SlotKeys.Body)
         if (contactName.isEmpty()) return "No contact specified"
         if (body.isEmpty()) return "No message body"
 
         // Reuse the upstream resolution when present — the slot extractor
         // already validated this name against the Contacts provider.
-        val contact = (result.slots[SlotKeys.ResolvedContact] as? ResolvedContact)
+        val contact = result.contactSlot()
             ?: contacts.findContact(contactName)
             ?: return "Contact not found: $contactName"
 

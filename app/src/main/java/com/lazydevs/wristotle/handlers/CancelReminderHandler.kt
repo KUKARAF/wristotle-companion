@@ -13,6 +13,7 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.stringSlot
 import com.lazydevs.wristotle.speech.nlu.transport.TimelineSendResult
 import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
 
@@ -40,7 +41,7 @@ class CancelReminderHandler(
     override val intent: Intent = Intent.Cancel
 
     override suspend fun handle(result: IntentResult): String {
-        val target = (result.slots[SlotKeys.Target] as? String)?.trim().orEmpty()
+        val target = result.stringSlot(SlotKeys.Target)
         Log.d(TAG, "cancel: ${result.rawQuery} (target='$target')")
 
         val record = if (target.isEmpty()) {

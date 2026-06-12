@@ -5,8 +5,9 @@ package com.lazydevs.wristotle.speech.nlu.handlers
 
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.contactSlot
+import com.lazydevs.wristotle.speech.nlu.stringSlot
 import com.lazydevs.wristotle.speech.nlu.contacts.ContactsResolver
-import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
 import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.telephony.Telephony
@@ -36,12 +37,12 @@ class CallHandler(
         if (!contacts.hasPermission()) return "Contacts permission not granted"
         if (!telephony.canPlaceCall()) return "Call permission not granted"
 
-        val contactName = (result.slots[SlotKeys.Contact] as? String)?.trim().orEmpty()
+        val contactName = result.stringSlot(SlotKeys.Contact)
         if (contactName.isEmpty()) return "No contact specified"
 
         // PebbleListenerService.enrichResolvedContact already looked
         // this name up before the confirm-gate; reuse that match.
-        val contact = (result.slots[SlotKeys.ResolvedContact] as? ResolvedContact)
+        val contact = result.contactSlot()
             ?: contacts.findContact(contactName)
             ?: return "Contact not found: $contactName"
 

@@ -13,6 +13,9 @@ import com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.boolSlot
+import com.lazydevs.wristotle.speech.nlu.instantSlot
+import com.lazydevs.wristotle.speech.nlu.optStringSlot
 import com.lazydevs.wristotle.speech.nlu.transport.ReminderPin
 import com.lazydevs.wristotle.speech.nlu.transport.TimelineSendResult
 import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
@@ -44,14 +47,14 @@ class ReminderHandler(
         // ReminderSlots always populates a time — defaults to now + 30 min
         // when no explicit time was spoken — so this cast won't fail in
         // practice. Defensive null-check stays for the type system only.
-        val instant = result.slots[SlotKeys.Time] as? Instant ?: return "Couldn't set reminder"
+        val instant = result.instantSlot(SlotKeys.Time) ?: return "Couldn't set reminder"
         val timeMs = instant.toEpochMilliseconds()
         val time = Date(timeMs)
         // ReminderSlots already blanks a time-only / contextless title; the
         // shared resolver then supplies the "Wristotle Reminder" placeholder
         // (same one the confirm preview uses) rather than echoing the raw query.
-        val title = DefaultTitles.composeReminderTitle(result.slots[SlotKeys.Title] as? String)
-        val isPersistent = result.slots[SlotKeys.Persistent] as? Boolean ?: false
+        val title = DefaultTitles.composeReminderTitle(result.optStringSlot(SlotKeys.Title))
+        val isPersistent = result.boolSlot(SlotKeys.Persistent)
 
         Log.d(TAG, "date=$time  title=$title  persistent=$isPersistent")
 

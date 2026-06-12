@@ -7,6 +7,7 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.optStringSlot
 import com.lazydevs.wristotle.tasks.TaskRepository
 import com.lazydevs.wristotle.tasks.TasksResponseFormatter
 
@@ -30,7 +31,7 @@ class ListTasksHandler(
     override suspend fun handle(result: IntentResult): String {
         // `filter` slot (set by ListTasksSlots) selects pending vs
         // completed. Absent → pending (default — most common case).
-        return when ((result.slots[SlotKeys.Filter] as? String)?.lowercase()) {
+        return when (result.optStringSlot(SlotKeys.Filter)?.lowercase()) {
             SlotKeys.FilterCompleted -> TasksResponseFormatter.format(
                 tasks = tasks.listCompleted(),
                 emptyMessage = "No completed tasks",

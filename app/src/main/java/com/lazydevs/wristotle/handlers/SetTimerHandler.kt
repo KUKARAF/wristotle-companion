@@ -11,6 +11,7 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.intSlot
 
 private const val TAG = "SetTimerHandler"
 
@@ -28,7 +29,7 @@ class SetTimerHandler(private val context: Context) : ActionHandler {
     override val intent: Intent = Intent.SetTimer
 
     override suspend fun handle(result: IntentResult): String {
-        val seconds = result.slots[SlotKeys.Seconds] as? Int
+        val seconds = result.intSlot(SlotKeys.Seconds)
             ?: return "Couldn't understand the duration.\nTry \"set a timer for 10 minutes\"."
 
         // Deliberately NOT EXTRA_SKIP_UI=true (unlike SetAlarmHandler).

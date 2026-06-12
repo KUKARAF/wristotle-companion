@@ -12,6 +12,7 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.intSlot
 
 /**
  * Handlers for the `Intent.Media*` variants, grouped in one file
@@ -162,7 +163,7 @@ class MediaSeekHandler(
 
     override suspend fun handle(result: IntentResult): String {
         if (!media.hasNotificationAccess()) return NEEDS_PERMISSION
-        val seconds = (result.slots[SlotKeys.Seconds] as? Int) ?: defaultSeconds()
+        val seconds = result.intSlot(SlotKeys.Seconds) ?: defaultSeconds()
         val delta = if (intent == Intent.MediaSeekForward) seconds else -seconds
         if (!media.seekBy(delta)) return NOTHING_PLAYING
         val verb = if (delta > 0) "Forward" else "Back"

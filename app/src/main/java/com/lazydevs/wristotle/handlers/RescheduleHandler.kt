@@ -3,7 +3,8 @@
 
 package com.lazydevs.wristotle.handlers
 
-import kotlinx.datetime.Instant
+import com.lazydevs.wristotle.speech.nlu.instantSlot
+import com.lazydevs.wristotle.speech.nlu.stringSlot
 import com.lazydevs.wristotle.speech.nlu.reminders.ReminderMatching
 import com.lazydevs.wristotle.speech.nlu.reminders.mentionsCalendarEvent
 import com.lazydevs.wristotle.speech.nlu.reminders.ReminderRecord
@@ -45,11 +46,11 @@ class RescheduleHandler(
     override val intent: Intent = Intent.Reschedule
 
     override suspend fun handle(result: IntentResult): String {
-        val instant = result.slots[SlotKeys.Time] as? Instant
+        val instant = result.instantSlot(SlotKeys.Time)
             ?: return "Couldn't understand the new time"
         val timeMs = instant.toEpochMilliseconds()
         val time = Date(timeMs)
-        val target = (result.slots[SlotKeys.Target] as? String)?.trim().orEmpty()
+        val target = result.stringSlot(SlotKeys.Target)
         Log.d(TAG, "reschedule: ${result.rawQuery} (target='$target' time=$time)")
 
         val record = if (target.isEmpty()) {

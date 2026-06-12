@@ -15,7 +15,7 @@ import com.lazydevs.wristotle.speech.nlu.handlers.formatClock12h
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import kotlinx.datetime.Instant
+import com.lazydevs.wristotle.speech.nlu.instantSlot
 import java.util.Calendar
 
 /**
@@ -44,7 +44,7 @@ class SetAlarmHandler(
         // SetAlarmSlots puts a kotlinx-datetime Instant here (not java.util.Date)
         // — casting to Date silently failed and every voice alarm reported
         // "couldn't understand" AFTER the confirm preview showed the right time.
-        val instant = result.slots[SlotKeys.Time] as? Instant
+        val instant = result.instantSlot(SlotKeys.Time)
             ?: return "Couldn't understand the time.\nTry \"set an alarm for 7am\"."
 
         val cal = Calendar.getInstance().apply { timeInMillis = instant.toEpochMilliseconds() }

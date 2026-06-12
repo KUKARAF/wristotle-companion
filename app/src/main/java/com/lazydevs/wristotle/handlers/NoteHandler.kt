@@ -9,6 +9,7 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.optStringSlot
 import java.io.File
 
 private const val TAG = "NoteHandler"
@@ -31,7 +32,7 @@ class NoteHandler(private val notes: NoteRepository) : ActionHandler {
     override val intent = Intent.Note
 
     override suspend fun handle(result: IntentResult): String {
-        val body = (result.slots[SlotKeys.Body] as? String)?.takeIf { it.isNotBlank() }
+        val body = result.optStringSlot(SlotKeys.Body)?.takeIf { it.isNotBlank() }
             ?: result.rawQuery.trim()
         if (body.isBlank()) return "Couldn't capture an empty note"
 
@@ -39,7 +40,7 @@ class NoteHandler(private val notes: NoteRepository) : ActionHandler {
         val id = notes.insert(body = body, source = SOURCE_WATCH, createdAtEpochMs = now)
         Log.d(TAG, "saved note id=$id len=${body.length}")
 
-        (result.slots[SlotKeys.AudioPath] as? String)?.let { path ->
+        result.optStringSlot(SlotKeys.AudioPath)?.let { path ->
             runCatching { notes.attachAudio(id, File(path)) }
                 .onFailure { Log.w(TAG, "attachAudio failed", it) }
         }

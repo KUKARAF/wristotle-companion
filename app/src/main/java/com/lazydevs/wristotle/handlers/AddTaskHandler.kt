@@ -7,6 +7,7 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
+import com.lazydevs.wristotle.speech.nlu.stringSlot
 import com.lazydevs.wristotle.tasks.TaskRepository
 
 /**
@@ -31,7 +32,7 @@ class AddTaskHandler(
     override val intent: Intent = Intent.AddTask
 
     override suspend fun handle(result: IntentResult): String {
-        val body = (result.slots[SlotKeys.Body] as? String)?.trim().orEmpty()
+        val body = result.stringSlot(SlotKeys.Body)
         if (body.isEmpty()) return "What's the task?"
 
         tasks.add(text = body, source = "watch")
