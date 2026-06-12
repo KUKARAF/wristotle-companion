@@ -7,6 +7,7 @@ import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.Reminder]:
@@ -37,7 +38,16 @@ class ReminderSlots(
 
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
+        // A clock time the user named resolves onto today's date, which may
+        // already be in the past — roll it to the next occurrence so the
+        // reminder doesn't fire in the past (issue #13). A bare hour ("at 8")
+        // rolls to the next 8 o'clock; an explicit "1 a.m." rolls to tomorrow.
         out[SlotKeys.Time] = timeParser.parse(query)?.instant
+            ?.rolledToNextFutureOccurrence(
+                clock.now(),
+                TimeZone.currentSystemDefault(),
+                ambiguousMeridiem = !queryHasExplicitMeridiem(query),
+            )
             ?: defaultedInstant()
         if (DETECT_PERSISTENT.containsMatchIn(query)) out[SlotKeys.Persistent] = true
         val title = buildTitle(query)
@@ -50,8 +60,8 @@ class ReminderSlots(
         return Instant.fromEpochMilliseconds(nowMs + defaultOffsetMinProvider() * 60_000L)
     }
 
-    private fun buildTitle(transcription: String): String =
-        transcription
+    private fun buildTitle(transcription: String): String {
+        val stripped = transcription
             // Drop the "persistent" / "persistently" modifier first so the
             // existing reminder prefixes can still match what follows ("persistent
             // reminder to call mom" → "reminder to call mom" → "Call mom").
@@ -60,7 +70,13 @@ class ReminderSlots(
             .replace(STRIP_LEADING_TIME_THEN_TO, "")
             .replace(STRIP_TIME_PHRASES, "")
             .trim()
-            .replaceFirstChar { it.uppercaseChar() }
+        // A time-only reminder ("set a reminder for 8 p.m.") strips down to a
+        // bare time token the trailing-clause regex can't reach (its preposition
+        // was eaten by STRIP_PREFIXES). Drop it so the title doesn't become
+        // "8pm"; the handler defaults the title when this slot is absent.
+        if (isOnlyTimeExpression(stripped)) return ""
+        return stripped.replaceFirstChar { it.uppercaseChar() }
+    }
 
     private companion object {
         // `\b` wraps the optional connectors so "remind me to call" strips

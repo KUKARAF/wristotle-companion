@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.alarms
 
 import com.lazydevs.wristotle.speech.nlu.alarms.AlarmDestination
+import com.lazydevs.wristotle.speech.nlu.handlers.DefaultTitles
 import com.lazydevs.wristotle.speech.nlu.transport.sendAlarmCancel
 import com.lazydevs.wristotle.speech.nlu.transport.sendAlarmSet
 import android.content.Context
@@ -117,7 +118,7 @@ class AlarmDispatcher(
     }
 
     private fun labelOrDefault(label: String): String =
-        label.trim().ifBlank { "Alarm" }
+        label.trim().ifBlank { DefaultTitles.ALARM }
 
     companion object {
         private const val TAG = "AlarmDispatcher"

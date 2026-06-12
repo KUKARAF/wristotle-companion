@@ -5,6 +5,8 @@ package com.lazydevs.wristotle.speech.nlu.slots
 
 import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.Reschedule]:
@@ -24,11 +26,21 @@ import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
  */
 class RescheduleSlots(
     private val timeParser: TimeParser,
+    private val clock: Clock = Clock.System,
 ) : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
         val out = mutableMapOf<String, Any>()
-        timeParser.parse(query)?.let { out[SlotKeys.Time] = it.instant }
+        // Rescheduling moves a reminder to a future time — roll a past bare
+        // clock time to its next occurrence the same way the other scheduling
+        // intents do (issue #13 family).
+        timeParser.parse(query)?.let {
+            out[SlotKeys.Time] = it.instant.rolledToNextFutureOccurrence(
+                clock.now(),
+                TimeZone.currentSystemDefault(),
+                ambiguousMeridiem = !queryHasExplicitMeridiem(query),
+            )
+        }
         val target = stripVerbBody(query.replace(STRIP_TIME_CLAUSE, ""), VERBS, FILLERS)
         if (target.isNotBlank()) out[SlotKeys.Target] = target
         return out

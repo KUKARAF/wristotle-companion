@@ -6,6 +6,7 @@ package com.lazydevs.wristotle.speech.nlu.handler
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.contacts.ResolvedContact
+import com.lazydevs.wristotle.speech.nlu.handlers.DefaultTitles
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
@@ -36,10 +37,10 @@ object ConfirmSummaryBuilder {
             if (body == null) "action: $verb\ndetails: $to"
             else              "action: $verb\ndetails: $to $body"
         }
-        Intent.Reminder      -> "action: reminder\ndetails: ${titleWithTime(r, defaultTitle = "Reminder")}"
+        Intent.Reminder      -> "action: reminder\ndetails: ${withTime(r, DefaultTitles.composeReminderTitle(slotStr(r, SlotKeys.Title)))}"
         Intent.Cancel        -> "action: cancel\ndetails: ${targetOrLatest(r)}"
         Intent.Reschedule    -> "action: reschedule\ndetails: ${targetOrLatest(r)} → ${timeOrDash(r)}"
-        Intent.CreateEvent   -> "action: schedule\ndetails: ${titleWithTime(r, defaultTitle = "Meeting")}"
+        Intent.CreateEvent   -> "action: schedule\ndetails: ${withTime(r, DefaultTitles.composeEventTitle(slotStr(r, SlotKeys.Title), slotStr(r, SlotKeys.Attendee)))}"
         Intent.OpenApp       -> "action: open\ndetails: ${slot(r, SlotKeys.App)}"
         Intent.MediaPlay     -> "action: play\ndetails: ${slot(r, SlotKeys.App)}"
         Intent.MediaPause    -> "action: pause\ndetails: ${slotOrDash(r, SlotKeys.App)}"
@@ -98,16 +99,13 @@ object ConfirmSummaryBuilder {
     private fun targetOrLatest(r: IntentResult): String =
         (r.slots[SlotKeys.Target] as? String)?.takeIf { it.isNotEmpty() } ?: "latest reminder"
 
-    private fun titleWithTime(r: IntentResult, defaultTitle: String): String {
-        val explicit = (r.slots[SlotKeys.Title] as? String)?.takeIf { it.isNotEmpty() }
-        val attendee = (r.slots[SlotKeys.Attendee] as? String)?.takeIf { it.isNotEmpty() }
-        val title = when {
-            explicit != null && attendee != null && !explicit.contains(attendee, ignoreCase = true) ->
-                "$explicit with $attendee"
-            explicit != null -> explicit
-            attendee != null -> "$defaultTitle with $attendee"
-            else -> defaultTitle
-        }
+    private fun slotStr(r: IntentResult, key: String): String? =
+        (r.slots[key] as? String)?.takeIf { it.isNotEmpty() }
+
+    /** Appends the formatted time to an already-composed title (if present).
+     *  The title itself comes from the shared [DefaultTitles] resolvers so the
+     *  preview always matches what the handler will actually save. */
+    private fun withTime(r: IntentResult, title: String): String {
         val time = (r.slots[SlotKeys.Time] as? Instant)?.let { formatWatchTime(it) }
         return if (time != null) "$title @ $time" else title
     }

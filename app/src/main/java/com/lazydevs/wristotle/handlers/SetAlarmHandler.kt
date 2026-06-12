@@ -10,6 +10,7 @@ import com.lazydevs.wristotle.alarms.AlarmEntity
 import com.lazydevs.wristotle.alarms.AlarmRepository
 import com.lazydevs.wristotle.alarms.DispatchResult
 import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
+import com.lazydevs.wristotle.speech.nlu.handlers.DefaultTitles
 import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
@@ -50,7 +51,7 @@ class SetAlarmHandler(
         val draft = AlarmEntity(
             hour = hour,
             minute = minute,
-            label = "Alarm",
+            label = DefaultTitles.ALARM,
             destination = destination.name,
             wireEpoch = null,
             enabled = true,

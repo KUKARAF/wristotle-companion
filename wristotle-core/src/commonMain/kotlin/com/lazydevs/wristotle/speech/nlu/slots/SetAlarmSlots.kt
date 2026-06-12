@@ -8,6 +8,7 @@ import kotlinx.datetime.Clock
 import kotlin.time.Duration.Companion.seconds
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractor
 import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
 
 /**
  * Slots for [com.lazydevs.wristotle.speech.nlu.Intent.SetAlarm].
@@ -23,6 +24,7 @@ import kotlinx.datetime.Instant
  */
 class SetAlarmSlots(
     private val timeParser: TimeParser,
+    private val clock: Clock = Clock.System,
 ) : SlotExtractor {
 
     override suspend fun extract(query: String): Map<String, Any> {
@@ -55,7 +57,18 @@ class SetAlarmSlots(
         val instant: Instant = timeParser.parse(stripped)?.instant
             ?: timeParser.parse(normalized)?.instant
             ?: return emptyMap()
-        return mapOf(SlotKeys.Time to instant)
+        // The handler reads hour+minute off this and schedules the next
+        // occurrence — but a bare "alarm for 8" at 9 a.m. parses as 8 a.m.
+        // (past), which would schedule tomorrow 8 a.m. instead of the next
+        // 8 o'clock (8 p.m. today). Roll it the same way reminders do so the
+        // extracted hour is the right one; an explicit "8 a.m." still rolls to
+        // tomorrow rather than this afternoon.
+        val rolled = instant.rolledToNextFutureOccurrence(
+            clock.now(),
+            TimeZone.currentSystemDefault(),
+            ambiguousMeridiem = !queryHasExplicitMeridiem(query),
+        )
+        return mapOf(SlotKeys.Time to rolled)
     }
 
     private companion object {

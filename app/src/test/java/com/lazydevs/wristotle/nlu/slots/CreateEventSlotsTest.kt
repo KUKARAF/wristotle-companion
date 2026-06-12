@@ -3,9 +3,13 @@
 
 package com.lazydevs.wristotle.nlu.slots
 
+import com.lazydevs.wristotle.speech.nlu.parsing.ParsedTime
+import com.lazydevs.wristotle.speech.nlu.parsing.TimeParser
 import com.lazydevs.wristotle.speech.nlu.slots.*
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -98,6 +102,23 @@ class CreateEventSlotsTest {
 
     @Test fun `a spoken time populates the time slot`() {
         assertNotNull(extract("schedule a meeting tomorrow at three pm")["time"])
+    }
+
+    // A bare clock time that already passed today must roll to the next day so
+    // the event isn't created in the past (same fix as reminder issue #13).
+    // Deterministic via a fake parser + fixed clock.
+    @Test fun `past clock time rolls forward to next day`() {
+        val now = Instant.parse("2026-06-12T20:00:00Z")
+        val oneAmToday = Instant.parse("2026-06-12T01:00:00Z")
+        val time = runBlocking {
+            CreateEventSlots(
+                timeParser = object : TimeParser {
+                    override fun parse(query: String): ParsedTime? = ParsedTime(oneAmToday, "")
+                },
+                clock = object : Clock { override fun now(): Instant = now },
+            ).extract("schedule a meeting at one am")["time"] as? Instant
+        }
+        assertEquals(Instant.parse("2026-06-13T01:00:00Z"), time)
     }
 
     // --- Combined --------------------------------------------------------
