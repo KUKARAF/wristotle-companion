@@ -55,6 +55,15 @@ android {
                     arguments += listOf(
                         "-DANDROID_STL=c++_shared",
                         "-DANDROID_ARM_NEON=ON",
+                        // GGML_OPENMP=OFF is REQUIRED for F-Droid reproducibility.
+                        // With OpenMP on, ggml-cpu emits OpenMP `ident_t.psource`
+                        // strings (";<file>;<func>;<line>;<col>;;") that embed the
+                        // ABSOLUTE build-root path. Clang's -ffile-prefix-map does
+                        // NOT rewrite those idents, so libggml-cpu.so could never
+                        // byte-match across build roots (Codeberg vs F-Droid).
+                        // Disabling OpenMP drops libomp.so and makes ggml use its
+                        // native pthread threadpool (equivalent perf on Android).
+                        "-DGGML_OPENMP=OFF",
                         "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--build-id=none",
                         "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,--build-id=none",
                         "-DCMAKE_EXE_LINKER_FLAGS=-Wl,--build-id=none",

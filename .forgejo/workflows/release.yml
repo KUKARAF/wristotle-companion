@@ -81,9 +81,7 @@ jobs:
           mkdir -p \
             "$CACHE_ROOT/android-sdk" \
             "$CACHE_ROOT/gradle" \
-            "$CACHE_ROOT/kotlin-konan" \
-            "$CACHE_ROOT/speech-whisper-cxx" \
-            "$CACHE_ROOT/speech-whisper-cxx-intermediates"
+            "$CACHE_ROOT/kotlin-konan"
           {
             echo "WRISTOTLE_CI_CACHE_ROOT=$CACHE_ROOT"
             echo "ANDROID_HOME=$CACHE_ROOT/android-sdk"
@@ -91,12 +89,15 @@ jobs:
             echo "GRADLE_USER_HOME=$CACHE_ROOT/gradle"
             echo "KONAN_DATA_DIR=$CACHE_ROOT/kotlin-konan"
           } >> $GITHUB_ENV
-          # Pipe .cxx build artefacts through symlinks into the persistent
-          # cache. AGP writes through the symlinks; the next build inherits
-          # the .o files without re-running CMake's configure step.
-          ln -snf "$CACHE_ROOT/speech-whisper-cxx" speech-whisper/.cxx
-          mkdir -p speech-whisper/build/intermediates
-          ln -snf "$CACHE_ROOT/speech-whisper-cxx-intermediates" speech-whisper/build/intermediates/cxx
+          # NOTE: .cxx build artefacts are deliberately NOT symlinked into the
+          # persistent cache. Doing so made AGP write through to an absolute
+          # out-of-tree path ($HOME/.wristotle-ci-cache/speech-whisper-cxx),
+          # whose resolved path leaked into every libggml*.so / libwhisper.so /
+          # libwristotle_speech.so via __FILE__ — breaking F-Droid
+          # reproducibility, since the -ffile-prefix-map only covers the in-tree
+          # ${rootDir}/${projectDir}. Keeping .cxx in-tree lets the prefix-map
+          # rewrite it to ./.cxx/... so the Codeberg release build matches
+          # F-Droid's clean-room build byte-for-byte.
           du -sh "$CACHE_ROOT"/* 2>/dev/null || true
 
       - name: Set up JDK 17
