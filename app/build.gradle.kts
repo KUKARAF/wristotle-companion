@@ -121,6 +121,16 @@ android {
         }
     }
 
+    // AGP embeds an opaque, Google-signed "dependency metadata" blob in the APK
+    // Signing Block (for Play Console dependency reporting). F-Droid's scanner
+    // rejects it as a CRITICAL "extra signing block 'Dependency metadata'", and
+    // it's encrypted + non-deterministic so it also breaks reproducible builds.
+    // Strip it from both the APK and the App Bundle.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     // PNG-crunch reproducibility was a real concern under aapt + AGP 7.
     // AGP 8's aapt2 crunches deterministically by default and the legacy
     // `aaptOptions.cruncherEnabled` toggle has been removed. We use
