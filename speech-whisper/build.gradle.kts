@@ -64,8 +64,18 @@ android {
                         // Disabling OpenMP drops libomp.so and makes ggml use its
                         // native pthread threadpool (equivalent perf on Android).
                         "-DGGML_OPENMP=OFF",
-                        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--build-id=none",
-                        "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,--build-id=none",
+                        // `-Wl,--strip-all` strips at LINK time, which is
+                        // REQUIRED for F-Droid reproducibility. AGP's separate
+                        // `stripReleaseDebugSymbols` task does NOT strip these
+                        // libs on the Linux NDK (it does on macOS) — so the
+                        // shipped .so kept their DWARF, which embeds the NDK
+                        // sysroot include dir (an absolute path that differs
+                        // between the Codeberg builder /root/.wristotle-ci-cache
+                        // and F-Droid's /opt/android-sdk). Stripping in the
+                        // linker removes all debug info deterministically on
+                        // every build host, independent of AGP's post-strip.
+                        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--build-id=none -Wl,--strip-all",
+                        "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,--build-id=none -Wl,--strip-all",
                         "-DCMAKE_EXE_LINKER_FLAGS=-Wl,--build-id=none",
                     )
                 }

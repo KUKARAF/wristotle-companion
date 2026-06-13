@@ -158,27 +158,30 @@ android {
         }
     }
 
-    // keepDebugSymbols ONLY for the prebuilt `.so` that ship inside their
-    // upstream AARs (ONNX runtime, AndroidX graphics-path, datastore) plus the
-    // NDK's libc++_shared. These come in pre-compiled and byte-identical in
-    // every build, so packaging them unstripped is harmless for reproducibility
-    // and silences strip warnings for the ones whose sections NDK 30's strip
-    // tool doesn't recognise.
-    //
-    // The locally-compiled libs (libggml*, libwhisper, libwristotle_speech) are
-    // deliberately NOT listed — they MUST be stripped. Keeping their debug info
-    // embeds environment-specific absolute paths (the NDK sysroot include dir,
-    // DWARF comp_dir) that differ between the Codeberg release builder and
-    // F-Droid's clean room, which breaks reproducible-build verification.
-    // AGP's stripReleaseDebugSymbols strips them cleanly (verified).
+    // Keep ALL bundled `.so` out of AGP's `stripReleaseDebugSymbols`:
+    //   - The prebuilt AAR/NDK libs (ONNX runtime, AndroidX graphics-path,
+    //     datastore, libc++_shared) ship pre-compiled and byte-identical in
+    //     every build; AGP's strip can't process some of their sections anyway.
+    //   - The locally-compiled libs (libggml*, libwhisper, libwristotle_speech)
+    //     are already fully stripped AT LINK TIME via `-Wl,--strip-all` (see
+    //     speech-whisper/build.gradle.kts). AGP's stripReleaseDebugSymbols task
+    //     does NOT strip them on the Linux NDK (it does on macOS), so letting it
+    //     run would make the APK depend on the build host. Keeping them here
+    //     means the APK ships exactly the linker's deterministic stripped output
+    //     on every platform — the key to F-Droid reproducible-build verification.
     packaging {
         jniLibs {
             keepDebugSymbols += setOf(
                 "**/libandroidx.graphics.path.so",
                 "**/libc++_shared.so",
                 "**/libdatastore_shared_counter.so",
+                "**/libggml.so",
+                "**/libggml-base.so",
+                "**/libggml-cpu.so",
                 "**/libonnxruntime.so",
                 "**/libonnxruntime4j_jni.so",
+                "**/libwhisper.so",
+                "**/libwristotle_speech.so",
             )
         }
     }
