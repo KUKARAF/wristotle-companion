@@ -1,0 +1,8 @@
+Reproducible F-Droid builds.
+
+The app now builds reproducibly, so
+F-Droid can rebuild it from source
+and confirm it matches the release
+you download — byte for byte. This
+was entirely a build-system change;
+the app behaves exactly the same.

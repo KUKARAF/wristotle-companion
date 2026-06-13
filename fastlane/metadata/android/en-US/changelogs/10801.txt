@@ -1,0 +1,14 @@
+Voice scheduling fixes.
+
+Voice alarms work again ("set an
+alarm for 5 minutes"). A bare hour
+now means the next one — at 2:30pm,
+"remind me at 8" means 8pm today —
+applied consistently whether you
+create, reschedule, cancel, or ask.
+
+Reminder and meeting titles are
+cleaner: a time-only reminder is
+titled "Wristotle Reminder" instead
+of "8pm", and "with Alex" stays as
+the attendee.

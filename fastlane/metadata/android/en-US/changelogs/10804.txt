@@ -1,0 +1,5 @@
+Reproducible-build groundwork.
+
+More build-system work toward an
+F-Droid listing. No functional
+changes — same app as 1.8.2.

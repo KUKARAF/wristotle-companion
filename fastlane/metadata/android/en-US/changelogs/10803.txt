@@ -1,0 +1,6 @@
+Reproducible-build groundwork.
+
+Build-system work toward an F-Droid
+listing — making the native speech
+libraries build identically on every
+machine. No functional changes.

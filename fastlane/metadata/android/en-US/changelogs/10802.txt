@@ -1,0 +1,6 @@
+Packaging fix.
+
+A build-system change so the app
+builds cleanly on F-Droid's build
+servers. No functional changes —
+same app as 1.8.1.
