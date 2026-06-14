@@ -1,0 +1,9 @@
+Speak sports replies on your watch.
+
+Sports answers (F1, scores, standings)
+can now be read aloud on the watch.
+
+Find the new "Sports" toggle under
+Settings → Speech → Lookups — it's
+pre-ticked, so just turn on the
+master Speech switch to hear it.
