@@ -200,6 +200,10 @@ class PebbleListenerService : BasePebbleListenerService() {
                 phoneLocation = com.lazydevs.wristotle.phone.PhoneLocation(this),
                 settings = app.weatherSettings,
             ),
+            com.lazydevs.wristotle.handlers.SportHandler(
+                source = app.sportSource,
+                settings = app.sportSettings,
+            ),
             com.lazydevs.wristotle.handlers.AskAgentHandler(
                 settings = app.askAgentSettings,
                 mcpServers = app.mcpServerRepository,

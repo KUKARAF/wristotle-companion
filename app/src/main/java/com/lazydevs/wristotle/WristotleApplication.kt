@@ -205,6 +205,16 @@ class WristotleApplication : Application() {
     lateinit var weatherSettings: com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings
         private set
 
+    /** Sports feature preferences (favorite teams + preferred sport). */
+    lateinit var sportSettings: com.lazydevs.wristotle.speech.nlu.settings.SportSettings
+        private set
+
+    /** Generic sports data source (sportskapi, ESPN-backed behind a neutral
+     *  API) — a shared singleton so its in-memory config cache + background
+     *  refresh persist for the process. */
+    lateinit var sportSource: com.lazydevs.sportskapi.SportDataSource
+        private set
+
     /** AskAgent preferences — LLM provider + API key + model. Lazy for
      *  the same reason as [mcpDb]: only touched when the user opens the
      *  Settings card, fires an AskAgent intent, or runs a backup. */
@@ -544,6 +554,20 @@ class WristotleApplication : Application() {
             kvStore(com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings.PREFS_NAME),
             localeDefaultProvider = ::localeDefaultTempUnit,
         )
+        sportSettings = com.lazydevs.wristotle.speech.nlu.settings.SportSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.SportSettings.PREFS_NAME),
+        )
+        // ESPN specifics + remote-config handling live entirely inside
+        // sportskapi; we only supply the HTTP + storage seams and the URL of
+        // the hosted config (slug/team-index updates land without an app
+        // release; a bundled default keeps it working offline).
+        sportSource = com.lazydevs.sportskapi.SportsKApi.create(
+            http = com.lazydevs.wristotle.sport.SportHttpImpl(),
+            store = com.lazydevs.wristotle.sport.SportConfigStoreImpl(
+                kvStore(com.lazydevs.wristotle.sport.SportConfigStoreImpl.PREFS_NAME),
+            ),
+            remoteConfigUrl = "https://wristotle.codeberg.page/data/sports-config.json",
+        )
 
         nluDb = NluDatabase.build(this)
         nluBank = ExampleBank(nluDb.exampleDao())
@@ -621,6 +645,7 @@ class WristotleApplication : Application() {
             Intent.WorldTime to com.lazydevs.wristotle.speech.nlu.slots.WorldTimeSlots(),
             Intent.Calculate to com.lazydevs.wristotle.speech.nlu.slots.CalculateSlots(),
             Intent.Weather to com.lazydevs.wristotle.speech.nlu.slots.WeatherSlots(),
+            Intent.SportScore to com.lazydevs.wristotle.speech.nlu.slots.SportSlots(),
             Intent.AskAgent to com.lazydevs.wristotle.speech.nlu.slots.AskAgentSlots(
                 extrasProvider = { askAgentSettings.customTriggers.value },
             ),

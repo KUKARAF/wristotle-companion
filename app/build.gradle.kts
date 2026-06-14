@@ -293,6 +293,11 @@ dependencies {
     implementation(project(":speech"))
     implementation(project(":speech-whisper"))
     implementation(project(":wristotle-core"))
+    // Generic sports-data library (composite-build substitution → ./sportskapi).
+    // :app consumes the provider-neutral SportDataSource for SportHandler +
+    // the seam impls; wristotle-core keeps it `implementation` so :app needs
+    // its own declaration.
+    implementation("com.lazydevs.sportskapi:sportskapi:0.1.0")
     // MCP client (phase A of AskAgent) — official SDK over Ktor's OkHttp engine.
     // Pure-package under app/.../mcp/; no separate module per the
     // module-vs-package check (single consumer, no NDK, no model lifecycle).

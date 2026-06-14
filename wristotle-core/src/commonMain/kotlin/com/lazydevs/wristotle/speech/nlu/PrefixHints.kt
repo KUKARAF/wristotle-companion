@@ -199,6 +199,14 @@ object PrefixHints {
         // / "temperature" shapes. Sits above the Calculate rule (which keys
         // on digits + operators — no overlap) so the order isn't load-bearing.
         Regex("(?i)\\b(weather|forecast|raining|sunny|temperature)\\b") to Intent.Weather,
+        // SportScore — unambiguous sports vocab only (bare team names lean on
+        // the classifier + seeds). Requires a sports anchor so it doesn't steal
+        // the media "play" rules. Covers standings / fixtures / results / live.
+        Regex(
+            "(?i)\\b(standings?|league table|fixtures?|(next|last)\\s+(game|match|fixture)|" +
+                "did\\s+(we|they|us)\\s+(win|lose|won)|who\\s+(do|does|are|is)\\b.*\\bplay|" +
+                "live\\s+score|grand prix)\\b",
+        ) to Intent.SportScore,
         // Calculate — a number immediately followed by an arithmetic operator
         // word/symbol ("15% of", "25 plus", "96 divided by"). Distinctive
         // enough that no other intent's phrasing collides: reminder/timer
