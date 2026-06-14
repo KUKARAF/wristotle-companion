@@ -23,6 +23,11 @@ dependencyResolutionManagement {
     }
 }
 
+// Composite build: the generic sports-data library lives in its own repo,
+// vendored here as a git submodule at ./sportskapi. Gradle substitutes any
+// "com.lazydevs.sportskapi:sportskapi" dependency with this included build.
+includeBuild("sportskapi")
+
 rootProject.name = "Wristotle"
 include(":app")
 include(":speech")

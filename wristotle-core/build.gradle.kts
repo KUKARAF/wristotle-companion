@@ -73,6 +73,11 @@ kotlin {
             // + java.text.SimpleDateFormat for the lifted briefing pieces
             // (TodayRange today, MorningBriefRenderer + Date-using slots next).
             implementation(libs.kotlinx.datetime)
+            // Generic sports-data library (composite-build substitution →
+            // ./sportskapi). Provides the provider-neutral SportDataSource +
+            // domain consumed by the sport voice intent. KMP so it compiles
+            // for the iOS-sim gate too.
+            implementation("com.lazydevs.sportskapi:sportskapi:0.1.0")
         }
         androidMain.dependencies {
             implementation(project(":speech"))
