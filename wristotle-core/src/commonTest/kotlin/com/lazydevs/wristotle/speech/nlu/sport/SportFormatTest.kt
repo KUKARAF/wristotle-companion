@@ -59,13 +59,33 @@ class SportFormatTest {
             Standing(4, "Spurs", points = 70),
         )
         val out = SportFormat.standings(StandingsResult.Ok(table, "Premier League"))
-        assertEquals("Premier League\n1 Arsenal 85\n2 Man City 82\n3 Liverpool 78\n4 Spurs 70", out)
+        assertEquals(
+            "Premier League\n1. Arsenal (85)\n2. Man City (82)\n3. Liverpool (78)\n4. Spurs (70)",
+            out,
+        )
     }
 
     @Test fun standingsUsesRecordWhenNoPoints() {
-        val table = listOf(Standing(1, "Warriors", record = "60-22"))
+        val table = listOf(
+            Standing(1, "Warriors", record = "60-22"),
+            Standing(2, "Lakers", record = "55-27"),
+        )
         val out = SportFormat.standings(StandingsResult.Ok(table, "NBA"))
-        assertEquals("NBA\n1 Warriors 60-22", out)
+        assertEquals("NBA\n1. Warriors (60-22)\n2. Lakers (55-27)", out)
+    }
+
+    @Test fun standingsLeadersViewDropsRedundantRank() {
+        // Every row is a division leader (all rank 1) → no leading "1." noise;
+        // the division-prefixed name carries the row, stat in parens.
+        val table = listOf(
+            Standing(1, "AL East New York Yankees", record = "50-30"),
+            Standing(1, "AL West Houston Astros", record = "46-34"),
+        )
+        val out = SportFormat.standings(StandingsResult.Ok(table, "MLB"))
+        assertEquals(
+            "MLB\nAL East New York Yankees (50-30)\nAL West Houston Astros (46-34)",
+            out,
+        )
     }
 
     @Test fun errorsRenderShortMessages() {

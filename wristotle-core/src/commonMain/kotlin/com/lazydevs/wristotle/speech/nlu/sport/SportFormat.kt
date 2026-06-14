@@ -53,10 +53,20 @@ object SportFormat {
         is StandingsResult.Ok -> {
             // Up to 8 rows — covers a league's full set of division leaders
             // (NFL has 8) or a single league's top 8.
-            val rows = result.table.take(8).joinToString("\n") { s ->
-                "${s.rank} ${s.team} ${s.points ?: s.record ?: ""}".trim()
+            val rows = result.table.take(8)
+            // All rows sharing one rank ⇒ a "division leaders" view (every row
+            // IS a #1), so the leading rank on each line is noise — drop it and
+            // let the division-prefixed team name carry the row. Otherwise show
+            // "1." as an ordinal. The stat (points or W-L record) goes in parens
+            // so the three values (rank / team / stat) are visually distinct on
+            // the watch instead of three bare numbers running together.
+            val leaders = rows.size > 1 && rows.map { it.rank }.distinct().size == 1
+            val body = rows.joinToString("\n") { s ->
+                val stat = s.points?.toString() ?: s.record
+                val name = if (leaders) s.team else "${s.rank}. ${s.team}"
+                if (stat == null) name else "$name ($stat)"
             }
-            if (rows.isEmpty()) "No standings available." else "${result.league}\n$rows"
+            if (body.isBlank()) "No standings available." else "${result.league}\n$body"
         }
         StandingsResult.NotFound -> "No standings available."
         StandingsResult.Network -> NETWORK
