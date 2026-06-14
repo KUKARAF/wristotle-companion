@@ -3,4 +3,4 @@
 	url = https://github.com/ggerganov/whisper.cpp
 [submodule "sportskapi"]
 	path = sportskapi
-	url = /Users/kannan/pebble/sportskapi
+	url = https://codeberg.org/wristotle/sportskapi.git
