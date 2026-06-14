@@ -83,6 +83,13 @@ class SportSettings(private val store: KeyValueStore) {
         _excludedSports.value = next
     }
 
+    /** Replace the whole excluded set (used by Restore). */
+    fun setExcludedSports(excluded: Set<String>) {
+        if (excluded == _excludedSports.value) return
+        store.putString(KEY_EXCLUDED_SPORTS, json.encodeToString(strListSerializer, excluded.toList()))
+        _excludedSports.value = excluded
+    }
+
     private fun readFavorites(): List<SportSubject> = runCatching {
         val raw = store.getString(KEY_FAVORITES, "")
         if (raw.isEmpty()) emptyList() else json.decodeFromString(favSerializer, raw)
