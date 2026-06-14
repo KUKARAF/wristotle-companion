@@ -126,6 +126,11 @@ object MessageKeys {
      *  plain chat bubble (e.g. "sport"). Empty/absent ⇒ plain bubble. */
     val CARD_KIND: UInt = 10057u
 
+    /** Companion → watch: optional structured card payload (US-0x1F-delimited)
+     *  the watch renders visually — e.g. a sports scoreboard. Same frame as the
+     *  response + [CARD_KIND]. */
+    val CARD_DATA: UInt = 10058u
+
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE]. */
     const val NOTE_DETAIL_MAX_CHARS: Int = 540
 

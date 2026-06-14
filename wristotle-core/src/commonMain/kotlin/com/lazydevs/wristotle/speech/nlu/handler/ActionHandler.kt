@@ -37,4 +37,20 @@ interface ActionHandler {
      * Return a short result string for the watch chat display.
      */
     suspend fun handle(result: IntentResult): String
+
+    /**
+     * Richer variant carrying optional structured [RichResult.cardData] the
+     * watch can render as a visual card (e.g. a sports scoreboard). The default
+     * just wraps [handle] with no card data — only handlers that produce a card
+     * override this, so the other ~20 handlers are untouched.
+     */
+    suspend fun handleRich(result: IntentResult): RichResult = RichResult(handle(result))
 }
+
+/**
+ * A handler response plus optional structured card payload. [cardData] is a
+ * compact, watch-parsed string (US-0x1F-delimited) — e.g. the score card
+ * `"scoreWarriors121Celtics115Final"`. Null ⇒ the
+ * watch falls back to a plain text card / bubble.
+ */
+data class RichResult(val response: String, val cardData: String? = null)

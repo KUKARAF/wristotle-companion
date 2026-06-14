@@ -41,6 +41,28 @@ object SportFormat {
     fun sportDisabled(key: String): String =
         "${sportLabel(key)} is turned off. Enable it in Settings → Sports."
 
+    /** Unit separator (US-ASCII 0x1F) delimiting the watch score-card payload. */
+    private const val US = '\u001F'
+
+    /**
+     * Structured payload for a visual scoreboard card, or null when the event
+     * isn't a two-numeric-score game (F1/cricket/next/standings fall back to the
+     * text card). Shape: `score<US>home<US>homeScore<US>away<US>awayScore<US>status`.
+     */
+    fun scoreCardData(result: SportResult): String? {
+        val e = (result as? SportResult.Ok)?.events?.firstOrNull() ?: return null
+        val h = e.homeScore ?: return null
+        val a = e.awayScore ?: return null
+        if (e.homeName.isBlank() || e.awayName.isBlank()) return null
+        val status = when (e.status) {
+            com.lazydevs.sportskapi.SportEventStatus.LIVE -> e.progress ?: "Live"
+            com.lazydevs.sportskapi.SportEventStatus.FINAL -> "Final"
+            else -> ""
+        }
+        return listOf("score", e.homeName, h.toString(), e.awayName, a.toString(), status)
+            .joinToString(US.toString())
+    }
+
     fun next(result: SportResult, subjectName: String): String = when (result) {
         is SportResult.Ok -> result.events.firstOrNull()?.let { upcoming(it, subjectName) }
             ?: "$subjectName has no upcoming games."

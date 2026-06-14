@@ -419,7 +419,9 @@ class PebbleListenerService : BasePebbleListenerService() {
         }
         Log.d(TAG, "Sending response: ${dispatchResult.response}")
 
-        transport.sendForHint(watchHint, dispatchResult.response, cardKindFor(routed.intent))
+        transport.sendForHint(
+            watchHint, dispatchResult.response, cardKindFor(routed.intent), dispatchResult.cardData,
+        )
 
         // Per-intent TTS on the watch speaker. Master + per-intent toggle
         // both gate via `shouldSpeak`.

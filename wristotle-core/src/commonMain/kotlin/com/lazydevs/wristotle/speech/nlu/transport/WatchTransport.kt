@@ -96,19 +96,26 @@ suspend fun WatchTransport.sendCancelResult(text: String) =
  * query on so older firmware that distinguishes the reminder/cancel
  * inboxes still routes the response right.
  */
-suspend fun WatchTransport.sendForHint(hint: Intent?, text: String, cardKind: String? = null): Boolean {
+suspend fun WatchTransport.sendForHint(
+    hint: Intent?,
+    text: String,
+    cardKind: String? = null,
+    cardData: String? = null,
+): Boolean {
     val responseKey = when (hint) {
         Intent.Reminder -> MessageKeys.REMINDER_RESULT
         Intent.Cancel -> MessageKeys.CANCEL_RESULT
         else -> MessageKeys.COMPANION_RESPONSE
     }
-    // Pair the response with its card-kind hint in ONE frame so the watch can
-    // render a full-screen card; absent kind ⇒ plain chat bubble.
-    return if (cardKind.isNullOrEmpty()) {
-        sendText(responseKey, text)
-    } else {
-        sendTexts(mapOf(responseKey to text, MessageKeys.CARD_KIND to cardKind))
+    // Pair the response with its card-kind hint + optional structured card data
+    // in ONE frame so the watch can render a full-screen (and visual) card;
+    // absent kind ⇒ plain chat bubble.
+    val payload = buildMap {
+        put(responseKey, text)
+        if (!cardKind.isNullOrEmpty()) put(MessageKeys.CARD_KIND, cardKind)
+        if (!cardData.isNullOrEmpty()) put(MessageKeys.CARD_DATA, cardData)
     }
+    return if (payload.size == 1) sendText(responseKey, text) else sendTexts(payload)
 }
 
 suspend fun WatchTransport.sendNotesResponse(text: String) =

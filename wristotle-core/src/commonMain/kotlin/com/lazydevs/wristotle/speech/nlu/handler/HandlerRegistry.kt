@@ -20,6 +20,8 @@ data class HandlerResult(
     val response: String,
     val handler: String,
     val success: Boolean,
+    /** Optional structured card payload for the watch (see [RichResult]). */
+    val cardData: String? = null,
 )
 
 /**
@@ -51,8 +53,11 @@ class HandlerRegistry(handlers: List<ActionHandler>) {
         val handler = byIntent[result.intent]
         return try {
             if (handler != null) {
-                val response = handler.handle(result)
-                HandlerResult(response, handler.tag, success = isSuccessResponse(response))
+                val rich = handler.handleRich(result)
+                HandlerResult(
+                    rich.response, handler.tag,
+                    success = isSuccessResponse(rich.response), cardData = rich.cardData,
+                )
             } else {
                 HandlerResult(
                     response = "Unknown command: ${result.rawQuery}",
