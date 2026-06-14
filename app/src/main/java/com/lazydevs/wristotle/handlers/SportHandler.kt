@@ -53,7 +53,14 @@ class SportHandler(
     /** Named team → resolve via the library (biased by the user's sport
      *  priority order); otherwise the first saved favorite. */
     private suspend fun resolve(spoken: String?): SportSubject? {
-        return if (spoken != null) source.resolveTeam(spoken, settings.preferredSports.value)
-        else settings.favorites.value.firstOrNull()
+        return if (spoken != null) {
+            source.resolveTeam(
+                spoken,
+                settings.preferredSports.value,
+                settings.excludedSports.value.toList(),
+            )
+        } else {
+            settings.favorites.value.firstOrNull()
+        }
     }
 }

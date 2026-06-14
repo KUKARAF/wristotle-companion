@@ -35,6 +35,11 @@ class SportSettings(private val store: KeyValueStore) {
     private val _preferredSports = MutableStateFlow(readPreferredSports())
     val preferredSports: StateFlow<List<String>> = _preferredSports
 
+    /** Sport keys the user opted out of — excluded sports return no info and
+     *  never win an ambiguous name. Empty = everything enabled. */
+    private val _excludedSports = MutableStateFlow(readExcludedSports())
+    val excludedSports: StateFlow<Set<String>> = _excludedSports
+
     fun addFavorite(subject: SportSubject) {
         val next = (listOf(subject) + _favorites.value.filterNot { it.id == subject.id }).take(MAX_FAVORITES)
         store.putString(KEY_FAVORITES, json.encodeToString(favSerializer, next))
@@ -70,6 +75,14 @@ class SportSettings(private val store: KeyValueStore) {
         _preferredSports.value = order
     }
 
+    /** Enable/disable a sport. Disabled (excluded) sports return no info. */
+    fun setSportEnabled(key: String, enabled: Boolean) {
+        val next = if (enabled) _excludedSports.value - key else _excludedSports.value + key
+        if (next == _excludedSports.value) return
+        store.putString(KEY_EXCLUDED_SPORTS, json.encodeToString(strListSerializer, next.toList()))
+        _excludedSports.value = next
+    }
+
     private fun readFavorites(): List<SportSubject> = runCatching {
         val raw = store.getString(KEY_FAVORITES, "")
         if (raw.isEmpty()) emptyList() else json.decodeFromString(favSerializer, raw)
@@ -83,6 +96,11 @@ class SportSettings(private val store: KeyValueStore) {
         (stored + DEFAULT_SPORT_ORDER.filterNot { it in stored }).ifEmpty { DEFAULT_SPORT_ORDER }
     }.getOrElse { DEFAULT_SPORT_ORDER }
 
+    private fun readExcludedSports(): Set<String> = runCatching {
+        val raw = store.getString(KEY_EXCLUDED_SPORTS, "")
+        if (raw.isEmpty()) emptySet() else json.decodeFromString(strListSerializer, raw).toSet()
+    }.getOrElse { emptySet() }
+
     companion object {
         const val PREFS_NAME = "sport_settings"
         const val MAX_FAVORITES = 10
@@ -95,5 +113,6 @@ class SportSettings(private val store: KeyValueStore) {
 
         private const val KEY_FAVORITES = "favorites"
         private const val KEY_PREF_SPORTS = "preferred_sports"
+        private const val KEY_EXCLUDED_SPORTS = "excluded_sports"
     }
 }
