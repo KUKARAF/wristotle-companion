@@ -41,31 +41,37 @@ class SportHandler(
                 },
             )
         return when (kind) {
-            SportKind.NEXT -> RichResult(SportFormat.next(source.nextEvent(subject), subject.name))
+            SportKind.NEXT -> {
+                val r = source.nextEvent(subject)
+                sportCard(SportFormat.next(r, subject.name), "sport_fixture", SportFormat.fixtureCardData(r, subject.name))
+            }
             SportKind.LAST -> {
                 val r = source.lastEvent(subject)
-                RichResult(SportFormat.last(r, subject.name), SportFormat.scoreCardData(r))
+                sportCard(SportFormat.last(r, subject.name), "sport_score", SportFormat.scoreCardData(r))
             }
             SportKind.LIVE -> {
                 // "what's the score" is ambiguous: show the live game if one is
                 // in progress, else fall back to the most recent result so the
                 // user isn't dead-ended with "no live game".
                 val live = source.liveEvent(subject)
-                val r = if (live is com.lazydevs.sportskapi.SportResult.NotFound) {
-                    source.lastEvent(subject).also { /* fall back to last result */ }
+                if (live is com.lazydevs.sportskapi.SportResult.NotFound) {
+                    val r = source.lastEvent(subject)
+                    sportCard(SportFormat.last(r, subject.name), "sport_score", SportFormat.scoreCardData(r))
                 } else {
-                    live
+                    sportCard(SportFormat.live(live, subject.name), "sport_score", SportFormat.scoreCardData(live))
                 }
-                val text = if (live is com.lazydevs.sportskapi.SportResult.NotFound) {
-                    SportFormat.last(r, subject.name)
-                } else {
-                    SportFormat.live(r, subject.name)
-                }
-                RichResult(text, SportFormat.scoreCardData(r))
             }
-            SportKind.STANDINGS -> RichResult(SportFormat.standings(source.standings(subject)))
+            SportKind.STANDINGS -> {
+                val r = source.standings(subject)
+                sportCard(SportFormat.standings(r), "sport_standings", SportFormat.standingsCardData(r))
+            }
         }
     }
+
+    /** A typed sport widget when we have structured [data]; otherwise a
+     *  sport-branded text card (F1 podiums, cricket string scores, "no games"). */
+    private fun sportCard(text: String, kind: String, data: String?): RichResult =
+        if (data != null) RichResult(text, kind, data) else RichResult(text, "sport_text", null)
 
     /** Named team → resolve via the library (biased by the user's sport
      *  priority order); otherwise the first saved favorite. */

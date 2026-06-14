@@ -48,9 +48,15 @@ interface ActionHandler {
 }
 
 /**
- * A handler response plus optional structured card payload. [cardData] is a
- * compact, watch-parsed string (US-0x1F-delimited) — e.g. the score card
- * `"scoreWarriors121Celtics115Final"`. Null ⇒ the
- * watch falls back to a plain text card / bubble.
+ * A handler response plus optional inline-widget descriptor for the watch.
+ *
+ * [cardKind] is the widget TYPE the watch renders ("sport_score",
+ * "sport_standings", "sport_fixture", "sport_text"); [cardData] is its compact,
+ * watch-parsed payload (US-0x1F fields, RS-0x1E rows). Both null = a plain chat
+ * bubble. Sent together in one AppMessage frame with the response.
  */
-data class RichResult(val response: String, val cardData: String? = null)
+data class RichResult(
+    val response: String,
+    val cardKind: String? = null,
+    val cardData: String? = null,
+)
