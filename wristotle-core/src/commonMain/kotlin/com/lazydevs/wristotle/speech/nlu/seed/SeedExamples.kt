@@ -652,6 +652,10 @@ object SeedExamples {
             "next formula one race",
             "last race results",
             "last race standings",
+            "ipl score",
+            "ipl standings",
+            "did rcb win",
+            "cricket world cup score",
         ))
         // ── Calculate ───────────────────────────────────────────────────
         // On-device arithmetic. The digits + operator-word shapes are the
