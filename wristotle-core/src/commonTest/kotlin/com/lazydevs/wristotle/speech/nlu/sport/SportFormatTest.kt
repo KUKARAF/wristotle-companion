@@ -119,6 +119,13 @@ class SportFormatTest {
         assertEquals(11, out.lines().size - 1) // all 11 constructors, not capped at 10
     }
 
+    @Test fun sportDisabledMessageUsesLabel() {
+        assertEquals("Baseball is turned off. Enable it in Settings → Sports.", SportFormat.sportDisabled("baseball"))
+        // Label matches the Settings UI (soccer is shown as "Football").
+        assertEquals("Football is turned off. Enable it in Settings → Sports.", SportFormat.sportDisabled("soccer"))
+        assertEquals("Formula 1", SportFormat.sportLabel("racing"))
+    }
+
     @Test fun errorsRenderShortMessages() {
         assertEquals("Couldn't fetch sports. Try again.", SportFormat.next(SportResult.Network, "x"))
         assertEquals("Manchester City has no upcoming games.", SportFormat.next(SportResult.NotFound, "Manchester City"))

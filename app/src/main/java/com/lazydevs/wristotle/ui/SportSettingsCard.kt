@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.lazydevs.sportskapi.SportDataSource
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.speech.nlu.settings.SportSettings
+import com.lazydevs.wristotle.speech.nlu.sport.SportFormat
 import kotlinx.coroutines.launch
 
 /**
@@ -152,16 +153,8 @@ fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
     }
 }
 
-private fun sportLabel(key: String): String = when (key) {
-    "soccer" -> "Football"
-    "basketball" -> "Basketball"
-    "baseball" -> "Baseball"
-    "football" -> "American Football"
-    "hockey" -> "Ice Hockey"
-    "cricket" -> "Cricket"
-    "racing" -> "Formula 1"
-    else -> key.replaceFirstChar { it.uppercase() }
-}
+/** Shared with the handler's "sport is turned off" message — one source of truth. */
+private fun sportLabel(key: String): String = SportFormat.sportLabel(key)
 
 /** Returns a copy with the item at [from] moved to index [to]. */
 private fun List<String>.moved(from: Int, to: Int): List<String> {

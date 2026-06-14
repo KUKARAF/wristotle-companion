@@ -25,6 +25,22 @@ object SportFormat {
     private const val NETWORK = "Couldn't fetch sports. Try again."
     private const val UNSUPPORTED = "Not supported yet."
 
+    /** User-facing label for a sport key (matches Settings → Sports). */
+    fun sportLabel(key: String): String = when (key.lowercase()) {
+        "soccer" -> "Football"
+        "basketball" -> "Basketball"
+        "baseball" -> "Baseball"
+        "football" -> "American Football"
+        "hockey" -> "Ice Hockey"
+        "cricket" -> "Cricket"
+        "racing" -> "Formula 1"
+        else -> key.replaceFirstChar { it.uppercase() }
+    }
+
+    /** Shown when the user asks about a sport they've excluded in Settings. */
+    fun sportDisabled(key: String): String =
+        "${sportLabel(key)} is turned off. Enable it in Settings → Sports."
+
     fun next(result: SportResult, subjectName: String): String = when (result) {
         is SportResult.Ok -> result.events.firstOrNull()?.let { upcoming(it, subjectName) }
             ?: "$subjectName has no upcoming games."
