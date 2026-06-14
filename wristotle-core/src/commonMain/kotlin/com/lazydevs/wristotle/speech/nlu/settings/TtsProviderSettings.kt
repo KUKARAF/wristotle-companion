@@ -136,6 +136,7 @@ class TtsProviderSettings(private val store: KeyValueStore) {
         const val INTENT_TIME = "Time"
         const val INTENT_BATTERY = "Battery"
         const val INTENT_CALCULATE = "Calculate"
+        const val INTENT_SPORT = "SportScore"
 
         // Communication
         const val INTENT_CALL = "Call"
