@@ -1,0 +1,23 @@
+Formula 1 and cricket.
+
+Sports now covers Formula 1 and
+cricket alongside soccer and the
+US major leagues.
+
+F1: next race, last-race podium,
+and driver / constructor standings.
+Say "when is the next f1 race",
+"who won the grand prix", or
+"f1 standings".
+
+Cricket: scores, results, and the
+points table for the IPL and World
+Cup. Say "ipl score", "did rcb
+win", or "ipl standings".
+
+Plus: switch off any sport you
+don't follow in Settings → Sports —
+it won't show up or match team
+names. Favorites, sport priority,
+and these on/off choices all travel
+in Backup & Restore.
