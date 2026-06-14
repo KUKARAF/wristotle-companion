@@ -10,7 +10,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -33,19 +38,14 @@ import kotlinx.coroutines.launch
 
 /**
  * Settings card for the Sports feature:
- *  - **Favorites** — saved teams so "did we win" / "next game" work without
- *    naming a team. Add by typing a name (resolved via the sports library);
- *    remove with the row button.
- *  - **Preferred sport** — biases team-name disambiguation.
- *
- * Reads StateFlows directly off [SportSettings] (no VM). Resolution is a
- * suspend call on the provider-neutral [SportDataSource], so adds run in a
- * coroutine.
+ *  - **Favorites** — saved teams so "did we win" works without naming a team.
+ *  - **Sport priority** — a reorderable list; when a team name is shared across
+ *    sports (e.g. "City"), the higher-ranked sport wins. Feeds the resolver.
  */
 @Composable
 fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
     val favorites by settings.favorites.collectAsState()
-    val preferred by settings.preferredSport.collectAsState()
+    val priority by settings.preferredSports.collectAsState()
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
     var status by remember { mutableStateOf<String?>(null) }
@@ -79,7 +79,6 @@ fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
                     TextButton(onClick = { settings.removeFavorite(fav.id) }) { Text("Remove") }
                 }
             }
-
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = input,
@@ -93,8 +92,7 @@ fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
                     onClick = {
                         val name = input.trim()
                         scope.launch {
-                            val pref = preferred.ifBlank { null }
-                            val subject = source.resolveTeam(name, pref)
+                            val subject = source.resolveTeam(name, priority)
                             if (subject != null) {
                                 settings.addFavorite(subject)
                                 input = ""
@@ -112,29 +110,48 @@ fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
 
             Spacer(Modifier.height(8.dp))
 
-            // ── Preferred sport ──────────────────────────────────────────
-            Text("Preferred sport", style = MaterialTheme.typography.titleSmall)
+            // ── Sport priority ───────────────────────────────────────────
+            Text("Sport priority", style = MaterialTheme.typography.titleSmall)
             Text(
-                "Helps pick the right team when a name is shared across leagues.",
+                "When a team name is shared across sports (e.g. \"City\"), the " +
+                    "sport higher in this list wins.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            PREFERRED_SPORTS.forEach { (label, value) ->
-                RadioRow(
-                    label = label,
-                    selected = preferred == value,
-                    onSelect = { settings.setPreferredSport(value) },
-                )
+            priority.forEachIndexed { i, key ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "${i + 1}.  ${sportLabel(key)}",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    IconButton(
+                        enabled = i > 0,
+                        onClick = { settings.setPreferredSports(priority.moved(i, i - 1)) },
+                    ) { Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Move up") }
+                    IconButton(
+                        enabled = i < priority.size - 1,
+                        onClick = { settings.setPreferredSports(priority.moved(i, i + 1)) },
+                    ) { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Move down") }
+                }
             }
         }
     }
 }
 
-private val PREFERRED_SPORTS = listOf(
-    "Any" to "",
-    "Soccer" to "soccer",
-    "Basketball" to "basketball",
-    "Football" to "football",
-    "Baseball" to "baseball",
-    "Hockey" to "hockey",
-)
+private fun sportLabel(key: String): String = when (key) {
+    "soccer" -> "Soccer"
+    "basketball" -> "Basketball"
+    "baseball" -> "Baseball"
+    "football" -> "Football"
+    "hockey" -> "Hockey"
+    else -> key.replaceFirstChar { it.uppercase() }
+}
+
+/** Returns a copy with the item at [from] moved to index [to]. */
+private fun List<String>.moved(from: Int, to: Int): List<String> {
+    if (from == to || from !in indices || to !in indices) return this
+    val out = toMutableList()
+    out.add(to, out.removeAt(from))
+    return out
+}
