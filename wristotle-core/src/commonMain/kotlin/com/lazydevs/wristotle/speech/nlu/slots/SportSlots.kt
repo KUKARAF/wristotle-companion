@@ -82,7 +82,7 @@ class SportSlots : SlotExtractor {
         // F1 session words (qualifying/sprint/pole) read as LAST so "f1
         // qualifying" → that session's RESULT, not the next race. They are NOT
         // in VERBS, so they stay in the subject for the library to pick the session.
-        val LAST = Regex("(?i)\\b(last|won|win|wins|winning|lose|loses|lost|losing|beat|beats|score|scores|result|results|final|how did|qualifying|quali|qualifier|sprint|pole)\\b")
+        val LAST = Regex("(?i)\\b(last|won|win|wins|winning|lose|loses|lost|losing|beat|beats|score|scores|result|results|final|how did|qualif[a-z]*|quali|sprint|pole)\\b")
         val NEXT = Regex("(?i)\\b(next|upcoming|fixtures?|when (do|is|are|does)|who (do|are)|play(ing|s)?)\\b")
 
         // Stripped to leave the bare team/league. Deliberately omits "league"

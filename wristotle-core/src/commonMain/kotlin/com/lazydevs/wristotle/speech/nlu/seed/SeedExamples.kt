@@ -653,6 +653,7 @@ object SeedExamples {
             "last race results",
             "last race standings",
             "f1 qualifying results",
+            "who won the last qualifier",
             "who got pole",
             "f1 sprint results",
             "ipl score",
