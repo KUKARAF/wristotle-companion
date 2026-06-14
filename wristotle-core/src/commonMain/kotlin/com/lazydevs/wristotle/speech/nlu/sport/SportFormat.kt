@@ -51,9 +51,9 @@ object SportFormat {
 
     fun standings(result: StandingsResult): String = when (result) {
         is StandingsResult.Ok -> {
-            // Up to 8 rows — covers a league's full set of division leaders
-            // (NFL has 8) or a single league's top 8.
-            val rows = result.table.take(8)
+            // Up to 10 rows — a useful top-10 for full tables (F1 drivers,
+            // soccer leagues); leader views (NFL = 8, MLB = 6) have fewer anyway.
+            val rows = result.table.take(10)
             // All rows sharing one rank ⇒ a "division leaders" view (every row
             // IS a #1), so the leading rank on each line is noise — drop it and
             // let the division-prefixed team name carry the row. Otherwise show
