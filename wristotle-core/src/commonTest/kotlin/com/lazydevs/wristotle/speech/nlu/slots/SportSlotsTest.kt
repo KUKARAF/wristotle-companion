@@ -55,6 +55,19 @@ class SportSlotsTest {
         assertEquals(SportKind.STANDINGS, kind("A.L. West Standings"))
     }
 
+    @Test fun f1SessionWordsRouteLastAndStayInSubject() = runTest {
+        // "qualifying"/"sprint"/"pole" read as LAST (the session's result) and
+        // must REMAIN in the subject so the library picks that session.
+        assertEquals(SportKind.LAST, kind("f1 qualifying results"))
+        assertEquals("f1 qualifying", subject("f1 qualifying results"))
+        assertEquals(SportKind.LAST, kind("who got pole"))
+        assertEquals(SportKind.LAST, kind("f1 sprint results"))
+        // "qualifier" / "qualifiers" must also be recognised (not just "quali").
+        assertEquals(SportKind.LAST, kind("who won the last qualifier"))
+        assertEquals("qualifier", subject("who won the last qualifier"))
+        assertEquals(SportKind.LAST, kind("last qualifier results"))
+    }
+
     @Test fun pronounMeansFavorite() = runTest {
         // "did we win" → no subject (handler uses the saved favorite) + LAST.
         assertNull(subject("did we win"))

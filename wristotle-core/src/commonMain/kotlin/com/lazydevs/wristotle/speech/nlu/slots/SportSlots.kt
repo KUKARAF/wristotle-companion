@@ -79,7 +79,10 @@ class SportSlots : SlotExtractor {
     private companion object {
         val STANDINGS = Regex("(?i)\\b(standings?|table|league position|where (are|do|is)|top of)\\b")
         val LIVE = Regex("(?i)\\b(live|right now|currently|in[- ]?game|what'?s the score)\\b")
-        val LAST = Regex("(?i)\\b(last|won|win|wins|winning|lose|loses|lost|losing|beat|beats|score|scores|result|results|final|how did)\\b")
+        // F1 session words (qualifying/sprint/pole) read as LAST so "f1
+        // qualifying" → that session's RESULT, not the next race. They are NOT
+        // in VERBS, so they stay in the subject for the library to pick the session.
+        val LAST = Regex("(?i)\\b(last|won|win|wins|winning|lose|loses|lost|losing|beat|beats|score|scores|result|results|final|how did|qualif[a-z]*|quali|sprint|pole)\\b")
         val NEXT = Regex("(?i)\\b(next|upcoming|fixtures?|when (do|is|are|does)|who (do|are)|play(ing|s)?)\\b")
 
         // Stripped to leave the bare team/league. Deliberately omits "league"

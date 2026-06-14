@@ -1,0 +1,14 @@
+Formula 1 session fixes.
+
+F1 race answers now show the right
+session and label which one it is.
+
+Ask for qualifying, sprint, or pole
+results — say "who won the last
+qualifier" or "f1 qualifying
+results".
+
+"Who won the last race" always
+gives the most recent completed
+session, so you get a result even
+mid-weekend.
