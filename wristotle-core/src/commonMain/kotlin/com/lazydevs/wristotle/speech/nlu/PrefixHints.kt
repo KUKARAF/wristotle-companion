@@ -47,6 +47,23 @@ import com.lazydevs.wristotle.speech.nlu.Intent
 object PrefixHints {
 
     private val HINTS: List<Pair<Regex, Intent>> = listOf(
+        // SportScore — FIRST so a sports query that opens with "next"/"last"
+        // ("next Dodgers game", "last Lakers result") beats the media
+        // next/previous rules below. Keys on sports qualifiers (game / match /
+        // score / standings / fixture / play / win-lose), so bare media
+        // commands without a qualifier ("next song", "play <artist>") still
+        // fall through to the media rules. A team name may sit between the verb
+        // and the qualifier, hence the bounded filler.
+        Regex(
+            "(?i)(" +
+                "\\bstandings?\\b|\\bleague table\\b|\\bin the table\\b|\\bfixtures?\\b|" +
+                "\\b(next|last|upcoming)\\b[a-z0-9 '.\\-]{0,24}\\b(game|match)\\b|" +
+                "\\bwhen\\b[a-z0-9 '.\\-]{0,30}\\b(play|game|match)\\b|" +
+                "\\bwho\\b[a-z0-9 '.\\-]{0,24}\\bplay(ing)?\\b|" +
+                "\\bdid\\b[a-z0-9 '.\\-]{0,20}\\b(win|won|lose|lost|beat)\\b|" +
+                "\\blive score\\b|\\bscore\\b|\\bgrand prix\\b" +
+                ")",
+        ) to Intent.SportScore,
         // Media — seek variants FIRST so "skip ahead 30 seconds" /
         // "back ten seconds" / "rewind" route to seek before falling
         // into the broader next / previous rules below.
@@ -199,14 +216,6 @@ object PrefixHints {
         // / "temperature" shapes. Sits above the Calculate rule (which keys
         // on digits + operators — no overlap) so the order isn't load-bearing.
         Regex("(?i)\\b(weather|forecast|raining|sunny|temperature)\\b") to Intent.Weather,
-        // SportScore — unambiguous sports vocab only (bare team names lean on
-        // the classifier + seeds). Requires a sports anchor so it doesn't steal
-        // the media "play" rules. Covers standings / fixtures / results / live.
-        Regex(
-            "(?i)\\b(standings?|league table|fixtures?|(next|last)\\s+(game|match|fixture)|" +
-                "did\\s+(we|they|us)\\s+(win|lose|won)|who\\s+(do|does|are|is)\\b.*\\bplay|" +
-                "live\\s+score|grand prix)\\b",
-        ) to Intent.SportScore,
         // Calculate — a number immediately followed by an arithmetic operator
         // word/symbol ("15% of", "25 plus", "96 divided by"). Distinctive
         // enough that no other intent's phrasing collides: reminder/timer
