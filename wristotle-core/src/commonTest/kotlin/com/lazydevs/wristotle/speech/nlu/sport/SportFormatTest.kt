@@ -107,6 +107,18 @@ class SportFormatTest {
         assertEquals("Date TBD\nMonaco Grand Prix", out)
     }
 
+    @Test fun standingsCapLongTablesAtTen() {
+        val table = (1..22).map { Standing(it, "Driver $it", points = 200 - it) }
+        val out = SportFormat.standings(StandingsResult.Ok(table, "Driver Standings"))
+        assertEquals(10, out.lines().size - 1) // minus the header line
+    }
+
+    @Test fun constructorStandingsShowAll() {
+        val table = (1..11).map { Standing(it, "Team $it", points = 300 - it) }
+        val out = SportFormat.standings(StandingsResult.Ok(table, "Constructor Standings"))
+        assertEquals(11, out.lines().size - 1) // all 11 constructors, not capped at 10
+    }
+
     @Test fun errorsRenderShortMessages() {
         assertEquals("Couldn't fetch sports. Try again.", SportFormat.next(SportResult.Network, "x"))
         assertEquals("Manchester City has no upcoming games.", SportFormat.next(SportResult.NotFound, "Manchester City"))

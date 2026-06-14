@@ -51,9 +51,14 @@ object SportFormat {
 
     fun standings(result: StandingsResult): String = when (result) {
         is StandingsResult.Ok -> {
-            // Up to 10 rows — a useful top-10 for full tables (F1 drivers,
-            // soccer leagues); leader views (NFL = 8, MLB = 6) have fewer anyway.
-            val rows = result.table.take(10)
+            // Top 10 for long tables (F1 drivers ~22, soccer leagues ~20);
+            // leader views (NFL = 8, MLB = 6) have fewer anyway. F1 constructor
+            // standings are a small complete field (~11) — show them all.
+            val rows = if (result.league.contains("constructor", ignoreCase = true)) {
+                result.table
+            } else {
+                result.table.take(10)
+            }
             // All rows sharing one rank ⇒ a "division leaders" view (every row
             // IS a #1), so the leading rank on each line is noise — drop it and
             // let the division-prefixed team name carry the row. Otherwise show
