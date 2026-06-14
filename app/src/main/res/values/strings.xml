@@ -280,6 +280,8 @@
     <string name="alarms_save_partial">Saved with warnings:\n%1$s</string>
     <string name="alarms_dismiss">OK</string>
     <string name="settings_section_weather">Weather</string>
+    <string name="settings_section_sport">Sports</string>
+    <string name="sport_settings_desc">Ask about games by voice — next fixture, last result, live score, and league standings. Save favorite teams so \"did we win?\" works without naming a team.</string>
     <string name="settings_section_watch">Watch</string>
 
     <string name="weather_settings_header">Weather</string>
