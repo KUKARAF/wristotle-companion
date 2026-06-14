@@ -61,8 +61,8 @@ android {
         //
         // Bump scheme: versionCode is 2 digits per component (max 99.99.99).
         // v1.2.3 → versionCode 1*10000 + 2*100 + 3 = 10203.
-        versionCode = 10806
-        versionName = "1.8.6"
+        versionCode = 10900
+        versionName = "1.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -293,6 +293,11 @@ dependencies {
     implementation(project(":speech"))
     implementation(project(":speech-whisper"))
     implementation(project(":wristotle-core"))
+    // Generic sports-data library (composite-build substitution → ./sportskapi).
+    // :app consumes the provider-neutral SportDataSource for SportHandler +
+    // the seam impls; wristotle-core keeps it `implementation` so :app needs
+    // its own declaration.
+    implementation("com.lazydevs.sportskapi:sportskapi:0.1.0")
     // MCP client (phase A of AskAgent) — official SDK over Ktor's OkHttp engine.
     // Pure-package under app/.../mcp/; no separate module per the
     // module-vs-package check (single consumer, no NDK, no model lifecycle).

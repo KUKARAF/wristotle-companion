@@ -57,6 +57,13 @@ object SlotKeys {
     const val FilterCompleted = "completed"
     const val FilterPending = "pending"
 
+    /** Sports intent: which kind of query (value is the SportKind enum —
+     *  NEXT / LAST / LIVE / STANDINGS) + the spoken team/league subject
+     *  (String; omitted when the user means a saved favorite, e.g. "did
+     *  we win"). */
+    const val SportKind = "sportKind"
+    const val Subject = "subject"
+
     /** Resolved contact match — held as a [com.lazydevs.wristotle.phone.ContactsRepository.Contact]
      *  (name + number). Populated by whichever upstream pass first
      *  matches the spoken name against the address book; either the

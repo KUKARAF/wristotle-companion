@@ -1,3 +1,6 @@
 [submodule "speech-whisper/src/main/cpp/whisper.cpp"]
 	path = speech-whisper/src/main/cpp/whisper.cpp
 	url = https://github.com/ggerganov/whisper.cpp
+[submodule "sportskapi"]
+	path = sportskapi
+	url = https://codeberg.org/wristotle/sportskapi.git

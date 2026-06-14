@@ -6,6 +6,7 @@ package com.lazydevs.wristotle.nlu
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.PrefixHints
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -479,5 +480,22 @@ class PrefixHintsTest {
         // the `tasks` keyword and stay with ListTasks.
         assertEquals(Intent.ListTasks, PrefixHints.hintFor("list my tasks"))
         assertEquals(Intent.ListTasks, PrefixHints.hintFor("what are my tasks"))
+    }
+
+    @Test fun `sport queries route to SportScore`() {
+        // A team name can sit between the verb and the sports qualifier.
+        assertEquals(Intent.SportScore, PrefixHints.hintFor("when is the next dodgers game"))
+        assertEquals(Intent.SportScore, PrefixHints.hintFor("next warriors game"))
+        assertEquals(Intent.SportScore, PrefixHints.hintFor("when do the lakers play"))
+        assertEquals(Intent.SportScore, PrefixHints.hintFor("did the dodgers win"))
+        assertEquals(Intent.SportScore, PrefixHints.hintFor("premier league table"))
+        assertEquals(Intent.SportScore, PrefixHints.hintFor("nba standings"))
+        assertEquals(Intent.SportScore, PrefixHints.hintFor("what's the score of the lakers game"))
+    }
+
+    @Test fun `sport rule does not steal media commands`() {
+        // Bare "play <x>" / "next <x>" lack a sports qualifier → not SportScore.
+        assertNotEquals(Intent.SportScore, PrefixHints.hintFor("play taylor swift"))
+        assertNotEquals(Intent.SportScore, PrefixHints.hintFor("next song"))
     }
 }

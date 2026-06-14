@@ -61,6 +61,7 @@ fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.WorldTime,     // read-only clock lookup
     Intent.Calculate,     // read-only arithmetic
     Intent.Weather,       // read-only network lookup
+    Intent.SportScore,    // read-only sports lookup
     Intent.AskAgent,      // phase B1 is pure Q&A — read-only by construction.
                           // B2's tool-calling will hand destructive decisions
                           // to the LLM; revisit the confirm gate then.

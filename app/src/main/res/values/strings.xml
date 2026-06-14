@@ -280,6 +280,8 @@
     <string name="alarms_save_partial">Saved with warnings:\n%1$s</string>
     <string name="alarms_dismiss">OK</string>
     <string name="settings_section_weather">Weather</string>
+    <string name="settings_section_sport">Sports</string>
+    <string name="sport_settings_desc">Ask about games by voice — next fixture, last result, live score, and league standings. Save favorite teams so \"did we win?\" works without naming a team.</string>
     <string name="settings_section_watch">Watch</string>
 
     <string name="weather_settings_header">Weather</string>
@@ -473,6 +475,7 @@
     <string name="settings_backup_summary_cat_ask_agent_setup">Ask Agent setup</string>
     <string name="settings_backup_summary_cat_stt_provider_setup">Speech provider setup</string>
     <string name="settings_backup_summary_cat_tts_provider_setup">TTS provider setup</string>
+    <string name="settings_backup_summary_cat_sport_settings">Sport settings</string>
     <string name="settings_backup_summary_cat_weather_api_key">Weather API key</string>
     <string name="settings_backup_summary_cat_mcp_auth_headers">MCP auth headers</string>
     <string name="settings_backup_summary_cat_ask_agent_api_keys">Ask Agent API keys</string>
@@ -483,6 +486,7 @@
     <string name="settings_backup_cat_ask_agent_setup">Ask Agent setup (provider + model + system prompt)</string>
     <string name="settings_backup_cat_stt_provider_setup">Speech provider setup (mode + endpoint + model)</string>
     <string name="settings_backup_cat_tts_provider_setup">TTS provider setup (mode + endpoint + model + voice + per-intent toggles)</string>
+    <string name="settings_backup_cat_sport_settings">Sport settings (favorite teams + sport priority)</string>
     <string name="settings_backup_cat_weather_api_key">Weather API key (OpenWeather)</string>
     <string name="settings_backup_cat_mcp_auth_headers">MCP server auth headers</string>
     <string name="settings_backup_cat_ask_agent_api_keys">Ask Agent API keys (Anthropic / OpenAI)</string>

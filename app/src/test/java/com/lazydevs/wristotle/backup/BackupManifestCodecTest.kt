@@ -225,6 +225,33 @@ class BackupManifestCodecTest {
         assertEquals("", decoded.prefs.askAgent?.systemPrompt)
     }
 
+    @Test fun sportPrefs_roundTrip() {
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                sport = BackupManifest.SportPrefs(
+                    favorites = listOf(
+                        com.lazydevs.sportskapi.SportSubject("123", "City", "soccer", "eng.1"),
+                        com.lazydevs.sportskapi.SportSubject("456", "Lakers", "basketball", "nba"),
+                    ),
+                    preferredSports = listOf("basketball", "soccer", "baseball"),
+                ),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(original.prefs.sport, decoded.prefs.sport)
+    }
+
+    @Test fun sportPrefs_emptyLists_roundTrip() {
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                sport = BackupManifest.SportPrefs(favorites = emptyList(), preferredSports = emptyList()),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(emptyList<com.lazydevs.sportskapi.SportSubject>(), decoded.prefs.sport?.favorites)
+        assertEquals(emptyList<String>(), decoded.prefs.sport?.preferredSports)
+    }
+
     @Test fun schema1Backup_decodesPrefsBlocksAsNull() {
         // A schema-1 ZIP has no reminder/weather/askAgent prefs at all.
         val text = BackupManifestCodec.encode(sampleManifest().copy(

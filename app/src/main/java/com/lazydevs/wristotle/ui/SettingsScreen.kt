@@ -86,6 +86,7 @@ enum class SettingsCategory(
     Reminders(R.string.settings_section_reminders, "⏰"),
     Notifications(R.string.settings_section_notifications, "🔔"),
     Weather(R.string.settings_section_weather, "☁️"),
+    Sport(R.string.settings_section_sport, "🏆"),
     Models(R.string.settings_section_models, "🧠"),
     Learning(R.string.settings_section_learning, "🎓"),
     Backup(R.string.settings_section_backup, "💾"),
@@ -519,6 +520,9 @@ private fun SettingsCategoryContent(
 
             SettingsCategory.Weather ->
                 WeatherSettingsCard(settings = weatherSettings)
+
+            SettingsCategory.Sport ->
+                SportSettingsCard(settings = app.sportSettings, source = app.sportSource)
 
             SettingsCategory.Models -> {
                 SttProviderCard(settings = app.sttProviderSettings)

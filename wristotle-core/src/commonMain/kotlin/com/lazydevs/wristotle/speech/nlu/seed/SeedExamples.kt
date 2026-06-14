@@ -621,6 +621,31 @@ object SeedExamples {
             "weather in india",
             "current weather",
         ))
+        // ── SportScore ──────────────────────────────────────────────────
+        // Four query kinds (next / last / live / standings) over teams +
+        // leagues. SportSlots infers the kind from the verb; these teach the
+        // classifier the question shapes, not every team name.
+        addAll(Intent.SportScore, listOf(
+            "when do the warriors play next",
+            "who do the lakers play next",
+            "next game for arsenal",
+            "warriors next game",
+            "upcoming fixtures for liverpool",
+            "did the warriors win",
+            "what was the score of the lakers game",
+            "how did manchester united do",
+            "last result for the celtics",
+            "did we win last night",
+            "who won the niners game",
+            "what's the live score",
+            "how are the warriors doing right now",
+            "live score for the lakers",
+            "premier league table",
+            "where are arsenal in the table",
+            "nba standings",
+            "league standings for la liga",
+            "what's the score of the chiefs game",
+        ))
         // ── Calculate ───────────────────────────────────────────────────
         // On-device arithmetic. The digits + operator-word shapes are the
         // discriminator; CalculateSlots does the real parsing, so the seeds

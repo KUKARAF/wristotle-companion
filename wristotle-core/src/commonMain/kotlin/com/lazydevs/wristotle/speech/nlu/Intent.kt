@@ -185,6 +185,16 @@ enum class Intent {
      *  `weather.md`. Read-only — not in the confirm gate. */
     Weather,
 
+    /** Sports scores — "when do the Warriors play next", "did Arsenal win",
+     *  "what's the live score", "Premier League table". Slots: `sportKind`
+     *  ({NEXT, LAST, LIVE, STANDINGS}, inferred from the verb — defaults to
+     *  NEXT) + `subject` (String?, optional — the spoken team/league; omitted
+     *  when the user means a saved favorite, e.g. "did we win"). Handled by
+     *  SportHandler over the generic `sportskapi` library (ESPN-backed today);
+     *  output is short + watch-friendly. Network read-only — not in the confirm
+     *  gate. See the sport-events plan. */
+    SportScore,
+
     /** On-device calculator — "what's 15% of 80", "25 plus 17", "96 divided
      *  by 4". Slot: `expression` (String — a normalised arithmetic string,
      *  e.g. "15 / 100 * 80"). CalculateSlots turns spoken operators
