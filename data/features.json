@@ -2,6 +2,26 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-11-0-bbl-cricket",
+      "date": "2026-06-14",
+      "companion_version": "v1.11.0",
+      "watch_version": null,
+      "title": "Cricket adds the Big Bash League",
+      "description": "Cricket now covers Australia's Big Bash League — ask for BBL standings or whether your team won.",
+      "sample_query": "BBL standings",
+      "docs_path": "voice-commands/#sports"
+    },
+    {
+      "id": "v1-11-0-update-sports-data",
+      "date": "2026-06-14",
+      "companion_version": "v1.11.0",
+      "watch_version": null,
+      "title": "Sports data updates itself — or on demand",
+      "description": "Sports leagues and teams now refresh automatically, and Settings → Sports has an Update sports data button to pull the latest now.",
+      "sample_query": null,
+      "docs_path": "voice-commands/#sports"
+    },
+    {
       "id": "v1-10-2-speak-sports",
       "date": "2026-06-14",
       "companion_version": "v1.10.2",

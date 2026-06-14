@@ -1,0 +1,16 @@
+Cricket Big Bash League + sports data updates.
+
+Cricket now covers Australia's
+Big Bash League (BBL) — say "BBL
+standings" or "did the Scorchers win".
+
+Sports data (leagues, teams, fixes)
+now updates on its own in the
+background, so new additions arrive
+without an app update.
+
+You can also pull the latest
+immediately in Settings → Sports →
+Update sports data. The button
+lights up only when a newer version
+is available.

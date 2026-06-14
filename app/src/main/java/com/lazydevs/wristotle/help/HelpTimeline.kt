@@ -16,6 +16,26 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-11-0-bbl-cricket",
+            date = "2026-06-14",
+            companionVersion = "v1.11.0",
+            watchVersion = null,
+            title = "Cricket adds the Big Bash League",
+            description = "Cricket now covers Australia's Big Bash League — ask for BBL standings or whether your team won.",
+            sampleQuery = "BBL standings",
+            docsPath = "voice-commands/#sports",
+        ),
+        FeatureEntry(
+            id = "v1-11-0-update-sports-data",
+            date = "2026-06-14",
+            companionVersion = "v1.11.0",
+            watchVersion = null,
+            title = "Sports data updates itself — or on demand",
+            description = "Sports leagues and teams now refresh automatically, and Settings → Sports has an Update sports data button to pull the latest now.",
+            sampleQuery = null,
+            docsPath = "voice-commands/#sports",
+        ),
+        FeatureEntry(
             id = "v1-10-2-speak-sports",
             date = "2026-06-14",
             companionVersion = "v1.10.2",
