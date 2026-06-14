@@ -566,7 +566,10 @@ class WristotleApplication : Application() {
             store = com.lazydevs.wristotle.sport.SportConfigStoreImpl(
                 kvStore(com.lazydevs.wristotle.sport.SportConfigStoreImpl.PREFS_NAME),
             ),
-            remoteConfigUrl = "https://wristotle.codeberg.page/data/sports-config.json",
+            // The canonical config lives in the sportskapi library repo (it's a
+            // library artifact, not Wristotle-specific). Codeberg serves it raw,
+            // so hot-fixes go live on git push — no docs-site build / edge cache.
+            remoteConfigUrl = "https://codeberg.org/wristotle/sportskapi/raw/branch/main/sports-config.json",
         )
 
         nluDb = NluDatabase.build(this)
