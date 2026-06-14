@@ -19,11 +19,26 @@ class TtsProviderSettingsTest {
 
     private fun fresh() = TtsProviderSettings(InMemoryKeyValueStore())
 
-    @Test fun `defaults silently — master off, no intents`() {
+    @Test fun `defaults silently — master off, only sports pre-enabled`() {
         val s = fresh()
         assertFalse(s.enabled.value, "fresh install: master toggle off")
-        assertTrue(s.intentsEnabled.value.isEmpty(), "fresh install: no per-intent opt-in")
+        // Sports ships pre-ticked in the picker; everything else is opt-in.
+        assertEquals(TtsProviderSettings.DEFAULT_INTENTS, s.intentsEnabled.value)
+        assertTrue(TtsProviderSettings.INTENT_SPORT in s.intentsEnabled.value)
+        // ...but the master toggle being off means nothing speaks yet.
+        assertFalse(s.shouldSpeak(TtsProviderSettings.INTENT_SPORT))
         assertFalse(s.shouldSpeak(TtsProviderSettings.INTENT_ASK_AGENT))
+    }
+
+    @Test fun `deselect-all persists as empty, not reverting to the default`() {
+        // The fresh-install default (Sports) only applies when the key was
+        // never written. Once the user clears the picker, that empty choice
+        // must survive a reload — not silently re-enable Sports.
+        val store = InMemoryKeyValueStore()
+        TtsProviderSettings(store).setIntentsEnabled(emptySet())
+        val recreated = TtsProviderSettings(store)
+        assertTrue(recreated.intentsEnabled.value.isEmpty())
+        assertFalse(recreated.shouldSpeak(TtsProviderSettings.INTENT_SPORT))
     }
 
     @Test fun `master off blocks even when intent is enabled`() {

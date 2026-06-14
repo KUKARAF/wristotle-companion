@@ -116,6 +116,7 @@ private val INTENT_GROUPS = listOf(
             TtsProviderSettings.INTENT_TIME to "Time",
             TtsProviderSettings.INTENT_BATTERY to "Battery",
             TtsProviderSettings.INTENT_CALCULATE to "Calculator",
+            TtsProviderSettings.INTENT_SPORT to "Sports",
         ),
     ),
 )
