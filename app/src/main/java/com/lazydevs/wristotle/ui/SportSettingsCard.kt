@@ -140,11 +140,11 @@ fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
 }
 
 private fun sportLabel(key: String): String = when (key) {
-    "soccer" -> "Soccer"
+    "soccer" -> "Football"
     "basketball" -> "Basketball"
     "baseball" -> "Baseball"
-    "football" -> "Football"
-    "hockey" -> "Hockey"
+    "football" -> "American Football"
+    "hockey" -> "Ice Hockey"
     else -> key.replaceFirstChar { it.uppercase() }
 }
 
