@@ -70,6 +70,7 @@ class SportFormatTest {
 
     @Test fun errorsRenderShortMessages() {
         assertEquals("Couldn't fetch sports. Try again.", SportFormat.next(SportResult.Network, "x"))
-        assertEquals("No upcoming games.", SportFormat.next(SportResult.NotFound, "x"))
+        assertEquals("Manchester City has no upcoming games.", SportFormat.next(SportResult.NotFound, "Manchester City"))
+        assertEquals("Manchester City has no recent games.", SportFormat.last(SportResult.NotFound, "Manchester City"))
     }
 }

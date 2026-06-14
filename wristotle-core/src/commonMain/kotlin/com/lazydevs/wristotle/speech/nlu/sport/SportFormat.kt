@@ -22,29 +22,29 @@ object SportFormat {
 
     const val NO_SUBJECT = "Name a team, or add a favorite in Settings → Sports."
     const val NOT_FOUND = "Couldn't find that team."
-    private const val NONE_UPCOMING = "No upcoming games."
-    private const val NONE_RECENT = "No recent games."
-    private const val NO_LIVE = "No live game right now."
     private const val NETWORK = "Couldn't fetch sports. Try again."
     private const val UNSUPPORTED = "Not supported yet."
 
     fun next(result: SportResult, subjectName: String): String = when (result) {
-        is SportResult.Ok -> result.events.firstOrNull()?.let { upcoming(it, subjectName) } ?: NONE_UPCOMING
-        SportResult.NotFound -> NONE_UPCOMING
+        is SportResult.Ok -> result.events.firstOrNull()?.let { upcoming(it, subjectName) }
+            ?: "$subjectName has no upcoming games."
+        SportResult.NotFound -> "$subjectName has no upcoming games."
         SportResult.Network -> NETWORK
         SportResult.Unsupported -> UNSUPPORTED
     }
 
     fun last(result: SportResult, subjectName: String): String = when (result) {
-        is SportResult.Ok -> result.events.firstOrNull()?.let { finalScore(it, subjectName) } ?: NONE_RECENT
-        SportResult.NotFound -> NONE_RECENT
+        is SportResult.Ok -> result.events.firstOrNull()?.let { finalScore(it, subjectName) }
+            ?: "$subjectName has no recent games."
+        SportResult.NotFound -> "$subjectName has no recent games."
         SportResult.Network -> NETWORK
         SportResult.Unsupported -> UNSUPPORTED
     }
 
     fun live(result: SportResult, subjectName: String): String = when (result) {
-        is SportResult.Ok -> result.events.firstOrNull()?.let { liveScore(it) } ?: NO_LIVE
-        SportResult.NotFound -> NO_LIVE
+        is SportResult.Ok -> result.events.firstOrNull()?.let { liveScore(it) }
+            ?: "$subjectName isn't playing right now."
+        SportResult.NotFound -> "$subjectName isn't playing right now."
         SportResult.Network -> NETWORK
         SportResult.Unsupported -> UNSUPPORTED
     }
@@ -56,7 +56,7 @@ object SportFormat {
             val rows = result.table.take(8).joinToString("\n") { s ->
                 "${s.rank} ${s.team} ${s.points ?: s.record ?: ""}".trim()
             }
-            if (rows.isEmpty()) NONE_RECENT else "${result.league}\n$rows"
+            if (rows.isEmpty()) "No standings available." else "${result.league}\n$rows"
         }
         StandingsResult.NotFound -> "No standings available."
         StandingsResult.Network -> NETWORK
