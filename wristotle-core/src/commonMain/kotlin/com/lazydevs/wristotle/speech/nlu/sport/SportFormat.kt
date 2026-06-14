@@ -51,7 +51,9 @@ object SportFormat {
 
     fun standings(result: StandingsResult): String = when (result) {
         is StandingsResult.Ok -> {
-            val rows = result.table.take(3).joinToString("\n") { s ->
+            // Up to 8 rows — covers a league's full set of division leaders
+            // (NFL has 8) or a single league's top 8.
+            val rows = result.table.take(8).joinToString("\n") { s ->
                 "${s.rank} ${s.team} ${s.points ?: s.record ?: ""}".trim()
             }
             if (rows.isEmpty()) NONE_RECENT else "${result.league}\n$rows"

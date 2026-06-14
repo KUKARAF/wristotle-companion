@@ -72,7 +72,7 @@ class SportSlots : SlotExtractor {
         )
         val FILLERS = Regex(
             "(?i)\\b(the|a|an|for|of|on|in|to|me|vs|against|right now|now|" +
-                "tonight|today|tomorrow|game|games|match|matches|position)\\b",
+                "tonight|today|tomorrow|game|games|match|matches|team|teams|position)\\b",
         )
         val PRONOUNS = setOf("we", "us", "they", "them", "our team", "my team", "our", "my")
     }

@@ -51,7 +51,7 @@ class SportFormatTest {
         assertEquals("Q3 3:45\nWarriors 78-74 Suns", out)
     }
 
-    @Test fun standingsTopThreeWithPoints() {
+    @Test fun standingsShowsRowsWithPoints() {
         val table = listOf(
             Standing(1, "Arsenal", points = 85),
             Standing(2, "Man City", points = 82),
@@ -59,7 +59,7 @@ class SportFormatTest {
             Standing(4, "Spurs", points = 70),
         )
         val out = SportFormat.standings(StandingsResult.Ok(table, "Premier League"))
-        assertEquals("Premier League\n1 Arsenal 85\n2 Man City 82\n3 Liverpool 78", out)
+        assertEquals("Premier League\n1 Arsenal 85\n2 Man City 82\n3 Liverpool 78\n4 Spurs 70", out)
     }
 
     @Test fun standingsUsesRecordWhenNoPoints() {
