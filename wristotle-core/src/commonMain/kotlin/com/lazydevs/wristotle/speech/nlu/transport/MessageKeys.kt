@@ -121,6 +121,11 @@ object MessageKeys {
      *  throughput stats on receipt — that's the spike's measurement signal. */
     val TTS_END: UInt = 10056u
 
+    /** Companion → watch: a "card kind" hint sent in the SAME frame as the
+     *  response so the watch can render a richer full-screen card instead of a
+     *  plain chat bubble (e.g. "sport"). Empty/absent ⇒ plain bubble. */
+    val CARD_KIND: UInt = 10057u
+
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE]. */
     const val NOTE_DETAIL_MAX_CHARS: Int = 540
 

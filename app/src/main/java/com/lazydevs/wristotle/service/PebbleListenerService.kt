@@ -383,6 +383,14 @@ class PebbleListenerService : BasePebbleListenerService() {
      * COMPANION_QUERY branch so both the immediate path and the post-confirm
      * path call the same code.
      */
+    /** Maps an intent to a watch "card kind" hint so the watch renders a
+     *  full-screen card instead of a plain bubble. null ⇒ plain bubble.
+     *  Sports first; CRUD intents (reminder/alarm/task) can opt in here later. */
+    private fun cardKindFor(intent: Intent): String? = when (intent) {
+        Intent.SportScore -> "sport"
+        else -> null
+    }
+
     private suspend fun dispatchAndReport(
         routed: com.lazydevs.wristotle.speech.nlu.IntentResult,
         query: String,
@@ -411,7 +419,7 @@ class PebbleListenerService : BasePebbleListenerService() {
         }
         Log.d(TAG, "Sending response: ${dispatchResult.response}")
 
-        transport.sendForHint(watchHint, dispatchResult.response)
+        transport.sendForHint(watchHint, dispatchResult.response, cardKindFor(routed.intent))
 
         // Per-intent TTS on the watch speaker. Master + per-intent toggle
         // both gate via `shouldSpeak`.
