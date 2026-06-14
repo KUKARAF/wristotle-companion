@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
@@ -22,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -148,6 +150,69 @@ fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
                         onClick = { settings.setPreferredSports(priority.moved(i, i + 1)) },
                     ) { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Move down") }
                 }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── Sports data (config) ─────────────────────────────────────
+            // Leagues, team names and provider fixes update automatically in the
+            // background; this lets users pull the latest immediately. The button
+            // enables ONLY when a newer config is actually available.
+            var dataVersion by remember { mutableStateOf(source.configVersion()) }
+            var updateAvailable by remember { mutableStateOf(false) }
+            var dataBusy by remember { mutableStateOf(false) }
+            var dataMessage by remember { mutableStateOf("Checking for updates…") }
+
+            suspend fun checkForUpdate() {
+                dataBusy = true
+                dataMessage = "Checking for updates…"
+                updateAvailable = source.isConfigUpdateAvailable()
+                dataMessage = if (updateAvailable) "An update is available." else "Up to date (v$dataVersion)."
+                dataBusy = false
+            }
+
+            LaunchedEffect(Unit) { checkForUpdate() }
+
+            Text("Sports data", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Leagues, team names and fixes update automatically. Pull the latest now:",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                dataMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (updateAvailable) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Button(
+                    enabled = updateAvailable && !dataBusy,
+                    onClick = {
+                        scope.launch {
+                            dataBusy = true
+                            dataMessage = "Updating…"
+                            if (source.refreshConfig()) {
+                                dataVersion = source.configVersion()
+                                updateAvailable = false
+                                dataMessage = "Updated to v$dataVersion."
+                            } else {
+                                dataMessage = "Update failed — try again."
+                            }
+                            dataBusy = false
+                        }
+                    },
+                ) { Text("Update sports data") }
+                TextButton(
+                    enabled = !dataBusy,
+                    onClick = { scope.launch { checkForUpdate() } },
+                ) { Text("Check again") }
             }
         }
     }
