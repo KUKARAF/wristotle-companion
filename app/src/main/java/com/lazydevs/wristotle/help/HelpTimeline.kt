@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-10-0-sports-phase-2",
+            date = "2026-06-14",
+            companionVersion = "v1.10.0",
+            watchVersion = null,
+            title = "Formula 1 and cricket, plus per-sport on/off",
+            description = "Sports adds Formula 1 (races + driver/constructor standings) and cricket (IPL, World Cup), and lets you switch off sports you don't follow in Settings → Sports.",
+            sampleQuery = "when is the next f1 race",
+            docsPath = "voice-commands/#sports",
+        ),
+        FeatureEntry(
             id = "v1-9-0-sports",
             date = "2026-06-14",
             companionVersion = "v1.9.0",

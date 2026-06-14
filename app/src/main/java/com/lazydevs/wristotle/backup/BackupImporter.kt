@@ -557,6 +557,7 @@ class BackupImporter(private val app: WristotleApplication) {
                 if (s.preferredSports.isNotEmpty()) {
                     app.sportSettings.setPreferredSports(s.preferredSports)
                 }
+                app.sportSettings.setExcludedSports(s.excludedSports.toSet())
             }
         }
     }

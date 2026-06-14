@@ -61,7 +61,8 @@ object PrefixHints {
                 "\\bwhen\\b[a-z0-9 '.\\-]{0,30}\\b(play|game|match)\\b|" +
                 "\\bwho\\b[a-z0-9 '.\\-]{0,24}\\bplay(ing)?\\b|" +
                 "\\bdid\\b[a-z0-9 '.\\-]{0,20}\\b(win|won|lose|lost|beat)\\b|" +
-                "\\blive score\\b|\\bscore\\b|\\bgrand prix\\b" +
+                "\\blive score\\b|\\bscore\\b|\\bgrand prix\\b|\\brace\\b|\\bf1\\b|\\bformula (1|one)\\b|" +
+                "\\bcricket\\b|\\bipl\\b" +
                 ")",
         ) to Intent.SportScore,
         // Media — seek variants FIRST so "skip ahead 30 seconds" /

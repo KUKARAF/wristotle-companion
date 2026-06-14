@@ -31,7 +31,10 @@ class SportHandler(
         val kind = result.slots.sportKind()
         val spoken = result.slots.sportSubject()
         val subject = resolve(spoken)
-            ?: return if (spoken == null) SportFormat.NO_SUBJECT else SportFormat.NOT_FOUND
+            ?: return when {
+                spoken == null -> SportFormat.NO_SUBJECT
+                else -> disabledSportMessage(spoken) ?: SportFormat.NOT_FOUND
+            }
         return when (kind) {
             SportKind.NEXT -> SportFormat.next(source.nextEvent(subject), subject.name)
             SportKind.LAST -> SportFormat.last(source.lastEvent(subject), subject.name)
@@ -53,7 +56,23 @@ class SportHandler(
     /** Named team → resolve via the library (biased by the user's sport
      *  priority order); otherwise the first saved favorite. */
     private suspend fun resolve(spoken: String?): SportSubject? {
-        return if (spoken != null) source.resolveTeam(spoken, settings.preferredSports.value)
-        else settings.favorites.value.firstOrNull()
+        return if (spoken != null) {
+            source.resolveTeam(
+                spoken,
+                settings.preferredSports.value,
+                settings.excludedSports.value.toList(),
+            )
+        } else {
+            settings.favorites.value.firstOrNull()
+        }
+    }
+
+    /** If a query failed to resolve only because its sport is excluded, return a
+     *  "that sport is turned off" message; otherwise null (genuine not-found). */
+    private suspend fun disabledSportMessage(spoken: String): String? {
+        val excluded = settings.excludedSports.value
+        if (excluded.isEmpty()) return null
+        val unfiltered = source.resolveTeam(spoken, settings.preferredSports.value, emptyList())
+        return unfiltered?.sport?.takeIf { it in excluded }?.let { SportFormat.sportDisabled(it) }
     }
 }

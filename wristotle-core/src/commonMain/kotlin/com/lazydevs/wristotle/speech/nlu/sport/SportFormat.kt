@@ -25,6 +25,22 @@ object SportFormat {
     private const val NETWORK = "Couldn't fetch sports. Try again."
     private const val UNSUPPORTED = "Not supported yet."
 
+    /** User-facing label for a sport key (matches Settings → Sports). */
+    fun sportLabel(key: String): String = when (key.lowercase()) {
+        "soccer" -> "Football"
+        "basketball" -> "Basketball"
+        "baseball" -> "Baseball"
+        "football" -> "American Football"
+        "hockey" -> "Ice Hockey"
+        "cricket" -> "Cricket"
+        "racing" -> "Formula 1"
+        else -> key.replaceFirstChar { it.uppercase() }
+    }
+
+    /** Shown when the user asks about a sport they've excluded in Settings. */
+    fun sportDisabled(key: String): String =
+        "${sportLabel(key)} is turned off. Enable it in Settings → Sports."
+
     fun next(result: SportResult, subjectName: String): String = when (result) {
         is SportResult.Ok -> result.events.firstOrNull()?.let { upcoming(it, subjectName) }
             ?: "$subjectName has no upcoming games."
@@ -51,12 +67,27 @@ object SportFormat {
 
     fun standings(result: StandingsResult): String = when (result) {
         is StandingsResult.Ok -> {
-            // Up to 8 rows — covers a league's full set of division leaders
-            // (NFL has 8) or a single league's top 8.
-            val rows = result.table.take(8).joinToString("\n") { s ->
-                "${s.rank} ${s.team} ${s.points ?: s.record ?: ""}".trim()
+            // Top 10 for long tables (F1 drivers ~22, soccer leagues ~20);
+            // leader views (NFL = 8, MLB = 6) have fewer anyway. F1 constructor
+            // standings are a small complete field (~11) — show them all.
+            val rows = if (result.league.contains("constructor", ignoreCase = true)) {
+                result.table
+            } else {
+                result.table.take(10)
             }
-            if (rows.isEmpty()) "No standings available." else "${result.league}\n$rows"
+            // All rows sharing one rank ⇒ a "division leaders" view (every row
+            // IS a #1), so the leading rank on each line is noise — drop it and
+            // let the division-prefixed team name carry the row. Otherwise show
+            // "1." as an ordinal. The stat (points or W-L record) goes in parens
+            // so the three values (rank / team / stat) are visually distinct on
+            // the watch instead of three bare numbers running together.
+            val leaders = rows.size > 1 && rows.map { it.rank }.distinct().size == 1
+            val body = rows.joinToString("\n") { s ->
+                val stat = s.points?.toString() ?: s.record
+                val name = if (leaders) s.team else "${s.rank}. ${s.team}"
+                if (stat == null) name else "$name ($stat)"
+            }
+            if (body.isBlank()) "No standings available." else "${result.league}\n$body"
         }
         StandingsResult.NotFound -> "No standings available."
         StandingsResult.Network -> NETWORK
@@ -78,6 +109,9 @@ object SportFormat {
     }
 
     private fun finalScore(e: SportEvent, subject: String): String {
+        // Sports without two numeric scores (F1 winner, cricket innings) carry a
+        // pre-formatted result line.
+        e.result?.let { return "${e.title}\n$it" }
         if (e.homeName.isBlank() && e.awayName.isBlank()) return e.title
         val home = subjectIsHome(e, subject)
         val name = if (home == false) e.awayName else e.homeName
@@ -95,6 +129,7 @@ object SportFormat {
     }
 
     private fun liveScore(e: SportEvent): String {
+        e.result?.let { return "${e.progress ?: e.title}\n$it" }
         val prog = e.progress ?: "Live"
         val h = e.homeScore?.toString() ?: "-"
         val a = e.awayScore?.toString() ?: "-"

@@ -59,13 +59,71 @@ class SportFormatTest {
             Standing(4, "Spurs", points = 70),
         )
         val out = SportFormat.standings(StandingsResult.Ok(table, "Premier League"))
-        assertEquals("Premier League\n1 Arsenal 85\n2 Man City 82\n3 Liverpool 78\n4 Spurs 70", out)
+        assertEquals(
+            "Premier League\n1. Arsenal (85)\n2. Man City (82)\n3. Liverpool (78)\n4. Spurs (70)",
+            out,
+        )
     }
 
     @Test fun standingsUsesRecordWhenNoPoints() {
-        val table = listOf(Standing(1, "Warriors", record = "60-22"))
+        val table = listOf(
+            Standing(1, "Warriors", record = "60-22"),
+            Standing(2, "Lakers", record = "55-27"),
+        )
         val out = SportFormat.standings(StandingsResult.Ok(table, "NBA"))
-        assertEquals("NBA\n1 Warriors 60-22", out)
+        assertEquals("NBA\n1. Warriors (60-22)\n2. Lakers (55-27)", out)
+    }
+
+    @Test fun standingsLeadersViewDropsRedundantRank() {
+        // Every row is a division leader (all rank 1) → no leading "1." noise;
+        // the division-prefixed name carries the row, stat in parens.
+        val table = listOf(
+            Standing(1, "AL East New York Yankees", record = "50-30"),
+            Standing(1, "AL West Houston Astros", record = "46-34"),
+        )
+        val out = SportFormat.standings(StandingsResult.Ok(table, "MLB"))
+        assertEquals(
+            "MLB\nAL East New York Yankees (50-30)\nAL West Houston Astros (46-34)",
+            out,
+        )
+    }
+
+    @Test fun lastUsesResultLineForRaces() {
+        // F1: no two-sided score — the pre-formatted result line is shown.
+        val race = SportEvent(
+            homeName = "", awayName = "", title = "British Grand Prix",
+            status = SportEventStatus.FINAL, result = "Won by Max Verstappen",
+        )
+        val out = SportFormat.last(SportResult.Ok(listOf(race), "Formula 1"), "Formula 1")
+        assertEquals("British Grand Prix\nWon by Max Verstappen", out)
+    }
+
+    @Test fun nextRaceShowsDateAndName() {
+        val race = SportEvent(
+            homeName = "", awayName = "", title = "Monaco Grand Prix",
+            status = SportEventStatus.SCHEDULED, kickoff = null,
+        )
+        val out = SportFormat.next(SportResult.Ok(listOf(race), "Formula 1"), "Formula 1")
+        assertEquals("Date TBD\nMonaco Grand Prix", out)
+    }
+
+    @Test fun standingsCapLongTablesAtTen() {
+        val table = (1..22).map { Standing(it, "Driver $it", points = 200 - it) }
+        val out = SportFormat.standings(StandingsResult.Ok(table, "Driver Standings"))
+        assertEquals(10, out.lines().size - 1) // minus the header line
+    }
+
+    @Test fun constructorStandingsShowAll() {
+        val table = (1..11).map { Standing(it, "Team $it", points = 300 - it) }
+        val out = SportFormat.standings(StandingsResult.Ok(table, "Constructor Standings"))
+        assertEquals(11, out.lines().size - 1) // all 11 constructors, not capped at 10
+    }
+
+    @Test fun sportDisabledMessageUsesLabel() {
+        assertEquals("Baseball is turned off. Enable it in Settings → Sports.", SportFormat.sportDisabled("baseball"))
+        // Label matches the Settings UI (soccer is shown as "Football").
+        assertEquals("Football is turned off. Enable it in Settings → Sports.", SportFormat.sportDisabled("soccer"))
+        assertEquals("Formula 1", SportFormat.sportLabel("racing"))
     }
 
     @Test fun errorsRenderShortMessages() {

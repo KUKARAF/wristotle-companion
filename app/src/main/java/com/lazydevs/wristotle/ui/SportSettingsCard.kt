@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.lazydevs.sportskapi.SportDataSource
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.speech.nlu.settings.SportSettings
+import com.lazydevs.wristotle.speech.nlu.sport.SportFormat
 import kotlinx.coroutines.launch
 
 /**
@@ -46,6 +48,7 @@ import kotlinx.coroutines.launch
 fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
     val favorites by settings.favorites.collectAsState()
     val priority by settings.preferredSports.collectAsState()
+    val excluded by settings.excludedSports.collectAsState()
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
     var status by remember { mutableStateOf<String?>(null) }
@@ -92,7 +95,7 @@ fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
                     onClick = {
                         val name = input.trim()
                         scope.launch {
-                            val subject = source.resolveTeam(name, priority)
+                            val subject = source.resolveTeam(name, priority, excluded.toList())
                             if (subject != null) {
                                 settings.addFavorite(subject)
                                 input = ""
@@ -114,16 +117,27 @@ fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
             Text("Sport priority", style = MaterialTheme.typography.titleSmall)
             Text(
                 "When a team name is shared across sports (e.g. \"City\"), the " +
-                    "sport higher in this list wins.",
+                    "sport higher in this list wins. Untick a sport to exclude it — " +
+                    "you'll get no info for it and it won't match spoken names.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             priority.forEachIndexed { i, key ->
+                val enabled = key !in excluded
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = enabled,
+                        onCheckedChange = { settings.setSportEnabled(key, it) },
+                    )
                     Text(
                         "${i + 1}.  ${sportLabel(key)}",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyMedium,
+                        color = if (enabled) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                     )
                     IconButton(
                         enabled = i > 0,
@@ -139,14 +153,8 @@ fun SportSettingsCard(settings: SportSettings, source: SportDataSource) {
     }
 }
 
-private fun sportLabel(key: String): String = when (key) {
-    "soccer" -> "Football"
-    "basketball" -> "Basketball"
-    "baseball" -> "Baseball"
-    "football" -> "American Football"
-    "hockey" -> "Ice Hockey"
-    else -> key.replaceFirstChar { it.uppercase() }
-}
+/** Shared with the handler's "sport is turned off" message — one source of truth. */
+private fun sportLabel(key: String): String = SportFormat.sportLabel(key)
 
 /** Returns a copy with the item at [from] moved to index [to]. */
 private fun List<String>.moved(from: Int, to: Int): List<String> {

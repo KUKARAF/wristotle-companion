@@ -234,6 +234,7 @@ class BackupManifestCodecTest {
                         com.lazydevs.sportskapi.SportSubject("456", "Lakers", "basketball", "nba"),
                     ),
                     preferredSports = listOf("basketball", "soccer", "baseball"),
+                    excludedSports = listOf("cricket", "racing"),
                 ),
             ),
         )

@@ -42,6 +42,18 @@ class SportSettingsTest {
         assertEquals(listOf("a"), s.favorites.value.map { it.id })
     }
 
+    @Test fun excludeAndReenableSport() {
+        val store = InMemoryKeyValueStore()
+        val s = SportSettings(store)
+        assertEquals(emptySet(), s.excludedSports.value)
+        s.setSportEnabled("cricket", false)
+        assertEquals(setOf("cricket"), s.excludedSports.value)
+        // Persists across instances.
+        assertEquals(setOf("cricket"), SportSettings(store).excludedSports.value)
+        s.setSportEnabled("cricket", true)
+        assertEquals(emptySet(), s.excludedSports.value)
+    }
+
     @Test fun merge_persistsAcrossNewInstance() {
         val store = InMemoryKeyValueStore()
         SportSettings(store).mergeFavorites(listOf(subj("a"), subj("b")))

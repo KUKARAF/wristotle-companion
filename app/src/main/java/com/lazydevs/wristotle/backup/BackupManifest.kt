@@ -172,6 +172,7 @@ data class BackupManifest(
     data class SportPrefs(
         val favorites: List<SportSubject>,
         val preferredSports: List<String>,
+        val excludedSports: List<String> = emptyList(),
     )
 
     /** Wire-format record matching the manifest JSON, not the Room/PinStore type. */
@@ -377,6 +378,9 @@ object BackupManifestCodec {
                     put("preferred_sports", JSONArray().also { arr ->
                         s.preferredSports.forEach { arr.put(it) }
                     })
+                    put("excluded_sports", JSONArray().also { arr ->
+                        s.excludedSports.forEach { arr.put(it) }
+                    })
                 })
             }
         })
@@ -564,6 +568,7 @@ object BackupManifestCodec {
                 sport = prefs.optJSONObject("sport_settings")?.let { s ->
                     val favArr = s.optJSONArray("favorites") ?: JSONArray()
                     val prefArr = s.optJSONArray("preferred_sports") ?: JSONArray()
+                    val exclArr = s.optJSONArray("excluded_sports") ?: JSONArray()
                     BackupManifest.SportPrefs(
                         favorites = (0 until favArr.length()).mapNotNull { i ->
                             val o = favArr.optJSONObject(i) ?: return@mapNotNull null
@@ -577,6 +582,7 @@ object BackupManifestCodec {
                             )
                         },
                         preferredSports = (0 until prefArr.length()).map { prefArr.getString(it) },
+                        excludedSports = (0 until exclArr.length()).map { exclArr.getString(it) },
                     )
                 },
             ),

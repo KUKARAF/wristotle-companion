@@ -377,6 +377,7 @@ class BackupExporter(private val app: WristotleApplication) {
             sport = if (sel.sportSettings) BackupManifest.SportPrefs(
                 favorites = app.sportSettings.favorites.value,
                 preferredSports = app.sportSettings.preferredSports.value,
+                excludedSports = app.sportSettings.excludedSports.value.toList(),
             ) else null,
         )
 }

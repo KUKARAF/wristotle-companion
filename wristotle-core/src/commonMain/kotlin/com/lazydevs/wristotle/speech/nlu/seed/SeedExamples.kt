@@ -645,6 +645,17 @@ object SeedExamples {
             "nba standings",
             "league standings for la liga",
             "what's the score of the chiefs game",
+            "when is the next f1 race",
+            "who won the grand prix",
+            "f1 driver standings",
+            "constructor standings",
+            "next formula one race",
+            "last race results",
+            "last race standings",
+            "ipl score",
+            "ipl standings",
+            "did rcb win",
+            "cricket world cup score",
         ))
         // ── Calculate ───────────────────────────────────────────────────
         // On-device arithmetic. The digits + operator-word shapes are the
