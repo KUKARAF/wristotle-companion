@@ -49,10 +49,31 @@ class SportSlots : SlotExtractor {
     }
 
     private fun extractSubject(query: String): String? {
-        val residue = stripVerbBody(query, VERBS, FILLERS).trim()
+        // Fold spoken initialisms FIRST — STT renders "A.L. West" with periods
+        // (and sometimes "A L West" spaced). Without this, stripVerbBody's
+        // filler regex eats the standalone "a" inside "a.l." and the conference
+        // code is destroyed ("a.l. west" → "l west" → no match).
+        val residue = stripVerbBody(foldInitialisms(query), VERBS, FILLERS).trim()
         if (residue.isEmpty()) return null
         if (residue in PRONOUNS) return null // "did we win" → use the favorite
         return residue
+    }
+
+    /** "A.L. West" / "A L West" → "AL West": drop periods, then merge runs of
+     *  single letters into one token. Multi-char tokens pass through. */
+    private fun foldInitialisms(query: String): String {
+        val out = mutableListOf<String>()
+        val run = StringBuilder()
+        for (tok in query.replace(".", "").split(' ')) {
+            if (tok.length == 1 && tok[0].isLetter()) {
+                run.append(tok)
+            } else {
+                if (run.isNotEmpty()) { out.add(run.toString()); run.clear() }
+                if (tok.isNotEmpty()) out.add(tok)
+            }
+        }
+        if (run.isNotEmpty()) out.add(run.toString())
+        return out.joinToString(" ")
     }
 
     private companion object {

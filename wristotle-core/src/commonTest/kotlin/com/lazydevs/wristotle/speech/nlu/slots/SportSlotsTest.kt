@@ -46,6 +46,15 @@ class SportSlotsTest {
         assertEquals("warriors", subject("warriors"))
     }
 
+    @Test fun dottedAndSpacedInitialismsSurvive() = runTest {
+        // STT renders "A.L. West" with periods (and sometimes spaced letters).
+        // The standalone "a" must NOT be eaten as a filler word.
+        assertEquals("al west", subject("A.L. West Standings"))
+        assertEquals("al west", subject("A L West standings"))
+        assertEquals("nl east", subject("N.L. East table"))
+        assertEquals(SportKind.STANDINGS, kind("A.L. West Standings"))
+    }
+
     @Test fun pronounMeansFavorite() = runTest {
         // "did we win" → no subject (handler uses the saved favorite) + LAST.
         assertNull(subject("did we win"))
