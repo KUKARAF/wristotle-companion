@@ -145,6 +145,8 @@ private fun sportLabel(key: String): String = when (key) {
     "baseball" -> "Baseball"
     "football" -> "American Football"
     "hockey" -> "Ice Hockey"
+    "cricket" -> "Cricket"
+    "racing" -> "Formula 1"
     else -> key.replaceFirstChar { it.uppercase() }
 }
 

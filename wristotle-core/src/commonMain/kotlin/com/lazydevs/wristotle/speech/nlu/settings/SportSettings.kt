@@ -87,8 +87,11 @@ class SportSettings(private val store: KeyValueStore) {
         const val PREFS_NAME = "sport_settings"
         const val MAX_FAVORITES = 10
 
-        /** Supported sport keys in their default priority order. */
-        val DEFAULT_SPORT_ORDER = listOf("soccer", "basketball", "baseball", "football", "hockey")
+        /** Supported sport keys in their default priority order. Keys match
+         *  SportSubject.sport (so "racing" = F1). Existing users get new entries
+         *  appended automatically by [readPreferredSports]. */
+        val DEFAULT_SPORT_ORDER =
+            listOf("soccer", "basketball", "baseball", "football", "hockey", "cricket", "racing")
 
         private const val KEY_FAVORITES = "favorites"
         private const val KEY_PREF_SPORTS = "preferred_sports"
