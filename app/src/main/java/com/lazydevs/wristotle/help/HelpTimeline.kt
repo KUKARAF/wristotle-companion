@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-9-0-sports",
+            date = "2026-06-14",
+            companionVersion = "v1.9.0",
+            watchVersion = null,
+            title = "Sports scores, schedules, and standings",
+            description = "Ask any team's next game, last result, live score, or league standings — across soccer, the NBA, NFL, MLB, and NHL.",
+            sampleQuery = "when do the warriors play next",
+            docsPath = "voice-commands/#sports",
+        ),
+        FeatureEntry(
             id = "v1-8-0-stats",
             date = "2026-06-11",
             companionVersion = "v1.8.0",

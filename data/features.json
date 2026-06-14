@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-9-0-sports",
+      "date": "2026-06-14",
+      "companion_version": "v1.9.0",
+      "watch_version": null,
+      "title": "Sports scores, schedules, and standings",
+      "description": "Ask any team's next game, last result, live score, or league standings — across soccer, the NBA, NFL, MLB, and NHL.",
+      "sample_query": "when do the warriors play next",
+      "docs_path": "voice-commands/#sports"
+    },
+    {
       "id": "v1-8-0-stats",
       "date": "2026-06-11",
       "companion_version": "v1.8.0",

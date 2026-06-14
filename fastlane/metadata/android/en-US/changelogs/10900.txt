@@ -1,0 +1,17 @@
+Sports scores, schedules &
+standings.
+
+Ask Wristotle about any team's
+next game, last result, live
+score, or league standings —
+across soccer and the US major
+leagues (NBA, NFL, MLB, NHL).
+
+Pick favorite teams so "did we
+win?" works without naming one,
+and set a sport priority so
+ambiguous names like "City"
+resolve to the sport you follow.
+
+Favorites and sport priority are
+included in Backup & Restore.
