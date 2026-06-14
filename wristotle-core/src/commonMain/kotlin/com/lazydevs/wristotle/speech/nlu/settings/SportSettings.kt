@@ -47,6 +47,22 @@ class SportSettings(private val store: KeyValueStore) {
         _favorites.value = next
     }
 
+    /**
+     * Union-merge [incoming] favorites into the current set — used by Restore
+     * so teams added on the new device aren't clobbered. Existing favorites
+     * keep their position; new ones (by [SportSubject.id]) append, capped at
+     * [MAX_FAVORITES]. A no-op when nothing new arrives.
+     */
+    fun mergeFavorites(incoming: List<SportSubject>) {
+        if (incoming.isEmpty()) return
+        val current = _favorites.value
+        val seen = current.mapTo(mutableSetOf()) { it.id }
+        val merged = (current + incoming.filter { seen.add(it.id) }).take(MAX_FAVORITES)
+        if (merged == current) return
+        store.putString(KEY_FAVORITES, json.encodeToString(favSerializer, merged))
+        _favorites.value = merged
+    }
+
     /** Replace the full priority order (the Settings card reorders + saves). */
     fun setPreferredSports(order: List<String>) {
         if (order == _preferredSports.value) return

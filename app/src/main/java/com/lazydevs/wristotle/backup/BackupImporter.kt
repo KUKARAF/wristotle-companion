@@ -548,6 +548,17 @@ class BackupImporter(private val app: WristotleApplication) {
                 }
             }
         }
+
+        if (sel.sportSettings) {
+            p.sport?.let { s ->
+                // Favorites union-merge (don't clobber teams added on this
+                // device); priority order overwrites (single ordered list).
+                app.sportSettings.mergeFavorites(s.favorites)
+                if (s.preferredSports.isNotEmpty()) {
+                    app.sportSettings.setPreferredSports(s.preferredSports)
+                }
+            }
+        }
     }
 
     private fun applyPins(incoming: List<BackupManifest.PinRecord>): EntityStats {

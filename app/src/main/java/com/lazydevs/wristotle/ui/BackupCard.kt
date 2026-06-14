@@ -286,6 +286,9 @@ private fun BackupSelectionEditor(
         CatRow(R.string.settings_backup_cat_tts_provider_setup, selection.ttsProviderSetup, available?.ttsProviderSetup) {
             onChange(selection.copy(ttsProviderSetup = it))
         }
+        CatRow(R.string.settings_backup_cat_sport_settings, selection.sportSettings, available?.sportSettings) {
+            onChange(selection.copy(sportSettings = it))
+        }
 
         SectionHeader(stringResource(R.string.settings_backup_section_secrets))
         Text(
@@ -696,6 +699,7 @@ private fun BackupSelectionSections(selection: BackupSelection, isExport: Boolea
         if (selection.askAgentSetup) R.string.settings_backup_summary_cat_ask_agent_setup else null,
         if (selection.sttProviderSetup) R.string.settings_backup_summary_cat_stt_provider_setup else null,
         if (selection.ttsProviderSetup) R.string.settings_backup_summary_cat_tts_provider_setup else null,
+        if (selection.sportSettings) R.string.settings_backup_summary_cat_sport_settings else null,
     )
     val secrets = listOfNotNull(
         if (selection.weatherApiKey) R.string.settings_backup_summary_cat_weather_api_key else null,

@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.backup
 
+import com.lazydevs.sportskapi.SportSubject
 import com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
 import com.lazydevs.wristotle.phone.ContactRef
 import org.json.JSONArray
@@ -95,6 +96,7 @@ data class BackupManifest(
         val askAgent: AskAgentPrefs? = null,
         val sttProvider: SttProviderPrefs? = null,
         val ttsProvider: TtsProviderPrefs? = null,
+        val sport: SportPrefs? = null,
     )
     data class NotesPrefs(val keepLast: Int, val appendAudioMode: String)
     data class ConversationPrefs(val retentionDays: Int)
@@ -161,6 +163,15 @@ data class BackupManifest(
         val httpVoice: String,
         val intentsCsv: String,
         val httpApiKey: String? = null,
+    )
+
+    /** Sport favorites + the priority-ordered sport list. Non-sensitive —
+     *  rides with the "sport settings" category (no secret sub-fields).
+     *  Favorites are the library's neutral [SportSubject]; serialised as a
+     *  JSON array of their scalar fields so the org.json codec stays simple. */
+    data class SportPrefs(
+        val favorites: List<SportSubject>,
+        val preferredSports: List<String>,
     )
 
     /** Wire-format record matching the manifest JSON, not the Room/PinStore type. */
@@ -248,6 +259,7 @@ object BackupManifestCodec {
             put("ask_agent_setup", m.selected.askAgentSetup)
             put("stt_provider_setup", m.selected.sttProviderSetup)
             put("tts_provider_setup", m.selected.ttsProviderSetup)
+            put("sport_settings", m.selected.sportSettings)
             put("weather_api_key", m.selected.weatherApiKey)
             put("mcp_auth_headers", m.selected.mcpAuthHeaders)
             put("ask_agent_api_keys", m.selected.askAgentApiKeys)
@@ -347,6 +359,24 @@ object BackupManifestCodec {
                     put("http_voice", t.httpVoice)
                     put("intents_enabled", t.intentsCsv)
                     if (t.httpApiKey != null) put("http_api_key", t.httpApiKey)
+                })
+            }
+            m.prefs.sport?.let { s ->
+                put("sport_settings", JSONObject().apply {
+                    put("favorites", JSONArray().also { arr ->
+                        s.favorites.forEach { f ->
+                            arr.put(
+                                JSONObject()
+                                    .put("id", f.id)
+                                    .put("name", f.name)
+                                    .put("sport", f.sport)
+                                    .put("league", f.league),
+                            )
+                        }
+                    })
+                    put("preferred_sports", JSONArray().also { arr ->
+                        s.preferredSports.forEach { arr.put(it) }
+                    })
                 })
             }
         })
@@ -531,6 +561,24 @@ object BackupManifestCodec {
                         httpApiKey = t.optString("http_api_key").takeIf { it.isNotEmpty() },
                     )
                 },
+                sport = prefs.optJSONObject("sport_settings")?.let { s ->
+                    val favArr = s.optJSONArray("favorites") ?: JSONArray()
+                    val prefArr = s.optJSONArray("preferred_sports") ?: JSONArray()
+                    BackupManifest.SportPrefs(
+                        favorites = (0 until favArr.length()).mapNotNull { i ->
+                            val o = favArr.optJSONObject(i) ?: return@mapNotNull null
+                            val id = o.optString("id").takeIf { it.isNotEmpty() }
+                                ?: return@mapNotNull null
+                            SportSubject(
+                                id = id,
+                                name = o.optString("name"),
+                                sport = o.optString("sport"),
+                                league = o.optString("league"),
+                            )
+                        },
+                        preferredSports = (0 until prefArr.length()).map { prefArr.getString(it) },
+                    )
+                },
             ),
             reminderPins = (0 until pinsArr.length()).map { i ->
                 val p = pinsArr.getJSONObject(i)
@@ -573,6 +621,7 @@ object BackupManifestCodec {
                     askAgentSetup = sel.optBoolean("ask_agent_setup", true),
                     sttProviderSetup = sel.optBoolean("stt_provider_setup", true),
                     ttsProviderSetup = sel.optBoolean("tts_provider_setup", true),
+                    sportSettings = sel.optBoolean("sport_settings", true),
                     weatherApiKey = sel.optBoolean("weather_api_key", false),
                     mcpAuthHeaders = sel.optBoolean("mcp_auth_headers", false),
                     askAgentApiKeys = sel.optBoolean("ask_agent_api_keys", false),

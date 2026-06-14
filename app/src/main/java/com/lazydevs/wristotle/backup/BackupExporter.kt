@@ -374,6 +374,10 @@ class BackupExporter(private val app: WristotleApplication) {
                 httpApiKey = app.ttsProviderSettings.httpApiKey.value
                     .takeIf { sel.ttsProviderApiKey && it.isNotEmpty() },
             ) else null,
+            sport = if (sel.sportSettings) BackupManifest.SportPrefs(
+                favorites = app.sportSettings.favorites.value,
+                preferredSports = app.sportSettings.preferredSports.value,
+            ) else null,
         )
 }
 
