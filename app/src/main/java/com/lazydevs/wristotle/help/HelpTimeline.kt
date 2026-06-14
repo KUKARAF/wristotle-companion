@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-10-1-f1-sessions",
+            date = "2026-06-14",
+            companionVersion = "v1.10.1",
+            watchVersion = null,
+            title = "Formula 1 qualifying, sprint and pole results",
+            description = "Ask Formula 1 for qualifying, sprint, or pole results, and every race answer now shows which session it's from.",
+            sampleQuery = "who won the last f1 qualifying",
+            docsPath = "voice-commands/#sports",
+        ),
+        FeatureEntry(
             id = "v1-10-0-sports-phase-2",
             date = "2026-06-14",
             companionVersion = "v1.10.0",
