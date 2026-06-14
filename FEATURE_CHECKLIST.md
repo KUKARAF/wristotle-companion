@@ -67,9 +67,8 @@ Backup is bidirectional — miss a step and data silently doesn't travel.
 - [ ] **`BackupManifest`** — record presence of the new data in the ZIP.
 - [ ] **`BackupExporter` + `BackupImporter`** (`app/.../backup/`) — gate write/read
   on the selection field; add `MergeStrategies` dedupe rule for restore collisions.
-- [ ] **Round-trip test** for the codec + merge (pure JUnit, no Robolectric).
-- [ ] Cross-check the "things that travel together" list in
-  `claude_knowledge/.../wristotle-companion/backup.md`.
+- [ ] **Round-trip test** for the codec + merge (pure JUnit, no Robolectric):
+  export → wipe → import restores the new data intact.
 
 ## Trigger: The feature has user-facing settings
 
@@ -77,15 +76,14 @@ Backup is bidirectional — miss a step and data silently doesn't travel.
   `KeyValueStore` seam (Android adapter in `:app/storage`).
 - [ ] Expose it from `WristotleApplication.kt` (lazy val).
 - [ ] **Settings card** + a `SettingsCategory` entry in `app/.../ui/SettingsScreen.kt`
-  (mark `experimental` if applicable — see `settings.md`).
+  (mark `experimental` if applicable).
 - [ ] If any setting should survive backup, also do the **stores-data** section
   (settings block in exporter/importer; secrets gated separately, default off).
 
 ## Trigger: The feature talks to the watch (new wire messages)
 
 - [ ] Add the key to the **watch** `package.json` `messageKeys` FIRST, then sync
-  `wristotle-core/.../transport/MessageKeys.kt` (must match the watch — see
-  `wristotle/features.md`).
+  `wristotle-core/.../transport/MessageKeys.kt` (the two must match exactly).
 - [ ] Bump the **watch** `package.json` version before tagging the watch (CI does
   not rewrite it from the tag).
 
@@ -93,8 +91,8 @@ Backup is bidirectional — miss a step and data silently doesn't travel.
 
 - [ ] Go through the `HttpClient` seam (Android impl wraps `SimpleHttp`); use
   `kotlinx.serialization`, not `org.json`.
-- [ ] **Never** log an API key / auth header (see
-  `feedback_no_api_keys_in_logs`). Redact URL+status+excerpt only.
+- [ ] **Never** log an API key / auth header. Redact to URL + status + body
+  excerpt only.
 - [ ] Consider a remote-config / bundled-fallback path for volatile data.
 
 ## Trigger: Diagnostics-worthy state
@@ -108,7 +106,7 @@ Backup is bidirectional — miss a step and data silently doesn't travel.
 
 - [ ] Bump `versionCode` + `versionName` in `app/build.gradle.kts`
   (`major*10000 + minor*100 + patch`). **Feature/UI/wire/data → minor; fix/polish
-  → patch.** Confirm the number with the user before tagging.
+  → patch.** Settle the number before tagging.
 - [ ] **`data/features.json`** — one entry (a single ~10–20-word sentence, no
   internals jargon), then `python3 tools/regenerate_help_timeline.py` (never edit
   `HelpTimeline.kt` by hand). **Internals-only release → no entry, no row.**
@@ -131,8 +129,7 @@ Backup is bidirectional — miss a step and data silently doesn't travel.
 ```
 
 - [ ] On-device smoke of the actual voice path on the watch (not just unit tests).
-- [ ] Update the relevant `claude_knowledge/.../wristotle-companion/*.md` + a
-  memory entry.
+- [ ] Update any architecture/reference docs affected by the change.
 
 ---
 
