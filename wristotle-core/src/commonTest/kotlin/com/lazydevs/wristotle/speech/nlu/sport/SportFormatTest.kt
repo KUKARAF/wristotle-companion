@@ -88,6 +88,25 @@ class SportFormatTest {
         )
     }
 
+    @Test fun lastUsesResultLineForRaces() {
+        // F1: no two-sided score — the pre-formatted result line is shown.
+        val race = SportEvent(
+            homeName = "", awayName = "", title = "British Grand Prix",
+            status = SportEventStatus.FINAL, result = "Won by Max Verstappen",
+        )
+        val out = SportFormat.last(SportResult.Ok(listOf(race), "Formula 1"), "Formula 1")
+        assertEquals("British Grand Prix\nWon by Max Verstappen", out)
+    }
+
+    @Test fun nextRaceShowsDateAndName() {
+        val race = SportEvent(
+            homeName = "", awayName = "", title = "Monaco Grand Prix",
+            status = SportEventStatus.SCHEDULED, kickoff = null,
+        )
+        val out = SportFormat.next(SportResult.Ok(listOf(race), "Formula 1"), "Formula 1")
+        assertEquals("Date TBD\nMonaco Grand Prix", out)
+    }
+
     @Test fun errorsRenderShortMessages() {
         assertEquals("Couldn't fetch sports. Try again.", SportFormat.next(SportResult.Network, "x"))
         assertEquals("Manchester City has no upcoming games.", SportFormat.next(SportResult.NotFound, "Manchester City"))

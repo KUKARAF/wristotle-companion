@@ -88,6 +88,9 @@ object SportFormat {
     }
 
     private fun finalScore(e: SportEvent, subject: String): String {
+        // Sports without two numeric scores (F1 winner, cricket innings) carry a
+        // pre-formatted result line.
+        e.result?.let { return "${e.title}\n$it" }
         if (e.homeName.isBlank() && e.awayName.isBlank()) return e.title
         val home = subjectIsHome(e, subject)
         val name = if (home == false) e.awayName else e.homeName
@@ -105,6 +108,7 @@ object SportFormat {
     }
 
     private fun liveScore(e: SportEvent): String {
+        e.result?.let { return "${e.progress ?: e.title}\n$it" }
         val prog = e.progress ?: "Live"
         val h = e.homeScore?.toString() ?: "-"
         val a = e.awayScore?.toString() ?: "-"
