@@ -384,6 +384,7 @@
     <string name="settings_support_bmc_section">Only if you have spare cash</string>
     <string name="settings_support_bmc_caveat">If money\'s tight or you need it for yourself or family, please skip this. Wristotle is free forever — a star above means just as much. No pressure.</string>
     <string name="settings_support_bmc_button">Buy me a coffee</string>
+    <string name="settings_support_liberapay_button">Donate on Liberapay</string>
 
     <!-- Reminders card -->
     <string name="settings_reminders_header">Reminders</string>

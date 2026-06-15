@@ -92,6 +92,12 @@ fun SupportCard() {
             ) {
                 Text(stringResource(R.string.settings_support_bmc_button))
             }
+            Button(
+                onClick = { openUrl(context, URL_LIBERAPAY) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_support_liberapay_button))
+            }
         }
     }
 }
@@ -107,10 +113,11 @@ private fun openUrl(context: Context, url: String) {
 }
 
 private const val URL_BMC = "https://buymeacoffee.com/lazydevs"
+private const val URL_LIBERAPAY = "https://liberapay.com/lazydevs/donate"
 private const val URL_REPO_COMPANION = "https://codeberg.org/wristotle/wristotle-companion"
 private const val URL_REPO_WATCH = "https://codeberg.org/wristotle/wristotle"
 private const val URL_APPSTORE_REBBLE =
     "https://apps.rebble.io/en_US/application/6a0e71faced0bb000943bc90"
 private const val URL_APPSTORE_REPEBBLE =
-    "https://apps.repebble.com/6a0e71faced0bb000943bc90"
+    "https://apps.repebble.com/wristotle_6a0e71faced0bb000943bc90"
 private const val URL_DOCS_SUPPORT = "https://wristotle.codeberg.page/support/"
