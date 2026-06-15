@@ -637,6 +637,7 @@ object SeedExamples {
             "last result for the celtics",
             "did we win last night",
             "who won the niners game",
+            "who won the arsenal match",
             "what's the live score",
             "how are the warriors doing right now",
             "live score for the lakers",

@@ -59,7 +59,7 @@ object PrefixHints {
                 "\\bstandings?\\b|\\bleague table\\b|\\bin the table\\b|\\bfixtures?\\b|" +
                 "\\b(next|last|upcoming)\\b[a-z0-9 '.\\-]{0,24}\\b(game|match)\\b|" +
                 "\\bwhen\\b[a-z0-9 '.\\-]{0,30}\\b(play|game|match)\\b|" +
-                "\\bwho\\b[a-z0-9 '.\\-]{0,24}\\bplay(ing)?\\b|" +
+                "\\bwho\\b[a-z0-9 '.\\-]{0,24}\\b(play(ing)?|won|win|beat|lost|lose)\\b|" +
                 "\\bdid\\b[a-z0-9 '.\\-]{0,20}\\b(win|won|lose|lost|beat)\\b|" +
                 "\\blive score\\b|\\bscore\\b|\\bgrand prix\\b|\\brace\\b|\\bf1\\b|\\bformula (1|one)\\b|" +
                 "\\bcricket\\b|\\bipl\\b|\\bqualif[a-z]*|\\bquali\\b|\\bsprint\\b|\\bpole\\b" +
