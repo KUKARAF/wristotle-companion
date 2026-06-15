@@ -1,10 +1,16 @@
 # Wristotle Companion
 
+[![Release](https://img.shields.io/gitea/v/release/wristotle/wristotle-companion?gitea_url=https://codeberg.org&label=release&color=1793d1)](https://codeberg.org/wristotle/wristotle-companion/releases)
+[![Build](https://codeberg.org/wristotle/wristotle-companion/actions/workflows/release.yml/badge.svg)](https://codeberg.org/wristotle/wristotle-companion/actions)
+[![F-Droid](https://img.shields.io/badge/F--Droid-in%20review-yellow)](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/40246)
+[![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-online-success)](https://wristotle.codeberg.page/)
+[![Watch app — Rebble](https://img.shields.io/badge/watch%20app-Rebble-c2154f)](https://apps.rebble.io/en_US/application/6a0e71faced0bb000943bc90)
+[![Watch app — rePebble](https://img.shields.io/badge/watch%20app-rePebble-f4511e)](https://apps.repebble.com/wristotle_6a0e71faced0bb000943bc90)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/lazydevs)
+
 The phone half of Wristotle — a voice-driven Pebble watch companion
 that runs on-device by default.
-
-→ **Docs:** <https://wristotle.codeberg.page/>
-→ **Watch app:** <https://codeberg.org/wristotle/wristotle>
 
 ## What it does
 
