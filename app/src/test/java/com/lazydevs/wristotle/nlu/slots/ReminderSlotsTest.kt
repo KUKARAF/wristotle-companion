@@ -41,6 +41,30 @@ class ReminderSlotsTest {
         assertEquals("Finish the report", title("remind me to finish the report by 6pm"))
     }
 
+    // codeberg #14: a trailing "in/at/on … <words>" clause is only a time clause
+    // when it actually names a time. "put in a Whole Foods order" is the task —
+    // the old regex stripped its "in …" tail down to "Put".
+    @Test fun `trailing non-time clause is kept`() {
+        assertEquals(
+            "Put in a Whole Foods order.",
+            title("Remind me persistently in one hour to put in a Whole Foods order."),
+        )
+        assertEquals(
+            "Put in a Whole Foods order",
+            title("remind me in one hour to put in a Whole Foods order"),
+        )
+        // A place, not a time → kept.
+        assertEquals("Buy milk at the store", title("remind me to buy milk at the store"))
+        // A genuine trailing time IS still stripped.
+        assertEquals("Order lunch", title("remind me to order lunch at noon"))
+        assertEquals("Water the plants", title("remind me to water the plants in 20 minutes"))
+        // Non-time "in …" AND a real trailing time together → keep the task,
+        // peel only the time.
+        assertEquals("Put in an order", title("remind me to put in an order at 3pm"))
+        // Filler between lead-in and the time signal ("in the morning").
+        assertEquals("Walk the dog", title("remind me to walk the dog in the morning"))
+    }
+
     // When the user doesn't say a time, the slot defaults to roughly
     // 30 min from now instead of leaving the time null — handler used to
     // return "Couldn't understand the time" which surfaced as a dead end.

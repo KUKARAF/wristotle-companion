@@ -49,6 +49,19 @@ class CreateEventSlotsTest {
         assertNull(extract("schedule a meeting for tomorrow at 3pm")["title"])
     }
 
+    // codeberg #14 (meeting variant): a non-time "in …" in the title must
+    // survive; only the genuine trailing time is peeled.
+    @Test fun `non-time in-clause survives in the event title`() {
+        assertEquals(
+            "Put in an order",
+            extract("schedule a meeting titled put in an order at 3pm")["title"],
+        )
+        assertEquals(
+            "Walk in interviews",
+            extract("create an event called walk in interviews on friday")["title"],
+        )
+    }
+
     @Test fun `no title keyword yields no title slot`() {
         assertNull(extract("schedule a meeting tomorrow at three pm")["title"])
     }
