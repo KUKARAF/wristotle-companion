@@ -78,10 +78,14 @@ class CreateEventSlots(
         // Trailing `[.!?,]*\s*$` lets "…with Alex." (dictation's trailing period)
         // still anchor the name, not just a bare end-of-string.
         val ATTENDEE = Regex("""(?i)\bwith\s+([A-Za-z][\w' ]*?)(?:\s+(?:on|at|tomorrow|today|tonight|next|this|called|titled|about)\b|[.!?,]*\s*$)""")
-        // A trailing " at/on/… <rest>" clause to peel off a greedily-captured
-        // title. The leading \s+ means a title-initial keyword ("next steps")
-        // is left intact.
-        val TRAILING_TIME = Regex("""(?i)\s+(?:at|on|by|in|from|next|this|$DAY_TOKEN_ALT)\b.*$""")
+        // The shared trailing-time stripper (same gate as Reminder/Reschedule):
+        // peels a real trailing time off a greedily-captured title, but keeps an
+        // ordinary "in/at …" tail (codeberg #14). `allowBareDayToken` also peels
+        // a bare trailing day word ("called standup tomorrow" → "standup").
+        val TRAILING_TIME = trailingTimeClauseRegex(
+            setOf("at", "on", "by", "in", "from", "next", "this"),
+            allowBareDayToken = true,
+        )
 
         val HALF_HOUR = Regex("""(?i)\bhalf (?:an )?hour\b""")
         val HOURS = Regex("""(?i)\b(\d{1,2}|one|two|three|four|five|six)\s*(?:hour|hr)s?\b""")

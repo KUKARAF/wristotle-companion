@@ -272,9 +272,61 @@ fun parseDurationSeconds(text: String): Int? {
  * The lead-in is matched only at a word boundary with whitespace on both
  * sides, so the "at" inside "chat", the "to" inside "auto", etc. are never
  * stripped mid-word — the single place that bug-class is handled.
+ *
+ * The clause is stripped only when a TIME signal (digit / real number word /
+ * time unit / clock or day token) follows the lead-in IMMEDIATELY — modulo a
+ * few articles/hedges ("the", "a", "next", "a couple"). This both (a) keeps an
+ * ordinary tail like "in a Whole Foods order" intact (codeberg #14 — no signal
+ * after "in"), and (b) when a real time DOES follow later, peels only that
+ * clause: "put in an order at 3pm" → "put in an order" (the "at 3pm" goes, the
+ * "in an order" stays). Bare "a"/"an" are deliberately not signals — otherwise
+ * "in **a** Whole Foods order" would look number-ish (`WORD_NUMBERS` maps "a"→1).
+ *
+ * [allowBareDayToken] also strips a trailing day/date word with no preposition
+ * ("standup tomorrow", "review monday") — wanted for event titles, off by
+ * default so reminder/reschedule targets aren't trimmed unexpectedly.
+ *
+ * This is the SINGLE trailing-time stripper — Reminder, Reschedule, and
+ * CreateEvent all route through it so they can't drift (the divergence that
+ * let codeberg #14 hide in CreateEvent's old private copy).
  */
-fun trailingTimeClauseRegex(leadIns: Set<String>): Regex =
-    Regex("""(?i)\s+\b(${leadIns.joinToString("|")})\b\s+[\w\s:.,]+$""")
+fun trailingTimeClauseRegex(
+    leadIns: Set<String>,
+    allowBareDayToken: Boolean = false,
+): Regex {
+    val prepClause =
+        """\b(?:${leadIns.joinToString("|")})\b\s+(?:(?:$PRE_SIGNAL_FILLERS)\s+)*(?:$TIME_SIGNAL_ALT)"""
+    val bareDay = if (allowBareDayToken) """|\b(?:$DAY_TOKEN_ALT)\b""" else ""
+    return Regex("""(?i)\s+(?:$prepClause$bareDay).*$""")
+}
+
+/** Time-neutral words that may sit between a lead-in and the time signal
+ *  ("in **the** morning", "to **next** week", "in **a couple** hours") without
+ *  making the clause non-temporal. NOT signals themselves. */
+const val PRE_SIGNAL_FILLERS =
+    "the|a|an|about|around|roughly|approximately|almost|next|this|coming|following|couple|few|half"
+
+// Number words that count as a time signal — every `WORD_NUMBERS` key except
+// the bare articles "a"/"an" (which appear in ordinary titles) and the
+// space/hyphen compounds (their first word already matches).
+private val TRAILING_NUMBER_WORDS: String =
+    WORD_NUMBERS.keys
+        .filter { it != "a" && it != "an" && ' ' !in it && '-' !in it }
+        .joinToString("|")
+private const val TRAILING_TIME_UNITS =
+    "hours?|hrs?|minutes?|mins?|seconds?|secs?|days?|weeks?|weekends?|months?|years?"
+private const val TRAILING_CLOCK_WORDS =
+    "noon|midnight|midday|mornings?|afternoons?|evenings?|nights?|tonight|o'?clock|[ap]\\.?m\\.?"
+
+/**
+ * Regex fragment (no anchors) matching a single TIME signal: a digit, a real
+ * number word, a time unit, a clock / part-of-day word, or a day / month
+ * token. Used to gate trailing-clause stripping so a title's ordinary "in/at/on
+ * …" tail isn't mistaken for a spoken time (codeberg #14). Embed inside a
+ * `(?: … )`; callers add `(?i)`.
+ */
+val TIME_SIGNAL_ALT: String =
+    """\d|\b(?:$TRAILING_NUMBER_WORDS|$TRAILING_TIME_UNITS|$TRAILING_CLOCK_WORDS|$DAY_TOKEN_ALT)\b"""
 
 /**
  * Pulls a place name out of a query of the form `… <in|at> <place>`. Used
