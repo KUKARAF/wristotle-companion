@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.handlers
 
 import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
+import com.lazydevs.wristotle.speech.nlu.handler.RichResult
 import com.lazydevs.wristotle.speech.nlu.slots.weatherLocation
 import com.lazydevs.wristotle.phone.PhoneLocation
 import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
@@ -37,23 +38,47 @@ class WeatherHandler(
     override val tag: String = "weather"
     override val intent: Intent = Intent.Weather
 
-    override suspend fun handle(result: IntentResult): String {
+    override suspend fun handle(result: IntentResult): String = handleRich(result).response
+
+    override suspend fun handleRich(result: IntentResult): RichResult {
         val place = result.slots.weatherLocation()
         val location = if (place != null) {
             WeatherLocation.Place(place)
         } else {
-            // Bare query — try the phone's cached fix; the messages below
-            // name the specific reason the bare path can't proceed so the
-            // user knows what to fix.
-            val fix = phoneLocation.lastKnown()
-            if (fix == null) {
-                return if (phoneLocation.hasPermission()) NO_RECENT_LOCATION_HINT
-                else NO_PERMISSION_HINT
-            }
+            // Bare query — try the phone's cached fix; the hint names the
+            // specific reason the bare path can't proceed so the user knows
+            // what to fix. No card on the hint path — it's a plain bubble.
+            val fix = phoneLocation.current()
+                ?: return RichResult(
+                    if (phoneLocation.hasPermission()) NO_RECENT_LOCATION_HINT
+                    else NO_PERMISSION_HINT,
+                )
             WeatherLocation.Coords(fix.latitude, fix.longitude)
         }
-        val provider = selectProvider()
-        return format(provider.currentWeather(location, settings.unit.value))
+        val weather = selectProvider().currentWeather(location, settings.unit.value)
+        val text = format(weather)
+        // Only a successful lookup carries the rich card; errors stay bubbles.
+        return if (weather is WeatherResult.Ok) {
+            RichResult(text, cardKind = "weather_current", cardData = weatherCardData(weather))
+        } else {
+            RichResult(text)
+        }
+    }
+
+    /** Compact US-0x1F payload for the watch's weather widget:
+     *  place ⏐ temp ⏐ condition ⏐ humidity ⏐ wind (empty field when absent). */
+    private fun weatherCardData(w: WeatherResult.Ok): String {
+        val tempSymbol = if (w.unit == TempUnit.FAHRENHEIT) "°F" else "°C"
+        val windUnit = if (w.unit == TempUnit.FAHRENHEIT) "mph" else "km/h"
+        val humidity = w.humidity?.let { "$it%" } ?: ""
+        val wind = w.windSpeed?.let { "${it.roundToInt()} $windUnit" } ?: ""
+        return listOf(
+            w.place,
+            "${w.temperature.roundToInt()}$tempSymbol",
+            w.condition,
+            humidity,
+            wind,
+        ).joinToString("")
     }
 
     /** Reads the user's chosen provider from settings. The OpenWeather impl

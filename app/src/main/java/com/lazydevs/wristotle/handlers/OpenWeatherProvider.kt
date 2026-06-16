@@ -132,11 +132,18 @@ class OpenWeatherProvider(private val apiKey: String) : WeatherProvider {
         // Prefer the city name OpenWeather echoes back for places, fall back
         // to whatever we resolved in geocoding when only coords were supplied.
         val resolvedPlace = json.optString("name").ifEmpty { place }
+        // OpenWeather wind is m/s on metric, mph on imperial. Normalise metric
+        // to km/h so the card's unit matches open-meteo.
+        val windSpeed = json.optJSONObject("wind")?.optDouble("speed", Double.NaN)
+            ?.takeIf { !it.isNaN() }
+            ?.let { if (unit == TempUnit.FAHRENHEIT) it else it * 3.6 }
         return WeatherResult.Ok(
             temperature = temp,
             condition = condition,
             place = resolvedPlace,
             unit = unit,
+            humidity = main.optInt("humidity", -1).takeIf { it >= 0 },
+            windSpeed = windSpeed,
         )
     }
 

@@ -44,6 +44,7 @@ class RescheduleHandler(
 
     override val tag: String = "reschedule"
     override val intent: Intent = Intent.Reschedule
+    override val cardKind: String? = "reminder_reschedule"
 
     override suspend fun handle(result: IntentResult): String {
         val instant = result.instantSlot(SlotKeys.Time)

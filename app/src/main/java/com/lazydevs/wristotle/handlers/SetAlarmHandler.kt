@@ -39,6 +39,7 @@ class SetAlarmHandler(
 
     override val tag: String = "set_alarm"
     override val intent: Intent = Intent.SetAlarm
+    override val cardKind: String? = "alarm_create"
 
     override suspend fun handle(result: IntentResult): String {
         // SetAlarmSlots puts a kotlinx-datetime Instant here (not java.util.Date)

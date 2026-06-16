@@ -58,6 +58,7 @@ class MorningBriefHandler(
 
     override val tag: String = "morning-brief"
     override val intent: Intent = Intent.MorningBrief
+    override val cardKind: String? = "brief_read"
 
     private val pinStore = PinStore(context)
 

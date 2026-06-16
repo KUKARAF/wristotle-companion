@@ -132,10 +132,12 @@ class OpenMeteoProvider : WeatherProvider {
 
     private fun fetchCurrent(coords: WeatherLocation.Coords, unit: TempUnit, place: String): WeatherResult {
         val tempUnit = if (unit == TempUnit.FAHRENHEIT) "fahrenheit" else "celsius"
+        val windUnit = if (unit == TempUnit.FAHRENHEIT) "mph" else "kmh"
         val url = "https://api.open-meteo.com/v1/forecast?" +
             "latitude=${coords.lat}&longitude=${coords.lon}" +
-            "&current=temperature_2m,weather_code" +
+            "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m" +
             "&temperature_unit=$tempUnit" +
+            "&wind_speed_unit=$windUnit" +
             "&timezone=auto"
         val body = httpGet(url) ?: return WeatherResult.Network
         val current = JSONObject(body).optJSONObject("current") ?: return WeatherResult.Network
@@ -147,6 +149,8 @@ class OpenMeteoProvider : WeatherProvider {
             condition = WeatherCodes.describe(code),
             place = place,
             unit = unit,
+            humidity = current.optInt("relative_humidity_2m", -1).takeIf { it >= 0 },
+            windSpeed = current.optDouble("wind_speed_10m", Double.NaN).takeIf { !it.isNaN() },
         )
     }
 

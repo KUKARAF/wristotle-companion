@@ -7,10 +7,16 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
+import android.os.Bundle
+import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 
 private const val TAG = "PhoneLocation"
 
@@ -71,6 +77,49 @@ class PhoneLocation(private val context: Context) {
             if (freshest == null || fix.time > freshest.time) freshest = fix
         }
         return freshest
+    }
+
+    /**
+     * Cached fix if one is fresh enough, otherwise a single **active** fix
+     * requested live, bounded by [timeoutMs] so the watch's response watchdog
+     * never fires. Used by bare *"what's the weather"* when nothing is cached.
+     *
+     * Prefers NETWORK (cell / Wi-Fi — a couple of seconds, low power) over GPS
+     * (slow, especially indoors). Returns null on no permission, no enabled
+     * provider, or timeout — the handler then surfaces its location hint.
+     */
+    suspend fun current(timeoutMs: Long = 6_000L): Location? {
+        lastKnown()?.let { return it }
+        if (!hasPermission()) return null
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            ?: return null
+        val provider = when {
+            lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+            lm.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+            else -> return null
+        }
+        return withTimeoutOrNull(timeoutMs) {
+            suspendCancellableCoroutine { cont ->
+                val listener = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        lm.removeUpdates(this)
+                        if (cont.isActive) cont.resume(location)
+                    }
+                    override fun onProviderDisabled(provider: String) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    @Deprecated("Required by the pre-API-29 interface")
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                }
+                try {
+                    @Suppress("MissingPermission") // checked above
+                    lm.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper())
+                } catch (e: SecurityException) {
+                    Log.w(TAG, "current() denied", e)
+                    if (cont.isActive) cont.resume(null)
+                }
+                cont.invokeOnCancellation { lm.removeUpdates(listener) }
+            }
+        }
     }
 
     private companion object {

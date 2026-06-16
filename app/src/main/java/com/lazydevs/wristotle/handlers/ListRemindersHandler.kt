@@ -26,6 +26,7 @@ class ListRemindersHandler(context: Context) : ActionHandler {
 
     override val tag: String = "list_reminders"
     override val intent: Intent = Intent.ListReminders
+    override val cardKind: String? = "reminder_list"
 
     override suspend fun handle(result: IntentResult): String {
         val now = System.currentTimeMillis()

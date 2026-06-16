@@ -30,6 +30,7 @@ class CalendarHandler(private val calendar: CalendarReader) : ActionHandler {
 
     override val tag: String = "calendar"
     override val intent: Intent = Intent.Calendar
+    override val cardKind: String? = "meeting_list"
 
     override suspend fun handle(result: IntentResult): String {
         if (!calendar.hasPermission()) {

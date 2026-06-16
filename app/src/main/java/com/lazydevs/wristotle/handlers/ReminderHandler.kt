@@ -42,6 +42,7 @@ class ReminderHandler(
 
     override val tag: String = "reminder"
     override val intent: Intent = Intent.Reminder
+    override val cardKind: String? = "reminder_create"
 
     override suspend fun handle(result: IntentResult): String {
         // ReminderSlots always populates a time — defaults to now + 30 min

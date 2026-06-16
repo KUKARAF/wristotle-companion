@@ -35,6 +35,11 @@ sealed class WeatherResult {
         val condition: String,
         val place: String,
         val unit: TempUnit,
+        /** Relative humidity %, when the provider supplies it. */
+        val humidity: Int? = null,
+        /** Wind speed in the unit system's native unit (km/h for metric,
+         *  mph for imperial), when available. */
+        val windSpeed: Double? = null,
     ) : WeatherResult()
 
     /** Geocoding returned no results (the spoken place doesn't exist in the

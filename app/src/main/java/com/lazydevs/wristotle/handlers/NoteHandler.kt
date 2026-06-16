@@ -30,6 +30,7 @@ class NoteHandler(private val notes: NoteRepository) : ActionHandler {
 
     override val tag = "note"
     override val intent = Intent.Note
+    override val cardKind: String? = "note_create"
 
     override suspend fun handle(result: IntentResult): String {
         val body = result.optStringSlot(SlotKeys.Body)?.takeIf { it.isNotBlank() }
