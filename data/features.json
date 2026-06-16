@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-12-0-watch-cards",
+      "date": "2026-06-15",
+      "companion_version": "v1.12.0",
+      "watch_version": "v1.3.0",
+      "title": "Replies show as cards on the watch",
+      "description": "Sports, weather and meeting replies now appear as full-screen cards on the watch — switch on more in Settings.",
+      "sample_query": "weather in Tokyo",
+      "docs_path": "voice-commands/"
+    },
+    {
       "id": "v1-11-0-bbl-cricket",
       "date": "2026-06-14",
       "companion_version": "v1.11.0",

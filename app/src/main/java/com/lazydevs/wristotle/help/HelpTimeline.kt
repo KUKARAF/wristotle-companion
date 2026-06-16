@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-12-0-watch-cards",
+            date = "2026-06-15",
+            companionVersion = "v1.12.0",
+            watchVersion = "v1.3.0",
+            title = "Replies show as cards on the watch",
+            description = "Sports, weather and meeting replies now appear as full-screen cards on the watch — switch on more in Settings.",
+            sampleQuery = "weather in Tokyo",
+            docsPath = "voice-commands/",
+        ),
+        FeatureEntry(
             id = "v1-11-0-bbl-cricket",
             date = "2026-06-14",
             companionVersion = "v1.11.0",

@@ -1,0 +1,14 @@
+Replies as cards on the watch.
+
+Sports, weather, and meeting replies
+now show as full-screen cards — a
+coloured band for the action and an
+icon for the feature — with a rich
+weather card (temperature, condition,
+humidity, wind).
+
+Turn cards on or off per type in
+Settings → Watch. Reminders, tasks,
+notes, alarms, the agent, and the
+morning brief can all be switched on
+there too.
