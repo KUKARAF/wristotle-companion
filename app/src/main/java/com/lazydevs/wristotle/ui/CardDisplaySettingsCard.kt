@@ -105,8 +105,9 @@ fun CardDisplaySettingsCard(settings: CardSettings) {
                 title = "Watch cards",
                 description = "When a reply has a card, the watch shows a full-screen " +
                     "card — coloured band (the operation) + icon (the feature) — on top " +
-                    "of the chat; BACK returns to the conversation. Turn off any you'd " +
-                    "rather see as a plain chat bubble. All on by default.",
+                    "of the chat; BACK returns to the conversation. Sports, meetings, and " +
+                    "weather are on by default; switch on any others you'd like as cards " +
+                    "(the rest stay plain chat bubbles).",
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
