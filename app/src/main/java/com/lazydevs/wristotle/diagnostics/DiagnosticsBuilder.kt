@@ -76,6 +76,7 @@ class DiagnosticsBuilder(
             appendAskAgentSection()
             appendMcpServersSection(redact)
             appendWatchSettingsSection()
+            appendWatchCardsSection()
             appendAppIndexSection()
             appendConversationAudioSection(redact)
             appendConversationSection(recentEntries, redact)
@@ -87,6 +88,17 @@ class DiagnosticsBuilder(
     }
 
     // ── Sections ────────────────────────────────────────────────────
+
+    /** Which watch cards are turned off (non-secret UI state). */
+    private fun StringBuilder.appendWatchCardsSection() {
+        val disabled = app.cardSettings.disabledKinds.value
+        appendLine("### Watch cards")
+        appendLine(
+            "- Disabled kinds: " +
+                if (disabled.isEmpty()) "(none — all on)" else disabled.sorted().joinToString(", "),
+        )
+        appendLine()
+    }
 
     private fun StringBuilder.appendIssueTemplate() {
         appendLine("## Issue")

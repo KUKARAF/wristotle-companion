@@ -97,7 +97,11 @@ data class BackupManifest(
         val sttProvider: SttProviderPrefs? = null,
         val ttsProvider: TtsProviderPrefs? = null,
         val sport: SportPrefs? = null,
+        val cards: CardsPrefs? = null,
     )
+    /** Watch-card on/off — the set of DISABLED card kinds. Rides with the
+     *  `appPreferences` umbrella (non-sensitive UI prefs). */
+    data class CardsPrefs(val disabled: List<String>)
     data class NotesPrefs(val keepLast: Int, val appendAudioMode: String)
     data class ConversationPrefs(val retentionDays: Int)
     data class ConversationAudioPrefs(val captureEnabled: Boolean)
@@ -383,6 +387,13 @@ object BackupManifestCodec {
                     })
                 })
             }
+            m.prefs.cards?.let { c ->
+                put("cards", JSONObject().apply {
+                    put("disabled", JSONArray().also { arr ->
+                        c.disabled.forEach { arr.put(it) }
+                    })
+                })
+            }
         })
         put("reminder_pins", JSONArray().apply {
             m.reminderPins.forEach { p ->
@@ -583,6 +594,12 @@ object BackupManifestCodec {
                         },
                         preferredSports = (0 until prefArr.length()).map { prefArr.getString(it) },
                         excludedSports = (0 until exclArr.length()).map { exclArr.getString(it) },
+                    )
+                },
+                cards = prefs.optJSONObject("cards")?.let { c ->
+                    val arr = c.optJSONArray("disabled") ?: JSONArray()
+                    BackupManifest.CardsPrefs(
+                        disabled = (0 until arr.length()).map { arr.getString(it) },
                     )
                 },
             ),
