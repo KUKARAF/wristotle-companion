@@ -30,6 +30,7 @@ class AddTaskHandler(
 
     override val tag: String = "add-task"
     override val intent: Intent = Intent.AddTask
+    override val cardKind: String? = "task_create"
 
     override suspend fun handle(result: IntentResult): String {
         val body = result.stringSlot(SlotKeys.Body)

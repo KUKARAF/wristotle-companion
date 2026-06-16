@@ -30,6 +30,7 @@ class DeleteTaskHandler(
 
     override val tag: String = "delete-task"
     override val intent: Intent = Intent.DeleteTask
+    override val cardKind: String? = "task_delete"
 
     override suspend fun handle(result: IntentResult): String {
         val target = result.stringSlot(SlotKeys.Target)

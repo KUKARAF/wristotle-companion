@@ -220,7 +220,7 @@ class PebbleListenerService : BasePebbleListenerService() {
                 ),
                 notifLogEnabledProvider = { app.notificationLogSettings.enabled.value },
             ),
-        ))
+        ), cardEnabled = app.cardSettings::isEnabled)
     }
 
     // Transport is Application-owned; no close in onDestroy. The base class cancels
@@ -411,7 +411,9 @@ class PebbleListenerService : BasePebbleListenerService() {
         }
         Log.d(TAG, "Sending response: ${dispatchResult.response}")
 
-        transport.sendForHint(watchHint, dispatchResult.response)
+        transport.sendForHint(
+            watchHint, dispatchResult.response, dispatchResult.cardKind, dispatchResult.cardData,
+        )
 
         // Per-intent TTS on the watch speaker. Master + per-intent toggle
         // both gate via `shouldSpeak`.

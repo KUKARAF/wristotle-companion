@@ -488,6 +488,9 @@ class PrefixHintsTest {
         assertEquals(Intent.SportScore, PrefixHints.hintFor("next warriors game"))
         assertEquals(Intent.SportScore, PrefixHints.hintFor("when do the lakers play"))
         assertEquals(Intent.SportScore, PrefixHints.hintFor("did the dodgers win"))
+        // "who won/beat <team>" — the win-lose verbs, not just "who … play".
+        assertEquals(Intent.SportScore, PrefixHints.hintFor("who won the liverpool match"))
+        assertEquals(Intent.SportScore, PrefixHints.hintFor("who beat arsenal"))
         assertEquals(Intent.SportScore, PrefixHints.hintFor("premier league table"))
         assertEquals(Intent.SportScore, PrefixHints.hintFor("nba standings"))
         assertEquals(Intent.SportScore, PrefixHints.hintFor("what's the score of the lakers game"))

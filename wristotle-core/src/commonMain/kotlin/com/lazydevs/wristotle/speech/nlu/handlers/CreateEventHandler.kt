@@ -30,6 +30,7 @@ class CreateEventHandler(private val calendar: CalendarReader) : ActionHandler {
 
     override val tag: String = "create_event"
     override val intent: Intent = Intent.CreateEvent
+    override val cardKind: String? = "meeting_create"
 
     override suspend fun handle(result: IntentResult): String {
         if (!calendar.hasWritePermission()) {

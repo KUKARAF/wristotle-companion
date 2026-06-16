@@ -53,6 +53,7 @@ class CancelAlarmHandler(
 
     override val tag: String = "cancel_alarm"
     override val intent: Intent = Intent.CancelAlarm
+    override val cardKind: String? = "alarm_cancel"
 
     override suspend fun handle(result: IntentResult): String {
         val instant = result.instantSlot(SlotKeys.Time)

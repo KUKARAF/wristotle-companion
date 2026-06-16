@@ -158,6 +158,22 @@ class BackupManifestCodecTest {
         assertEquals(45, decoded.prefs.reminder?.defaultOffsetMin)
     }
 
+    @Test fun cardsPrefs_roundTrip() {
+        val disabled = listOf("task_create", "note_update", "agent_answer")
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                cards = BackupManifest.CardsPrefs(disabled = disabled),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(disabled, decoded.prefs.cards?.disabled)
+    }
+
+    @Test fun cardsPrefs_absentDecodesAsNull() {
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(sampleManifest()))
+        assertNull(decoded.prefs.cards)
+    }
+
     @Test fun weatherPrefs_withApiKey_roundTrip() {
         val original = sampleManifest().copy(
             prefs = sampleManifest().prefs.copy(

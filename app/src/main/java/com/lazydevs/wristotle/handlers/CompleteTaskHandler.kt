@@ -30,6 +30,7 @@ class CompleteTaskHandler(
 
     override val tag: String = "complete-task"
     override val intent: Intent = Intent.CompleteTask
+    override val cardKind: String? = "task_complete"
 
     override suspend fun handle(result: IntentResult): String {
         val target = result.stringSlot(SlotKeys.Target)

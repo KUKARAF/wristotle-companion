@@ -47,6 +47,7 @@ class AskAgentHandler(
 
     override val tag: String = "ask-agent"
     override val intent: Intent = Intent.AskAgent
+    override val cardKind: String? = "agent_answer"
 
     override suspend fun handle(result: IntentResult): String {
         val query = result.stringSlot(SlotKeys.Query)

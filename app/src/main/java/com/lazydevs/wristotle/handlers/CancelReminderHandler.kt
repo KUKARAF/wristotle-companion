@@ -39,6 +39,7 @@ class CancelReminderHandler(
 
     override val tag: String = "cancel"
     override val intent: Intent = Intent.Cancel
+    override val cardKind: String? = "reminder_cancel"
 
     override suspend fun handle(result: IntentResult): String {
         val target = result.stringSlot(SlotKeys.Target)

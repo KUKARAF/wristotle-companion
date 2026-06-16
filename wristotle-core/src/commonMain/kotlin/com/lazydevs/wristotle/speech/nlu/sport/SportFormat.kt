@@ -41,6 +41,65 @@ object SportFormat {
     fun sportDisabled(key: String): String =
         "${sportLabel(key)} is turned off. Enable it in Settings → Sports."
 
+    // Watch inline-widget payload delimiters: US between fields, RS between rows.
+    private const val US = ''
+    private const val RS = ''
+
+    /**
+     * Score-widget payload, or null if the event isn't a two-numeric-score game
+     * (F1 podium / cricket string scores fall back to the text widget). The
+     * widget TYPE travels in `card_kind` ("sport_score"); this is just the
+     * fields: `home<US>homeScore<US>away<US>awayScore<US>status`.
+     */
+    fun scoreCardData(result: SportResult): String? {
+        val e = (result as? SportResult.Ok)?.events?.firstOrNull() ?: return null
+        val h = e.homeScore ?: return null
+        val a = e.awayScore ?: return null
+        if (e.homeName.isBlank() || e.awayName.isBlank()) return null
+        val status = when (e.status) {
+            com.lazydevs.sportskapi.SportEventStatus.LIVE -> e.progress ?: "Live"
+            com.lazydevs.sportskapi.SportEventStatus.FINAL -> "Final"
+            else -> ""
+        }
+        return listOf(e.homeName, h.toString(), e.awayName, a.toString(), status).joinToString(US.toString())
+    }
+
+    /**
+     * Standings-widget payload: `league<RS>row<RS>row` where each row is
+     * `rank<US>team<US>stat` (rank blank for the all-leaders view). Mirrors the
+     * text [standings] (top-10, constructors in full, leaders drop the rank).
+     */
+    fun standingsCardData(result: StandingsResult): String? {
+        val ok = result as? StandingsResult.Ok ?: return null
+        val rows = if (ok.league.contains("constructor", ignoreCase = true)) ok.table else ok.table.take(10)
+        if (rows.isEmpty()) return null
+        val leaders = rows.size > 1 && rows.map { it.rank }.distinct().size == 1
+        val rowStrings = rows.map { s ->
+            val stat = s.points?.toString() ?: s.record ?: ""
+            val rank = if (leaders) "" else s.rank.toString()
+            listOf(rank, s.team, stat).joinToString(US.toString())
+        }
+        return (listOf(ok.league) + rowStrings).joinToString(RS.toString())
+    }
+
+    /** Fixture-widget payload: `when<US>line2` (date + "vs Opponent" / race name). */
+    fun fixtureCardData(result: SportResult, subjectName: String): String? {
+        val e = (result as? SportResult.Ok)?.events?.firstOrNull() ?: return null
+        val whenStr = e.kickoff?.let {
+            val ms = it.toEpochMilliseconds()
+            "${EventTimeFormat.day(ms)} ${EventTimeFormat.time(ms)}"
+        } ?: "Date TBD"
+        val line2 = if (e.homeName.isBlank() && e.awayName.isBlank()) {
+            e.title
+        } else {
+            val home = subjectIsHome(e, subjectName)
+            val opponent = if (home == false) e.homeName else e.awayName
+            val prep = if (home == false) "at" else "vs"
+            "$prep $opponent"
+        }
+        return listOf(whenStr, line2).joinToString(US.toString())
+    }
+
     fun next(result: SportResult, subjectName: String): String = when (result) {
         is SportResult.Ok -> result.events.firstOrNull()?.let { upcoming(it, subjectName) }
             ?: "$subjectName has no upcoming games."

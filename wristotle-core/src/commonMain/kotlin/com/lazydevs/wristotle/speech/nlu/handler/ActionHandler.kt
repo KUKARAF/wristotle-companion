@@ -37,4 +37,37 @@ interface ActionHandler {
      * Return a short result string for the watch chat display.
      */
     suspend fun handle(result: IntentResult): String
+
+    /**
+     * Optional card kind for a handler whose plain-text response should also
+     * surface as a full-screen watch card (the CRUD reminder/task/note cards).
+     * When non-null, the default [handleRich] attaches it with no [RichResult.cardData],
+     * so the watch renders a text card under the kind's header (band color + icon
+     * derived from the kind string). Handlers needing a *structured* card (e.g.
+     * the sports scoreboard) override [handleRich] directly and ignore this.
+     */
+    val cardKind: String? get() = null
+
+    /**
+     * Richer variant carrying optional structured [RichResult.cardData] the
+     * watch can render as a visual card (e.g. a sports scoreboard). The default
+     * wraps [handle] and attaches [cardKind] (null for most handlers → a plain
+     * chat bubble); only handlers producing structured card DATA override this.
+     */
+    suspend fun handleRich(result: IntentResult): RichResult =
+        RichResult(handle(result), cardKind = cardKind)
 }
+
+/**
+ * A handler response plus optional inline-widget descriptor for the watch.
+ *
+ * [cardKind] is the widget TYPE the watch renders ("sport_score",
+ * "sport_standings", "sport_fixture", "sport_text"); [cardData] is its compact,
+ * watch-parsed payload (US-0x1F fields, RS-0x1E rows). Both null = a plain chat
+ * bubble. Sent together in one AppMessage frame with the response.
+ */
+data class RichResult(
+    val response: String,
+    val cardKind: String? = null,
+    val cardData: String? = null,
+)

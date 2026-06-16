@@ -42,6 +42,10 @@ class PebbleTransport(context: Context) : WatchTransport, java.io.Closeable {
         mapOf(key to PebbleDictionaryItem.Text(text))
     )
 
+    override suspend fun sendTexts(texts: Map<UInt, String>): Boolean = sendWithNackRetry(
+        texts.mapValues { PebbleDictionaryItem.Text(it.value) }
+    )
+
     override suspend fun sendInt32(key: UInt, value: Int): Boolean = sendWithNackRetry(
         mapOf(key to PebbleDictionaryItem.Int32(value))
     )

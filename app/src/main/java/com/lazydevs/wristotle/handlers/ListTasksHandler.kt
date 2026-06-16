@@ -27,6 +27,7 @@ class ListTasksHandler(
 
     override val tag: String = "list-tasks"
     override val intent: Intent = Intent.ListTasks
+    override val cardKind: String? = "task_list"
 
     override suspend fun handle(result: IntentResult): String {
         // `filter` slot (set by ListTasksSlots) selects pending vs

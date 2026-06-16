@@ -25,6 +25,11 @@ interface WatchTransport {
     /** Send a single text tuple on [key]. Returns true if the watch ACKed. */
     suspend fun sendText(key: UInt, text: String): Boolean
 
+    /** Send several text tuples in ONE AppMessage frame (atomic — they arrive
+     *  in the same inbox iteration). Used to pair a response with its card-kind
+     *  hint. Returns true if the watch ACKed. */
+    suspend fun sendTexts(texts: Map<UInt, String>): Boolean
+
     /** Send a single int32 tuple on [key]. Returns true if the watch ACKed. */
     suspend fun sendInt32(key: UInt, value: Int): Boolean
 
@@ -91,10 +96,26 @@ suspend fun WatchTransport.sendCancelResult(text: String) =
  * query on so older firmware that distinguishes the reminder/cancel
  * inboxes still routes the response right.
  */
-suspend fun WatchTransport.sendForHint(hint: Intent?, text: String) = when (hint) {
-    Intent.Reminder -> sendReminderResult(text)
-    Intent.Cancel -> sendCancelResult(text)
-    else -> sendResponse(text)
+suspend fun WatchTransport.sendForHint(
+    hint: Intent?,
+    text: String,
+    cardKind: String? = null,
+    cardData: String? = null,
+): Boolean {
+    val responseKey = when (hint) {
+        Intent.Reminder -> MessageKeys.REMINDER_RESULT
+        Intent.Cancel -> MessageKeys.CANCEL_RESULT
+        else -> MessageKeys.COMPANION_RESPONSE
+    }
+    // Pair the response with its card-kind hint + optional structured card data
+    // in ONE frame so the watch can render a full-screen (and visual) card;
+    // absent kind ⇒ plain chat bubble.
+    val payload = buildMap {
+        put(responseKey, text)
+        if (!cardKind.isNullOrEmpty()) put(MessageKeys.CARD_KIND, cardKind)
+        if (!cardData.isNullOrEmpty()) put(MessageKeys.CARD_DATA, cardData)
+    }
+    return if (payload.size == 1) sendText(responseKey, text) else sendTexts(payload)
 }
 
 suspend fun WatchTransport.sendNotesResponse(text: String) =

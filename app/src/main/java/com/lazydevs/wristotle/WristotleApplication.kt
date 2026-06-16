@@ -232,6 +232,15 @@ class WristotleApplication : Application() {
         )
     }
 
+    /** Per-card-kind on/off for the watch's full-screen cards (Settings → ⌚
+     *  Watch). The handler registry consults [CardSettings.isEnabled] before
+     *  forwarding a `card_kind`. */
+    val cardSettings: com.lazydevs.wristotle.speech.nlu.settings.CardSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.CardSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.CardSettings.PREFS_NAME),
+        )
+    }
+
     /** TTS-provider preferences for the watch-side TTS feature. Mirrors
      *  the STT shape; CompositeTtsProvider chooses Local vs HTTP per [mode]. */
     val ttsProviderSettings: com.lazydevs.wristotle.speech.nlu.settings.TtsProviderSettings by lazy {
