@@ -445,8 +445,10 @@ private fun SettingsCategoryContent(
                     onOpenTopLevelTab = onOpenTopLevelTab,
                 )
 
-            SettingsCategory.Watch ->
+            SettingsCategory.Watch -> {
                 WatchSettingsCard(vm = watchSettingsVm)
+                CardDisplaySettingsCard(settings = app.cardSettings)
+            }
 
             SettingsCategory.Conversation -> {
                 val retentionDays by conversationVm.retentionDays.collectAsState()

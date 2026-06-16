@@ -220,7 +220,7 @@ class PebbleListenerService : BasePebbleListenerService() {
                 ),
                 notifLogEnabledProvider = { app.notificationLogSettings.enabled.value },
             ),
-        ))
+        ), cardEnabled = app.cardSettings::isEnabled)
     }
 
     // Transport is Application-owned; no close in onDestroy. The base class cancels

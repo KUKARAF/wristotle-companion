@@ -37,7 +37,14 @@ data class HandlerResult(
  * R4 batch 1 — lifted from :app. Pure dispatch — no platform
  * dependencies. The handlers it routes to may still be platform-specific.
  */
-class HandlerRegistry(handlers: List<ActionHandler>) {
+class HandlerRegistry(
+    handlers: List<ActionHandler>,
+    /** Companion-side gate consulted before forwarding a handler's `card_kind`.
+     *  Returns false for kinds the user has turned off in Settings → ⌚ Watch,
+     *  so the card (and its data) is dropped and the reply shows as a plain chat
+     *  bubble. Defaults to allowing every card (e.g. in tests). */
+    private val cardEnabled: (String) -> Boolean = { true },
+) {
 
     private val byIntent: Map<Intent, ActionHandler> = run {
         val grouped = handlers.groupBy { it.intent }
@@ -55,10 +62,14 @@ class HandlerRegistry(handlers: List<ActionHandler>) {
         return try {
             if (handler != null) {
                 val rich = handler.handleRich(result)
+                // Drop the card (and its data) when the user has disabled this
+                // kind — the response still lands as a chat bubble.
+                val kind = rich.cardKind?.takeIf(cardEnabled)
                 HandlerResult(
                     rich.response, handler.tag,
                     success = isSuccessResponse(rich.response),
-                    cardKind = rich.cardKind, cardData = rich.cardData,
+                    cardKind = kind,
+                    cardData = if (kind != null) rich.cardData else null,
                 )
             } else {
                 HandlerResult(
