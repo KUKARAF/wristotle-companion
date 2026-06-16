@@ -110,9 +110,18 @@ Backup is bidirectional — miss a step and data silently doesn't travel.
 - [ ] **`data/features.json`** — one entry (a single ~10–20-word sentence, no
   internals jargon), then `python3 tools/regenerate_help_timeline.py` (never edit
   `HelpTimeline.kt` by hand). **Internals-only release → no entry, no row.**
+  Edit the **companion** copy directly — it's the de-facto canonical source now.
+- [ ] **Mirror `features.json` to the docs repo** —
+  `cp data/features.json ../wristotle-docs/data/features.json`. Do **NOT** run
+  `tools/sync_features.sh` (it copies docs → companion, the wrong way, and would
+  clobber the fresh entry). Nothing enforces this step, so it's easy to skip —
+  the in-app Help page stays correct (reads the companion copy) while the docs
+  copy silently drifts (it sat 4 releases behind by v1.12.0).
 - [ ] **fastlane changelog** — `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`.
 - [ ] **Docs site** (`wristotle-docs`) — `docs/voice-commands.md` +
-  `docs/changelog.md` if user-facing.
+  `docs/changelog.md` if user-facing, plus the hand-written tables in
+  `docs/features.md` (On-watch UI / Companion-side / Settings-category) when the
+  release adds a surface to one of them.
 - [ ] Commit message: Conventional Commits `type(scope):`; **no `Co-Authored-By`
   trailer.** Grep the diff for real names / dictated phrases / numbers / keys.
 - [ ] If a vendored library (e.g. `sportskapi` submodule) changed: commit + tag +
