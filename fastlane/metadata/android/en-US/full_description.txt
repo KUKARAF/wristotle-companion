@@ -1,4 +1,4 @@
-Wristotle turns your Pebble watch's dictation button into a voice command surface on your phone — calls, texts, reminders, alarms, music control, notes, tasks, weather, world clock, calculator, and an Ask-Agent path that can hit any MCP server you configure.
+Wristotle turns your Pebble watch's dictation button into a voice command surface on your phone — calls, texts, reminders, alarms, music control, notes, tasks, meetings, weather, sports, world clock, calculator, a morning brief, and an Ask-Agent path that can hit any MCP server you configure.
 
 Everything runs on-device by default. Optional cloud Whisper / self-hosted speech-to-text endpoint and optional Anthropic or OpenAI-compatible LLM if you want them. Baseline doesn't phone home; no account, no tracking, AGPLv3-licensed.
 
@@ -8,7 +8,8 @@ Voice commands (one-liners):
 
 * Calls — "call John"
 * Messages — "text Sarah I'll be late" / "whatsapp Mom dinner at 7"
-* Reminders — "remind me to take meds in 20 minutes"
+* Reminders — "remind me to take meds in 20 minutes" (incl. persistent "nag me" reminders)
+* Meetings — "schedule a meeting with Sam tomorrow at 3" / "what's on my calendar"
 * Alarms — "set an alarm for 6:30 am" (phone / watch / both)
 * Timers — "set a timer for 10 minutes"
 * Music — "play Spotify" / "pause" / "next"
@@ -16,15 +17,19 @@ Voice commands (one-liners):
 * Notes — "make a note buy milk" (text + audio)
 * Tasks — "add task pick up dry cleaning"
 * Weather — "weather in Tokyo" / "what's the weather"
+* Sports — "when do the Warriors play next" / "did Arsenal win"
 * World clock — "what time is it in Berlin"
 * Calculator — "what's 15% of 80"
+* Morning brief — "what's my morning brief"
 * Ask Agent — "ask agent what's on my calendar tomorrow"
 * Find phone — "find my phone"
 
-Headline 1.0 feature: a first-launch welcome wizard that walks new users through the optional setup that unlocks the full app — Whisper speech model download, on-device intent classifier model, runtime permissions, installed-app indexing.
+A first-launch welcome wizard walks new users through the optional setup that unlocks the full app — Whisper speech model download, on-device intent classifier model, runtime permissions, installed-app indexing.
 
 Other things worth knowing:
 
+* Watch cards — sports, weather, and meeting replies render as full-screen cards on the watch (colour band shows the action, icon shows the subject); pick which kinds show in settings
+* Speak replies on the watch — optional on-device or cloud text-to-speech reads answers aloud on supported watches
 * Confirm-before-send for destructive actions (toggle in settings or say "confirm" in your query) previews destination + body before any call / message goes out
 * Conversation history with optional audio capture
 * Contact aliases — "call dad" stores the mapping so it survives phonebook re-orders
