@@ -16,6 +16,7 @@ import io.rebble.pebblekit2.common.model.PebbleDictionaryItem
 import io.rebble.pebblekit2.common.model.TimelineLayout
 import io.rebble.pebblekit2.common.model.TimelineLayoutType
 import io.rebble.pebblekit2.common.model.TimelinePin
+import io.rebble.pebblekit2.common.model.TimelineReminder
 import io.rebble.pebblekit2.common.model.TimelineResult
 import io.rebble.pebblekit2.common.model.TransmissionResult
 import kotlin.time.ExperimentalTime
@@ -63,19 +64,34 @@ class PebbleTransport(context: Context) : WatchTransport, java.io.Closeable {
         return sendWithNackRetry(payload)
     }
 
-    override suspend fun insertReminderPin(pin: ReminderPin): TimelineSendResult =
-        sender.insertTimelinePin(
+    override suspend fun insertReminderPin(pin: ReminderPin): TimelineSendResult {
+        val startTime = Instant.fromEpochMilliseconds(pin.startEpochMillis)
+        return sender.insertTimelinePin(
             AppConstants.PEBBLE_UUID,
             TimelinePin(
                 id = pin.id,
-                startTime = Instant.fromEpochMilliseconds(pin.startEpochMillis),
+                startTime = startTime,
                 layout = TimelineLayout(
                     type = TimelineLayoutType.GENERIC_PIN,
                     title = pin.title,
                     tinyIcon = pin.tinyIcon,
                 ),
+                // A bare pin is silent; attach a reminder so the watch actually
+                // buzzes at the reminder time. Requires a host (libpebble3) that
+                // forwards TimelinePin.reminders to its timeline emulator.
+                reminders = listOf(
+                    TimelineReminder(
+                        time = startTime,
+                        layout = TimelineLayout(
+                            type = TimelineLayoutType.GENERIC_REMINDER,
+                            title = pin.title,
+                            tinyIcon = pin.tinyIcon,
+                        ),
+                    ),
+                ),
             ),
         ).toCommon()
+    }
 
     override suspend fun deleteReminderPin(pinId: String): TimelineSendResult =
         sender.deleteTimelinePin(AppConstants.PEBBLE_UUID, pinId).toCommon()
