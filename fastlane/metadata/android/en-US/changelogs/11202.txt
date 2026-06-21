@@ -1,0 +1,8 @@
+Better bug reports.
+
+The diagnostics bundle now includes your
+watch's model, firmware, and the Wristotle
+watch-app version, plus the Pebble companion
+app version, battery-optimization and exact-
+alarm status, and device RAM — so problems
+are far easier to pin down.
