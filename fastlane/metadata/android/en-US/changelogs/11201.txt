@@ -1,0 +1,8 @@
+Clearer dictation feedback.
+
+When watch dictation can't start or
+comes back empty, the watch now tells
+you what to check — for example that
+voice dictation is off or not set up
+in your Pebble app — instead of always
+showing "Didn't catch that".
