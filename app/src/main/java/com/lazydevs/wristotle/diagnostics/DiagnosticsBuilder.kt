@@ -14,7 +14,9 @@ import com.lazydevs.wristotle.WristotleApplication
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.logging.WristotleLog
 import com.lazydevs.wristotle.util.hasPermission
+import com.lazydevs.wristotle.transport.WatchInfoStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
@@ -69,6 +71,7 @@ class DiagnosticsBuilder(
             appendAppSection()
             appendDeviceSection()
             appendPebbleCompanionSection()
+            appendWatchSection()
             appendPermissionsSection()
             appendModelsSection()
             appendSttProviderSection(redact)
@@ -192,6 +195,44 @@ class DiagnosticsBuilder(
         // an update" reports (e.g. the local-STT regression in the 1.3.x line).
         companionVersion(CORE_DEVICES_PKG)?.let { appendLine("  - Core Devices app version: $it") }
         appendLine("- Whisper applies to watch dictation: ${yesNo(state.whisperAppliesToWatchDictation)}")
+        appendLine()
+    }
+
+    /**
+     * The connected Pebble watch itself: model + firmware from PebbleKit2 (the
+     * paired companion knows these whenever a watch is connected), plus the
+     * Wristotle WATCH-app version it last reported on launch (cached, since a
+     * watchapp only runs when open). All three were invisible to bug reports
+     * before — and the watch model/platform is exactly what pinned down #17.
+     */
+    private suspend fun StringBuilder.appendWatchSection() {
+        appendLine("### Watch")
+        val watch = runCatching {
+            kotlinx.coroutines.withTimeoutOrNull(2_000) {
+                io.rebble.pebblekit2.client.DefaultPebbleInfoRetriever(context)
+                    .getConnectedWatches()
+                    .first()
+                    .firstOrNull()
+            }
+        }.getOrNull()
+        if (watch == null) {
+            appendLine("- Connected watch: (none reported by the Pebble app)")
+        } else {
+            appendLine("- Model: ${watch.platform}")
+            appendLine("- Name: ${watch.name}")
+            val tag = watch.firmwareVersionTag?.let { " $it" } ?: ""
+            appendLine(
+                "- Firmware: ${watch.firmwareVersionMajor}." +
+                    "${watch.firmwareVersionMinor}.${watch.firmwareVersionPatch}$tag",
+            )
+        }
+        val info = WatchInfoStore(context)
+        val wv = info.watchAppVersion
+        if (wv == null) {
+            appendLine("- Wristotle watch app: (not reported — open Wristotle on the watch once)")
+        } else {
+            appendLine("- Wristotle watch app: $wv (last seen ${agoString(System.currentTimeMillis() - info.watchAppVersionSeenAt)})")
+        }
         appendLine()
     }
 
