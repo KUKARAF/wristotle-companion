@@ -131,6 +131,11 @@ object MessageKeys {
      *  response + [CARD_KIND]. */
     val CARD_DATA: UInt = 10058u
 
+    /** Watch → companion: the watch app's version string, piggybacked on the
+     *  launch COMPANION_PING. Cached by the companion (a watchapp only runs when
+     *  launched) and surfaced in the diagnostics bundle. */
+    val WATCH_APP_VERSION: UInt = 10059u
+
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE]. */
     const val NOTE_DETAIL_MAX_CHARS: Int = 540
 

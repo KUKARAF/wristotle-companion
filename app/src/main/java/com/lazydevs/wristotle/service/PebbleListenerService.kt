@@ -48,6 +48,7 @@ import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.slot.SlotExtractorRegistry
 import com.lazydevs.wristotle.speech.nlu.transport.MessageKeys
 import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
+import com.lazydevs.wristotle.transport.WatchInfoStore
 import com.lazydevs.wristotle.transport.boolFlag
 import com.lazydevs.wristotle.transport.int32
 import com.lazydevs.wristotle.transport.text
@@ -270,6 +271,12 @@ class PebbleListenerService : BasePebbleListenerService() {
 
         if (data[MessageKeys.COMPANION_PING] != null) {
             Log.d(TAG, "Received COMPANION_PING, sending READY")
+            // The watch piggybacks its app version on the launch ping (a watchapp
+            // only runs when launched). Cache it for the diagnostics bundle.
+            data.text(MessageKeys.WATCH_APP_VERSION)?.let { v ->
+                WatchInfoStore(applicationContext).recordWatchAppVersion(v, System.currentTimeMillis())
+                Log.d(TAG, "Watch app version reported: $v")
+            }
             transport.sendReady()
             return ReceiveResult.Ack
         }
