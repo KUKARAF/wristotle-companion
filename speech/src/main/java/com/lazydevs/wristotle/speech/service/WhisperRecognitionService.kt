@@ -141,6 +141,7 @@ class WhisperRecognitionService : RecognitionService() {
 
     private suspend fun runSession(source: AudioSource, recog: Recognizer, callback: Callback) {
         var sawSpeechStarted = false
+        var sawTerminal = false // a Final transcript or an Error was delivered to the caller
         try {
             recog.transcribe(source).collect { event ->
                 Log.d(TAG, "event: $event")
@@ -151,11 +152,36 @@ class WhisperRecognitionService : RecognitionService() {
                     }
                     is TranscriptionEvent.Partial -> callback.safePartial(event.text)
                     TranscriptionEvent.SpeechEnded -> callback.safeEndOfSpeech()
-                    is TranscriptionEvent.Final -> callback.safeResults(event.text)
-                    is TranscriptionEvent.Error -> callback.safeError(event.code)
+                    is TranscriptionEvent.Final -> {
+                        sawTerminal = true
+                        callback.safeResults(event.text)
+                    }
+                    is TranscriptionEvent.Error -> {
+                        sawTerminal = true
+                        callback.safeError(event.code)
+                    }
                 }
             }
             Log.d(TAG, "session collect done")
+            // The recognizer completed without ever delivering a transcript or
+            // an error. Send a precise terminal error so the watch can show a
+            // meaningful message instead of a bare timeout — and crucially,
+            // tell the two silent outcomes apart:
+            //   - no audio ever arrived (pipe yielded zero bytes → no
+            //     SpeechStarted): the dictation provider isn't delivering audio
+            //     to us (e.g. voice/dictation not set up in the companion app).
+            //     ERROR_AUDIO surfaces as the watch's "check dictation setup".
+            //   - audio arrived but resolved to nothing: a genuine no-match →
+            //     ERROR_NO_MATCH → the watch's "didn't catch that".
+            if (!sawTerminal) {
+                val code = if (!sawSpeechStarted) {
+                    SpeechRecognizer.ERROR_AUDIO
+                } else {
+                    SpeechRecognizer.ERROR_NO_MATCH
+                }
+                Log.d(TAG, "no terminal event — synthesising error($code)")
+                callback.safeError(code)
+            }
         } catch (c: CancellationException) {
             Log.d(TAG, "session cancelled")
             throw c
