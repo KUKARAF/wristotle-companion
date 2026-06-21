@@ -125,6 +125,10 @@ class DiagnosticsBuilder(
         appendLine("### Device")
         appendLine("- Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
         appendLine("- Model: ${Build.MANUFACTURER} ${Build.MODEL} (${Build.DEVICE})")
+        // Low-RAM devices skip on-device NLU + warm-up entirely (see
+        // WristotleApplication.isLowRamDevice gating), so "intents don't work"
+        // reports on older phones are explained by this line alone.
+        appendLine("- RAM: ${totalRamGb()} GB${if (isLowRamDevice()) " — low-RAM device, NLU disabled" else ""}")
         appendLine()
     }
 
@@ -135,6 +139,12 @@ class DiagnosticsBuilder(
         appendLine("- SMS: ${grant(Manifest.permission.SEND_SMS)}")
         appendLine("- Record audio: ${grant(Manifest.permission.RECORD_AUDIO)}")
         appendLine("- Notification access: ${yesNo(hasNotificationAccess())}")
+        // Top cause of "stops working when my phone sleeps" — the whole app is
+        // a foreground service; without the exemption the OS can freeze it.
+        appendLine("- Battery optimization exempt: ${yesNo(isIgnoringBatteryOptimizations())}")
+        // Persistent reminders + alarms use exact alarms; on Android 12+ this
+        // can be revoked separately, which makes them fire late or not at all.
+        appendLine("- Exact alarms allowed: ${yesNo(canScheduleExactAlarms())}")
         appendLine("- Default voice provider: ${yesNo(isDefaultVoiceProvider())}")
         appendVoiceProviderDetail()
         appendLine()
@@ -175,7 +185,12 @@ class DiagnosticsBuilder(
         val state = app.pebbleCompanionDetector.state.value
         appendLine("- Active: ${state.active}")
         appendLine("- microPebble installed: ${yesNo(state.installed.micropebble)}")
+        companionVersion(MICROPEBBLE_PKG)?.let { appendLine("  - microPebble version: $it") }
         appendLine("- Core Devices / rePebble installed: ${yesNo(state.installed.repebble)}")
+        // The companion app handles dictation under Core Devices, so its
+        // version is the single most useful field for "dictation broke after
+        // an update" reports (e.g. the local-STT regression in the 1.3.x line).
+        companionVersion(CORE_DEVICES_PKG)?.let { appendLine("  - Core Devices app version: $it") }
         appendLine("- Whisper applies to watch dictation: ${yesNo(state.whisperAppliesToWatchDictation)}")
         appendLine()
     }
@@ -411,6 +426,35 @@ class DiagnosticsBuilder(
         -1L
     }
 
+    /** "versionName (versionCode)" for an installed companion app, or null
+     *  if it isn't installed. Used to surface the Pebble companion build. */
+    private fun companionVersion(pkg: String): String? = try {
+        val pi = context.packageManager.getPackageInfo(pkg, 0)
+        "${pi.versionName} (${PackageInfoCompat.getLongVersionCode(pi)})"
+    } catch (t: Throwable) {
+        null
+    }
+
+    private fun isLowRamDevice(): Boolean =
+        (context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
+
+    private fun totalRamGb(): String {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val info = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
+        return "%.1f".format(info.totalMem / 1024.0 / 1024.0 / 1024.0)
+    }
+
+    private fun isIgnoringBatteryOptimizations(): Boolean =
+        (context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager)
+            .isIgnoringBatteryOptimizations(context.packageName)
+
+    /** Pre-Android 12 has no separate exact-alarm gate — always allowed. */
+    private fun canScheduleExactAlarms(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        return (context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager)
+            .canScheduleExactAlarms()
+    }
+
     /** Pipe + newlines break markdown tables — escape inline. */
     private fun escapeCell(s: String): String =
         s.replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ").take(80)
@@ -458,6 +502,8 @@ class DiagnosticsBuilder(
         const val AUDIO_ATTACHMENTS = 3
         const val CRASH_FILES = 3
         const val VOICE_RECOGNITION_SERVICE = "voice_recognition_service"
+        const val MICROPEBBLE_PKG = "si.matejdro.micropebble"
+        const val CORE_DEVICES_PKG = "coredevices.coreapp"
 
         val TIME_FORMAT = SimpleDateFormat("MMM d HH:mm", Locale.US)
         val DIGIT_RUN = Regex("\\b\\d{7,}\\b")
