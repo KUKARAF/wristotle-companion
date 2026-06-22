@@ -80,4 +80,12 @@ class ConversationEntryJsonTest {
         assertEquals(0.0f, decoded.confidence!!, 0.0001f)
         assertEquals(0.0f, decoded.nluConfidence!!, 0.0001f)
     }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun unsupportedSchemaThrows() {
+        ConversationEntryJson.decode(
+            org.json.JSONObject(),
+            schema = ConversationEntryJson.CURRENT_SCHEMA + 1,
+        )
+    }
 }
