@@ -501,4 +501,30 @@ class PrefixHintsTest {
         assertNotEquals(Intent.SportScore, PrefixHints.hintFor("play taylor swift"))
         assertNotEquals(Intent.SportScore, PrefixHints.hintFor("next song"))
     }
+
+    // Direct hintFor rows for rules previously only covered transitively via
+    // VoicePipeline — so a regex edit fails loudly here, not just in the heavier
+    // pipeline test.
+
+    @Test fun `ask-subject maps to AskAgent`() {
+        assertEquals(Intent.AskAgent, PrefixHints.hintFor("ask claude what's the capital of France"))
+        assertEquals(Intent.AskAgent, PrefixHints.hintFor("hey agent what's the weather"))
+    }
+
+    @Test fun `add task maps to AddTask`() {
+        assertEquals(Intent.AddTask, PrefixHints.hintFor("add a task buy groceries"))
+        assertEquals(Intent.AddTask, PrefixHints.hintFor("new task call the dentist"))
+    }
+
+    @Test fun `set or wake-me alarm maps to SetAlarm`() {
+        assertEquals(Intent.SetAlarm, PrefixHints.hintFor("set an alarm for 7 am"))
+        assertEquals(Intent.SetAlarm, PrefixHints.hintFor("wake me at 6 am"))
+    }
+
+    @Test fun `task-specific complete and delete verbs map to their intents`() {
+        assertEquals(Intent.CompleteTask, PrefixHints.hintFor("complete the dishes"))
+        assertEquals(Intent.CompleteTask, PrefixHints.hintFor("mark the laundry as done"))
+        assertEquals(Intent.DeleteTask, PrefixHints.hintFor("delete the task buy milk"))
+        assertEquals(Intent.DeleteTask, PrefixHints.hintFor("remove buy milk from my tasks"))
+    }
 }

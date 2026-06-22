@@ -60,7 +60,7 @@ class DiagnosticsBuilder(
 
         val recentEntries = app.conversationRepository.recent(RECENT_ENTRIES)
         val audioFiles = if (includeAudio) copyAudioForReport(recentEntries) else emptyList()
-        val logDump = WristotleLog.dumpRecent(LOG_LINES).let { if (redact) redactDigits(it) else it }
+        val logDump = WristotleLog.dumpRecent(LOG_LINES).let { if (redact) DiagnosticsText.redactDigits(it) else it }
 
         val markdown = buildString {
             appendIssueTemplate()
@@ -371,8 +371,8 @@ class DiagnosticsBuilder(
             val time = TIME_FORMAT.format(Date(e.timestampEpochMs))
             val intent = e.nluIntent ?: "-"
             val conf = e.nluConfidence?.let { "%.2f".format(it) } ?: "-"
-            val query = if (redact) "<redacted>" else escapeCell(e.userQuery)
-            val response = if (redact) "<redacted>" else escapeCell(e.responseText)
+            val query = if (redact) "<redacted>" else DiagnosticsText.escapeCell(e.userQuery)
+            val response = if (redact) "<redacted>" else DiagnosticsText.escapeCell(e.responseText)
             appendLine("| $time | ${e.handler} | ${if (e.success) "✓" else "✗"} | $intent ($conf) | $query | $response |")
         }
         appendLine()
@@ -410,7 +410,7 @@ class DiagnosticsBuilder(
             appendLine()
             appendLine("````")
             val body = runCatching { f.readText() }.getOrElse { "(unreadable: ${it.javaClass.simpleName})" }
-            appendLine(if (redact) redactDigits(body) else body)
+            appendLine(if (redact) DiagnosticsText.redactDigits(body) else body)
             appendLine("````")
             appendLine()
         }
@@ -508,16 +508,6 @@ class DiagnosticsBuilder(
     }
 
     /** Pipe + newlines break markdown tables — escape inline. */
-    private fun escapeCell(s: String): String =
-        s.replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ").take(80)
-
-    /** Light-touch redaction for log lines — strips any run of 7+ digits
-     *  (phone numbers). Contact-name redaction would need to enumerate
-     *  contacts; the conversation table already redacts queries fully
-     *  when the toggle is on. */
-    private fun redactDigits(text: String): String =
-        DIGIT_RUN.replace(text, "<digits>")
-
     private suspend fun copyAudioForReport(entries: List<ConversationEntry>): List<File> {
         val targetDir = File(context.filesDir, "diagnostics").apply { mkdirs() }
         // Wipe previous export so the dir doesn't accumulate.
@@ -558,6 +548,5 @@ class DiagnosticsBuilder(
         const val CORE_DEVICES_PKG = "coredevices.coreapp"
 
         val TIME_FORMAT = SimpleDateFormat("MMM d HH:mm", Locale.US)
-        val DIGIT_RUN = Regex("\\b\\d{7,}\\b")
     }
 }
