@@ -518,6 +518,7 @@ private fun SettingsCategoryContent(
                     onToggleLog = app.notificationLogSettings::setEnabled,
                     onClearLog = app.notificationLogStore::deleteAll,
                 )
+                MorningBriefSettingsCard(settings = app.briefSettings)
             }
 
             SettingsCategory.Weather ->

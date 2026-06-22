@@ -338,6 +338,7 @@ class BackupExporter(private val app: WristotleApplication) {
             ) else null,
             morningBrief = if (sel.appPreferences) BackupManifest.MorningBriefPrefs(
                 notifLogEnabled = app.notificationLogSettings.enabled.value,
+                disabledSections = app.briefSettings.snapshotDisabled().toList(),
             ) else null,
             weather = if (sel.weatherSettings) BackupManifest.WeatherPrefs(
                 unit = app.weatherSettings.unit.value.name,

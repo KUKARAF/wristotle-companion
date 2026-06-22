@@ -220,6 +220,7 @@ class PebbleListenerService : BasePebbleListenerService() {
                     postsDao = app.notificationLogDb.notificationPostDao(),
                 ),
                 notifLogEnabledProvider = { app.notificationLogSettings.enabled.value },
+                briefSettings = app.briefSettings,
             ),
         ), cardEnabled = app.cardSettings::isEnabled)
     }

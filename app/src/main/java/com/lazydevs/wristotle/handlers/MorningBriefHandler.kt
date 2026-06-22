@@ -7,7 +7,9 @@ import android.content.Context
 import android.util.Log
 import com.lazydevs.wristotle.alarms.AlarmRepository
 import com.lazydevs.wristotle.briefing.MorningBriefRenderer
+import com.lazydevs.wristotle.speech.nlu.briefing.BriefSection
 import com.lazydevs.wristotle.speech.nlu.briefing.TodayRange
+import com.lazydevs.wristotle.speech.nlu.settings.MorningBriefSettings
 import com.lazydevs.wristotle.briefing.UnreadMessagesProvider
 import com.lazydevs.wristotle.notes.NoteRepository
 import com.lazydevs.wristotle.phone.CalendarRepository
@@ -54,6 +56,7 @@ class MorningBriefHandler(
     private val notes: NoteRepository,
     private val unreadMessages: UnreadMessagesProvider = UnreadMessagesProvider(),
     private val notifLogEnabledProvider: () -> Boolean = { false },
+    private val briefSettings: MorningBriefSettings,
 ) : ActionHandler {
 
     override val tag: String = "morning-brief"
@@ -64,48 +67,58 @@ class MorningBriefHandler(
 
     override suspend fun handle(result: IntentResult): String {
         val today = TodayRange.now()
+        // Per-section gate (Settings → Reminders → Morning Brief). A disabled
+        // section skips BOTH its fetch and its render — so e.g. turning off
+        // Messages also drops the Notification-Access read, not just the line.
+        fun on(section: BriefSection) = briefSettings.isEnabled(section)
 
-        val meetings = if (calendar.hasPermission()) {
+        val meetings = if (on(BriefSection.MEETINGS) && calendar.hasPermission()) {
             calendar.onDay(today.startMs)
         } else emptyList()
 
-        val alarmsToday = alarms.getAll().filter { it.enabled }
+        val alarmsToday = if (on(BriefSection.ALARMS)) {
+            alarms.getAll().filter { it.enabled }
+        } else emptyList()
 
-        val remindersToday = pinStore.all().filter { rec ->
-            rec.timeMs?.let { it in today } ?: false
-        }
+        val remindersToday = if (on(BriefSection.REMINDERS)) {
+            pinStore.all().filter { rec -> rec.timeMs?.let { it in today } ?: false }
+        } else emptyList()
 
-        val pendingTasks = tasks.listPending()
+        val pendingTasks = if (on(BriefSection.TASKS)) tasks.listPending() else emptyList()
 
         // NoteRepository only exposes observeAll() / mostRecent(N).
         // Pulling a generous recent slice + filtering by createdAt
         // gives us today's notes without an extra DAO query.
-        val notesToday = notes.mostRecent(MAX_RECENT_NOTES_SCAN)
-            .filter { it.createdAtEpochMs in today }
+        val notesToday = if (on(BriefSection.NOTES)) {
+            notes.mostRecent(MAX_RECENT_NOTES_SCAN).filter { it.createdAtEpochMs in today }
+        } else emptyList()
 
-        // Persisted-log path when the user opted in via Settings →
-        // 🔔 Notifications: union of the currently-in-tray snapshot AND
-        // today's persisted log, deduped by conversation key. Catches
-        // both "I dismissed it before brief time" (log) and "it's still
-        // in my tray" (snapshot) without losing either.
-        val messages = if (notifLogEnabledProvider()) {
-            val combined = unreadMessages.snapshotPlusTodayPosts()
-            Log.d(TAG, "notif-log path: ${combined.totalConversations} conv / ${combined.totalMessages} msgs (snapshot ∪ log)")
-            combined
-        } else {
-            unreadMessages.snapshot()
-        }
+        // Messages sit between time-anchored items (meetings / alarms) and the
+        // personal queue (reminders / tasks / notes) — current-state, but
+        // transient enough that they drop first when the trim hits. Gated
+        // explicitly (no natural empty input to feed the renderer): when off we
+        // skip the snapshot/log read entirely and contribute a null line.
+        //
+        // Persisted-log path when the user opted in via Settings → 🔔
+        // Notifications: union of the currently-in-tray snapshot AND today's
+        // persisted log, deduped by conversation key. Catches both "I dismissed
+        // it before brief time" (log) and "it's still in my tray" (snapshot).
+        val messagesLine: String? = if (on(BriefSection.MESSAGES)) {
+            val messages = if (notifLogEnabledProvider()) {
+                val combined = unreadMessages.snapshotPlusTodayPosts()
+                Log.d(TAG, "notif-log path: ${combined.totalConversations} conv / ${combined.totalMessages} msgs (snapshot ∪ log)")
+                combined
+            } else {
+                unreadMessages.snapshot()
+            }
+            MorningBriefRenderer.messagesSection(messages)
+        } else null
 
         return MorningBriefRenderer.render(
             listOf(
                 MorningBriefRenderer.meetingsSection(meetings),
                 MorningBriefRenderer.alarmsSection(alarmsToday),
-                // Messages sit between time-anchored items (meetings /
-                // alarms) and the personal queue (reminders / tasks /
-                // notes) — they're current-state, like the calendar
-                // line, but transient enough that they drop first when
-                // the trim hits.
-                MorningBriefRenderer.messagesSection(messages),
+                messagesLine,
                 MorningBriefRenderer.remindersSection(remindersToday),
                 MorningBriefRenderer.tasksSection(pendingTasks),
                 MorningBriefRenderer.notesSection(notesToday),

@@ -121,6 +121,9 @@ data class BackupManifest(
      *  themselves are NOT backed up; only the user's toggle preference. */
     data class MorningBriefPrefs(
         val notifLogEnabled: Boolean = false,
+        /** Disabled BriefSection keys. Default empty (= all sections on) keeps
+         *  older backups, which lacked this field, decoding to "all on". */
+        val disabledSections: List<String> = emptyList(),
     )
 
     /** `apiKey` rides only when the user ticks the secret checkbox. */

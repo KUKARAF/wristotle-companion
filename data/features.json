@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-13-0-configurable-brief",
+      "date": "2026-06-21",
+      "companion_version": "v1.13.0",
+      "watch_version": null,
+      "title": "Choose what's in your Morning Brief",
+      "description": "Pick which sections your morning brief includes — meetings, alarms, messages, reminders, tasks, or notes.",
+      "sample_query": "what's on my plate today",
+      "docs_path": "voice-commands/"
+    },
+    {
       "id": "v1-12-0-watch-cards",
       "date": "2026-06-15",
       "companion_version": "v1.12.0",
