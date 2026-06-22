@@ -13,7 +13,10 @@ package com.lazydevs.wristotle.speech.nlu.briefing
 enum class BriefSection(val key: String, val label: String) {
     MEETINGS("meetings", "Meetings"),
     ALARMS("alarms", "Alarms"),
-    MESSAGES("messages", "Messages"),
+    // Covers ALL active notifications, not just messaging apps: the renderer
+    // shows "Messages: N from <app>…" for recognised messaging apps and
+    // "Notifications: N other" for the rest — both gated by this one section.
+    MESSAGES("messages", "Messages & notifications"),
     REMINDERS("reminders", "Reminders"),
     TASKS("tasks", "Tasks"),
     NOTES("notes", "Notes");
