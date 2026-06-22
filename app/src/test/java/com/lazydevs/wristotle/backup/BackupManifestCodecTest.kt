@@ -84,6 +84,22 @@ class BackupManifestCodecTest {
         assertEquals("minilm-l6-v2-int8", decoded.prefs.nluModels?.activeModelId)
     }
 
+    @Test fun morningBriefPrefs_roundTrip() {
+        val withBrief = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                morningBrief = BackupManifest.MorningBriefPrefs(
+                    notifLogEnabled = true,
+                    disabledSections = listOf("messages", "notes"),
+                ),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(withBrief)).prefs.morningBrief
+        assertEquals(true, decoded?.notifLogEnabled)
+        // The bug this guards: the codec dropped disabledSections, so a user's
+        // section choices silently reset to all-on on backup/restore (v1.13.0).
+        assertEquals(listOf("messages", "notes"), decoded?.disabledSections)
+    }
+
     @Test fun nullActiveModelIdDecodesAsNull() {
         val withNullModels = sampleManifest().copy(
             prefs = sampleManifest().prefs.copy(

@@ -327,6 +327,9 @@ object BackupManifestCodec {
             m.prefs.morningBrief?.let { mb ->
                 put("wristotle_notif_log_settings", JSONObject().apply {
                     put("enabled", mb.notifLogEnabled)
+                    put("disabled_sections", JSONArray().also { arr ->
+                        mb.disabledSections.forEach { arr.put(it) }
+                    })
                 })
             }
             m.prefs.weather?.let { w ->
@@ -537,8 +540,10 @@ object BackupManifestCodec {
                     )
                 },
                 morningBrief = prefs.optJSONObject("wristotle_notif_log_settings")?.let { mb ->
+                    val sections = mb.optJSONArray("disabled_sections") ?: JSONArray()
                     BackupManifest.MorningBriefPrefs(
                         notifLogEnabled = mb.optBoolean("enabled", false),
+                        disabledSections = (0 until sections.length()).map { sections.getString(it) },
                     )
                 },
                 weather = prefs.optJSONObject("weather_settings")?.let { w ->
