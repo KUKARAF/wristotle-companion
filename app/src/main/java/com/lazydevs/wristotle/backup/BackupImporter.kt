@@ -489,6 +489,7 @@ class BackupImporter(private val app: WristotleApplication) {
             }
             p.morningBrief?.let {
                 app.notificationLogSettings.setEnabled(it.notifLogEnabled)
+                app.briefSettings.restoreDisabled(it.disabledSections.toSet())
             }
             p.cards?.let { app.cardSettings.restoreDisabled(it.disabled.toSet()) }
         }
