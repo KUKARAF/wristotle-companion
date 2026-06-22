@@ -33,29 +33,34 @@ class CalculateHandler : ActionHandler {
         val expression = result.slots.calcExpression()
             ?: return PARSE_FAIL
         return when (val r = Calculator.evaluate(expression)) {
-            is Calculator.Result.Value -> "= ${formatNumber(r.number)}"
+            is Calculator.Result.Value -> "= ${formatCalcNumber(r.number)}"
             Calculator.Result.DivByZero -> "Couldn't divide by zero."
             Calculator.Result.Unparseable -> PARSE_FAIL
         }
     }
 
-    private fun formatNumber(d: Double): String {
-        // Whole number → no decimal point. The magnitude guard keeps very
-        // large doubles off the Long path (where they'd overflow/round oddly).
-        if (d == floor(d) && abs(d) < 1e15) return d.toLong().toString()
-        // Round to 4 decimal places + strip trailing zeros.
-        val scale = 10_000L
-        val rounded = (d * scale).roundToLong()
-        val sign = if (rounded < 0) "-" else ""
-        val absVal = abs(rounded)
-        val whole = absVal / scale
-        val frac = absVal % scale
-        if (frac == 0L) return "$sign$whole"
-        val fracStr = frac.toString().padStart(4, '0').trimEnd('0')
-        return "$sign$whole.$fracStr"
-    }
-
     private companion object {
         const val PARSE_FAIL = "Couldn't work that out.\nTry \"what's 15% of 80\"."
     }
+}
+
+/**
+ * Render a calculator result for the watch. Whole numbers drop the decimal
+ * point; fractional results round to 4 places with trailing zeros trimmed. A
+ * magnitude guard (`< 1e15`) keeps very large doubles off the Long path where
+ * they'd overflow / round oddly. `internal` so it's unit-testable without the
+ * Android-coupled handler. Behaviour-preserving extraction (R5 manual
+ * round-to-4dp replaced BigDecimal for commonMain).
+ */
+internal fun formatCalcNumber(d: Double): String {
+    if (d == floor(d) && abs(d) < 1e15) return d.toLong().toString()
+    val scale = 10_000L
+    val rounded = (d * scale).roundToLong()
+    val sign = if (rounded < 0) "-" else ""
+    val absVal = abs(rounded)
+    val whole = absVal / scale
+    val frac = absVal % scale
+    if (frac == 0L) return "$sign$whole"
+    val fracStr = frac.toString().padStart(4, '0').trimEnd('0')
+    return "$sign$whole.$fracStr"
 }
