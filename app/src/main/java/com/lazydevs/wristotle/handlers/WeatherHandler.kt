@@ -7,12 +7,10 @@ import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
 import com.lazydevs.wristotle.speech.nlu.handler.RichResult
 import com.lazydevs.wristotle.speech.nlu.slots.weatherLocation
 import com.lazydevs.wristotle.phone.PhoneLocation
-import com.lazydevs.wristotle.speech.nlu.settings.TempUnit
 import com.lazydevs.wristotle.speech.nlu.settings.WeatherProviderId
 import com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
-import kotlin.math.roundToInt
 
 /**
  * Handles [Intent.Weather] — fetches the current weather from a
@@ -56,29 +54,13 @@ class WeatherHandler(
             WeatherLocation.Coords(fix.latitude, fix.longitude)
         }
         val weather = selectProvider().currentWeather(location, settings.unit.value)
-        val text = format(weather)
+        val text = WeatherFormat.line(weather)
         // Only a successful lookup carries the rich card; errors stay bubbles.
         return if (weather is WeatherResult.Ok) {
-            RichResult(text, cardKind = "weather_current", cardData = weatherCardData(weather))
+            RichResult(text, cardKind = "weather_current", cardData = WeatherFormat.cardData(weather))
         } else {
             RichResult(text)
         }
-    }
-
-    /** Compact US-0x1F payload for the watch's weather widget:
-     *  place ⏐ temp ⏐ condition ⏐ humidity ⏐ wind (empty field when absent). */
-    private fun weatherCardData(w: WeatherResult.Ok): String {
-        val tempSymbol = if (w.unit == TempUnit.FAHRENHEIT) "°F" else "°C"
-        val windUnit = if (w.unit == TempUnit.FAHRENHEIT) "mph" else "km/h"
-        val humidity = w.humidity?.let { "$it%" } ?: ""
-        val wind = w.windSpeed?.let { "${it.roundToInt()} $windUnit" } ?: ""
-        return listOf(
-            w.place,
-            "${w.temperature.roundToInt()}$tempSymbol",
-            w.condition,
-            humidity,
-            wind,
-        ).joinToString("")
     }
 
     /** Reads the user's chosen provider from settings. The OpenWeather impl
@@ -87,16 +69,6 @@ class WeatherHandler(
     private fun selectProvider(): WeatherProvider = when (settings.provider.value) {
         WeatherProviderId.OPEN_METEO -> openMeteo
         WeatherProviderId.OPEN_WEATHER -> openWeatherFactory(settings.apiKey.value)
-    }
-
-    private fun format(result: WeatherResult): String = when (result) {
-        is WeatherResult.Ok -> {
-            val symbol = if (result.unit == TempUnit.FAHRENHEIT) "°F" else "°C"
-            "${result.temperature.roundToInt()}$symbol in ${result.place}\n${result.condition}"
-        }
-        is WeatherResult.NotFound -> "Couldn't find that place."
-        is WeatherResult.Network -> "Couldn't fetch the weather."
-        is WeatherResult.BadKey -> "Couldn't fetch the weather: ${result.message}"
     }
 
     private companion object {

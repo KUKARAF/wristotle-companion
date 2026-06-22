@@ -41,4 +41,21 @@ class ExampleEntryJsonTest {
         }
         assertEquals(1, ExampleEntryJson.decode(json, schema = 1).usageCount)
     }
+
+    @Test fun sourceDefaultsToLearnedIfMissing() {
+        // The exporter only ever writes learned rows, so a row missing `source`
+        // (hand-edited backup) should decode as "learned", not empty.
+        val json = org.json.JSONObject().apply {
+            put("id", 1); put("intent", "Call")
+            put("raw_text", "x"); put("normalized_text", "x"); put("added_at_ms", 0)
+        }
+        assertEquals("learned", ExampleEntryJson.decode(json, schema = 1).source)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun unsupportedSchemaThrows() {
+        // Decoder accepts 1..CURRENT_SCHEMA; a newer/unknown schema must fail
+        // loudly rather than silently mis-decode.
+        ExampleEntryJson.decode(org.json.JSONObject(), schema = ExampleEntryJson.CURRENT_SCHEMA + 1)
+    }
 }
