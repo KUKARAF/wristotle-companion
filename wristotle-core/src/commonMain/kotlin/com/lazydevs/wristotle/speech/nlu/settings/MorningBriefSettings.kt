@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Which [BriefSection]s the Morning Brief includes (Settings → Reminders →
- * Morning Brief). The handler consults [isEnabled] before both FETCHING and
+ * Which [BriefSection]s the Morning Brief includes (Settings → 🔔 Notifications,
+ * alongside the brief's notification-log toggle). The handler consults [isEnabled] before both FETCHING and
  * rendering a section, so a disabled section also skips its IO — e.g. turning
  * off Messages drops the Notification-Access read entirely.
  *
