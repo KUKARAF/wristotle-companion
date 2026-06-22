@@ -80,6 +80,7 @@ class DiagnosticsBuilder(
             appendMcpServersSection(redact)
             appendWatchSettingsSection()
             appendWatchCardsSection()
+            appendMorningBriefSection()
             appendAppIndexSection()
             appendConversationAudioSection(redact)
             appendConversationSection(recentEntries, redact)
@@ -98,6 +99,16 @@ class DiagnosticsBuilder(
         appendLine("### Watch cards")
         appendLine(
             "- Disabled kinds: " +
+                if (disabled.isEmpty()) "(none — all on)" else disabled.sorted().joinToString(", "),
+        )
+        appendLine()
+    }
+
+    private fun StringBuilder.appendMorningBriefSection() {
+        val disabled = app.briefSettings.disabledSections.value
+        appendLine("### Morning Brief")
+        appendLine(
+            "- Disabled sections: " +
                 if (disabled.isEmpty()) "(none — all on)" else disabled.sorted().joinToString(", "),
         )
         appendLine()
