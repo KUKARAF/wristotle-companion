@@ -241,6 +241,14 @@ class WristotleApplication : Application() {
         )
     }
 
+    /** Which Morning Brief sections to include (Settings → Reminders →
+     *  Morning Brief). Consumed by MorningBriefHandler + the Settings card. */
+    val briefSettings: com.lazydevs.wristotle.speech.nlu.settings.MorningBriefSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.MorningBriefSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.MorningBriefSettings.PREFS_NAME),
+        )
+    }
+
     /** TTS-provider preferences for the watch-side TTS feature. Mirrors
      *  the STT shape; CompositeTtsProvider chooses Local vs HTTP per [mode]. */
     val ttsProviderSettings: com.lazydevs.wristotle.speech.nlu.settings.TtsProviderSettings by lazy {
