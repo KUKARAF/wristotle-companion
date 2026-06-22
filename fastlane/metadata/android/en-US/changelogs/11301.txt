@@ -1,0 +1,4 @@
+Fixes a bug where your Morning Brief section
+choices (from v1.13.0) were lost on backup and
+restore — they're now saved and restored
+correctly.
