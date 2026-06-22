@@ -1,0 +1,8 @@
+Morning Brief, your way.
+
+You can now choose which sections your morning
+brief includes — meetings, alarms, messages &
+notifications, reminders, tasks, and notes — in
+Settings → Notifications → Morning Brief. Turn
+off what you don't care about; the brief skips
+reading that data entirely.

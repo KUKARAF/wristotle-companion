@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-13-0-configurable-brief",
+            date = "2026-06-21",
+            companionVersion = "v1.13.0",
+            watchVersion = null,
+            title = "Choose what's in your Morning Brief",
+            description = "Pick which sections your morning brief includes — meetings, alarms, messages, reminders, tasks, or notes.",
+            sampleQuery = "what's on my plate today",
+            docsPath = "voice-commands/",
+        ),
+        FeatureEntry(
             id = "v1-12-0-watch-cards",
             date = "2026-06-15",
             companionVersion = "v1.12.0",
