@@ -24,6 +24,9 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Boost the alarm-stream volume + vibrate while ringing for find-my-phone. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- The companion bridges to a connected wearable (Pebble watch via
          rePebble / microPebble). `connectedDevice` is the semantically
@@ -136,6 +139,15 @@
             <intent-filter>
                 <action android:name="com.lazydevs.wristotle.PERSISTENT_REMINDER_FIRE" />
                 <action android:name="com.lazydevs.wristotle.PERSISTENT_REMINDER_STOP" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Stop action for the find-my-phone ringer. Internal only. -->
+        <receiver
+            android:name=".findphone.FindPhoneReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.lazydevs.wristotle.FIND_PHONE_STOP" />
             </intent-filter>
         </receiver>
 

@@ -15,6 +15,9 @@ package com.lazydevs.wristotle.speech.nlu.transport
  * no platform deps.
  */
 object MessageKeys {
+    /** Watch → phone: ring the phone for "find my phone". Tagged with [MSG_TARGET]
+     *  = companion when routed here; the companion plays it on the alarm stream. */
+    val FIND_PHONE: UInt         = 10001u
     val REMINDER_QUERY: UInt     = 10004u
     val REMINDER_RESULT: UInt    = 10005u
     val CANCEL_QUERY: UInt       = 10006u

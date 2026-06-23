@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-14-0-find-phone-ringer",
+      "date": "2026-06-22",
+      "companion_version": "v1.14.0",
+      "watch_version": "v1.4.0",
+      "title": "Find my phone rings loud, even on silent",
+      "description": "\"Find my phone\" now rings at full alarm volume and vibrates from the phone, so you hear it even with the media volume muted.",
+      "sample_query": "find my phone",
+      "docs_path": "voice-commands/"
+    },
+    {
       "id": "v1-13-0-configurable-brief",
       "date": "2026-06-21",
       "companion_version": "v1.13.0",
