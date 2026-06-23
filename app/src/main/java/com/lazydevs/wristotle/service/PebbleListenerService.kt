@@ -161,7 +161,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             CancelReminderHandler(this, transport, app.persistentReminderScheduler),
             ListRemindersHandler(this),
             RescheduleHandler(this, transport, app.persistentReminderScheduler),
-            FindPhoneHandler(),
+            FindPhoneHandler(this),
             MediaPlayHandler(this, media, appIndex),
             MediaPauseHandler(this, media, appIndex),
             MediaPlayPauseHandler(media),
@@ -279,6 +279,15 @@ class PebbleListenerService : BasePebbleListenerService() {
                 Log.d(TAG, "Watch app version reported: $v")
             }
             transport.sendReady()
+            return ReceiveResult.Ack
+        }
+
+        // Find my phone — the watch routes this here (msg_target=companion) so
+        // we can ring on the ALARM stream (audible at media volume 0, unlike
+        // the PKJS Web-Audio path). Watch-local command, no chat response.
+        if (data[MessageKeys.FIND_PHONE] != null) {
+            Log.d(TAG, "Received FIND_PHONE, ringing on the alarm stream")
+            com.lazydevs.wristotle.findphone.FindPhoneRinger.start(applicationContext)
             return ReceiveResult.Ack
         }
 

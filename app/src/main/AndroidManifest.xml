@@ -139,6 +139,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- Stop action for the find-my-phone ringer. Internal only. -->
+        <receiver
+            android:name=".findphone.FindPhoneReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.lazydevs.wristotle.FIND_PHONE_STOP" />
+            </intent-filter>
+        </receiver>
+
         <!-- Boot recovery: re-arms persistent-reminder alarms after device
              restart. exported=true is required because BOOT_COMPLETED is a
              system broadcast; kept in a separate receiver from the fire /
