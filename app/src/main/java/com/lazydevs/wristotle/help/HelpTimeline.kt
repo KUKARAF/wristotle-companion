@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-14-0-find-phone-ringer",
+            date = "2026-06-22",
+            companionVersion = "v1.14.0",
+            watchVersion = "v1.4.0",
+            title = "Find my phone rings loud, even on silent",
+            description = "\"Find my phone\" now rings at full alarm volume and vibrates from the phone, so you hear it even with the media volume muted.",
+            sampleQuery = "find my phone",
+            docsPath = "voice-commands/",
+        ),
+        FeatureEntry(
             id = "v1-13-0-configurable-brief",
             date = "2026-06-21",
             companionVersion = "v1.13.0",

@@ -1,0 +1,10 @@
+Find my phone, but louder.
+
+"Find my phone" now rings from the phone at full
+alarm volume and vibrates — so you can hear it
+even when your media volume is muted (the old
+ringer was silent in that case). Tap, Stop, or
+swipe the notification to silence it.
+
+Update the watch app too for this to be the
+default.
