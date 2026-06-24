@@ -1,0 +1,8 @@
+Better calendar events.
+
+- Spoken dates like "July twenty ninth" now set the
+  right date and time (compound numbers like
+  "twenty ninth" were being cut to "twenty").
+- You no longer need to say "called" to name an
+  event: "create an event dentist appointment
+  tomorrow at 3pm" titles it correctly.
