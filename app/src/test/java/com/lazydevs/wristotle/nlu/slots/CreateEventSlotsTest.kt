@@ -149,4 +149,16 @@ class CreateEventSlotsTest {
         assertEquals("Standup", r["title"])
         assertNotNull(r["time"])
     }
+
+    @Test fun `compound ordinal date keeps the day and the time (bug report)`() {
+        // Reporter: "july twenty ninth at three PM" created the event on July 20
+        // and dropped the time, because normalisation split "twenty"→20 and left
+        // a stray "ninth". With the compound-ordinal fix it parses July 29, 3 PM.
+        val t = extract("create an event called dentist appointment july twenty ninth at three pm")["time"] as? Instant
+        assertNotNull("expected a parsed time", t)
+        val cal = java.util.Calendar.getInstance().apply { time = java.util.Date(t!!.toEpochMilliseconds()) }
+        assertEquals("month", java.util.Calendar.JULY, cal.get(java.util.Calendar.MONTH))
+        assertEquals("day", 29, cal.get(java.util.Calendar.DAY_OF_MONTH))
+        assertEquals("hour", 15, cal.get(java.util.Calendar.HOUR_OF_DAY))
+    }
 }
