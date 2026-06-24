@@ -149,4 +149,46 @@ class CreateEventSlotsTest {
         assertEquals("Standup", r["title"])
         assertNotNull(r["time"])
     }
+
+    // --- Bare title (no called/titled/about keyword) --------------------
+
+    @Test fun `bare title with a relative date`() {
+        assertEquals("Dentist appointment", extract("create an event dentist appointment tomorrow at three pm")["title"])
+    }
+
+    @Test fun `bare title with a month date`() {
+        // The reporter's other gripe: no "called" → "Wristotle Meeting".
+        assertEquals("Dentist appointment", extract("create an event dentist appointment july twenty ninth at three pm")["title"])
+    }
+
+    @Test fun `bare title with only a clock time`() {
+        assertEquals("Team sync", extract("schedule a meeting team sync at 3pm")["title"])
+    }
+
+    @Test fun `bare title alongside an attendee`() {
+        val r = extract("create an event lunch with alex tomorrow")
+        assertEquals("Lunch", r["title"])
+        assertEquals("Alex", r["attendee"])
+    }
+
+    @Test fun `a bare date alone is not turned into a title`() {
+        assertNull(extract("create an event july twenty ninth at three pm")["title"])
+        assertNull(extract("schedule a meeting tomorrow at 3pm")["title"])
+    }
+
+    @Test fun `keyword title still wins over the bare fallback`() {
+        assertEquals("Standup", extract("schedule a meeting called standup at three pm")["title"])
+    }
+
+    @Test fun `compound ordinal date keeps the day and the time (bug report)`() {
+        // Reporter: "july twenty ninth at three PM" created the event on July 20
+        // and dropped the time, because normalisation split "twenty"→20 and left
+        // a stray "ninth". With the compound-ordinal fix it parses July 29, 3 PM.
+        val t = extract("create an event called dentist appointment july twenty ninth at three pm")["time"] as? Instant
+        assertNotNull("expected a parsed time", t)
+        val cal = java.util.Calendar.getInstance().apply { time = java.util.Date(t!!.toEpochMilliseconds()) }
+        assertEquals("month", java.util.Calendar.JULY, cal.get(java.util.Calendar.MONTH))
+        assertEquals("day", 29, cal.get(java.util.Calendar.DAY_OF_MONTH))
+        assertEquals("hour", 15, cal.get(java.util.Calendar.HOUR_OF_DAY))
+    }
 }

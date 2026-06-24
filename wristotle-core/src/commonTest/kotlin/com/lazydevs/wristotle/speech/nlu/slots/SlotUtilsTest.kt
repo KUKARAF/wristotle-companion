@@ -150,4 +150,16 @@ class SlotUtilsTest {
         assertEquals(70, WORD_NUMBERS["seventy"])
         assertEquals(80, WORD_NUMBERS["eighty"])
     }
+
+    @Test fun `compound ordinals resolve as one unit (spoken dates)`() {
+        // Bug: "july twenty ninth" normalised to "july 20 ninth" because only
+        // the bare "twenty" matched, dropping the day AND the time. Compound
+        // ordinals must map as a unit.
+        assertEquals(29, WORD_NUMBERS["twenty ninth"])
+        assertEquals(29, WORD_NUMBERS["twenty-ninth"])
+        assertEquals(21, WORD_NUMBERS["twenty first"])
+        assertEquals(23, WORD_NUMBERS["twenty third"])
+        assertEquals(31, WORD_NUMBERS["thirty first"])
+        assertEquals(25, WORD_NUMBERS["twenty fifth"])
+    }
 }

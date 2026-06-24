@@ -107,6 +107,13 @@ val WORD_NUMBERS: Map<String, Int> = buildMap {
         "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5,
         "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9,
     )
+    // Ordinal ones, for compound spoken dates ("twenty ninth"). Single ordinals
+    // ("ninth", "thirtieth") are left for prettytime to handle natively; only
+    // the COMPOUND needs us — otherwise the tens word gets split off (see below).
+    val ordinalOnes = listOf(
+        "first" to 1, "second" to 2, "third" to 3, "fourth" to 4, "fifth" to 5,
+        "sixth" to 6, "seventh" to 7, "eighth" to 8, "ninth" to 9,
+    )
     val teens = listOf(
         "ten" to 10, "eleven" to 11, "twelve" to 12, "thirteen" to 13,
         "fourteen" to 14, "fifteen" to 15, "sixteen" to 16, "seventeen" to 17,
@@ -119,11 +126,15 @@ val WORD_NUMBERS: Map<String, Int> = buildMap {
     ones.forEach { (w, n) -> put(w, n) }
     teens.forEach { (w, n) -> put(w, n) }
     tens.forEach { (w, n) -> put(w, n) }
-    // Compound 21–99 in both space- and hyphen-joined shapes so Whisper's
-    // varying punctuation ("forty five" vs "forty-five" vs "forty5") all
-    // resolve. Order doesn't matter — this is a map, not a regex.
+    // Compound 21–99, BOTH cardinal ("twenty nine") and ordinal ("twenty
+    // ninth"), in space- and hyphen-joined shapes so Whisper's varying
+    // punctuation all resolves. The ordinal compounds matter for spoken dates:
+    // without them, normalising "twenty ninth" would match the bare "twenty"
+    // (→20) and leave a stray "ninth" that makes prettytime read "july 20" and
+    // drop the time. As a single compound key it normalises to "29" cleanly.
+    // Order doesn't matter — this is a map, not a regex.
     for ((tWord, tVal) in tens) {
-        for ((oWord, oVal) in ones) {
+        for ((oWord, oVal) in ones + ordinalOnes) {
             put("$tWord $oWord", tVal + oVal)
             put("$tWord-$oWord", tVal + oVal)
         }
