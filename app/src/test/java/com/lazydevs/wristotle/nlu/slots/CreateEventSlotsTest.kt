@@ -150,6 +150,36 @@ class CreateEventSlotsTest {
         assertNotNull(r["time"])
     }
 
+    // --- Bare title (no called/titled/about keyword) --------------------
+
+    @Test fun `bare title with a relative date`() {
+        assertEquals("Dentist appointment", extract("create an event dentist appointment tomorrow at three pm")["title"])
+    }
+
+    @Test fun `bare title with a month date`() {
+        // The reporter's other gripe: no "called" → "Wristotle Meeting".
+        assertEquals("Dentist appointment", extract("create an event dentist appointment july twenty ninth at three pm")["title"])
+    }
+
+    @Test fun `bare title with only a clock time`() {
+        assertEquals("Team sync", extract("schedule a meeting team sync at 3pm")["title"])
+    }
+
+    @Test fun `bare title alongside an attendee`() {
+        val r = extract("create an event lunch with alex tomorrow")
+        assertEquals("Lunch", r["title"])
+        assertEquals("Alex", r["attendee"])
+    }
+
+    @Test fun `a bare date alone is not turned into a title`() {
+        assertNull(extract("create an event july twenty ninth at three pm")["title"])
+        assertNull(extract("schedule a meeting tomorrow at 3pm")["title"])
+    }
+
+    @Test fun `keyword title still wins over the bare fallback`() {
+        assertEquals("Standup", extract("schedule a meeting called standup at three pm")["title"])
+    }
+
     @Test fun `compound ordinal date keeps the day and the time (bug report)`() {
         // Reporter: "july twenty ninth at three PM" created the event on July 20
         // and dropped the time, because normalisation split "twenty"→20 and left

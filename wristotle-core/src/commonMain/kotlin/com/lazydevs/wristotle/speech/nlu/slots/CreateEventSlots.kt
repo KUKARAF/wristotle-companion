@@ -45,6 +45,15 @@ class CreateEventSlots(
             ?.takeIf { it.isNotBlank() }
             ?.let { out[SlotKeys.Title] = it.replaceFirstChar(Char::uppercaseChar) }
 
+        // Bare title (no "called"/"titled"/"about"): take the words between the
+        // create-event lead-in and the date/time / "with <attendee>" clause —
+        // "create an event dentist appointment july 29 at 3pm" → "Dentist
+        // appointment". A date-only remainder ("june twenty ninth") is rejected
+        // so a bare date never becomes a title.
+        if (SlotKeys.Title !in out) {
+            bareTitle(query)?.let { out[SlotKeys.Title] = it.replaceFirstChar(Char::uppercaseChar) }
+        }
+
         ATTENDEE.find(query)?.groupValues?.getOrNull(1)
             ?.let { cleanTitleToken(it) }
             ?.takeIf { it.isNotBlank() }
@@ -69,6 +78,35 @@ class CreateEventSlots(
         return null
     }
 
+    /** Title with no keyword: the words after the create-event lead-in, minus
+     *  the "with <attendee>" clause and the trailing date/time clause (reusing
+     *  the same [TRAILING_TIME] stripper as the keyword path, which already
+     *  peels bare month/day tokens). Returns null when the lead-in is absent or
+     *  the remainder is blank / a bare date. */
+    private fun bareTitle(query: String): String? {
+        val m = EVENT_LEAD_IN.find(query) ?: return null
+        val candidate = query.substring(m.range.last + 1)
+            .replace(LEADING_CONNECTOR, "")  // "for tomorrow …" — drop the date-intro preposition
+            .replace(WITH_TAIL, "")
+            .replace(TRAILING_TIME, "")
+            .let { cleanTitleToken(it) }
+            .trim()
+        return candidate.takeIf { it.isNotBlank() && !looksLikePureDate(it) }
+    }
+
+    /** True when every token is a day/month word, a number word, an ordinal, or
+     *  a clock — i.e. there's no actual title, just a date the trailing-time
+     *  strip couldn't reach (a date sitting at the very start). */
+    private fun looksLikePureDate(text: String): Boolean {
+        val tokens = text.lowercase().split(MULTI_WHITESPACE).filter { it.isNotBlank() }
+        if (tokens.isEmpty()) return true
+        return tokens.all { raw ->
+            val t = raw.trim('.', ',', '!', '?', '\'', '"')
+            t.isEmpty() || t in DAY_TOKENS || t in WORD_NUMBERS ||
+                ORDINAL_TOKEN.matches(t) || BARE_CLOCK_TOKEN.matches(t)
+        }
+    }
+
     private companion object {
         // "… called standup" / "titled X" / "about X". Deliberately NOT
         // "for X" — "for tomorrow at 3" is a time clause, not a title.
@@ -90,6 +128,27 @@ class CreateEventSlots(
         val HALF_HOUR = Regex("""(?i)\bhalf (?:an )?hour\b""")
         val HOURS = Regex("""(?i)\b(\d{1,2}|one|two|three|four|five|six)\s*(?:hour|hr)s?\b""")
         val MINUTES = Regex("""(?i)\b(\d{1,3}|fifteen|thirty|forty five|forty-five|sixty)\s*(?:minute|min)s?\b""")
+
+        // --- Bare-title (no keyword) support ---------------------------------
+        // The create-event verb phrase, stripped before the title is read.
+        val EVENT_LEAD_IN = Regex(
+            """(?i)^\s*(?:create|schedule|set\s*up|setup|add|make|put|book|plan|new)\s+""" +
+                """(?:a\s+|an\s+|my\s+)?(?:new\s+)?(?:event|meeting|appointment)\b\s*""",
+        )
+        // A date-introducing preposition at the very start ("for tomorrow",
+        // "on friday") — there's no title before it, so drop it.
+        val LEADING_CONNECTOR = Regex("""(?i)^\s*(?:for|on|at|in|by|from)\s+""")
+        // "with <attendee> …" tail — the attendee is captured separately, and it
+        // (plus anything after) isn't part of the title.
+        val WITH_TAIL = Regex("""(?i)\s+with\s+\S.*$""")
+        // A single ordinal token, word ("ninth", "thirtieth") or digit ("29th").
+        val ORDINAL_TOKEN = Regex(
+            """(?i)\d{1,2}(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|""" +
+                """tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|""" +
+                """eighteenth|nineteenth|twentieth|thirtieth""",
+        )
+        // A bare clock token ("3", "3pm", "3:30", "3:30pm").
+        val BARE_CLOCK_TOKEN = Regex("""(?i)\d{1,2}(?:[:.]\d{2})?(?:a\.?m\.?|p\.?m\.?)?""")
     }
 }
 
