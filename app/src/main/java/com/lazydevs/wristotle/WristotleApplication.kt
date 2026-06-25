@@ -336,6 +336,10 @@ class WristotleApplication : Application() {
         private set
     lateinit var notesDb: com.lazydevs.wristotle.notes.NoteDatabase
         private set
+    lateinit var codesDb: com.lazydevs.wristotle.codes.CodeDatabase
+        private set
+    lateinit var codeRepository: com.lazydevs.wristotle.speech.nlu.codes.CodeRepository
+        private set
     lateinit var nluDb: com.lazydevs.wristotle.nlu.learning.NluDatabase
         private set
 
@@ -509,6 +513,10 @@ class WristotleApplication : Application() {
             settings = noteSettings,
         )
         appScope.launch { noteRepository.prune() }
+
+        // Saved codes (QR / barcode) — Room DB + repository.
+        codesDb = com.lazydevs.wristotle.codes.CodeDatabase.build(this)
+        codeRepository = com.lazydevs.wristotle.codes.RoomCodeRepository(codesDb.codeDao())
 
         // Notification log retention — drop rows older than the
         // retention window so the DB stays bounded if the user kept
