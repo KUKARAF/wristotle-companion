@@ -527,4 +527,13 @@ class PrefixHintsTest {
         assertEquals(Intent.DeleteTask, PrefixHints.hintFor("delete the task buy milk"))
         assertEquals(Intent.DeleteTask, PrefixHints.hintFor("remove buy milk from my tasks"))
     }
+
+    @Test fun `show my code variants map to ShowCode, bare opens do not`() {
+        assertEquals(Intent.ShowCode, PrefixHints.hintFor("show my tesco card"))
+        assertEquals(Intent.ShowCode, PrefixHints.hintFor("pull up my gym pass"))
+        assertEquals(Intent.ShowCode, PrefixHints.hintFor("show my qr code"))
+        // ShowCode needs an explicit code-ish noun, so a bare opener still routes
+        // to OpenApp rather than being grabbed by the codes rule.
+        assertEquals(Intent.OpenApp, PrefixHints.hintFor("open my notes"))
+    }
 }

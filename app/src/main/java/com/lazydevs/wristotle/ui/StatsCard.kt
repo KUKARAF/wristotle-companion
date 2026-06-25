@@ -523,6 +523,7 @@ private val HANDLER_NAMES = mapOf(
     "media_seek_forward" to "Skip forward",
     "media_seek_backward" to "Skip backward",
     "morning_brief" to "Morning brief",
+    "show_code" to "Show code",
     "ask_agent" to "Ask Agent",
 )
 

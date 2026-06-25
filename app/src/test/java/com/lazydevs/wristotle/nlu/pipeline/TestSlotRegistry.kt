@@ -88,5 +88,6 @@ fun testSlotRegistry(
         Intent.Calculate to CalculateSlots(),
         Intent.Weather to WeatherSlots(),
         Intent.AskAgent to AskAgentSlots(extrasProvider = askAgentSubjects),
+        Intent.ShowCode to com.lazydevs.wristotle.speech.nlu.slots.ShowCodeSlots(),
     ))
 }

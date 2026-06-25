@@ -46,5 +46,6 @@ class TtsProviderSettingsIntentSyncTest {
         assertEquals(Intent.ListTasks.name,     TtsProviderSettings.INTENT_LIST_TASKS)
         assertEquals(Intent.CompleteTask.name,  TtsProviderSettings.INTENT_COMPLETE_TASK)
         assertEquals(Intent.DeleteTask.name,    TtsProviderSettings.INTENT_DELETE_TASK)
+        assertEquals(Intent.ShowCode.name,      TtsProviderSettings.INTENT_SHOW_CODE)
     }
 }
