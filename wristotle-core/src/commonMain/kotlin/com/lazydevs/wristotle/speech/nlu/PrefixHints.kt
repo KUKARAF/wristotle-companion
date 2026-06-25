@@ -47,6 +47,15 @@ import com.lazydevs.wristotle.speech.nlu.Intent
 object PrefixHints {
 
     private val HINTS: List<Pair<Regex, Intent>> = listOf(
+        // ShowCode — recall a saved QR/barcode to the watch. Requires an explicit
+        // code-ish noun (code / barcode / qr / card / pass) so "open my notes"
+        // still falls through to OpenApp and "find my phone" to FindPhone; placed
+        // before OpenApp so "bring up my tesco card" wins over the generic opener.
+        Regex(
+            "(?i)^\\s*(show|pull up|bring up|display|open|get)\\s+(me\\s+)?(my\\s+|the\\s+)?" +
+                "\\S.*\\b(qr\\s*code|bar\\s*code|loyalty\\s*card|code|card|pass)\\b"
+        ) to Intent.ShowCode,
+
         // SportScore — FIRST so a sports query that opens with "next"/"last"
         // ("next Dodgers game", "last Lakers result") beats the media
         // next/previous rules below. Keys on sports qualifiers (game / match /

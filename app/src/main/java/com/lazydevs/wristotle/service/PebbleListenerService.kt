@@ -222,6 +222,10 @@ class PebbleListenerService : BasePebbleListenerService() {
                 notifLogEnabledProvider = { app.notificationLogSettings.enabled.value },
                 briefSettings = app.briefSettings,
             ),
+            com.lazydevs.wristotle.speech.nlu.codes.ShowCodeHandler(
+                repository = app.codeRepository,
+                transport = app.transport,
+            ),
         ), cardEnabled = app.cardSettings::isEnabled)
     }
 

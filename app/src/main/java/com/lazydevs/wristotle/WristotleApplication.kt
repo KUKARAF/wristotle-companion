@@ -693,6 +693,7 @@ class WristotleApplication : Application() {
                 extrasProvider = { askAgentSettings.customTriggers.value },
             ),
             Intent.MorningBrief to com.lazydevs.wristotle.speech.nlu.slots.MorningBriefSlots(),
+            Intent.ShowCode to com.lazydevs.wristotle.speech.nlu.slots.ShowCodeSlots(),
         ))
 
         learningCollector = LearningCollector(

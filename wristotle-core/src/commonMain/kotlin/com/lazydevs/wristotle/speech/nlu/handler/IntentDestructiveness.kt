@@ -71,5 +71,6 @@ fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.Steps,
     Intent.Vibrate,
     Intent.CancelAlarm,    // reversible — user re-enables in the companion Alarms card
+    Intent.ShowCode,       // read-only — renders a saved code on the watch
     Intent.Unknown -> false
 }

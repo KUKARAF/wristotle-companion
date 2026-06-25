@@ -224,6 +224,11 @@ enum class Intent {
      *  a follow-up. */
     MorningBrief,
 
+    /** Recall a saved QR/barcode to the watch by spoken name or alias —
+     *  "show my tesco", "pull up my clubcard". Companion resolves the alias/
+     *  label against the saved codes and tells the watch which to render. */
+    ShowCode,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

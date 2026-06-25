@@ -729,6 +729,27 @@ object SeedExamples {
             "today's rundown",
             "what's happening today",
         ))
+        // ── ShowCode ────────────────────────────────────────────────────
+        // Recall a saved QR/barcode to the watch by spoken name or alias.
+        // Seeds favour "show/pull up + my + <thing> + code/card/pass" so the
+        // embedding leans this way; PrefixHints rescues the explicit-noun
+        // forms. The handler resolves the subject against saved aliases.
+        addAll(Intent.ShowCode, listOf(
+            "show my tesco card",
+            "show my loyalty card",
+            "show my clubcard",
+            "pull up my gym pass",
+            "pull up my qr code",
+            "show me my boarding pass",
+            "show my membership card",
+            "display my barcode",
+            "open my library card",
+            "show my wifi qr code",
+            "bring up my coffee card",
+            "show my code",
+            "get my loyalty barcode",
+            "show my codes",
+        ))
         // Intent.Unknown intentionally has no seeds — it's the fallback
         // when nothing else clears the confidence threshold.
     }

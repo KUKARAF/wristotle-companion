@@ -148,6 +148,10 @@ object MessageKeys {
     val CODE_SYNC_LABEL: UInt  = 10062u
     val CODE_SYNC_MATRIX: UInt = 10063u
 
+    /** Voice recall — companion tells the watch to render the cached code at
+     *  this 0-based index (matches the [CODE_SYNC_INDEX] order). */
+    val SHOW_CODE_INDEX: UInt = 10064u
+
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE]. */
     const val NOTE_DETAIL_MAX_CHARS: Int = 540
 
