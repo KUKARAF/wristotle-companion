@@ -128,6 +128,7 @@ class BackupManifestCodecTest {
         val original = sampleManifest().copy(
             selected = BackupSelection(
                 notes = true,
+                codes = false,
                 tasks = false,
                 conversations = true,
                 reminders = false,

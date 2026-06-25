@@ -20,6 +20,7 @@ package com.lazydevs.wristotle.backup
  */
 data class BackupCounts(
     val notes: Int? = null,
+    val codes: Int? = null,
     val tasks: Int? = null,
     val conversations: Int? = null,
     val reminders: Int? = null,
@@ -39,6 +40,7 @@ data class BackupCounts(
          *  the manifest yet — pass null. */
         fun fromManifestStats(stats: BackupManifest.Stats): BackupCounts = BackupCounts(
             notes = stats.notes,
+            codes = stats.codes,
             tasks = stats.tasks,
             conversations = stats.conversations,
             reminders = stats.reminders,

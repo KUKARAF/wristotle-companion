@@ -429,6 +429,7 @@
     <string name="settings_backup_import_success_title">Restore complete</string>
     <string name="settings_backup_import_table_header">Total · Imported · Duplicates · Failed</string>
     <string name="settings_backup_import_row_notes">Notes</string>
+    <string name="settings_backup_import_row_codes">Saved codes</string>
     <string name="settings_backup_import_row_tasks">Tasks</string>
     <string name="settings_backup_import_row_conversations">Conversations</string>
     <string name="settings_backup_import_row_nlu">Learned phrases</string>
@@ -458,6 +459,7 @@
     <string name="settings_backup_section_secrets">Secrets</string>
     <string name="settings_backup_section_secrets_warning">Stored in plaintext unless you set a password below.</string>
     <string name="settings_backup_cat_notes">Notes</string>
+    <string name="settings_backup_cat_codes">Saved codes</string>
     <string name="settings_backup_cat_tasks">Tasks</string>
     <string name="settings_backup_cat_conversations">Conversations</string>
     <string name="settings_backup_cat_reminders">Reminders</string>

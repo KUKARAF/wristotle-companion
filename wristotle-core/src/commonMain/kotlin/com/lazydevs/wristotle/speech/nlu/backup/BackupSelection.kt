@@ -20,6 +20,7 @@ package com.lazydevs.wristotle.speech.nlu.backup
 data class BackupSelection(
     // Content
     val notes: Boolean = true,
+    val codes: Boolean = true,
     val tasks: Boolean = true,
     val conversations: Boolean = true,
     val reminders: Boolean = true,
@@ -47,7 +48,7 @@ data class BackupSelection(
     /** True when EVERY category — content, settings, and secrets — is ticked.
      *  [ALL] is the only value that satisfies this. */
     val allSelected: Boolean
-        get() = notes && tasks && conversations && reminders && nluLearned &&
+        get() = notes && codes && tasks && conversations && reminders && nluLearned &&
             appAliases && contactAliases && audioRecordings &&
             appPreferences && weatherSettings && mcpServers && askAgentSetup && sttProviderSetup &&
             ttsProviderSetup && sportSettings &&
@@ -60,14 +61,14 @@ data class BackupSelection(
      *  them in `allSelected` would leave the master row visually unchecked
      *  even when the user has ticked everything they expected to. */
     val allContentAndSettingsSelected: Boolean
-        get() = notes && tasks && conversations && reminders && nluLearned &&
+        get() = notes && codes && tasks && conversations && reminders && nluLearned &&
             appAliases && contactAliases && audioRecordings &&
             appPreferences && weatherSettings && mcpServers && askAgentSetup && sttProviderSetup &&
             ttsProviderSetup && sportSettings
 
     /** True when nothing is selected — used to disable the Export button. */
     val noneSelected: Boolean
-        get() = !(notes || tasks || conversations || reminders || nluLearned ||
+        get() = !(notes || codes || tasks || conversations || reminders || nluLearned ||
             appAliases || contactAliases || audioRecordings ||
             appPreferences || weatherSettings || mcpServers || askAgentSetup || sttProviderSetup ||
             ttsProviderSetup || sportSettings ||
@@ -87,6 +88,7 @@ data class BackupSelection(
      *  having to also touch `BackupViewModel.clamp` / `allSelected` / etc. */
     infix fun and(other: BackupSelection): BackupSelection = BackupSelection(
         notes = notes && other.notes,
+        codes = codes && other.codes,
         tasks = tasks && other.tasks,
         conversations = conversations && other.conversations,
         reminders = reminders && other.reminders,
@@ -120,7 +122,7 @@ data class BackupSelection(
 
         /** Every category off — used by the master deselect. */
         val NONE = BackupSelection(
-            notes = false, tasks = false, conversations = false, reminders = false,
+            notes = false, codes = false, tasks = false, conversations = false, reminders = false,
             nluLearned = false, appAliases = false, contactAliases = false,
             audioRecordings = false,
             appPreferences = false, weatherSettings = false, mcpServers = false,
@@ -139,7 +141,7 @@ data class BackupSelection(
          *  whatever was in the user's backup, so we always treat them as
          *  fully-available regardless of how ALL evolves. */
         val LEGACY_FULL = BackupSelection(
-            notes = true, tasks = true, conversations = true, reminders = true,
+            notes = true, codes = true, tasks = true, conversations = true, reminders = true,
             nluLearned = true, appAliases = true, contactAliases = true,
             audioRecordings = true,
             appPreferences = true, weatherSettings = true, mcpServers = true,

@@ -19,6 +19,12 @@ interface CodeDao {
     @Query("SELECT * FROM codes ORDER BY createdAtEpochMs DESC")
     suspend fun allNewestFirst(): List<CodeEntity>
 
+    @Query("SELECT * FROM codes ORDER BY createdAtEpochMs DESC")
+    suspend fun allForBackup(): List<CodeEntity>
+
+    @Query("SELECT COUNT(*) FROM codes")
+    suspend fun count(): Int
+
     @Query("UPDATE codes SET label = :label, alias = :alias, format = :format, data = :data WHERE id = :id")
     suspend fun update(id: String, label: String, alias: String, format: String, data: String)
 

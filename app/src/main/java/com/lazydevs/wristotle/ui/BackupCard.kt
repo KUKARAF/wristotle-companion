@@ -240,6 +240,9 @@ private fun BackupSelectionEditor(
         CatRow(R.string.settings_backup_cat_notes, selection.notes, available?.notes, counts.notes) {
             onChange(selection.copy(notes = it))
         }
+        CatRow(R.string.settings_backup_cat_codes, selection.codes, available?.codes, counts.codes) {
+            onChange(selection.copy(codes = it))
+        }
         CatRow(R.string.settings_backup_cat_tasks, selection.tasks, available?.tasks, counts.tasks) {
             onChange(selection.copy(tasks = it))
         }
@@ -569,6 +572,7 @@ private fun RestoreSuccessDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 ResultRow(stringResource(R.string.settings_backup_import_row_notes), result.notes)
+                ResultRow(stringResource(R.string.settings_backup_import_row_codes), result.codes)
                 ResultRow(stringResource(R.string.settings_backup_import_row_tasks), result.tasks)
                 ResultRow(stringResource(R.string.settings_backup_import_row_conversations), result.conversations)
                 ResultRow(stringResource(R.string.settings_backup_import_row_nlu), result.nlu)

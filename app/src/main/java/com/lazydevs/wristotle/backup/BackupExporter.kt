@@ -26,6 +26,7 @@ private const val DATA_ENTRY_NOTES = "data/notes.json"
 private const val DATA_ENTRY_CONVERSATIONS = "data/conversations.json"
 private const val DATA_ENTRY_NLU = "data/nlu.json"
 private const val DATA_ENTRY_TASKS = "data/tasks.json"
+private const val DATA_ENTRY_CODES = "data/codes.json"
 private const val DATA_ENTRY_MCP_SERVERS = "data/mcp_servers.json"
 private const val AUDIO_NOTES_PREFIX = "audio/notes/"
 private const val AUDIO_CONVERSATIONS_PREFIX = "audio/conversation/"
@@ -36,6 +37,7 @@ private const val AUDIO_CONVERSATIONS_PREFIX = "audio/conversation/"
  */
 data class BackupExportResult(
     val notes: Int,
+    val codes: Int,
     val tasks: Int,
     val conversations: Int,
     val nluLearned: Int,
@@ -85,6 +87,7 @@ class BackupExporter(private val app: WristotleApplication) {
         val audio = audioFiles()
         BackupCounts(
             notes = app.notesDb.noteDao().count(),
+            codes = app.codesDb.codeDao().count(),
             tasks = app.tasksDb.taskDao().count(),
             conversations = app.conversationDb.conversationDao().count(),
             reminders = readPinRecords().size,
@@ -119,6 +122,7 @@ class BackupExporter(private val app: WristotleApplication) {
         // selected — downstream encoders skip empty lists rather than
         // writing an empty rows array, so the ZIP stays clean.
         val notes = if (selection.notes) app.notesDb.noteDao().allForBackup() else emptyList()
+        val codes = if (selection.codes) app.codesDb.codeDao().allForBackup() else emptyList()
         val tasks = if (selection.tasks) app.tasksDb.taskDao().allForBackup() else emptyList()
         val conversations = if (selection.conversations)
             app.conversationDb.conversationDao().allForBackup() else emptyList()
@@ -146,9 +150,11 @@ class BackupExporter(private val app: WristotleApplication) {
                 conversations = ConversationEntryJson.CURRENT_SCHEMA,
                 nlu = ExampleEntryJson.CURRENT_SCHEMA,
                 mcpServers = if (selection.mcpServers) McpServerJson.CURRENT_SCHEMA else null,
+                codes = if (selection.codes) CodeJson.CURRENT_SCHEMA else null,
             ),
             stats = BackupManifest.Stats(
                 notes = notes.size,
+                codes = codes.size,
                 tasks = tasks.size,
                 conversations = conversations.size,
                 nluLearned = nluLearned.size,
@@ -212,6 +218,11 @@ class BackupExporter(private val app: WristotleApplication) {
                     encodeRowsJson(TaskJson.CURRENT_SCHEMA, tasks) { TaskJson.encode(it) })
                 addToZip(zip, params, stagingDir, DATA_ENTRY_TASKS)
             }
+            if (selection.codes) {
+                writeText(stagingDir, DATA_ENTRY_CODES,
+                    encodeRowsJson(CodeJson.CURRENT_SCHEMA, codes) { CodeJson.encode(it) })
+                addToZip(zip, params, stagingDir, DATA_ENTRY_CODES)
+            }
             if (selection.conversations) {
                 writeText(stagingDir, DATA_ENTRY_CONVERSATIONS,
                     encodeRowsJson(ConversationEntryJson.CURRENT_SCHEMA, conversations) { ConversationEntryJson.encode(it) })
@@ -245,6 +256,7 @@ class BackupExporter(private val app: WristotleApplication) {
 
             BackupExportResult(
                 notes = manifest.stats.notes,
+                codes = manifest.stats.codes,
                 tasks = manifest.stats.tasks,
                 conversations = manifest.stats.conversations,
                 nluLearned = manifest.stats.nluLearned,

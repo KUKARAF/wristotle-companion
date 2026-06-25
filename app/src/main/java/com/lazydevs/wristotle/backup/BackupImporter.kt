@@ -116,6 +116,8 @@ class BackupImporter(private val app: WristotleApplication) {
                 importNotes(extractDir, audio.map, schemaSkips) else EntityStats()
             val tasks = if (selection.tasks)
                 importTasks(extractDir, schemaSkips) else EntityStats()
+            val codes = if (selection.codes)
+                importCodes(extractDir, schemaSkips) else EntityStats()
             val conversations = if (selection.conversations)
                 importConversations(extractDir, audio.map, schemaSkips) else EntityStats()
             val nlu = if (selection.nluLearned)
@@ -131,6 +133,7 @@ class BackupImporter(private val app: WristotleApplication) {
 
             BackupImportResult(
                 notes = notes,
+                codes = codes,
                 tasks = tasks,
                 conversations = conversations,
                 nlu = nlu,
@@ -197,6 +200,7 @@ class BackupImporter(private val app: WristotleApplication) {
         entryName == BackupManifest.FILENAME -> true
         entryName == "data/notes.json" -> selection.notes
         entryName == "data/tasks.json" -> selection.tasks
+        entryName == "data/codes.json" -> selection.codes
         entryName == "data/conversations.json" -> selection.conversations
         entryName == "data/nlu.json" -> selection.nluLearned
         entryName == "data/mcp_servers.json" -> selection.mcpServers
@@ -349,6 +353,27 @@ class BackupImporter(private val app: WristotleApplication) {
         for (row in toInsert) {
             try { dao.insert(row); imported++ } catch (t: Throwable) {
                 Log.w(TAG, "task insert failed", t); failed++
+            }
+        }
+        return EntityStats(imported = imported, duplicates = duplicates, failed = failed)
+    }
+
+    private suspend fun importCodes(
+        extractDir: File,
+        schemaSkips: MutableList<String>,
+    ): EntityStats {
+        val rows = readRows(extractDir, "data/codes.json", CodeJson.CURRENT_SCHEMA, "codes", schemaSkips)
+            { row, schema -> CodeJson.decode(row, schema) }
+            ?: return EntityStats()
+        val dao = app.codesDb.codeDao()
+        val existing = dao.allForBackup()
+        val toInsert = MergeStrategies.mergeCodes(existing, rows)
+        val duplicates = rows.size - toInsert.size
+        var imported = 0
+        var failed = 0
+        for (row in toInsert) {
+            try { dao.insert(row); imported++ } catch (t: Throwable) {
+                Log.w(TAG, "code insert failed", t); failed++
             }
         }
         return EntityStats(imported = imported, duplicates = duplicates, failed = failed)
@@ -705,6 +730,7 @@ data class EntityStats(
 /** Summary of a completed import for the result dialog. */
 data class BackupImportResult(
     val notes: EntityStats,
+    val codes: EntityStats,
     val tasks: EntityStats,
     val conversations: EntityStats,
     val nlu: EntityStats,

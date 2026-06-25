@@ -64,6 +64,7 @@ data class BackupManifest(
         val conversations: Int,
         val nlu: Int,
         val mcpServers: Int? = null,
+        val codes: Int? = null,
     )
     data class Stats(
         val notes: Int,
@@ -74,6 +75,7 @@ data class BackupManifest(
         val aliases: Int,
         val contactAliases: Int = 0,
         val mcpServers: Int = 0,
+        val codes: Int = 0,
     )
 
     /**
@@ -240,6 +242,7 @@ object BackupManifestCodec {
         put("data_schemas", JSONObject().apply {
             put("notes", m.dataSchemas.notes)
             if (m.dataSchemas.tasks != null) put("tasks", m.dataSchemas.tasks)
+            if (m.dataSchemas.codes != null) put("codes", m.dataSchemas.codes)
             put("conversations", m.dataSchemas.conversations)
             put("nlu", m.dataSchemas.nlu)
             if (m.dataSchemas.mcpServers != null) put("mcp_servers", m.dataSchemas.mcpServers)
@@ -247,6 +250,7 @@ object BackupManifestCodec {
         put("stats", JSONObject().apply {
             put("notes", m.stats.notes)
             put("tasks", m.stats.tasks)
+            put("codes", m.stats.codes)
             put("conversations", m.stats.conversations)
             put("nlu_learned", m.stats.nluLearned)
             put("reminders", m.stats.reminders)
@@ -256,6 +260,7 @@ object BackupManifestCodec {
         })
         put("selected", JSONObject().apply {
             put("notes", m.selected.notes)
+            put("codes", m.selected.codes)
             put("tasks", m.selected.tasks)
             put("conversations", m.selected.conversations)
             put("reminders", m.selected.reminders)
@@ -480,6 +485,7 @@ object BackupManifestCodec {
                 conversations = dataSchemas.getInt("conversations"),
                 nlu = dataSchemas.getInt("nlu"),
                 mcpServers = if (dataSchemas.has("mcp_servers")) dataSchemas.getInt("mcp_servers") else null,
+                codes = if (dataSchemas.has("codes")) dataSchemas.getInt("codes") else null,
             ),
             stats = BackupManifest.Stats(
                 notes = stats.optInt("notes", 0),
@@ -490,6 +496,7 @@ object BackupManifestCodec {
                 aliases = stats.optInt("aliases", 0),
                 contactAliases = stats.optInt("contact_aliases", 0),
                 mcpServers = stats.optInt("mcp_servers", 0),
+                codes = stats.optInt("codes", 0),
             ),
             prefs = BackupManifest.PrefsBlock(
                 notes = notesPrefs?.let {
@@ -646,6 +653,7 @@ object BackupManifestCodec {
             selected = root.optJSONObject("selected")?.let { sel ->
                 BackupSelection(
                     notes = sel.optBoolean("notes", true),
+                    codes = sel.optBoolean("codes", true),
                     tasks = sel.optBoolean("tasks", true),
                     conversations = sel.optBoolean("conversations", true),
                     reminders = sel.optBoolean("reminders", true),
