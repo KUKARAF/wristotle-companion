@@ -139,6 +139,15 @@ object MessageKeys {
      *  launched) and surfaced in the diagnostics bundle. */
     val WATCH_APP_VERSION: UInt = 10059u
 
+    /** Saved-codes sync (companion → watch). One frame per code carries all four:
+     *  [CODE_SYNC_INDEX] (0-based; index 0 means "clear the cache first"),
+     *  [CODE_SYNC_COUNT] (total; 0 = no codes, just clear), [CODE_SYNC_LABEL]
+     *  (display name), [CODE_SYNC_MATRIX] (CodeWire bytes the watch draws). */
+    val CODE_SYNC_INDEX: UInt  = 10060u
+    val CODE_SYNC_COUNT: UInt  = 10061u
+    val CODE_SYNC_LABEL: UInt  = 10062u
+    val CODE_SYNC_MATRIX: UInt = 10063u
+
     /** Cap on a single per-note detail body sent over [NOTE_DETAIL_RESPONSE]. */
     const val NOTE_DETAIL_MAX_CHARS: Int = 540
 

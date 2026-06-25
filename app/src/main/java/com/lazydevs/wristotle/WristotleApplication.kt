@@ -340,6 +340,8 @@ class WristotleApplication : Application() {
         private set
     lateinit var codeRepository: com.lazydevs.wristotle.speech.nlu.codes.CodeRepository
         private set
+    lateinit var codeSyncSender: com.lazydevs.wristotle.speech.nlu.codes.CodeSyncSender
+        private set
     lateinit var nluDb: com.lazydevs.wristotle.nlu.learning.NluDatabase
         private set
 
@@ -456,6 +458,13 @@ class WristotleApplication : Application() {
      */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /** Push the saved codes to the watch (fire-and-forget). Called when the watch
+     *  connects (COMPANION_PING) so a freshly-launched watch gets the current
+     *  codes even if they changed while it was disconnected. */
+    fun syncCodesToWatch() {
+        appScope.launch { runCatching { codeSyncSender.sync() } }
+    }
+
     /** Cache: modelPath → recognizer. Built on demand by the provider lambda. */
     private val whisperRecognizers = mutableMapOf<String, WhisperRecognizer>()
 
@@ -514,9 +523,15 @@ class WristotleApplication : Application() {
         )
         appScope.launch { noteRepository.prune() }
 
-        // Saved codes (QR / barcode) — Room DB + repository.
+        // Saved codes (QR / barcode) — Room DB + repository + watch sync.
         codesDb = com.lazydevs.wristotle.codes.CodeDatabase.build(this)
         codeRepository = com.lazydevs.wristotle.codes.RoomCodeRepository(codesDb.codeDao())
+        codeSyncSender = com.lazydevs.wristotle.speech.nlu.codes.CodeSyncSender(codeRepository, transport)
+        // Push the codes to the watch whenever they change (and once at startup,
+        // via the initial emission), so the watch's offline cache stays current.
+        appScope.launch {
+            codeRepository.observeAll().collect { runCatching { codeSyncSender.sync() } }
+        }
 
         // Notification log retention — drop rows older than the
         // retention window so the DB stays bounded if the user kept

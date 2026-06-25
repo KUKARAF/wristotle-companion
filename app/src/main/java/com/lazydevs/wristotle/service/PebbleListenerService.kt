@@ -279,6 +279,9 @@ class PebbleListenerService : BasePebbleListenerService() {
                 Log.d(TAG, "Watch app version reported: $v")
             }
             transport.sendReady()
+            // Push current saved codes so a freshly-connected watch's offline
+            // cache is up to date (changes while disconnected aren't observed).
+            (application as? WristotleApplication)?.syncCodesToWatch()
             return ReceiveResult.Ack
         }
 

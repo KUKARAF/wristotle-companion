@@ -55,6 +55,18 @@ class PebbleTransport(context: Context) : WatchTransport, java.io.Closeable {
         mapOf(key to PebbleDictionaryItem.UInt8(1u))
     )
 
+    override suspend fun sendCodeFrame(index: Int, count: Int, label: String, matrix: ByteArray): Boolean {
+        val payload = mutableMapOf<UInt, PebbleDictionaryItem>(
+            MessageKeys.CODE_SYNC_INDEX to PebbleDictionaryItem.Int32(index),
+            MessageKeys.CODE_SYNC_COUNT to PebbleDictionaryItem.Int32(count),
+        )
+        if (count > 0) {
+            payload[MessageKeys.CODE_SYNC_LABEL] = PebbleDictionaryItem.Text(label)
+            if (matrix.isNotEmpty()) payload[MessageKeys.CODE_SYNC_MATRIX] = PebbleDictionaryItem.Bytes(matrix)
+        }
+        return sendWithNackRetry(payload)
+    }
+
     override suspend fun sendTtsChunk(bytes: ByteArray, start: Boolean, end: Boolean): Boolean {
         val payload = mutableMapOf<UInt, PebbleDictionaryItem>()
         if (start) payload[MessageKeys.TTS_START] = PebbleDictionaryItem.UInt8(1u)

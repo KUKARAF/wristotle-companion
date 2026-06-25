@@ -44,6 +44,14 @@ interface WatchTransport {
      */
     suspend fun sendTtsChunk(bytes: ByteArray, start: Boolean, end: Boolean): Boolean
 
+    /**
+     * One saved-codes sync frame (companion → watch). [index] 0 resets the
+     * watch cache; [count] 0 means "no codes, just clear"; [label] is the
+     * display name; [matrix] is the CodeWire bytes the watch draws. See
+     * `codes/CodeSyncSender`.
+     */
+    suspend fun sendCodeFrame(index: Int, count: Int, label: String, matrix: ByteArray): Boolean
+
     /** Insert (or replace) a reminder pin on the watch's timeline. */
     suspend fun insertReminderPin(pin: ReminderPin): TimelineSendResult
 
