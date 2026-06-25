@@ -4,7 +4,6 @@
 package com.lazydevs.wristotle.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,8 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -60,7 +57,10 @@ fun CodesScreen(vm: CodesViewModel) {
         if (data != null && format != null) pendingScan = format to data
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
+    // Plain Column (NOT fillMaxSize / LazyColumn): this screen renders inside
+    // the Settings drill-down's own verticalScroll Column, so a nested scrollable
+    // container would be measured with infinite height and crash.
+    Column(Modifier.fillMaxWidth().padding(16.dp)) {
         Text("Saved codes", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(4.dp))
         Text(
@@ -75,7 +75,11 @@ fun CodesScreen(vm: CodesViewModel) {
                 scanLauncher.launch(
                     ScanOptions().apply {
                         setDesiredBarcodeFormats(ScannedCodeFormats.DESIRED)
-                        setOrientationLocked(false)
+                        // Force portrait via the pinned capture activity —
+                        // setOrientationLocked alone can't stop the library's
+                        // landscape default.
+                        setCaptureActivity(com.lazydevs.wristotle.codes.PortraitCaptureActivity::class.java)
+                        setOrientationLocked(true)
                         setBeepEnabled(false)
                         setPrompt("Point at a barcode or QR code")
                     },
@@ -95,10 +99,9 @@ fun CodesScreen(vm: CodesViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(codes, key = { it.id }) { code ->
-                    CodeRow(code, onDelete = { vm.delete(code.id) })
-                }
+            codes.forEach { code ->
+                CodeRow(code, onDelete = { vm.delete(code.id) })
+                Spacer(Modifier.height(8.dp))
             }
         }
     }
