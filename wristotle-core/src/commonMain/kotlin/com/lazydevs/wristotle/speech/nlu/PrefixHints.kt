@@ -333,6 +333,32 @@ object PrefixHints {
     // the WorldTime prefix-hint rule above.
     private val WORLDTIME_MARKER = Regex("(?i)\\b(time|clock)\\b.*\\bin\\s+[a-z]")
 
+    /**
+     * Deterministic content-intent override, applied even on a CONFIDENT pick
+     * (same shape as [refineWorldTime] / [refineCancelAlarm]).
+     *
+     * A query that OPENS with a free-form content intent — "make a note …",
+     * "remind me …", "add a task …", "ask …" — carries arbitrary words in its
+     * body that can dominate the embedding. "make a note to find my phone
+     * charger" cosine-matches FindPhone and is picked CONFIDENTLY, so the
+     * below-threshold prefix-hint path in [WatchHintRefiner] never runs and the
+     * phone rings instead of saving a note. The opening prefix is the reliable
+     * signal, so it wins here too. Only ever overrides TO one of the content
+     * intents, and only when [hintFor] matches an opening content prefix — a
+     * confident, correctly-classified non-content query is left untouched.
+     */
+    fun refineContentPrefix(query: String, intent: Intent): Intent {
+        val hint = hintFor(query) ?: return intent
+        return if (hint in CONTENT_PREFIX_INTENTS && hint != intent) hint else intent
+    }
+
+    // Free-text-bearing intents: their spoken body can contain other intents'
+    // keywords ("…find my phone…", "…the battery…"), so an opening prefix for
+    // one of these is authoritative over the embedding's noun-driven guess.
+    private val CONTENT_PREFIX_INTENTS = setOf(
+        Intent.Note, Intent.AppendNote, Intent.Reminder, Intent.AddTask, Intent.AskAgent,
+    )
+
     // A wall-clock time: "7:30", "7 am", "o'clock", or a time-of-day word.
     private val CLOCK_MARKER = Regex(
         "(?i)\\b(\\d{1,2}\\s*:\\s*\\d{2}|\\d{1,2}\\s*(a\\.?m\\.?|p\\.?m\\.?)|o'?clock|noon|midnight|midday|morning|afternoon|evening|tonight)\\b"

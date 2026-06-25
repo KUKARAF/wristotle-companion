@@ -153,7 +153,10 @@ object WatchHintRefiner {
         //   - Cancel → CancelAlarm when the query has a whole-word "alarm"
         //     (the classifier confidently picks Cancel for the cancel-verb
         //     opener but Cancel's handler is reminder-only).
-        val finalIntent = PrefixHints.refineWorldTime(query, PrefixHints.refineCancelAlarm(query, classified.intent))
+        val finalIntent = PrefixHints.refineContentPrefix(
+            query,
+            PrefixHints.refineWorldTime(query, PrefixHints.refineCancelAlarm(query, classified.intent)),
+        )
         if (finalIntent != classified.intent) {
             logger.d(TAG, "intent refine: ${classified.intent} → $finalIntent for \"$query\"")
         }

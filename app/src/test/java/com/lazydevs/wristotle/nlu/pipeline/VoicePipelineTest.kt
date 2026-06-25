@@ -206,20 +206,22 @@ class VoicePipelineTest {
         assertEquals(Intent.AskAgent, r.result.intent)
     }
 
-    @Test fun `confident classifier with clear margin is NOT rescued`() {
-        // Opposite of the rescue case — same query but the classifier is
-        // confident AND the runner-up is far behind (margin 0.30 > 0.10),
-        // so PrefixHints is never consulted and the (wrong) classifier
-        // pick wins. Documents the gate's actual contract: PrefixHints
-        // only fires when the classifier is uncertain.
+    @Test fun `explicit ask-agent prefix wins even over a confident local pick`() {
+        // Used to assert the opposite: a confident WorldTime pick won, so
+        // "ask agent what time is it in Tokyo" dead-ended at the local world
+        // clock and never reached the agent — the LLM-interception the bug
+        // reporter flagged. refineContentPrefix now honours the explicit
+        // "ask agent" lead-in even on a confident pick (same fix that stops
+        // "make a note to find my phone …" from ringing the phone). A
+        // non-content confident pick is still trusted — see the genuine
+        // "find my phone" case above.
         val r = route(
             "ask agent what time is it in Tokyo",
             classifier = FakeIntentClassifier { q ->
                 classified(Intent.WorldTime, 0.80f, q, runnerUp = Intent.Weather to 0.50f)
             },
         )
-        assertNotEquals(Intent.AskAgent, r.result.intent)
-        assertEquals(Intent.WorldTime, r.result.intent)
+        assertEquals(Intent.AskAgent, r.result.intent)
     }
 
     // ── Cancel watch-hint passes through ───────────────────────────────
@@ -342,5 +344,35 @@ class VoicePipelineTest {
             slotExtractors = testSlotRegistry(),
         )
         assertFalse(pipeline.isStubClassifier)
+    }
+
+    // ── Content prefix beats a confident wrong pick (find-phone bug) ─────
+    // Reported: "make a note to find my phone charger" rang the phone. The
+    // embedding confidently picks FindPhone ("find my phone" dominates the
+    // cosine), so the below-threshold prefix-hint path never ran. The opening
+    // content prefix must override even a confident pick.
+
+    @Test fun `make a note is not hijacked by a confident FindPhone pick`() {
+        val r = route(
+            "make a note to find my phone charger",
+            classifier = FakeIntentClassifier(pick = { classified(Intent.FindPhone, 0.9f, it) }),
+        )
+        assertEquals(Intent.Note, r.result.intent)
+    }
+
+    @Test fun `remind me is not hijacked by a confident FindPhone pick`() {
+        val r = route(
+            "remind me to find my phone",
+            classifier = FakeIntentClassifier(pick = { classified(Intent.FindPhone, 0.9f, it) }),
+        )
+        assertEquals(Intent.Reminder, r.result.intent)
+    }
+
+    @Test fun `a genuine find my phone still routes to FindPhone`() {
+        val r = route(
+            "find my phone",
+            classifier = FakeIntentClassifier(pick = { classified(Intent.FindPhone, 0.9f, it) }),
+        )
+        assertEquals(Intent.FindPhone, r.result.intent)
     }
 }
