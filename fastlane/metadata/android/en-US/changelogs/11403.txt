@@ -1,0 +1,6 @@
+Ask Agent now works with slow local models.
+
+Settings → Ask Agent has a new "Response timeout"
+you can raise, so slow on-device models that "think"
+before answering aren't cut off mid-reply. Default
+is unchanged, so nothing changes unless you raise it.
