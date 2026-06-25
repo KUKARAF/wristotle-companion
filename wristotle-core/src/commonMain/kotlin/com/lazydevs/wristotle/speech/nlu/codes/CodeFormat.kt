@@ -13,5 +13,7 @@ package com.lazydevs.wristotle.speech.nlu.codes
 enum class CodeFormat(val is1D: Boolean, val displayName: String) {
     QR_CODE(is1D = false, displayName = "QR code"),
     CODE_128(is1D = true, displayName = "Code 128"),
-    // EAN_13 / UPC_A / CODE_39 land as their encoders do.
+    EAN_13(is1D = true, displayName = "EAN-13"),
+    UPC_A(is1D = true, displayName = "UPC-A"),
+    // CODE_39 lands as its encoder does.
 }

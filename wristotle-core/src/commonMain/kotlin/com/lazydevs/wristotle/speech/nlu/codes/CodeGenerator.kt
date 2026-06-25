@@ -14,5 +14,7 @@ object CodeGenerator {
     fun matrix(code: SavedCode): CodeMatrix? = when (code.format) {
         CodeFormat.QR_CODE -> runCatching { Qr.encode(code.data) }.getOrNull()
         CodeFormat.CODE_128 -> Code128.encode(code.data)
+        CodeFormat.EAN_13 -> EanUpc.encodeEan13(code.data)
+        CodeFormat.UPC_A -> EanUpc.encodeUpcA(code.data)
     }
 }

@@ -8,8 +8,11 @@ import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.Reader
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.oned.Code128Reader
+import com.google.zxing.oned.EAN13Reader
+import com.google.zxing.oned.UPCAReader
 import com.google.zxing.qrcode.QRCodeReader
 import com.lazydevs.wristotle.speech.nlu.codes.Code128
+import com.lazydevs.wristotle.speech.nlu.codes.EanUpc
 import com.lazydevs.wristotle.speech.nlu.codes.Qr
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -61,5 +64,15 @@ class CodeDecodeTest {
         for (data in listOf("123456789012", "AB-12", "Clubcard99")) {
             assertEquals(data, decode1D(Code128.encode(data)!!.bars, Code128Reader()))
         }
+    }
+
+    @Test fun `EAN-13 round-trips through a real decoder`() {
+        // 12 digits in → decoder reads back the full 13 (with computed check digit).
+        assertEquals("4006381333931", decode1D(EanUpc.encodeEan13("400638133393")!!.bars, EAN13Reader()))
+    }
+
+    @Test fun `UPC-A round-trips through a real decoder`() {
+        // 11 digits in → check computed → 12-digit UPC read back.
+        assertEquals("036000291452", decode1D(EanUpc.encodeUpcA("03600029145")!!.bars, UPCAReader()))
     }
 }

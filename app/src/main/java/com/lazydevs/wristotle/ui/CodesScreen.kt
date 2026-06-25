@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -163,6 +165,7 @@ fun CodesScreen(vm: CodesViewModel) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CodeEditorDialog(
     title: String,
@@ -205,17 +208,14 @@ private fun CodeEditorDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = format == CodeFormat.CODE_128,
-                        onClick = { format = CodeFormat.CODE_128 },
-                        label = { Text("Barcode") },
-                    )
-                    FilterChip(
-                        selected = format == CodeFormat.QR_CODE,
-                        onClick = { format = CodeFormat.QR_CODE },
-                        label = { Text("QR code") },
-                    )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CodeFormat.entries.forEach { f ->
+                        FilterChip(
+                            selected = format == f,
+                            onClick = { format = f },
+                            label = { Text(f.displayName) },
+                        )
+                    }
                 }
                 if (data.isNotBlank() && !valid) {
                     Spacer(Modifier.height(8.dp))
