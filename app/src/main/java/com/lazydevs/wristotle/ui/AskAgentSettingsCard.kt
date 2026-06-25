@@ -20,10 +20,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings
@@ -128,6 +132,32 @@ fun AskAgentSettingsCard(settings: AskAgentSettings) {
             )
             Text(
                 stringResource(R.string.settings_askagent_triggers_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── Response timeout ────────────────────────────────────────────
+            // Raised for slow local reasoning models (Gemma/R1-style thinking)
+            // that the old hardcoded 14 s timed out mid-generation. Clamped in
+            // the setter; the watch is kept alive past its 15 s ceiling by the
+            // handler's agent_status heartbeat.
+            val responseTimeout by settings.responseTimeoutSec.collectAsState()
+            var timeoutText by remember(responseTimeout) { mutableStateOf(responseTimeout.toString()) }
+            OutlinedTextField(
+                value = timeoutText,
+                onValueChange = { txt ->
+                    timeoutText = txt.filter { it.isDigit() }.take(3)
+                    timeoutText.toIntOrNull()?.let(settings::setResponseTimeoutSec)
+                },
+                label = { Text(stringResource(R.string.settings_askagent_timeout_label)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                stringResource(R.string.settings_askagent_timeout_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

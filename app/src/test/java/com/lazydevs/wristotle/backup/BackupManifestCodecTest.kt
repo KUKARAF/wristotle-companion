@@ -230,6 +230,9 @@ class BackupManifestCodecTest {
                     systemPrompt = "Be brief.",
                     anthropicApiKey = "sk-ant-x",
                     openaiApiKey = "sk-o-y",
+                    // Non-default so the round-trip actually proves the field
+                    // travels (default would pass even if the codec dropped it).
+                    responseTimeoutSec = 120,
                 ),
             ),
         )

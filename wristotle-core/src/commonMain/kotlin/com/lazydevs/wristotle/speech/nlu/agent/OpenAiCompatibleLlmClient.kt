@@ -41,6 +41,7 @@ class OpenAiCompatibleLlmClient(
     private val apiKey: String,
     private val model: String,
     private val maxTokens: Int = DEFAULT_MAX_TOKENS,
+    private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
 ) : LlmClient {
 
     override suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult {
@@ -233,7 +234,7 @@ class OpenAiCompatibleLlmClient(
                 if (apiKey.isNotBlank()) put("Authorization", "Bearer $apiKey")
             },
             body = body.encodeToByteArray(),
-            timeoutMs = READ_TIMEOUT_MS,
+            timeoutMs = readTimeoutMs,
         ),
     )
 
@@ -241,7 +242,11 @@ class OpenAiCompatibleLlmClient(
         private const val USER_AGENT = "Wristotle/companion"
         const val DEFAULT_MAX_TOKENS = 1024
         const val DEFAULT_ENDPOINT_URL = "https://api.openai.com/v1/chat/completions"
-        private const val READ_TIMEOUT_MS = 14_000
+        /** Default LLM read timeout — the previous hardcoded value, kept so
+         *  default behaviour is unchanged. User-overridable via AskAgentSettings
+         *  (raise for slow local reasoning models); the watch is kept alive past
+         *  its 15 s ceiling by AskAgentHandler's periodic agent_status heartbeat. */
+        const val DEFAULT_READ_TIMEOUT_MS = 14_000
 
         private val EMPTY_OBJECT_SCHEMA: JsonObject = buildJsonObject {
             put("type", "object")

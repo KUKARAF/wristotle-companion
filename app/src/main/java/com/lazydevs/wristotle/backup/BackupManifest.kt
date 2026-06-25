@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.backup
 
 import com.lazydevs.sportskapi.SportSubject
+import com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings
 import com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
 import com.lazydevs.wristotle.phone.ContactRef
 import org.json.JSONArray
@@ -145,6 +146,7 @@ data class BackupManifest(
         val anthropicApiKey: String? = null,
         val openaiApiKey: String? = null,
         val anthropicWebSearch: Boolean = false,
+        val responseTimeoutSec: Int = AskAgentSettings.DEFAULT_RESPONSE_TIMEOUT_SEC,
     )
 
     /** STT provider — mode + base URL + model travel with the
@@ -349,6 +351,7 @@ object BackupManifestCodec {
                     put("openai_model", a.openaiModel)
                     put("system_prompt", a.systemPrompt)
                     put("anthropic_web_search", a.anthropicWebSearch)
+                    put("response_timeout_sec", a.responseTimeoutSec)
                     if (a.anthropicApiKey != null) put("anthropic_api_key", a.anthropicApiKey)
                     if (a.openaiApiKey != null) put("openai_api_key", a.openaiApiKey)
                 })
@@ -563,6 +566,10 @@ object BackupManifestCodec {
                         anthropicApiKey = a.optString("anthropic_api_key").takeIf { it.isNotEmpty() },
                         openaiApiKey = a.optString("openai_api_key").takeIf { it.isNotEmpty() },
                         anthropicWebSearch = a.optBoolean("anthropic_web_search", false),
+                        responseTimeoutSec = a.optInt(
+                            "response_timeout_sec",
+                            AskAgentSettings.DEFAULT_RESPONSE_TIMEOUT_SEC,
+                        ),
                     )
                 },
                 sttProvider = prefs.optJSONObject("stt_provider_settings")?.let { s ->

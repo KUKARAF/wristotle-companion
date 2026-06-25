@@ -294,6 +294,7 @@ class DiagnosticsBuilder(
         appendLine("- OpenAI-compat key: ${setState(s.openaiApiKey.value)}; model: ${nonEmpty(s.openaiModel.value)}")
         appendLine("- Custom triggers: ${s.customTriggers.value.size}")
         appendLine("- System prompt: ${s.systemPrompt.value.length} chars")
+        appendLine("- Response timeout: ${s.responseTimeoutSec.value}s")
         appendLine()
     }
 

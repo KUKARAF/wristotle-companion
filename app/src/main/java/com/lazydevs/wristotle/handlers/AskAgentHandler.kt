@@ -18,6 +18,9 @@ import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.stringSlot
 import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Read-only by construction — not in the confirm-before-dispatch set.
@@ -60,66 +63,87 @@ class AskAgentHandler(
         val client = settings.activeClient()
 
         val enabled = mcpServers.listEnabled()
-        // The chat/tool path is needed when EITHER the user has MCP
-        // servers OR the active provider has built-in server tools the
-        // LLM should be able to invoke (today: Anthropic web_search).
-        // Otherwise the cheaper one-shot complete() suffices.
-        if (enabled.isEmpty() && !settings.activeProviderHasServerTools()) {
-            return renderComplete(client.complete(query, systemPrompt)).trimForWatch()
-        }
-
-        val loop = AgentLoop(
-            llm = client,
-            integrationFactory = { cfg ->
-                HttpMcpIntegration(
-                    name = cfg.name,
-                    url = cfg.url,
-                    streamable = cfg.streamable,
-                    authHeader = cfg.authHeader,
+        // Both paths run inside a watch heartbeat (see withWatchHeartbeat) so a
+        // slow model — a local reasoning model thinking for 30-60 s — doesn't
+        // leave the watch silent past its 15 s ceiling.
+        return withWatchHeartbeat {
+            // The chat/tool path is needed when EITHER the user has MCP servers
+            // OR the active provider has built-in server tools (today: Anthropic
+            // web_search). Otherwise the cheaper one-shot complete() suffices.
+            if (enabled.isEmpty() && !settings.activeProviderHasServerTools()) {
+                renderComplete(client.complete(query, systemPrompt)).trimForWatch()
+            } else {
+                val loop = AgentLoop(
+                    llm = client,
+                    integrationFactory = { cfg ->
+                        HttpMcpIntegration(
+                            name = cfg.name,
+                            url = cfg.url,
+                            streamable = cfg.streamable,
+                            authHeader = cfg.authHeader,
+                        )
+                    },
+                    log = WristotleLogger,
                 )
-            },
-            log = WristotleLogger,
-        )
-        val serverConfigs = enabled.map { entity ->
-            McpServerConfig(
-                name = entity.name,
-                url = entity.url,
-                streamable = entity.streamable,
-                authHeader = entity.authHeader,
-            )
-        }
-        val outcome = loop.run(
-            userQuery = query,
-            systemPrompt = systemPrompt,
-            servers = serverConfigs,
-            // Per-round watch status (B3): goes to the hint-bar slot via
-            // sendAgentStatus, NOT sendResponse. The chat surface only
-            // renders one bubble per query — using the response key here
-            // would drop the final answer (see
-            // feedback_watch_chat_single_bubble memory).
-            //
-            // Thinking AND CallingTool both emit so the watch's 15 s
-            // response timer is re-armed at the start of each LLM round
-            // (otherwise a pure-text call taking >15 s leaves the watch
-            // silent until it times out — companion's eventual response
-            // would land too late to render).
-            onStatus = { status ->
-                val line = when (status) {
-                    is AgentLoop.Status.Thinking ->
-                        if (status.round == 1) "→ thinking…"
-                        else "→ thinking (round ${status.round})…"
-                    is AgentLoop.Status.CallingTool -> "→ ${friendly(status.toolName)}"
-                    is AgentLoop.Status.ToolDone -> null
+                val serverConfigs = enabled.map { entity ->
+                    McpServerConfig(
+                        name = entity.name,
+                        url = entity.url,
+                        streamable = entity.streamable,
+                        authHeader = entity.authHeader,
+                    )
                 }
-                if (line != null) runCatching { transport.sendAgentStatus(line) }
-            },
-        )
-        return when (outcome) {
-            is AgentLoop.Outcome.Done -> outcome.text
-            is AgentLoop.Outcome.HitMaxIterations ->
-                outcome.partialText ?: "Agent: hit max iterations with no answer."
-            is AgentLoop.Outcome.Failed -> "Agent: ${outcome.message}"
-        }.trimForWatch()
+                val outcome = loop.run(
+                    userQuery = query,
+                    systemPrompt = systemPrompt,
+                    servers = serverConfigs,
+                    // Per-round watch status (B3): goes to the hint-bar slot via
+                    // sendAgentStatus, NOT sendResponse (the chat surface renders
+                    // one bubble per query — see feedback_watch_chat_single_bubble).
+                    // withWatchHeartbeat re-arms the watch's 15 s timer even WITHIN
+                    // a single long round; these add per-round/tool specificity.
+                    onStatus = { status ->
+                        val line = when (status) {
+                            is AgentLoop.Status.Thinking ->
+                                if (status.round == 1) "→ thinking…"
+                                else "→ thinking (round ${status.round})…"
+                            is AgentLoop.Status.CallingTool -> "→ ${friendly(status.toolName)}"
+                            is AgentLoop.Status.ToolDone -> null
+                        }
+                        if (line != null) runCatching { transport.sendAgentStatus(line) }
+                    },
+                )
+                when (outcome) {
+                    is AgentLoop.Outcome.Done -> outcome.text
+                    is AgentLoop.Outcome.HitMaxIterations ->
+                        outcome.partialText ?: "Agent: hit max iterations with no answer."
+                    is AgentLoop.Outcome.Failed -> "Agent: ${outcome.message}"
+                }.trimForWatch()
+            }
+        }
+    }
+
+    /**
+     * Runs [block] (the LLM work) while pinging the watch with a periodic
+     * `agent_status`. The watch re-arms its 15 s response timer on each
+     * `agent_status` (watch processor.c), so a long single LLM round — a
+     * reasoning model thinking for 30-60 s — no longer leaves the watch silent
+     * until it times out. Covers the one-shot `complete()` path (which sends no
+     * status of its own) and intra-round gaps in the agent-loop path. Cancelled
+     * the instant [block] returns, so fast replies never emit a heartbeat.
+     */
+    private suspend fun <T> withWatchHeartbeat(block: suspend () -> T): T = coroutineScope {
+        val heartbeat = launch {
+            while (true) {
+                delay(HEARTBEAT_INTERVAL_MS)
+                runCatching { transport.sendAgentStatus("→ thinking…") }
+            }
+        }
+        try {
+            block()
+        } finally {
+            heartbeat.cancel()
+        }
     }
 
     /** Last-line defence: a verbose LLM still gets truncated before it
@@ -154,5 +178,9 @@ class AskAgentHandler(
         /** Soft cap chosen to keep one reply within ~4–5 lines on a 144-px Pebble
          *  chat surface; well under the AppMessage Text payload limit. */
         const val WATCH_MAX_CHARS = 280
+
+        /** Heartbeat cadence — comfortably under the watch's 15 s response
+         *  timer so each ping re-arms it with margin. */
+        const val HEARTBEAT_INTERVAL_MS = 10_000L
     }
 }

@@ -63,6 +63,15 @@ class AskAgentSettings(
     )
     val anthropicWebSearch: StateFlow<Boolean> = _anthropicWebSearch
 
+    /** LLM response timeout in seconds. Raised for slow local reasoning models
+     *  (the hardcoded 14 s timed them out mid-generation). Clamped on read so a
+     *  stale/garbage stored value can't disable the timeout entirely. */
+    private val _responseTimeoutSec = MutableStateFlow(
+        store.getInt(KEY_RESPONSE_TIMEOUT_SEC, DEFAULT_RESPONSE_TIMEOUT_SEC)
+            .coerceIn(MIN_RESPONSE_TIMEOUT_SEC, MAX_RESPONSE_TIMEOUT_SEC),
+    )
+    val responseTimeoutSec: StateFlow<Int> = _responseTimeoutSec
+
     fun setProvider(value: LlmProvider) {
         store.putString(KEY_PROVIDER, value.name)
         _provider.value = value
@@ -80,6 +89,13 @@ class AskAgentSettings(
     fun setOpenAiModel(value: String) = write(KEY_OPENAI_MODEL, value.trim(), _openaiModel)
     fun setSystemPrompt(value: String) = write(KEY_SYSTEM_PROMPT, value, _systemPrompt)
     fun resetSystemPromptToDefault() = setSystemPrompt(DEFAULT_SYSTEM_PROMPT)
+
+    fun setResponseTimeoutSec(value: Int) {
+        val clamped = value.coerceIn(MIN_RESPONSE_TIMEOUT_SEC, MAX_RESPONSE_TIMEOUT_SEC)
+        if (_responseTimeoutSec.value == clamped) return
+        store.putInt(KEY_RESPONSE_TIMEOUT_SEC, clamped)
+        _responseTimeoutSec.value = clamped
+    }
 
     fun setCustomTriggers(rawText: String) {
         val sanitised = AskAgentTriggers.sanitise(rawText)
@@ -99,12 +115,14 @@ class AskAgentSettings(
             apiKey = _anthropicApiKey.value,
             model = _anthropicModel.value,
             webSearchEnabled = _anthropicWebSearch.value,
+            readTimeoutMs = _responseTimeoutSec.value * 1000,
         )
         LlmProvider.OPENAI_COMPATIBLE -> OpenAiCompatibleLlmClient(
             http = http,
             endpointUrl = _openaiEndpoint.value,
             apiKey = _openaiApiKey.value,
             model = _openaiModel.value,
+            readTimeoutMs = _responseTimeoutSec.value * 1000,
         )
     }
 
@@ -145,9 +163,18 @@ class AskAgentSettings(
         private const val KEY_SYSTEM_PROMPT = "system_prompt"
         private const val KEY_CUSTOM_TRIGGERS = "custom_triggers"
         private const val KEY_ANTHROPIC_WEB_SEARCH = "anthropic_web_search"
+        private const val KEY_RESPONSE_TIMEOUT_SEC = "response_timeout_sec"
 
         const val DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6"
         const val DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+
+        /** Default LLM response timeout (seconds). Unchanged from the previous
+         *  hardcoded 14 s so existing setups behave identically; users with slow
+         *  local reasoning models raise it via Settings. Clamped to
+         *  [MIN_RESPONSE_TIMEOUT_SEC]..[MAX_RESPONSE_TIMEOUT_SEC]. */
+        const val DEFAULT_RESPONSE_TIMEOUT_SEC = 14
+        const val MIN_RESPONSE_TIMEOUT_SEC = 5
+        const val MAX_RESPONSE_TIMEOUT_SEC = 300
 
         /**
          * Watch-friendly baseline that lands as the visible default in
