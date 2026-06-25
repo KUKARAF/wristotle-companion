@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,12 +17,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,6 +43,7 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.lazydevs.wristotle.codes.ScannedCodeFormats
 import com.lazydevs.wristotle.speech.nlu.codes.CodeFormat
+import com.lazydevs.wristotle.speech.nlu.codes.CodeGenerator
 import com.lazydevs.wristotle.speech.nlu.codes.SavedCode
 
 /**
@@ -50,6 +55,7 @@ import com.lazydevs.wristotle.speech.nlu.codes.SavedCode
 fun CodesScreen(vm: CodesViewModel) {
     val codes by vm.codes.collectAsState()
     var pendingScan by remember { mutableStateOf<Pair<CodeFormat, String>?>(null) }
+    var showManual by remember { mutableStateOf(false) }
 
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         val data = result.contents
@@ -91,6 +97,12 @@ fun CodesScreen(vm: CodesViewModel) {
             Spacer(Modifier.width(8.dp))
             Text("Scan a code")
         }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = { showManual = true }, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.Edit, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Enter manually")
+        }
         Spacer(Modifier.height(16.dp))
         if (codes.isEmpty()) {
             Text(
@@ -116,6 +128,79 @@ fun CodesScreen(vm: CodesViewModel) {
             onDismiss = { pendingScan = null },
         )
     }
+
+    if (showManual) {
+        ManualEntryDialog(
+            onConfirm = { label, format, data ->
+                vm.add(label, format, data)
+                showManual = false
+            },
+            onDismiss = { showManual = false },
+        )
+    }
+}
+
+@Composable
+private fun ManualEntryDialog(
+    onConfirm: (label: String, format: CodeFormat, data: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var label by remember { mutableStateOf("") }
+    var data by remember { mutableStateOf("") }
+    var format by remember { mutableStateOf(CodeFormat.CODE_128) }
+    // Validate by actually trying to encode — null = unencodable in this format
+    // (e.g. non-ASCII for Code 128, or too long for QR).
+    val valid = remember(data, format) {
+        data.isNotBlank() && CodeGenerator.matrix(SavedCode("", "", format, data, 0L)) != null
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add a code") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = label,
+                    onValueChange = { label = it },
+                    label = { Text("Label") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = data,
+                    onValueChange = { data = it },
+                    label = { Text("Card number, text, or URL") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = format == CodeFormat.CODE_128,
+                        onClick = { format = CodeFormat.CODE_128 },
+                        label = { Text("Barcode") },
+                    )
+                    FilterChip(
+                        selected = format == CodeFormat.QR_CODE,
+                        onClick = { format = CodeFormat.QR_CODE },
+                        label = { Text("QR code") },
+                    )
+                }
+                if (data.isNotBlank() && !valid) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "That can't be encoded as a ${format.displayName}.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(label, format, data) }, enabled = valid) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable
