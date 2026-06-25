@@ -18,7 +18,7 @@ interface CodeRepository {
     /** One-shot snapshot (e.g. the watch sync). */
     suspend fun all(): List<SavedCode>
 
-    suspend fun add(label: String, format: CodeFormat, data: String): SavedCode
-    suspend fun updateLabel(id: String, label: String)
+    suspend fun add(label: String, alias: String, format: CodeFormat, data: String): SavedCode
+    suspend fun update(id: String, label: String, alias: String, format: CodeFormat, data: String)
     suspend fun delete(id: String)
 }

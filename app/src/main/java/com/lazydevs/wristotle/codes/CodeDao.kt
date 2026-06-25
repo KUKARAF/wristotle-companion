@@ -19,8 +19,8 @@ interface CodeDao {
     @Query("SELECT * FROM codes ORDER BY createdAtEpochMs DESC")
     suspend fun allNewestFirst(): List<CodeEntity>
 
-    @Query("UPDATE codes SET label = :label WHERE id = :id")
-    suspend fun updateLabel(id: String, label: String)
+    @Query("UPDATE codes SET label = :label, alias = :alias, format = :format, data = :data WHERE id = :id")
+    suspend fun update(id: String, label: String, alias: String, format: String, data: String)
 
     @Query("DELETE FROM codes WHERE id = :id")
     suspend fun deleteById(id: String)

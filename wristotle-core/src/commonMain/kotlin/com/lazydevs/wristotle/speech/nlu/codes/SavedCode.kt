@@ -12,6 +12,9 @@ package com.lazydevs.wristotle.speech.nlu.codes
 data class SavedCode(
     val id: String,
     val label: String,
+    /** Optional spoken alias for voice recall ("show my Tesco card") — matched
+     *  in addition to [label] once the watch/voice piece lands. Empty = none. */
+    val alias: String,
     val format: CodeFormat,
     val data: String,
     val createdAtEpochMs: Long,

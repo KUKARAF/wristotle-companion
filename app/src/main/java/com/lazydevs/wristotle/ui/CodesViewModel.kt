@@ -25,16 +25,17 @@ class CodesViewModel(app: Application) : AndroidViewModel(app) {
     val codes: StateFlow<List<SavedCode>> =
         repository.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun add(label: String, format: CodeFormat, data: String) {
+    fun add(label: String, alias: String, format: CodeFormat, data: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.add(label.trim().ifEmpty { data }, format, data)
+            repository.add(label.trim().ifEmpty { data }, alias.trim(), format, data)
         }
     }
 
-    fun rename(id: String, label: String) {
-        val l = label.trim()
-        if (l.isEmpty()) return
-        viewModelScope.launch(Dispatchers.IO) { repository.updateLabel(id, l) }
+    fun update(id: String, label: String, alias: String, format: CodeFormat, data: String) {
+        if (data.isBlank()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.update(id, label.trim().ifEmpty { data }, alias.trim(), format, data)
+        }
     }
 
     fun delete(id: String) = viewModelScope.launch(Dispatchers.IO) { repository.delete(id) }

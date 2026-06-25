@@ -22,24 +22,26 @@ class RoomCodeRepository(private val dao: CodeDao) : CodeRepository {
 
     override suspend fun all(): List<SavedCode> = dao.allNewestFirst().mapNotNull(::toSaved)
 
-    override suspend fun add(label: String, format: CodeFormat, data: String): SavedCode {
+    override suspend fun add(label: String, alias: String, format: CodeFormat, data: String): SavedCode {
         val code = SavedCode(
             id = UUID.randomUUID().toString(),
             label = label,
+            alias = alias,
             format = format,
             data = data,
             createdAtEpochMs = System.currentTimeMillis(),
         )
-        dao.insert(CodeEntity(code.id, code.label, code.format.name, code.data, code.createdAtEpochMs))
+        dao.insert(CodeEntity(code.id, code.label, code.alias, code.format.name, code.data, code.createdAtEpochMs))
         return code
     }
 
-    override suspend fun updateLabel(id: String, label: String) = dao.updateLabel(id, label)
+    override suspend fun update(id: String, label: String, alias: String, format: CodeFormat, data: String) =
+        dao.update(id, label, alias, format.name, data)
 
     override suspend fun delete(id: String) = dao.deleteById(id)
 
     private fun toSaved(e: CodeEntity): SavedCode? {
         val fmt = runCatching { CodeFormat.valueOf(e.format) }.getOrNull() ?: return null
-        return SavedCode(e.id, e.label, fmt, e.data, e.createdAtEpochMs)
+        return SavedCode(e.id, e.label, e.alias, fmt, e.data, e.createdAtEpochMs)
     }
 }

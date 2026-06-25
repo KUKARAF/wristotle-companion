@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 class CodeGeneratorTest {
 
-    private fun code(format: CodeFormat, data: String) = SavedCode("id", "Label", format, data, 0L)
+    private fun code(format: CodeFormat, data: String) = SavedCode("id", "Label", "", format, data, 0L)
 
     @Test fun `QR dispatches to a 2D matrix`() {
         assertTrue(CodeGenerator.matrix(code(CodeFormat.QR_CODE, "https://wristotle.app")) is CodeMatrix.TwoD)

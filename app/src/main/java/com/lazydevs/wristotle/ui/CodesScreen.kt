@@ -56,6 +56,7 @@ fun CodesScreen(vm: CodesViewModel) {
     val codes by vm.codes.collectAsState()
     var pendingScan by remember { mutableStateOf<Pair<CodeFormat, String>?>(null) }
     var showManual by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<SavedCode?>(null) }
 
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         val data = result.contents
@@ -112,27 +113,49 @@ fun CodesScreen(vm: CodesViewModel) {
             )
         } else {
             codes.forEach { code ->
-                CodeRow(code, onDelete = { vm.delete(code.id) })
+                CodeRow(code, onEdit = { editing = code }, onDelete = { vm.delete(code.id) })
                 Spacer(Modifier.height(8.dp))
             }
         }
     }
 
     pendingScan?.let { (format, data) ->
-        LabelDialog(
-            suggested = data.take(24),
-            onConfirm = { label ->
-                vm.add(label, format, data)
+        NameDialog(
+            title = "Name this code",
+            initialLabel = data.take(24),
+            initialAlias = "",
+            onConfirm = { label, alias ->
+                vm.add(label, alias, format, data)
                 pendingScan = null
             },
             onDismiss = { pendingScan = null },
         )
     }
 
+    editing?.let { code ->
+        CodeEditorDialog(
+            title = "Edit code",
+            initialLabel = code.label,
+            initialAlias = code.alias,
+            initialFormat = code.format,
+            initialData = code.data,
+            onConfirm = { label, alias, format, data ->
+                vm.update(code.id, label, alias, format, data)
+                editing = null
+            },
+            onDismiss = { editing = null },
+        )
+    }
+
     if (showManual) {
-        ManualEntryDialog(
-            onConfirm = { label, format, data ->
-                vm.add(label, format, data)
+        CodeEditorDialog(
+            title = "Add a code",
+            initialLabel = "",
+            initialAlias = "",
+            initialFormat = CodeFormat.CODE_128,
+            initialData = "",
+            onConfirm = { label, alias, format, data ->
+                vm.add(label, alias, format, data)
                 showManual = false
             },
             onDismiss = { showManual = false },
@@ -141,30 +164,38 @@ fun CodesScreen(vm: CodesViewModel) {
 }
 
 @Composable
-private fun ManualEntryDialog(
-    onConfirm: (label: String, format: CodeFormat, data: String) -> Unit,
+private fun CodeEditorDialog(
+    title: String,
+    initialLabel: String,
+    initialAlias: String,
+    initialFormat: CodeFormat,
+    initialData: String,
+    onConfirm: (label: String, alias: String, format: CodeFormat, data: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var label by remember { mutableStateOf("") }
-    var data by remember { mutableStateOf("") }
-    var format by remember { mutableStateOf(CodeFormat.CODE_128) }
+    var label by remember { mutableStateOf(initialLabel) }
+    var alias by remember { mutableStateOf(initialAlias) }
+    var data by remember { mutableStateOf(initialData) }
+    var format by remember { mutableStateOf(initialFormat) }
     // Validate by actually trying to encode — null = unencodable in this format
     // (e.g. non-ASCII for Code 128, or too long for QR).
     val valid = remember(data, format) {
-        data.isNotBlank() && CodeGenerator.matrix(SavedCode("", "", format, data, 0L)) != null
+        data.isNotBlank() && CodeGenerator.matrix(SavedCode("", "", "", format, data, 0L)) != null
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add a code") },
+        title = { Text(title) },
         text = {
             Column {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Label") },
+                    label = { Text("Name") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(Modifier.height(8.dp))
+                AliasField(alias) { alias = it }
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = data,
@@ -197,14 +228,14 @@ private fun ManualEntryDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(label, format, data) }, enabled = valid) { Text("Save") }
+            TextButton(onClick = { onConfirm(label, alias, format, data) }, enabled = valid) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
 
 @Composable
-private fun CodeRow(code: SavedCode, onDelete: () -> Unit) {
+private fun CodeRow(code: SavedCode, onEdit: () -> Unit, onDelete: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             CodePreview(code, Modifier.size(56.dp))
@@ -217,10 +248,13 @@ private fun CodeRow(code: SavedCode, onDelete: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    code.format.displayName,
+                    code.format.displayName + if (code.alias.isNotBlank()) " · \"${code.alias}\"" else "",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Default.Edit, contentDescription = "Edit ${code.label}")
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete ${code.label}")
@@ -230,20 +264,50 @@ private fun CodeRow(code: SavedCode, onDelete: () -> Unit) {
 }
 
 @Composable
-private fun LabelDialog(suggested: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
-    var text by remember { mutableStateOf(suggested) }
+private fun NameDialog(
+    title: String,
+    initialLabel: String,
+    initialAlias: String,
+    onConfirm: (label: String, alias: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var label by remember { mutableStateOf(initialLabel) }
+    var alias by remember { mutableStateOf(initialAlias) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Name this code") },
+        title = { Text(title) },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("Label") },
-                singleLine = true,
-            )
+            Column {
+                OutlinedTextField(
+                    value = label,
+                    onValueChange = { label = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                AliasField(alias) { alias = it }
+            }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text("Save") } },
+        confirmButton = { TextButton(onClick = { onConfirm(label, alias) }) { Text("Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+/** Shared "Voice alias (optional)" field + hint, used by both add dialogs. */
+@Composable
+private fun AliasField(alias: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = alias,
+        onValueChange = onChange,
+        label = { Text("Voice alias (optional)") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(Modifier.height(4.dp))
+    Text(
+        "Say \"show my <alias>\" to pull it up later.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }

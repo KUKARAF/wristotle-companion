@@ -15,6 +15,8 @@ import androidx.room.PrimaryKey
 data class CodeEntity(
     @PrimaryKey val id: String,
     val label: String,
+    /** Spoken alias for voice recall (empty = none). Added in schema v2. */
+    val alias: String,
     val format: String,
     val data: String,
     val createdAtEpochMs: Long,
