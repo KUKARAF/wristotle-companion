@@ -69,6 +69,10 @@ kotlin {
             // kotlinx-serialization-json for the lifted MCP layer
             // (JsonObject / JsonElement). Multiplatform; safe on iOS.
             implementation(libs.kotlinx.serialization.json)
+            // QR generation — pure-Kotlin multiplatform (publishes an
+            // iosSimulatorArm64 artifact), so it compiles for the iOS target.
+            // We use only its raw module grid (see codes/Qr.kt); no rendering.
+            implementation("io.github.g0dkar:qrcode-kotlin:4.5.0")
             // kotlinx-datetime — replaces java.util.{Date, Calendar, TimeZone}
             // + java.text.SimpleDateFormat for the lifted briefing pieces
             // (TodayRange today, MorningBriefRenderer + Date-using slots next).

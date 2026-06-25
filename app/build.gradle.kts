@@ -316,6 +316,10 @@ dependencies {
     // TodayRangeTest (and future tests of code lifted to :wristotle-core commonMain)
     // construct kotlinx-datetime instants for fixture inputs.
     testImplementation(libs.kotlinx.datetime)
+    // Test-only: ZXing decodes the generated QR/Code128 matrices to prove they
+    // round-trip (correctness + orientation). NOT shipped — encoding is pure
+    // Kotlin (qrcode-kotlin for QR, codes/Code128 for 1D).
+    testImplementation("com.google.zxing:core:3.5.3")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
