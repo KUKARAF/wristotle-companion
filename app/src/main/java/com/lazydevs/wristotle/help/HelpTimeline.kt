@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-14-3-agent-timeout",
+            date = "2026-06-25",
+            companionVersion = "v1.14.3",
+            watchVersion = null,
+            title = "Ask Agent works with slow local models",
+            description = "Settings → ✨ Ask Agent has a Response timeout you can raise, so slow on-device models that \"think\" before answering aren't cut off mid-reply.",
+            sampleQuery = null,
+            docsPath = null,
+        ),
+        FeatureEntry(
             id = "v1-14-0-find-phone-ringer",
             date = "2026-06-22",
             companionVersion = "v1.14.0",

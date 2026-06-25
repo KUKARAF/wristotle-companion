@@ -357,6 +357,7 @@ class BackupExporter(private val app: WristotleApplication) {
                 openaiApiKey = app.askAgentSettings.openaiApiKey.value
                     .takeIf { sel.askAgentApiKeys && it.isNotEmpty() },
                 anthropicWebSearch = app.askAgentSettings.anthropicWebSearch.value,
+                responseTimeoutSec = app.askAgentSettings.responseTimeoutSec.value,
             ) else null,
             sttProvider = if (sel.sttProviderSetup) BackupManifest.SttProviderPrefs(
                 mode = app.sttProviderSettings.mode.value.name,

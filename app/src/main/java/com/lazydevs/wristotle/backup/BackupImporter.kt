@@ -515,6 +515,7 @@ class BackupImporter(private val app: WristotleApplication) {
                 app.askAgentSettings.setOpenAiModel(a.openaiModel)
                 app.askAgentSettings.setSystemPrompt(a.systemPrompt)
                 app.askAgentSettings.setAnthropicWebSearch(a.anthropicWebSearch)
+                app.askAgentSettings.setResponseTimeoutSec(a.responseTimeoutSec)
                 if (sel.askAgentApiKeys) {
                     a.anthropicApiKey?.let { app.askAgentSettings.setAnthropicApiKey(it) }
                     a.openaiApiKey?.let { app.askAgentSettings.setOpenAiApiKey(it) }

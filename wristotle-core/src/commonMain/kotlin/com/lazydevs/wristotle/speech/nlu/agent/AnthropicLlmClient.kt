@@ -48,6 +48,7 @@ class AnthropicLlmClient(
      * [complete] never sends tools.
      */
     private val webSearchEnabled: Boolean = false,
+    private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
 ) : LlmClient {
 
     override suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult {
@@ -255,11 +256,11 @@ class AnthropicLlmClient(
                 "User-Agent" to USER_AGENT,
             ),
             body = body.encodeToByteArray(),
-            // Cap under the watch's PROCESSOR_TIMEOUT_MS (15 s) so a slow
-            // LLM round produces a real failure message in time for the
-            // watch to render it, instead of leaving the watch silent
-            // past its own ceiling.
-            timeoutMs = READ_TIMEOUT_MS,
+            // User-configurable (AskAgentSettings); generous by default for slow
+            // reasoning models. The watch no longer needs the timeout capped
+            // under its 15 s ceiling — AskAgentHandler's periodic agent_status
+            // heartbeat re-arms the watch timer while the LLM is generating.
+            timeoutMs = readTimeoutMs,
         ),
     )
 
@@ -268,7 +269,8 @@ class AnthropicLlmClient(
         private const val ANTHROPIC_VERSION = "2023-06-01"
         private const val USER_AGENT = "Wristotle/companion"
         const val DEFAULT_MAX_TOKENS = 1024
-        private const val READ_TIMEOUT_MS = 14_000
+        /** Mirror of [OpenAiCompatibleLlmClient.DEFAULT_READ_TIMEOUT_MS]. */
+        const val DEFAULT_READ_TIMEOUT_MS = 14_000
 
         /**
          * Anthropic's server-side `web_search` tool version string —

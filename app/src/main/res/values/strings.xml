@@ -333,6 +333,8 @@
     <string name="settings_askagent_system_prompt_reset">Reset to default</string>
     <string name="settings_askagent_triggers_label">Custom trigger words</string>
     <string name="settings_askagent_triggers_hint">Extra wake words for the agent. One per line. Use them either as wake words (\"Jarvis, what\'s the weather?\") or with a verb (\"ask jarvis …\"). Built-ins (agent, claude, ai, …) only work with a verb — \"agent\" alone is too generic to bare-match safely.</string>
+    <string name="settings_askagent_timeout_label">Response timeout (seconds)</string>
+    <string name="settings_askagent_timeout_hint">How long to wait for the agent to reply. Raise this for slow local models that \"think\" before answering (e.g. 120). Range 5–300; default 14.</string>
 
     <!-- MCP servers card (phase A) -->
     <string name="settings_mcp_header">MCP servers</string>
