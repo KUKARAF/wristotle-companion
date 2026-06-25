@@ -1,0 +1,7 @@
+Find My Phone no longer triggers by accident.
+
+Saying "make a note to find my phone charger",
+"remind me to find my phone", or asking the agent
+a question that mentions your phone no longer rings
+the phone. It now only rings when you actually ask
+to find it.
