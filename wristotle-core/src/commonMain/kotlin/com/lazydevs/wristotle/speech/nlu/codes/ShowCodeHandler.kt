@@ -47,12 +47,22 @@ class ShowCodeHandler(
         return "Showing ${codes[index].label} on your watch."
     }
 
-    /** Alias exact → alias substring → label substring. -1 if nothing matches. */
+    /**
+     * Alias exact → alias substring → label substring → format hint. The format
+     * fallback lets "show my qr code" / "show my barcode" work without a name,
+     * picking the first code of that kind. -1 if nothing matches.
+     */
     private fun resolve(codes: List<SavedCode>, subject: String): Int {
         val q = subject.lowercase()
         codes.indexOfFirst { it.alias.equals(subject, ignoreCase = true) }.let { if (it >= 0) return it }
         codes.indexOfFirst { it.alias.isNotBlank() && it.alias.lowercase().contains(q) }.let { if (it >= 0) return it }
         codes.indexOfFirst { it.label.lowercase().contains(q) }.let { if (it >= 0) return it }
+        if (q.contains("qr")) {
+            codes.indexOfFirst { it.format == CodeFormat.QR_CODE }.let { if (it >= 0) return it }
+        }
+        if (q.contains("barcode") || q.contains("bar code") || q.contains("128")) {
+            codes.indexOfFirst { it.format.is1D }.let { if (it >= 0) return it }
+        }
         return -1
     }
 }

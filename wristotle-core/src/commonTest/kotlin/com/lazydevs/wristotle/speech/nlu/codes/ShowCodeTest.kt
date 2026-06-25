@@ -25,7 +25,24 @@ class ShowCodeTest {
         assertEquals("tesco", s.extract("show my tesco card")[SlotKeys.Subject])
         assertEquals("clubcard", s.extract("pull up my clubcard")[SlotKeys.Subject])
         assertEquals("gym", s.extract("show the gym pass")[SlotKeys.Subject])
+        // dictation trailing period must not defeat the noun strip (the live bug);
+        // case is preserved (the handler lowercases when matching)
+        assertEquals("QR", s.extract("Show QR card.")[SlotKeys.Subject])
+        // a bare format word survives as a hint instead of stripping to empty
+        assertEquals("barcode", s.extract("show my barcode")[SlotKeys.Subject])
         assertTrue(s.extract("show my codes").isEmpty())
+    }
+
+    @Test fun `handler matches by format when no name fits`() = runTest {
+        val codes = listOf(
+            SavedCode("a", "Clubcard", "tesco", CodeFormat.CODE_128, "123456789012", 0L),
+            SavedCode("b", "Wristotle", "", CodeFormat.QR_CODE, "https://wristotle.app", 0L),
+        )
+        val tx = FakeTransport()
+        ShowCodeHandler(FakeRepo(codes), tx).handle(result("qr"))
+        assertEquals(1, tx.shownIndex)   // "qr" → the QR_CODE entry
+        ShowCodeHandler(FakeRepo(codes), tx).handle(result("barcode"))
+        assertEquals(0, tx.shownIndex)   // "barcode" → the 1D entry
     }
 
     @Test fun `handler resolves alias to the synced index and renders it`() = runTest {

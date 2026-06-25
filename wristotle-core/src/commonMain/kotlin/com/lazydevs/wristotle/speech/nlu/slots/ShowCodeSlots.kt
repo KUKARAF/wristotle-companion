@@ -27,11 +27,17 @@ class ShowCodeSlots : SlotExtractor {
     }
 
     private fun extractSubject(query: String): String? {
-        var s = LEAD_IN.replace(query.trim(), "").trim()
-        s = TRAILING_NOUN.replace(s, "").trim()
+        // Dictation usually adds a trailing period ("Show QR card.") — strip
+        // surrounding punctuation BEFORE matching or the trailing-noun anchor fails.
+        var s = LEAD_IN.replace(query.trim().trim('.', '!', '?', ','), "").trim()
         // "show my codes/barcodes" with nothing else is a request for the list,
         // not a specific code — leave the subject empty.
         if (s.equals("codes", ignoreCase = true) || s.equals("barcodes", ignoreCase = true)) return null
+        // Drop a trailing "code/card/pass" — but only when something is left in
+        // front of it, so a bare "barcode" / "qr code" survives as a format hint
+        // for the handler ("show my barcode" → subject="barcode").
+        val stripped = TRAILING_NOUN.replace(s, "").trim()
+        if (stripped.isNotEmpty()) s = stripped
         return s.ifBlank { null }
     }
 
