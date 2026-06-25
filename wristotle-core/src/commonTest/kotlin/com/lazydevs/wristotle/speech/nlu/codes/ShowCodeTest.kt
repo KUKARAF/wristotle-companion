@@ -56,6 +56,17 @@ class ShowCodeTest {
         assertTrue(resp.contains("Tesco"))
     }
 
+    @Test fun `multiple matches ask instead of guessing`() = runTest {
+        val codes = listOf(
+            SavedCode("a", "Tesco", "", CodeFormat.QR_CODE, "https://a", 0L),
+            SavedCode("b", "Boots", "", CodeFormat.QR_CODE, "https://b", 0L),
+        )
+        val tx = FakeTransport()
+        val resp = ShowCodeHandler(FakeRepo(codes), tx).handle(result("qr"))
+        assertEquals(-1, tx.shownIndex)  // two QRs → didn't render either
+        assertTrue(resp.contains("Tesco") && resp.contains("Boots"))
+    }
+
     @Test fun `handler with an unknown subject sends nothing`() = runTest {
         val tx = FakeTransport()
         val resp = ShowCodeHandler(

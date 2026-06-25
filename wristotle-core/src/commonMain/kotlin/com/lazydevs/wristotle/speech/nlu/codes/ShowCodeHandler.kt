@@ -40,29 +40,42 @@ class ShowCodeHandler(
             return "Which code? You have: " + codes.joinToString(", ") { it.label } + "."
         }
 
-        val index = resolve(codes, subject)
-        if (index < 0) return "Couldn't find a saved code for \"$subject\"."
-
-        transport.sendInt32(MessageKeys.SHOW_CODE_INDEX, index)
-        return "Showing ${codes[index].label} on your watch."
+        val matches = resolve(codes, subject)
+        return when {
+            matches.isEmpty() -> "Couldn't find a saved code for \"$subject\"."
+            matches.size == 1 -> {
+                transport.sendInt32(MessageKeys.SHOW_CODE_INDEX, matches[0])
+                "Showing ${codes[matches[0]].label} on your watch."
+            }
+            // Ambiguous (e.g. several QR codes for "show my qr code") — don't
+            // guess; name the candidates so the user can recall the right one.
+            else -> "Which one? " + matches.joinToString(", ") { codes[it].label } +
+                ". Say its name."
+        }
     }
 
     /**
-     * Alias exact → alias substring → label substring → format hint. The format
-     * fallback lets "show my qr code" / "show my barcode" work without a name,
-     * picking the first code of that kind. -1 if nothing matches.
+     * Candidate indices in the synced order, by the strongest tier that hits:
+     * alias exact → alias substring → label substring → format hint. Returns ALL
+     * matches in that tier so the handler can disambiguate when there's more than
+     * one (the format fallback lets "show my qr code" work without a name).
      */
-    private fun resolve(codes: List<SavedCode>, subject: String): Int {
+    private fun resolve(codes: List<SavedCode>, subject: String): List<Int> {
         val q = subject.lowercase()
-        codes.indexOfFirst { it.alias.equals(subject, ignoreCase = true) }.let { if (it >= 0) return it }
-        codes.indexOfFirst { it.alias.isNotBlank() && it.alias.lowercase().contains(q) }.let { if (it >= 0) return it }
-        codes.indexOfFirst { it.label.lowercase().contains(q) }.let { if (it >= 0) return it }
+        codes.indices.filter { codes[it].alias.equals(subject, ignoreCase = true) }
+            .let { if (it.isNotEmpty()) return it }
+        codes.indices.filter { codes[it].alias.isNotBlank() && codes[it].alias.lowercase().contains(q) }
+            .let { if (it.isNotEmpty()) return it }
+        codes.indices.filter { codes[it].label.lowercase().contains(q) }
+            .let { if (it.isNotEmpty()) return it }
         if (q.contains("qr")) {
-            codes.indexOfFirst { it.format == CodeFormat.QR_CODE }.let { if (it >= 0) return it }
+            codes.indices.filter { codes[it].format == CodeFormat.QR_CODE }
+                .let { if (it.isNotEmpty()) return it }
         }
         if (q.contains("barcode") || q.contains("bar code") || q.contains("128")) {
-            codes.indexOfFirst { it.format.is1D }.let { if (it >= 0) return it }
+            codes.indices.filter { codes[it].format.is1D }
+                .let { if (it.isNotEmpty()) return it }
         }
-        return -1
+        return emptyList()
     }
 }
