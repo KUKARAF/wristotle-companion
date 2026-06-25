@@ -196,6 +196,7 @@
     <string name="settings_section_stats">Stats</string>
     <string name="settings_section_speech">Speech</string>
     <string name="settings_section_notes">Notes</string>
+    <string name="settings_section_codes">Saved codes</string>
     <string name="settings_section_reminders">Alarms &amp; Reminders</string>
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_section_setup">Setup</string>

@@ -83,6 +83,7 @@ enum class SettingsCategory(
     Watch(R.string.settings_section_watch, "⌚"),
     Conversation(R.string.settings_section_conversation, "💬"),
     Notes(R.string.settings_section_notes, "📝"),
+    Codes(R.string.settings_section_codes, "🎟️"),
     Reminders(R.string.settings_section_reminders, "⏰"),
     Notifications(R.string.settings_section_notifications, "🔔"),
     Weather(R.string.settings_section_weather, "☁️"),
@@ -482,6 +483,10 @@ private fun SettingsCategoryContent(
                     settings = app.notesSyncSettings,
                     coordinator = app.notesSyncCoordinator,
                 )
+            }
+
+            SettingsCategory.Codes -> {
+                CodesScreen(vm = androidx.lifecycle.viewmodel.compose.viewModel())
             }
 
             SettingsCategory.Reminders -> {

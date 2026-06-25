@@ -268,6 +268,9 @@ tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.co
 }
 
 dependencies {
+    // Live barcode/QR scanner for capturing a card — pure ZXing, NO Play
+    // Services (F-Droid-friendly, matches the app's AOSP stance).
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
