@@ -1,0 +1,7 @@
+Save loyalty cards and QR codes on your watch.
+
+Scan a card with the camera or type one in, and it
+syncs to your watch to show full-screen at the
+checkout — even offline. Works with QR, Code 128,
+EAN-13 and UPC-A. Give each a name, then recall it
+by voice: "show my qr code" or "show my clubcard".

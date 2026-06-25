@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-15-0-saved-codes",
+      "date": "2026-06-25",
+      "companion_version": "v1.15.0",
+      "watch_version": "v1.5.0",
+      "title": "Save loyalty cards and QR codes on your watch",
+      "description": "Scan or enter loyalty cards and QR codes; they show full-screen on the watch, even offline, and you can recall one by voice.",
+      "sample_query": "show my qr code",
+      "docs_path": "voice-commands/"
+    },
+    {
       "id": "v1-14-3-agent-timeout",
       "date": "2026-06-25",
       "companion_version": "v1.14.3",

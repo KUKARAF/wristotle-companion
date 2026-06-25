@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-15-0-saved-codes",
+            date = "2026-06-25",
+            companionVersion = "v1.15.0",
+            watchVersion = "v1.5.0",
+            title = "Save loyalty cards and QR codes on your watch",
+            description = "Scan or enter loyalty cards and QR codes; they show full-screen on the watch, even offline, and you can recall one by voice.",
+            sampleQuery = "show my qr code",
+            docsPath = "voice-commands/",
+        ),
+        FeatureEntry(
             id = "v1-14-3-agent-timeout",
             date = "2026-06-25",
             companionVersion = "v1.14.3",
