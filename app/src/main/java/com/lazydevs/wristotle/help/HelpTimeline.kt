@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-15-1-cloud-tts-audio",
+            date = "2026-07-20",
+            companionVersion = "v1.15.1",
+            watchVersion = null,
+            title = "Cloud voice replies are no longer silent",
+            description = "Speak-on-watch with a cloud or self-hosted TTS provider could produce no sound with some servers; the streamed audio now decodes and plays.",
+            sampleQuery = null,
+            docsPath = null,
+        ),
+        FeatureEntry(
             id = "v1-15-0-saved-codes",
             date = "2026-06-25",
             companionVersion = "v1.15.0",

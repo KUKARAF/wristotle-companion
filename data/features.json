@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-15-1-cloud-tts-audio",
+      "date": "2026-07-20",
+      "companion_version": "v1.15.1",
+      "watch_version": null,
+      "title": "Cloud voice replies are no longer silent",
+      "description": "Speak-on-watch with a cloud or self-hosted TTS provider could produce no sound with some servers; the streamed audio now decodes and plays.",
+      "sample_query": null,
+      "docs_path": null
+    },
+    {
       "id": "v1-15-0-saved-codes",
       "date": "2026-06-25",
       "companion_version": "v1.15.0",

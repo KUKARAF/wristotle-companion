@@ -1,0 +1,8 @@
+Cloud voice replies are no longer silent.
+
+Speak on watch with a cloud or self-hosted TTS
+endpoint (OpenAI-compatible /audio/speech) could
+play nothing on servers that stream the audio.
+The streamed reply now decodes correctly, so it
+speaks as expected. Local on-device TTS was
+unaffected.
