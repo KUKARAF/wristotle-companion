@@ -49,7 +49,7 @@ class SetAlarmSlots(
         if (RELATIVE_DURATION_MARKER.containsMatchIn(stripped)) {
             val seconds = parseDurationSeconds(stripped)
             if (seconds != null && seconds > 0) {
-                return mapOf(SlotKeys.Time to clock.now() + seconds.seconds)
+                return mapOf(SlotKeys.Time to Clock.System.now() + seconds.seconds)
             }
         }
 
@@ -79,15 +79,7 @@ class SetAlarmSlots(
 
         /** Cheap precondition gate for the SetTimer-style fast path —
          *  only trigger when the stripped query mentions a relative
-         *  marker, otherwise prettytime-nlp owns the parse. Besides "from
-         *  now" / "in <n>", a bare "<n> <duration-unit>" ("alarm for 40
-         *  minutes", "alarm for 2 hours") is a relative duration too —
-         *  without this it fell through to prettytime, which mangled
-         *  "40 minutes" into ~now (set 2:06 AM instead of now + 40 min).
-         *  A clock time like "for 7:40" / "for 8" has no unit word, so it
-         *  still goes to prettytime. */
-        val RELATIVE_DURATION_MARKER = Regex(
-            """(?i)\bfrom now\b|\bin\s+\d|\b\d+\s*(?:seconds?|secs?|minutes?|mins?|hours?|hrs?)\b""",
-        )
+         *  marker, otherwise prettytime-nlp owns the parse. */
+        val RELATIVE_DURATION_MARKER = Regex("""(?i)\bfrom now\b|\bin\s+\d""")
     }
 }

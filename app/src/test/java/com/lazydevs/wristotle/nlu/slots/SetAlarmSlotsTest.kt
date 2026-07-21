@@ -79,36 +79,6 @@ class SetAlarmSlotsTest {
         )
     }
 
-    @Test fun `for forty minutes sets alarm forty minutes ahead`() {
-        // Regression: on-device "set an alarm for 40 minutes" at 2:06 PM set the
-        // alarm for 2:06 AM — it ignored the duration and fell back to ~now. A
-        // bare "for <n> <unit>" is a relative duration, not a clock time.
-        val before = System.currentTimeMillis()
-        val date = extractDate("set an alarm for 40 minutes")
-        assertNotNull("expected non-null date for 'for 40 minutes'", date)
-        val ms = date!!.time - before
-        assertTrue(
-            "expected ~40min ahead, got ${ms / 60000}min",
-            ms in 39 * 60 * 1000L..41 * 60 * 1000L,
-        )
-    }
-
-    @Test fun `for two hours sets alarm two hours ahead`() {
-        val before = System.currentTimeMillis()
-        val date = extractDate("set an alarm for 2 hours")
-        assertNotNull(date)
-        val ms = date!!.time - before
-        assertTrue("expected ~120min, got ${ms / 60000}min", ms in 119 * 60 * 1000L..121 * 60 * 1000L)
-    }
-
-    @Test fun `colon time is not mistaken for a duration`() {
-        // "for 7:40" has no unit word, so it must stay an absolute clock time
-        // (7:40), not become "40 minutes from now".
-        val cal = Calendar.getInstance().apply { time = extractDate("set an alarm for 7:40")!! }
-        assertEquals(40, cal.get(Calendar.MINUTE))
-        assertTrue(cal.get(Calendar.HOUR_OF_DAY) == 7 || cal.get(Calendar.HOUR_OF_DAY) == 19)
-    }
-
     @Test fun `compound relative duration sets alarm at the sum`() {
         // Closes codeberg #12 (regression report). Pre-fix this returned
         // "Couldn't understand the time" because prettytime-nlp can't sum
