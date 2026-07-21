@@ -131,6 +131,13 @@ jobs:
         with:
           accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: false
+          # Install ONLY cmdline-tools — no extra packages. The default
+          # ("tools platform-tools") is unneeded for an APK build (AGP pulls
+          # build-tools + the compile platform itself; NDK + CMake are installed
+          # explicitly below) and dragged in an Android Emulator package whose
+          # cached archive corrupted the persistent SDK cache ("Error on ZipFile
+          # unknown archive"). Keeping this empty avoids ever touching it.
+          packages: ''
 
       - name: Re-accept Android SDK licenses (defensive)
         # Belt-and-braces against runner state drift — cmdline-tools

@@ -87,6 +87,9 @@ jobs:
         with:
           accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: false
+          # Only cmdline-tools — no extra packages (see release.yml). The default
+          # dragged in an Android Emulator package that corrupted the SDK cache.
+          packages: ''
 
       - name: Re-accept Android SDK licenses (defensive)
         run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
