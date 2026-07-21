@@ -55,6 +55,22 @@ class PebblePcmConverterTest {
         for (i in samples.indices) assertEquals(samples[i], decoded[i], "sample $i mismatch")
     }
 
+    @Test fun `decodeWavToMonoS16 recovers a streaming WAV that declares data size 0`() {
+        // Streaming TTS servers (OpenAI-compatible /audio/speech, many self-hosted)
+        // emit a WAV header with the data-chunk size written as 0 (or 0xFFFFFFFF)
+        // because the length is unknown up front, then stream the samples. On-device
+        // this decoded to frames=0 → silence in "cloud primary" mode.
+        val samples = shortArrayOf(1000, -1000, 2000, -2000, 3000, -3000)
+        for (declared in intArrayOf(0, -1 /* 0xFFFFFFFF */)) {
+            val wav = buildPcmWav(samples, sampleRate = 24000)
+            writeLEI32(wav, 40, declared)          // clobber the data-chunk size; keep the audio
+            val (decoded, rate) = PebblePcmConverter.decodeWavToMonoS16(wav)!!
+            assertEquals(24000, rate)
+            assertEquals(samples.size, decoded.size, "declared=$declared: samples lost")
+            assertEquals(samples.toList(), decoded.toList(), "declared=$declared")
+        }
+    }
+
     @Test fun `decodeWavToMonoS16 rejects garbage`() {
         assertNull(PebblePcmConverter.decodeWavToMonoS16(ByteArray(10)))
         assertNull(PebblePcmConverter.decodeWavToMonoS16("NOTRIFFGARBAGE".encodeToByteArray() + ByteArray(60)))

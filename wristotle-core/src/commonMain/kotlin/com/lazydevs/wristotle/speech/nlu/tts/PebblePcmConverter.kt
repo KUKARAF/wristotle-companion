@@ -72,7 +72,15 @@ object PebblePcmConverter {
                     sampleRate    = wavBytes.leI32(pos + 12)
                     bitsPerSample = wavBytes.leI16(pos + 22)
                 }
-                "data" -> { dataOffset = pos + 8; dataLength = sz }
+                "data" -> {
+                    dataOffset = pos + 8
+                    val avail = wavBytes.size - dataOffset
+                    // Streaming TTS servers write the data-chunk size as 0 (or
+                    // 0xFFFFFFFF → -1 via leI32) because the length is unknown
+                    // when the header is emitted — trust the bytes actually
+                    // present. Also clamp an over-declared size to what we have.
+                    dataLength = if (sz <= 0 || sz > avail) avail else sz
+                }
             }
             pos += 8 + sz
             if (sz % 2 == 1) pos++
