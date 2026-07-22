@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-16-0-home-assistant",
+            date = "2026-07-21",
+            companionVersion = "v1.16.0",
+            watchVersion = null,
+            title = "Control Home Assistant by voice",
+            description = "Say \"hey home assistant …\" and Wristotle sends the command to your self-hosted Home Assistant and speaks back its reply.",
+            sampleQuery = "hey home assistant turn off the kitchen lights",
+            docsPath = null,
+        ),
+        FeatureEntry(
             id = "v1-15-1-cloud-tts-audio",
             date = "2026-07-20",
             companionVersion = "v1.15.1",

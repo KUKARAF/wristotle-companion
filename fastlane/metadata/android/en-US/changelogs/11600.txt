@@ -1,0 +1,10 @@
+Control Home Assistant by voice.
+
+Point Wristotle at your self-hosted Home Assistant
+(base URL + a long-lived access token in Settings →
+Home Assistant), then speak from your watch: "hey
+home assistant turn off the kitchen lights" or just
+"home assistant, is the garage door open". The
+command goes to HA's own conversation agent and its
+reply comes back on your watch. Add custom wake
+words like "jarvis" if you like.
