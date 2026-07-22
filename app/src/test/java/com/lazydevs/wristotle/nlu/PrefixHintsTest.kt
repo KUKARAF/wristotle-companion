@@ -511,6 +511,15 @@ class PrefixHintsTest {
         assertEquals(Intent.AskAgent, PrefixHints.hintFor("hey agent what's the weather"))
     }
 
+    @Test fun `home-assistant subject maps to HomeAssistant`() {
+        // Verb form and bare form both route; "hey assistant" (AskAgent's) must NOT.
+        assertEquals(Intent.HomeAssistant, PrefixHints.hintFor("hey home assistant turn off the lights"))
+        assertEquals(Intent.HomeAssistant, PrefixHints.hintFor("home assistant set the thermostat to 20"))
+        assertEquals(Intent.HomeAssistant, PrefixHints.hintFor("tell home assistant to lock the door"))
+        assertEquals(Intent.HomeAssistant, PrefixHints.hintFor("hey hass what's the temperature"))
+        assertEquals(Intent.AskAgent, PrefixHints.hintFor("hey assistant what's the weather"))
+    }
+
     @Test fun `add task maps to AddTask`() {
         assertEquals(Intent.AddTask, PrefixHints.hintFor("add a task buy groceries"))
         assertEquals(Intent.AddTask, PrefixHints.hintFor("new task call the dentist"))

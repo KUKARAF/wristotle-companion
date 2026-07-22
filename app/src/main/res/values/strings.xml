@@ -298,6 +298,7 @@
     <string name="settings_section_backup">Backup &amp; Restore</string>
     <string name="settings_section_mcp">MCP servers</string>
     <string name="settings_section_askagent">Ask Agent</string>
+    <string name="settings_section_homeassistant">Home Assistant</string>
     <string name="settings_section_support">Support</string>
     <string name="settings_section_help">Help</string>
 
@@ -336,6 +337,19 @@
     <string name="settings_askagent_triggers_hint">Extra wake words for the agent. One per line. Use them either as wake words (\"Jarvis, what\'s the weather?\") or with a verb (\"ask jarvis …\"). Built-ins (agent, claude, ai, …) only work with a verb — \"agent\" alone is too generic to bare-match safely.</string>
     <string name="settings_askagent_timeout_label">Response timeout (seconds)</string>
     <string name="settings_askagent_timeout_hint">How long to wait for the agent to reply. Raise this for slow local models that \"think\" before answering (e.g. 120). Range 5–300; default 14.</string>
+
+    <!-- Home Assistant card -->
+    <string name="settings_homeassistant_header">Home Assistant</string>
+    <string name="settings_homeassistant_desc">Forwards a spoken command to your self-hosted Home Assistant and speaks back its reply. Say \"hey home assistant …\" (or just \"home assistant …\") and the rest is sent to HA\'s conversation agent — HA does the rest. Companion-local; nothing leaves your device except the command text to your own server.</string>
+    <string name="settings_homeassistant_url_label">Base URL</string>
+    <string name="settings_homeassistant_url_hint">Your HA address, e.g. http://homeassistant.local:8123 or https://&lt;your-domain&gt;. LAN / Tailscale / self-signed http:// all work. No trailing path — /api/conversation/process is added for you.</string>
+    <string name="settings_homeassistant_token_label">Long-lived access token</string>
+    <string name="settings_homeassistant_token_hint">In HA: your profile → Security → Long-lived access tokens → Create. Stored locally; sent only with Home Assistant requests.</string>
+    <string name="settings_homeassistant_triggers_label">Custom trigger words</string>
+    <string name="settings_homeassistant_triggers_hint">Extra wake words on top of the built-ins (home assistant, hass). One per line. Use them as wake words (\"Jarvis, turn off the lights\") or with a verb (\"tell jarvis to …\").</string>
+    <string name="settings_homeassistant_trigger_collision">⚠ \"%1$s\" also triggers Ask Agent. It will route to Home Assistant.</string>
+    <string name="settings_homeassistant_timeout_label">Response timeout (seconds)</string>
+    <string name="settings_homeassistant_timeout_hint">How long to wait for Home Assistant to reply. Range 5–120; default 10.</string>
 
     <!-- MCP servers card (phase A) -->
     <string name="settings_mcp_header">MCP servers</string>

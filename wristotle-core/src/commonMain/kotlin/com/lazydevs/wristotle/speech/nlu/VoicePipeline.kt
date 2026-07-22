@@ -33,6 +33,7 @@ class VoicePipeline(
     private val classifier: IntentClassifier,
     private val slotExtractors: SlotExtractorRegistry,
     private val askAgentSubjects: () -> List<String> = { emptyList() },
+    private val homeAssistantSubjects: () -> List<String> = { emptyList() },
     private val routeThreshold: Float = DEFAULT_ROUTE_THRESHOLD,
     private val routeMargin: Float = DEFAULT_ROUTE_MARGIN,
     private val logger: Logger = NoopLogger,
@@ -64,6 +65,7 @@ class VoicePipeline(
             routeThreshold = routeThreshold,
             routeMargin = routeMargin,
             customAskAgentSubjects = askAgentSubjects(),
+            customHomeAssistantSubjects = homeAssistantSubjects(),
             logger = logger,
         )
         val intent = refined ?: Intent.Unknown

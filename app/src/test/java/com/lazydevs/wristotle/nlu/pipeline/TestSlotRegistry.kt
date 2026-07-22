@@ -56,6 +56,7 @@ fun testSlotRegistry(
     findContact: suspend (String) -> ResolvedContact? = { null },
     reminderOffsetMin: () -> Int = { 30 },
     askAgentSubjects: () -> List<String> = { emptyList() },
+    homeAssistantSubjects: () -> List<String> = { emptyList() },
 ): SlotExtractorRegistry {
     val mediaTargetSlots = MediaTargetSlots()
     val mediaSeekSlots = MediaSeekSlots()
@@ -88,6 +89,7 @@ fun testSlotRegistry(
         Intent.Calculate to CalculateSlots(),
         Intent.Weather to WeatherSlots(),
         Intent.AskAgent to AskAgentSlots(extrasProvider = askAgentSubjects),
+        Intent.HomeAssistant to HomeAssistantSlots(extrasProvider = homeAssistantSubjects),
         Intent.ShowCode to com.lazydevs.wristotle.speech.nlu.slots.ShowCodeSlots(),
     ))
 }

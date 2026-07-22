@@ -54,6 +54,10 @@ private val INTENT_GROUPS = listOf(
         listOf(TtsProviderSettings.INTENT_ASK_AGENT to "Reply"),
     ),
     IntentGroup(
+        "Home Assistant",
+        listOf(TtsProviderSettings.INTENT_HOME_ASSISTANT to "Reply"),
+    ),
+    IntentGroup(
         "Morning brief",
         listOf(TtsProviderSettings.INTENT_MORNING_BRIEF to "Read out"),
     ),

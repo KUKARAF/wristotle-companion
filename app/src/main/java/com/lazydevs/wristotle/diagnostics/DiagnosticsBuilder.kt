@@ -77,6 +77,7 @@ class DiagnosticsBuilder(
             appendSttProviderSection(redact)
             appendTtsProviderSection(redact)
             appendAskAgentSection()
+            appendHomeAssistantSection()
             appendMcpServersSection(redact)
             appendWatchSettingsSection()
             appendWatchCardsSection()
@@ -294,6 +295,19 @@ class DiagnosticsBuilder(
         appendLine("- OpenAI-compat key: ${setState(s.openaiApiKey.value)}; model: ${nonEmpty(s.openaiModel.value)}")
         appendLine("- Custom triggers: ${s.customTriggers.value.size}")
         appendLine("- System prompt: ${s.systemPrompt.value.length} chars")
+        appendLine("- Response timeout: ${s.responseTimeoutSec.value}s")
+        appendLine()
+    }
+
+    private fun StringBuilder.appendHomeAssistantSection() {
+        appendLine("### Home Assistant")
+        val s = app.homeAssistantSettings
+        // URL/token set-state only — no host or token value (the diagnostics
+        // dump can be pasted publicly). State, never secrets.
+        appendLine("- Base URL: ${setState(s.baseUrl.value)}")
+        appendLine("- Token: ${setState(s.token.value)}")
+        appendLine("- Language: ${nonEmpty(s.language.value)}")
+        appendLine("- Custom triggers: ${s.customTriggers.value.size}")
         appendLine("- Response timeout: ${s.responseTimeoutSec.value}s")
         appendLine()
     }

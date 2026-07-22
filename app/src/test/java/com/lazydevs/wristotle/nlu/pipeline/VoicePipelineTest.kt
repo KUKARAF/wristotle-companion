@@ -31,16 +31,20 @@ class VoicePipelineTest {
         watchHint: Intent? = null,
         classifier: FakeIntentClassifier = FakeIntentClassifier(),
         askAgentSubjects: List<String> = emptyList(),
+        homeAssistantSubjects: List<String> = emptyList(),
         findContact: suspend (String) -> ResolvedContact? = { null },
     ): VoicePipeline.Routed = runBlocking {
         val subjectsProvider = { askAgentSubjects }
+        val haSubjectsProvider = { homeAssistantSubjects }
         VoicePipeline(
             classifier = classifier,
             slotExtractors = testSlotRegistry(
                 findContact = findContact,
                 askAgentSubjects = subjectsProvider,
+                homeAssistantSubjects = haSubjectsProvider,
             ),
             askAgentSubjects = subjectsProvider,
+            homeAssistantSubjects = haSubjectsProvider,
         ).route(query, watchHint)
     }
 
@@ -82,6 +86,45 @@ class VoicePipelineTest {
         // custom subjects configured, so wake-word form should not fire.
         val r = route("agent fix my bug")
         assertNotEquals(Intent.AskAgent, r.result.intent)
+    }
+
+    // ── HomeAssistant routing ──────────────────────────────────────────
+
+    @Test fun `verb form routes to HomeAssistant and strips lead-in`() {
+        val r = route("hey home assistant turn off the kitchen lights")
+        assertEquals(Intent.HomeAssistant, r.result.intent)
+        assertEquals("turn off the kitchen lights", r.result.slots[SlotKeys.Query])
+    }
+
+    @Test fun `bare home assistant routes and strips`() {
+        // Unlike AskAgent's generic subjects, HA's are specific enough to
+        // bare-match without a verb.
+        val r = route("home assistant set the thermostat to 20")
+        assertEquals(Intent.HomeAssistant, r.result.intent)
+        assertEquals("set the thermostat to 20", r.result.slots[SlotKeys.Query])
+    }
+
+    @Test fun `tell-to connector is stripped`() {
+        val r = route("tell home assistant to lock the front door")
+        assertEquals(Intent.HomeAssistant, r.result.intent)
+        assertEquals("lock the front door", r.result.slots[SlotKeys.Query])
+    }
+
+    @Test fun `HA custom wake word routes and strips`() {
+        val r = route("Jarvis close the blinds", homeAssistantSubjects = listOf("jarvis"))
+        assertEquals(Intent.HomeAssistant, r.result.intent)
+        assertEquals("close the blinds", r.result.slots[SlotKeys.Query])
+    }
+
+    @Test fun `colliding wake word routes to HomeAssistant not AskAgent`() {
+        // A wake word set for BOTH must resolve deterministically to HA
+        // (the WatchHintRefiner pre-pass checks HA first).
+        val r = route(
+            "jarvis turn off the lights",
+            askAgentSubjects = listOf("jarvis"),
+            homeAssistantSubjects = listOf("jarvis"),
+        )
+        assertEquals(Intent.HomeAssistant, r.result.intent)
     }
 
     // ── Ordering: AskAgent above Reminder ──────────────────────────────

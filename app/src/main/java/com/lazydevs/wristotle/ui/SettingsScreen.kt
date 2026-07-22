@@ -93,6 +93,7 @@ enum class SettingsCategory(
     Backup(R.string.settings_section_backup, "💾"),
     Mcp(R.string.settings_section_mcp, "🔌"),
     AskAgent(R.string.settings_section_askagent, "✨"),
+    HomeAssistant(R.string.settings_section_homeassistant, "🏠"),
     Speech(R.string.settings_section_speech, "🔊", experimental = true),
     Stats(R.string.settings_section_stats, "📊"),
     Diagnostics(R.string.settings_section_diagnostics, "🔧"),
@@ -157,6 +158,7 @@ fun SettingsScreen(
     val reminderSettings = app.reminderSettings
     val weatherSettings = app.weatherSettings
     val askAgentSettings = app.askAgentSettings
+    val homeAssistantSettings = app.homeAssistantSettings
     val scope = rememberCoroutineScope()
 
     // A rescan can prune aliases whose target was uninstalled; the alias card's
@@ -242,6 +244,7 @@ fun SettingsScreen(
                 reminderSettings = reminderSettings,
                 weatherSettings = weatherSettings,
                 askAgentSettings = askAgentSettings,
+                homeAssistantSettings = homeAssistantSettings,
                 onOpenCategory = { category = it },
                 onOpenTopLevelTab = onOpenTopLevelTab,
                 onShowClearLearnedConfirm = { showClearLearnedConfirm = true },
@@ -413,6 +416,7 @@ private fun SettingsCategoryContent(
     reminderSettings: ReminderSettings,
     weatherSettings: com.lazydevs.wristotle.speech.nlu.settings.WeatherSettings,
     askAgentSettings: com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings,
+    homeAssistantSettings: com.lazydevs.wristotle.speech.nlu.settings.HomeAssistantSettings,
     /** Lets the 🌟 Setup card's "Open" buttons jump directly into the
      *  sub-screen for an action's [SettingsCategory] target instead of
      *  bouncing the user back to the landing page. */
@@ -562,6 +566,12 @@ private fun SettingsCategoryContent(
 
             SettingsCategory.AskAgent ->
                 AskAgentSettingsCard(settings = askAgentSettings)
+
+            SettingsCategory.HomeAssistant ->
+                HomeAssistantSettingsCard(
+                    settings = homeAssistantSettings,
+                    askAgentSettings = askAgentSettings,
+                )
 
             SettingsCategory.Speech ->
                 TtsProviderCard(settings = app.ttsProviderSettings)

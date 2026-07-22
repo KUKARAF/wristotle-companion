@@ -225,6 +225,17 @@ class WristotleApplication : Application() {
         )
     }
 
+    /** Home Assistant preferences — base URL + long-lived token + custom
+     *  wake words. Lazy like [askAgentSettings]: only touched when the user
+     *  opens the Settings card, fires a HomeAssistant intent, or runs a
+     *  backup. */
+    val homeAssistantSettings: com.lazydevs.wristotle.speech.nlu.settings.HomeAssistantSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.HomeAssistantSettings(
+            store = kvStore(com.lazydevs.wristotle.speech.nlu.settings.HomeAssistantSettings.PREFS_NAME),
+            http = com.lazydevs.wristotle.http.AndroidHttpClient(),
+        )
+    }
+
     /** STT-provider preferences. See `wristotle-companion/stt-providers.md`. */
     val sttProviderSettings: com.lazydevs.wristotle.speech.nlu.settings.SttProviderSettings by lazy {
         com.lazydevs.wristotle.speech.nlu.settings.SttProviderSettings(
@@ -691,6 +702,9 @@ class WristotleApplication : Application() {
             Intent.SportScore to com.lazydevs.wristotle.speech.nlu.slots.SportSlots(),
             Intent.AskAgent to com.lazydevs.wristotle.speech.nlu.slots.AskAgentSlots(
                 extrasProvider = { askAgentSettings.customTriggers.value },
+            ),
+            Intent.HomeAssistant to com.lazydevs.wristotle.speech.nlu.slots.HomeAssistantSlots(
+                extrasProvider = { homeAssistantSettings.customTriggers.value },
             ),
             Intent.MorningBrief to com.lazydevs.wristotle.speech.nlu.slots.MorningBriefSlots(),
             Intent.ShowCode to com.lazydevs.wristotle.speech.nlu.slots.ShowCodeSlots(),

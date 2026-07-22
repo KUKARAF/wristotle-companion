@@ -137,6 +137,7 @@ class PebbleListenerService : BasePebbleListenerService() {
             classifier = IntentClassifiers.provider(this),
             slotExtractors = app.slotExtractors,
             askAgentSubjects = { app.askAgentSettings.customTriggers.value },
+            homeAssistantSubjects = { app.homeAssistantSettings.customTriggers.value },
             // through the multiplatform Logger interface.
             logger = com.lazydevs.wristotle.logging.WristotleLogger,
         )
@@ -209,6 +210,9 @@ class PebbleListenerService : BasePebbleListenerService() {
                 settings = app.askAgentSettings,
                 mcpServers = app.mcpServerRepository,
                 transport = app.transport,
+            ),
+            com.lazydevs.wristotle.handlers.HomeAssistantHandler(
+                settings = app.homeAssistantSettings,
             ),
             com.lazydevs.wristotle.handlers.MorningBriefHandler(
                 context = this,

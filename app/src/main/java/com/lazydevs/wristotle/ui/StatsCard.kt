@@ -525,6 +525,7 @@ private val HANDLER_NAMES = mapOf(
     "morning_brief" to "Morning brief",
     "show_code" to "Show code",
     "ask_agent" to "Ask Agent",
+    "home_assistant" to "Home Assistant",
 )
 
 /** Handlers we exclude from "Top intents" + "Hardest intent" — they
