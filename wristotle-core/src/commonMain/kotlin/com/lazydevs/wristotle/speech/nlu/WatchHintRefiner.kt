@@ -6,6 +6,7 @@ package com.lazydevs.wristotle.speech.nlu
 import com.lazydevs.wristotle.speech.nlu.logging.Logger
 import com.lazydevs.wristotle.speech.nlu.logging.NoopLogger
 import com.lazydevs.wristotle.speech.nlu.slots.AskAgentTriggers
+import com.lazydevs.wristotle.speech.nlu.slots.HomeAssistantTriggers
 import kotlin.concurrent.Volatile
 
 private const val TAG = "WatchHintRefiner"
@@ -53,13 +54,23 @@ object WatchHintRefiner {
         routeThreshold: Float,
         routeMargin: Float,
         customAskAgentSubjects: List<String> = emptyList(),
+        customHomeAssistantSubjects: List<String> = emptyList(),
         logger: Logger = NoopLogger,
     ): Intent? {
-        // User-supplied "ask jarvis …" triggers run BEFORE PrefixHints so a
+        // User-supplied wake words ("jarvis …") run BEFORE PrefixHints so a
         // custom subject takes effect on every code path (watch-hinted and
-        // unhinted alike). Default subjects are already covered by the
-        // static PrefixHints rule; this pre-pass only kicks in when the
-        // user has actually added an extra word.
+        // unhinted alike). Default subjects are already covered by the static
+        // PrefixHints rules; these pre-passes only kick in when the user has
+        // added an extra word.
+        //
+        // HomeAssistant is checked BEFORE AskAgent: if a user (in error) set
+        // the same wake word for both, the actuating/more-specific intent wins
+        // the tie deterministically — matching the HINTS ordering.
+        if (customHomeAssistantSubjects.isNotEmpty()) {
+            customHomeAssistantRegex(customHomeAssistantSubjects).find(query)?.let {
+                return Intent.HomeAssistant
+            }
+        }
         if (customAskAgentSubjects.isNotEmpty()) {
             customAskAgentRegex(customAskAgentSubjects).find(query)?.let {
                 return Intent.AskAgent
@@ -81,6 +92,17 @@ object WatchHintRefiner {
         val rebuilt = AskAgentTriggers.routeRegex(extras)
         cachedExtras = extras
         cachedRouteRegex = rebuilt
+        return rebuilt
+    }
+
+    @Volatile private var cachedHaExtras: List<String> = emptyList()
+    @Volatile private var cachedHaRouteRegex: Regex = HomeAssistantTriggers.routeRegex(emptyList())
+
+    private fun customHomeAssistantRegex(extras: List<String>): Regex {
+        if (extras == cachedHaExtras) return cachedHaRouteRegex
+        val rebuilt = HomeAssistantTriggers.routeRegex(extras)
+        cachedHaExtras = extras
+        cachedHaRouteRegex = rebuilt
         return rebuilt
     }
 

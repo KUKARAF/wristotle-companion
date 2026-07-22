@@ -65,6 +65,7 @@ object ConfirmSummaryBuilder {
         Intent.Weather       -> "action: weather\ndetails: ${slotOrDash(r, "location")}"
         Intent.SportScore    -> "action: sport\ndetails: ${slotOrDash(r, SlotKeys.Subject)}"
         Intent.AskAgent      -> "action: ask-agent\ndetails: ${slot(r, "query")}"
+        Intent.HomeAssistant -> "action: home-assistant\ndetails: ${slot(r, "query")}"
         Intent.MorningBrief  -> "action: morning-brief\ndetails: -"
         Intent.ShowCode      -> "action: show-code\ndetails: ${slotOrDash(r, SlotKeys.Subject)}"
         Intent.Battery       -> "action: battery\ndetails: -"

@@ -229,6 +229,17 @@ enum class Intent {
      *  label against the saved codes and tells the watch which to render. */
     ShowCode,
 
+    /** Forward a spoken command to a self-hosted Home Assistant instance —
+     *  "hey home assistant turn off the kitchen lights", "jarvis is the garage
+     *  door open". Slot: `query` (String — the command text with the
+     *  "hey/ask/tell <subject>" lead-in stripped). Handled by
+     *  HomeAssistantHandler: POSTs the text to the user's HA
+     *  `/api/conversation/process` endpoint (HA does its own NLU server-side)
+     *  and returns the spoken reply. No LLM — mirrors AskAgent minus the model
+     *  loop. Read-only from Wristotle's side (HA is the authority on what the
+     *  command does) — not in the confirm gate. */
+    HomeAssistant,
+
     /** Fallback when no other intent matches with sufficient confidence. */
     Unknown,
     ;

@@ -702,6 +702,27 @@ object SeedExamples {
             "ask claude give me a recipe for pancakes",
         ))
 
+        // ── HomeAssistant ───────────────────────────────────────────────
+        // Self-hosted HA passthrough — the "hey/ask/tell <home assistant>"
+        // lead-in is the discriminator; the slot extractor strips it and
+        // POSTs the bare command. Seeds cover the common imperative shapes
+        // (turn on/off, set, lock, open/close, is-X queries) so the centroid
+        // recognises "HA wake word + command," not the specific device.
+        addAll(Intent.HomeAssistant, listOf(
+            "hey home assistant turn off the kitchen lights",
+            "hey home assistant turn on the living room lamp",
+            "home assistant set the thermostat to twenty degrees",
+            "tell home assistant to lock the front door",
+            "tell home assistant to close the garage door",
+            "ask home assistant is the garage door open",
+            "hey home assistant good night",
+            "home assistant turn off all the lights",
+            "hey hass what's the temperature in the bedroom",
+            "tell home assistant to start the vacuum",
+            "home assistant open the blinds",
+            "hey home assistant activate movie mode",
+        ))
+
         // ── MorningBrief ────────────────────────────────────────────────
         // Aggregator over today's meetings, alarms, reminders, tasks,
         // and notes. Seeds favour "brief" / "day" / "today" tokens —

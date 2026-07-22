@@ -131,6 +131,18 @@ object PrefixHints {
         // SendMessage so the centroid stays meaningful.
         Regex("(?i)^\\s*(text|sms|message|send (a |an )?(text|message|sms))\\b") to Intent.SendMessage,
         Regex("(?i)^\\s*(call|dial|phone|ring)\\b") to Intent.Call,
+        // HomeAssistant — self-hosted HA passthrough. Sits ABOVE AskAgent so
+        // that on the (user-error) case of a wake word set for both, the
+        // actuating/more-specific intent wins the tie deterministically. The
+        // default subjects ("home assistant"/"homeassistant"/"hass") don't
+        // overlap AskAgent's, so order only matters for colliding customs
+        // (handled by the WatchHintRefiner pre-pass, which checks HA first too).
+        // "tell" is accepted on top of ask/hey — HA commands are imperative —
+        // and the verb is OPTIONAL: bare "home assistant turn off the lights"
+        // is the natural phrasing (the built-in subjects are specific enough
+        // to bare-match without false positives). Kept in lockstep with
+        // HomeAssistantTriggers.
+        Regex("(?i)^\\s*(?:(?:ask|hey|tell)\\s+(?:the\\s+)?)?(?:home\\s*assistant|hass)\\b") to Intent.HomeAssistant,
         // AskAgent — explicit LLM passthrough lead-in. Sits high in the
         // rule list because the trigger words are unambiguous: nothing
         // else in the intent set opens with "ask <agent|claude|ai|llm|
@@ -366,6 +378,7 @@ object PrefixHints {
     // one of these is authoritative over the embedding's noun-driven guess.
     private val CONTENT_PREFIX_INTENTS = setOf(
         Intent.Note, Intent.AppendNote, Intent.Reminder, Intent.AddTask, Intent.AskAgent,
+        Intent.HomeAssistant,
     )
 
     // A wall-clock time: "7:30", "7 am", "o'clock", or a time-of-day word.

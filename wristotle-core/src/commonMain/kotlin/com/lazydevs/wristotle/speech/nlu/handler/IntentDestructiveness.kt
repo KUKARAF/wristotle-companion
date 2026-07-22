@@ -72,5 +72,9 @@ fun Intent.requiresConfirm(): Boolean = when (this) {
     Intent.Vibrate,
     Intent.CancelAlarm,    // reversible — user re-enables in the companion Alarms card
     Intent.ShowCode,       // read-only — renders a saved code on the watch
+    Intent.HomeAssistant,  // HA is the authority on what the command does; gating
+                           // every device command behind a confirm would defeat
+                           // the point of fast voice control. Revisit if users
+                           // want a confirm for destructive HA commands.
     Intent.Unknown -> false
 }

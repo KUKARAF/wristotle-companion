@@ -23,6 +23,7 @@ class TtsProviderSettingsIntentSyncTest {
 
     @Test fun `every TtsProviderSettings INTENT constant matches an Intent enum name`() {
         assertEquals(Intent.AskAgent.name,      TtsProviderSettings.INTENT_ASK_AGENT)
+        assertEquals(Intent.HomeAssistant.name, TtsProviderSettings.INTENT_HOME_ASSISTANT)
         assertEquals(Intent.MorningBrief.name,  TtsProviderSettings.INTENT_MORNING_BRIEF)
         assertEquals(Intent.Weather.name,       TtsProviderSettings.INTENT_WEATHER)
         assertEquals(Intent.WorldTime.name,     TtsProviderSettings.INTENT_WORLD_TIME)
