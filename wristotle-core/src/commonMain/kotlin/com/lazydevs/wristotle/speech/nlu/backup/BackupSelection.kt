@@ -34,6 +34,7 @@ data class BackupSelection(
     val weatherSettings: Boolean = true,
     val mcpServers: Boolean = true,
     val askAgentSetup: Boolean = true,
+    val homeAssistantSetup: Boolean = true,
     val sttProviderSetup: Boolean = true,
     val ttsProviderSetup: Boolean = true,
     val sportSettings: Boolean = true,
@@ -42,6 +43,7 @@ data class BackupSelection(
     val weatherApiKey: Boolean = false,
     val mcpAuthHeaders: Boolean = false,
     val askAgentApiKeys: Boolean = false,
+    val homeAssistantToken: Boolean = false,
     val sttProviderApiKey: Boolean = false,
     val ttsProviderApiKey: Boolean = false,
 ) {
@@ -50,10 +52,11 @@ data class BackupSelection(
     val allSelected: Boolean
         get() = notes && codes && tasks && conversations && reminders && nluLearned &&
             appAliases && contactAliases && audioRecordings &&
-            appPreferences && weatherSettings && mcpServers && askAgentSetup && sttProviderSetup &&
+            appPreferences && weatherSettings && mcpServers && askAgentSetup &&
+            homeAssistantSetup && sttProviderSetup &&
             ttsProviderSetup && sportSettings &&
-            weatherApiKey && mcpAuthHeaders && askAgentApiKeys && sttProviderApiKey &&
-            ttsProviderApiKey
+            weatherApiKey && mcpAuthHeaders && askAgentApiKeys && homeAssistantToken &&
+            sttProviderApiKey && ttsProviderApiKey
 
     /** True when every content + settings box is ticked, regardless of
      *  whether the user opted any secrets in. Drives the master "Select
@@ -63,23 +66,25 @@ data class BackupSelection(
     val allContentAndSettingsSelected: Boolean
         get() = notes && codes && tasks && conversations && reminders && nluLearned &&
             appAliases && contactAliases && audioRecordings &&
-            appPreferences && weatherSettings && mcpServers && askAgentSetup && sttProviderSetup &&
+            appPreferences && weatherSettings && mcpServers && askAgentSetup &&
+            homeAssistantSetup && sttProviderSetup &&
             ttsProviderSetup && sportSettings
 
     /** True when nothing is selected — used to disable the Export button. */
     val noneSelected: Boolean
         get() = !(notes || codes || tasks || conversations || reminders || nluLearned ||
             appAliases || contactAliases || audioRecordings ||
-            appPreferences || weatherSettings || mcpServers || askAgentSetup || sttProviderSetup ||
+            appPreferences || weatherSettings || mcpServers || askAgentSetup ||
+            homeAssistantSetup || sttProviderSetup ||
             ttsProviderSetup || sportSettings ||
-            weatherApiKey || mcpAuthHeaders || askAgentApiKeys || sttProviderApiKey ||
-            ttsProviderApiKey)
+            weatherApiKey || mcpAuthHeaders || askAgentApiKeys || homeAssistantToken ||
+            sttProviderApiKey || ttsProviderApiKey)
 
     /** True when any secret category is ticked — used to gate the
      *  "plaintext secrets?" confirm dialog when no password is set. */
     val anySecretSelected: Boolean
-        get() = weatherApiKey || mcpAuthHeaders || askAgentApiKeys || sttProviderApiKey ||
-            ttsProviderApiKey
+        get() = weatherApiKey || mcpAuthHeaders || askAgentApiKeys || homeAssistantToken ||
+            sttProviderApiKey || ttsProviderApiKey
 
     /** Per-field AND of two selections. Used by the restore preview to
      *  clamp the user's requested selection against what's actually in
@@ -100,12 +105,14 @@ data class BackupSelection(
         weatherSettings = weatherSettings && other.weatherSettings,
         mcpServers = mcpServers && other.mcpServers,
         askAgentSetup = askAgentSetup && other.askAgentSetup,
+        homeAssistantSetup = homeAssistantSetup && other.homeAssistantSetup,
         sttProviderSetup = sttProviderSetup && other.sttProviderSetup,
         ttsProviderSetup = ttsProviderSetup && other.ttsProviderSetup,
         sportSettings = sportSettings && other.sportSettings,
         weatherApiKey = weatherApiKey && other.weatherApiKey,
         mcpAuthHeaders = mcpAuthHeaders && other.mcpAuthHeaders,
         askAgentApiKeys = askAgentApiKeys && other.askAgentApiKeys,
+        homeAssistantToken = homeAssistantToken && other.homeAssistantToken,
         sttProviderApiKey = sttProviderApiKey && other.sttProviderApiKey,
         ttsProviderApiKey = ttsProviderApiKey && other.ttsProviderApiKey,
     )
@@ -116,6 +123,7 @@ data class BackupSelection(
             weatherApiKey = true,
             mcpAuthHeaders = true,
             askAgentApiKeys = true,
+            homeAssistantToken = true,
             sttProviderApiKey = true,
             ttsProviderApiKey = true,
         )
@@ -126,8 +134,8 @@ data class BackupSelection(
             nluLearned = false, appAliases = false, contactAliases = false,
             audioRecordings = false,
             appPreferences = false, weatherSettings = false, mcpServers = false,
-            askAgentSetup = false, sttProviderSetup = false, ttsProviderSetup = false,
-            sportSettings = false,
+            askAgentSetup = false, homeAssistantSetup = false, sttProviderSetup = false,
+            ttsProviderSetup = false, sportSettings = false,
         )
 
         /** Older ZIPs (schema < 2) didn't carry a selection field — treat
@@ -145,10 +153,10 @@ data class BackupSelection(
             nluLearned = true, appAliases = true, contactAliases = true,
             audioRecordings = true,
             appPreferences = true, weatherSettings = true, mcpServers = true,
-            askAgentSetup = true, sttProviderSetup = true, ttsProviderSetup = true,
-            sportSettings = true,
+            askAgentSetup = true, homeAssistantSetup = true, sttProviderSetup = true,
+            ttsProviderSetup = true, sportSettings = true,
             weatherApiKey = true, mcpAuthHeaders = true, askAgentApiKeys = true,
-            sttProviderApiKey = true, ttsProviderApiKey = true,
+            homeAssistantToken = true, sttProviderApiKey = true, ttsProviderApiKey = true,
         )
     }
 }

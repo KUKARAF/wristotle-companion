@@ -140,9 +140,12 @@ class BackupManifestCodecTest {
                 weatherSettings = true,
                 mcpServers = true,
                 askAgentSetup = true,
+                // Non-default so the codec is proven to carry the new fields.
+                homeAssistantSetup = false,
                 weatherApiKey = true,
                 mcpAuthHeaders = false,
                 askAgentApiKeys = true,
+                homeAssistantToken = true,
             ),
         )
         val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
@@ -259,6 +262,38 @@ class BackupManifestCodecTest {
         assertNull(decoded.prefs.askAgent?.anthropicApiKey)
         assertNull(decoded.prefs.askAgent?.openaiApiKey)
         assertEquals("", decoded.prefs.askAgent?.systemPrompt)
+    }
+
+    @Test fun homeAssistantPrefs_withToken_roundTrip() {
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                homeAssistant = BackupManifest.HomeAssistantPrefs(
+                    baseUrl = "http://homeassistant.local:8123",
+                    language = "es",
+                    // Non-defaults so the round-trip proves each field travels.
+                    responseTimeoutSec = 30,
+                    customTriggers = listOf("jarvis", "computer"),
+                    token = "llat-secret",
+                ),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(original.prefs.homeAssistant, decoded.prefs.homeAssistant)
+    }
+
+    @Test fun homeAssistantPrefs_withoutToken_decodesNullToken() {
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                homeAssistant = BackupManifest.HomeAssistantPrefs(
+                    baseUrl = "http://homeassistant.local:8123",
+                    token = null,
+                ),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertNull(decoded.prefs.homeAssistant?.token)
+        assertEquals("http://homeassistant.local:8123", decoded.prefs.homeAssistant?.baseUrl)
+        assertEquals(emptyList<String>(), decoded.prefs.homeAssistant?.customTriggers)
     }
 
     @Test fun sportPrefs_roundTrip() {

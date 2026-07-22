@@ -283,6 +283,9 @@ private fun BackupSelectionEditor(
         CatRow(R.string.settings_backup_cat_ask_agent_setup, selection.askAgentSetup, available?.askAgentSetup) {
             onChange(selection.copy(askAgentSetup = it))
         }
+        CatRow(R.string.settings_backup_cat_home_assistant_setup, selection.homeAssistantSetup, available?.homeAssistantSetup) {
+            onChange(selection.copy(homeAssistantSetup = it))
+        }
         CatRow(R.string.settings_backup_cat_stt_provider_setup, selection.sttProviderSetup, available?.sttProviderSetup) {
             onChange(selection.copy(sttProviderSetup = it))
         }
@@ -308,6 +311,9 @@ private fun BackupSelectionEditor(
         }
         CatRow(R.string.settings_backup_cat_ask_agent_api_keys, selection.askAgentApiKeys, available?.askAgentApiKeys) {
             onChange(selection.copy(askAgentApiKeys = it))
+        }
+        CatRow(R.string.settings_backup_cat_home_assistant_token, selection.homeAssistantToken, available?.homeAssistantToken) {
+            onChange(selection.copy(homeAssistantToken = it))
         }
         CatRow(R.string.settings_backup_cat_stt_provider_api_key, selection.sttProviderApiKey, available?.sttProviderApiKey) {
             onChange(selection.copy(sttProviderApiKey = it))
@@ -701,6 +707,7 @@ private fun BackupSelectionSections(selection: BackupSelection, isExport: Boolea
         if (selection.weatherSettings) R.string.settings_backup_summary_cat_weather_settings else null,
         if (selection.mcpServers) R.string.settings_backup_summary_cat_mcp_servers else null,
         if (selection.askAgentSetup) R.string.settings_backup_summary_cat_ask_agent_setup else null,
+        if (selection.homeAssistantSetup) R.string.settings_backup_summary_cat_home_assistant_setup else null,
         if (selection.sttProviderSetup) R.string.settings_backup_summary_cat_stt_provider_setup else null,
         if (selection.ttsProviderSetup) R.string.settings_backup_summary_cat_tts_provider_setup else null,
         if (selection.sportSettings) R.string.settings_backup_summary_cat_sport_settings else null,
@@ -709,6 +716,7 @@ private fun BackupSelectionSections(selection: BackupSelection, isExport: Boolea
         if (selection.weatherApiKey) R.string.settings_backup_summary_cat_weather_api_key else null,
         if (selection.mcpAuthHeaders) R.string.settings_backup_summary_cat_mcp_auth_headers else null,
         if (selection.askAgentApiKeys) R.string.settings_backup_summary_cat_ask_agent_api_keys else null,
+        if (selection.homeAssistantToken) R.string.settings_backup_summary_cat_home_assistant_token else null,
         if (selection.sttProviderApiKey) R.string.settings_backup_summary_cat_stt_provider_api_key else null,
         if (selection.ttsProviderApiKey) R.string.settings_backup_summary_cat_tts_provider_api_key else null,
     )

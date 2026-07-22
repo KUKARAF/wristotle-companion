@@ -4,7 +4,9 @@
 package com.lazydevs.wristotle.backup
 
 import com.lazydevs.sportskapi.SportSubject
+import com.lazydevs.wristotle.speech.nlu.homeassistant.HomeAssistantClient
 import com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings
+import com.lazydevs.wristotle.speech.nlu.settings.HomeAssistantSettings
 import com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
 import com.lazydevs.wristotle.phone.ContactRef
 import org.json.JSONArray
@@ -97,6 +99,7 @@ data class BackupManifest(
         val morningBrief: MorningBriefPrefs? = null,
         val weather: WeatherPrefs? = null,
         val askAgent: AskAgentPrefs? = null,
+        val homeAssistant: HomeAssistantPrefs? = null,
         val sttProvider: SttProviderPrefs? = null,
         val ttsProvider: TtsProviderPrefs? = null,
         val sport: SportPrefs? = null,
@@ -149,6 +152,17 @@ data class BackupManifest(
         val openaiApiKey: String? = null,
         val anthropicWebSearch: Boolean = false,
         val responseTimeoutSec: Int = AskAgentSettings.DEFAULT_RESPONSE_TIMEOUT_SEC,
+    )
+
+    /** Home Assistant — base URL + language + timeout ride with the
+     *  non-sensitive "home assistant setup" category; the long-lived
+     *  [token] rides ONLY when the user ticks the secret checkbox. */
+    data class HomeAssistantPrefs(
+        val baseUrl: String,
+        val language: String = HomeAssistantClient.DEFAULT_LANGUAGE,
+        val responseTimeoutSec: Int = HomeAssistantSettings.DEFAULT_RESPONSE_TIMEOUT_SEC,
+        val customTriggers: List<String> = emptyList(),
+        val token: String? = null,
     )
 
     /** STT provider — mode + base URL + model travel with the
@@ -272,12 +286,14 @@ object BackupManifestCodec {
             put("weather_settings", m.selected.weatherSettings)
             put("mcp_servers", m.selected.mcpServers)
             put("ask_agent_setup", m.selected.askAgentSetup)
+            put("home_assistant_setup", m.selected.homeAssistantSetup)
             put("stt_provider_setup", m.selected.sttProviderSetup)
             put("tts_provider_setup", m.selected.ttsProviderSetup)
             put("sport_settings", m.selected.sportSettings)
             put("weather_api_key", m.selected.weatherApiKey)
             put("mcp_auth_headers", m.selected.mcpAuthHeaders)
             put("ask_agent_api_keys", m.selected.askAgentApiKeys)
+            put("home_assistant_token", m.selected.homeAssistantToken)
             put("stt_provider_api_key", m.selected.sttProviderApiKey)
             put("tts_provider_api_key", m.selected.ttsProviderApiKey)
         })
@@ -359,6 +375,15 @@ object BackupManifestCodec {
                     put("response_timeout_sec", a.responseTimeoutSec)
                     if (a.anthropicApiKey != null) put("anthropic_api_key", a.anthropicApiKey)
                     if (a.openaiApiKey != null) put("openai_api_key", a.openaiApiKey)
+                })
+            }
+            m.prefs.homeAssistant?.let { h ->
+                put("home_assistant_settings", JSONObject().apply {
+                    put("base_url", h.baseUrl)
+                    put("language", h.language)
+                    put("response_timeout_sec", h.responseTimeoutSec)
+                    put("custom_triggers", JSONArray(h.customTriggers))
+                    if (h.token != null) put("token", h.token)
                 })
             }
             m.prefs.sttProvider?.let { s ->
@@ -579,6 +604,19 @@ object BackupManifestCodec {
                         ),
                     )
                 },
+                homeAssistant = prefs.optJSONObject("home_assistant_settings")?.let { h ->
+                    val triggers = h.optJSONArray("custom_triggers") ?: JSONArray()
+                    BackupManifest.HomeAssistantPrefs(
+                        baseUrl = h.optString("base_url", ""),
+                        language = h.optString("language", HomeAssistantClient.DEFAULT_LANGUAGE),
+                        responseTimeoutSec = h.optInt(
+                            "response_timeout_sec",
+                            HomeAssistantSettings.DEFAULT_RESPONSE_TIMEOUT_SEC,
+                        ),
+                        customTriggers = (0 until triggers.length()).map { triggers.getString(it) },
+                        token = h.optString("token").takeIf { it.isNotEmpty() },
+                    )
+                },
                 sttProvider = prefs.optJSONObject("stt_provider_settings")?.let { s ->
                     BackupManifest.SttProviderPrefs(
                         mode = s.optString("mode", "LOCAL_ONLY"),
@@ -665,12 +703,14 @@ object BackupManifestCodec {
                     weatherSettings = sel.optBoolean("weather_settings", true),
                     mcpServers = sel.optBoolean("mcp_servers", true),
                     askAgentSetup = sel.optBoolean("ask_agent_setup", true),
+                    homeAssistantSetup = sel.optBoolean("home_assistant_setup", true),
                     sttProviderSetup = sel.optBoolean("stt_provider_setup", true),
                     ttsProviderSetup = sel.optBoolean("tts_provider_setup", true),
                     sportSettings = sel.optBoolean("sport_settings", true),
                     weatherApiKey = sel.optBoolean("weather_api_key", false),
                     mcpAuthHeaders = sel.optBoolean("mcp_auth_headers", false),
                     askAgentApiKeys = sel.optBoolean("ask_agent_api_keys", false),
+                    homeAssistantToken = sel.optBoolean("home_assistant_token", false),
                     sttProviderApiKey = sel.optBoolean("stt_provider_api_key", false),
                     ttsProviderApiKey = sel.optBoolean("tts_provider_api_key", false),
                 )

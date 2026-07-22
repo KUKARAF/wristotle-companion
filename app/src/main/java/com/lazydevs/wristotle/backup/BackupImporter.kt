@@ -548,6 +548,18 @@ class BackupImporter(private val app: WristotleApplication) {
             }
         }
 
+        if (sel.homeAssistantSetup) {
+            p.homeAssistant?.let { h ->
+                app.homeAssistantSettings.setBaseUrl(h.baseUrl)
+                app.homeAssistantSettings.setLanguage(h.language)
+                app.homeAssistantSettings.setResponseTimeoutSec(h.responseTimeoutSec)
+                app.homeAssistantSettings.setCustomTriggers(h.customTriggers.joinToString("\n"))
+                if (sel.homeAssistantToken) {
+                    h.token?.let { app.homeAssistantSettings.setToken(it) }
+                }
+            }
+        }
+
         if (sel.sttProviderSetup) {
             p.sttProvider?.let { s ->
                 runCatching { com.lazydevs.wristotle.speech.nlu.settings.SttProviderMode.valueOf(s.mode) }
