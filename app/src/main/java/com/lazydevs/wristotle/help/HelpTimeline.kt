@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-16-1-wake-words-and-code-tweaks",
+            date = "2026-07-30",
+            companionVersion = "v1.16.1",
+            watchVersion = "v1.5.1",
+            title = "Wake-word and watch-code fixes",
+            description = "Add several custom wake words, set how long a voice-recalled code stays on the watch, and open your codes from a watch button.",
+            sampleQuery = null,
+            docsPath = null,
+        ),
+        FeatureEntry(
             id = "v1-16-0-home-assistant",
             date = "2026-07-21",
             companionVersion = "v1.16.0",

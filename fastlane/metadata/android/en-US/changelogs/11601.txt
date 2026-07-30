@@ -1,0 +1,12 @@
+Fixes and watch tweaks.
+
+- Custom wake words: you can now add more than one (the
+  field wouldn't take a second line before). Works for
+  Home Assistant and Ask Agent.
+- New "Code display time" setting (Settings > Watch): how
+  long a voice-recalled code stays on the watch before it
+  auto-closes, or keep it up until you press Back.
+- Bind a watch button to your saved codes (Settings >
+  Watch > shortcuts > Codes).
+- Voice events/reminders that name an explicit date (e.g.
+  "July 29th at 3pm") no longer drift to the wrong day.
