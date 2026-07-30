@@ -334,7 +334,7 @@
     <string name="settings_askagent_system_prompt_hint">Sent with every AskAgent query. Pre-populated with a watch-friendly baseline that keeps responses short + plain-text. Edit freely; clear it entirely to send NO system prompt (the LLM may produce verbose markdown the watch can\'t render).\n\nUsing a reasoning model (Qwen3 / DeepSeek-R1 / QwQ)? Configure your inference server (e.g. vLLM\'s --enable-reasoning --reasoning-parser flag) to move the &lt;think&gt; chain-of-thought out of the response — see the Troubleshooting page.</string>
     <string name="settings_askagent_system_prompt_reset">Reset to default</string>
     <string name="settings_askagent_triggers_label">Custom trigger words</string>
-    <string name="settings_askagent_triggers_hint">Extra wake words for the agent. One per line. Use them either as wake words (\"Jarvis, what\'s the weather?\") or with a verb (\"ask jarvis …\"). Built-ins (agent, claude, ai, …) only work with a verb — \"agent\" alone is too generic to bare-match safely.</string>
+    <string name="settings_askagent_triggers_hint">Extra wake words for the agent. One per line, or separated by commas. Use them either as wake words (\"Jarvis, what\'s the weather?\") or with a verb (\"ask jarvis …\"). Built-ins (agent, claude, ai, …) only work with a verb — \"agent\" alone is too generic to bare-match safely.</string>
     <string name="settings_askagent_timeout_label">Response timeout (seconds)</string>
     <string name="settings_askagent_timeout_hint">How long to wait for the agent to reply. Raise this for slow local models that \"think\" before answering (e.g. 120). Range 5–300; default 14.</string>
 
@@ -346,7 +346,7 @@
     <string name="settings_homeassistant_token_label">Long-lived access token</string>
     <string name="settings_homeassistant_token_hint">In HA: your profile → Security → Long-lived access tokens → Create. Stored locally; sent only with Home Assistant requests.</string>
     <string name="settings_homeassistant_triggers_label">Custom trigger words</string>
-    <string name="settings_homeassistant_triggers_hint">Extra wake words on top of the built-ins (home assistant, hass). One per line. Use them as wake words (\"Jarvis, turn off the lights\") or with a verb (\"tell jarvis to …\").</string>
+    <string name="settings_homeassistant_triggers_hint">Extra wake words on top of the built-ins (home assistant, hass). One per line, or separated by commas. Use them as wake words (\"Jarvis, turn off the lights\") or with a verb (\"tell jarvis to …\").</string>
     <string name="settings_homeassistant_trigger_collision">⚠ \"%1$s\" also triggers Ask Agent. It will route to Home Assistant.</string>
     <string name="settings_homeassistant_timeout_label">Response timeout (seconds)</string>
     <string name="settings_homeassistant_timeout_hint">How long to wait for Home Assistant to reply. Range 5–120; default 10.</string>

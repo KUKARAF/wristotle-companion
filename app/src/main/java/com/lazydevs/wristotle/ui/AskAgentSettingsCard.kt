@@ -120,11 +120,20 @@ fun AskAgentSettingsCard(settings: AskAgentSettings) {
             // ai / ...). One per line in the UI; persisted lower-cased and
             // de-duplicated. Routing + slot extraction read the live list,
             // so a Settings save takes effect on the next voice query.
+            //
+            // Bound to a LOCAL editable copy, not the sanitised StateFlow:
+            // sanitising on every keystroke stripped the trailing newline the
+            // instant you pressed Enter, so a second trigger word could never be
+            // started. setCustomTriggers still sanitises for storage + routing.
+            // Initialised once (unkeyed remember).
             val customTriggers by settings.customTriggers.collectAsState()
-            val triggerText = customTriggers.joinToString("\n")
+            var triggerText by remember { mutableStateOf(customTriggers.joinToString("\n")) }
             OutlinedTextField(
                 value = triggerText,
-                onValueChange = settings::setCustomTriggers,
+                onValueChange = {
+                    triggerText = it
+                    settings.setCustomTriggers(it)
+                },
                 label = { Text(stringResource(R.string.settings_askagent_triggers_label)) },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
                 modifier = Modifier.fillMaxWidth(),

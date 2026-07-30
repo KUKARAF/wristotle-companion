@@ -94,11 +94,22 @@ fun HomeAssistantSettingsCard(
             // Extra wake words on top of the built-ins. One per line; persisted
             // lower-cased + de-duplicated. Routing + slot extraction read the
             // live list, so a save takes effect on the next voice command.
+            //
+            // The field is bound to a LOCAL editable copy, not the sanitised
+            // StateFlow. setCustomTriggers still sanitises for storage + routing,
+            // but feeding that back into `value` on every keystroke stripped the
+            // trailing newline the moment you pressed Enter (sanitise filters
+            // empty segments), so a second wake word could never be started.
+            // Initialised once (unkeyed remember) so committing doesn't snap the
+            // in-progress text back.
             val customTriggers by settings.customTriggers.collectAsState()
-            val triggerText = customTriggers.joinToString("\n")
+            var triggerText by remember { mutableStateOf(customTriggers.joinToString("\n")) }
             OutlinedTextField(
                 value = triggerText,
-                onValueChange = settings::setCustomTriggers,
+                onValueChange = {
+                    triggerText = it
+                    settings.setCustomTriggers(it)
+                },
                 label = { Text(stringResource(R.string.settings_homeassistant_triggers_label)) },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
                 modifier = Modifier.fillMaxWidth(),
