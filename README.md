@@ -9,7 +9,7 @@
 [![Docs](https://img.shields.io/badge/docs-online-success)](https://wristotle.codeberg.page/)
 
 <!-- Get the app -->
-[![F-Droid](https://img.shields.io/badge/F--Droid-in%20review-yellow)](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/40246)
+[![F-Droid](https://img.shields.io/f-droid/v/com.lazydevs.wristotle?logo=fdroid&label=F-Droid&color=1793d1)](https://f-droid.org/en/packages/com.lazydevs.wristotle/)
 
 <!-- Watch app -->
 [![Watch app — Rebble](https://img.shields.io/badge/watch%20app-Rebble-c2154f)](https://apps.rebble.io/en_US/application/6a0e71faced0bb000943bc90)
@@ -35,8 +35,8 @@ that runs on-device by default.
 
 ## Install
 
-- [Codeberg releases](https://codeberg.org/wristotle/wristotle-companion/releases) — signed APKs.
-- F-Droid submission in progress.
+- **[F-Droid](https://f-droid.org/en/packages/com.lazydevs.wristotle/)** — recommended; installs & auto-updates.
+- [Codeberg releases](https://codeberg.org/wristotle/wristotle-companion/releases) — signed APKs (pair with Obtainium for auto-updates).
 
 [Full install guide](https://wristotle.codeberg.page/install/) on the docs site.
 
