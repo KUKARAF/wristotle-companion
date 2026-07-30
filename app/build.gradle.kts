@@ -164,7 +164,10 @@ android {
         // codeberg-medium and the kernel OOM-kills mid-build (v0.15.0
         // hit this twice). 512 MB is plenty for our pure-JUnit cases.
         unitTests.all { test ->
-            test.maxHeapSize = "512m"
+            // 512m -> 384m: trims the forked test JVM further after the release
+            // CI's Gradle daemon kept getting OOM-killed on the self-hosted
+            // runner. Our tests are pure JUnit; 384m is ample.
+            test.maxHeapSize = "384m"
         }
     }
 
