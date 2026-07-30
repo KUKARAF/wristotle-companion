@@ -4,6 +4,7 @@
 package lazydevs.wristotle.speech.nlu.slots
 
 import com.lazydevs.wristotle.speech.nlu.slots.queryHasExplicitMeridiem
+import com.lazydevs.wristotle.speech.nlu.slots.queryNamesExplicitDate
 import com.lazydevs.wristotle.speech.nlu.slots.rolledToNextFutureOccurrence
 
 import kotlinx.datetime.Instant
@@ -74,6 +75,32 @@ class TimeRolloverTest {
             tenAmToday,
             tenAmToday.rolledToNextFutureOccurrence(now, utc, ambiguousMeridiem = true),
         )
+    }
+
+    // --- explicit dates are NOT day-rolled (query-aware overload) -----------
+
+    @Test fun `a query naming an explicit date is honoured as spoken, not walked forward`() {
+        // Regression: "july twenty ninth at 3 pm" parses to Jul 29; on Jul 30
+        // (after 3 pm) the day-roll used to walk it 29 → 30 → 31. The query-aware
+        // overload must return the parsed instant unchanged when the query names
+        // a date (guard runs before any roll, so it's zone-independent here).
+        val now = Instant.parse("2026-07-30T18:00:00Z")
+        val jul29_3pm = Instant.parse("2026-07-29T15:00:00Z")
+        assertEquals(
+            jul29_3pm,
+            jul29_3pm.rolledToNextFutureOccurrence(now, "schedule dentist july twenty ninth at 3 pm"),
+        )
+    }
+
+    @Test fun `queryNamesExplicitDate detects dates but not bare clock times`() {
+        assertTrue(queryNamesExplicitDate("july twenty ninth at 3 pm"))
+        assertTrue(queryNamesExplicitDate("dentist on the 29th at 3 pm"))
+        assertTrue(queryNamesExplicitDate("meeting 6/29 at noon"))
+        assertTrue(queryNamesExplicitDate("event dec 3rd at 9"))
+        assertFalse(queryNamesExplicitDate("remind me at 8 to take meds"))
+        assertFalse(queryNamesExplicitDate("schedule a meeting at one am"))
+        // "second" as a duration/word must not read as a date ordinal.
+        assertFalse(queryNamesExplicitDate("remind me in 30 seconds to stir"))
     }
 
     // --- meridiem detection -------------------------------------------------

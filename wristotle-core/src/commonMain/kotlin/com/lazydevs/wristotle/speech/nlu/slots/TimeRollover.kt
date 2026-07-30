@@ -75,12 +75,39 @@ fun Instant.rolledToNextFutureOccurrence(
  * boilerplate. Shared by ReminderSlots, CreateEventSlots, SetAlarmSlots and
  * RescheduleSlots. The 3-arg primitive stays for tests that pin the zone.
  */
-fun Instant.rolledToNextFutureOccurrence(now: Instant, query: String): Instant =
-    rolledToNextFutureOccurrence(
+fun Instant.rolledToNextFutureOccurrence(now: Instant, query: String): Instant {
+    // The roll exists to push a BARE clock time ("at 3pm") that the parser placed
+    // on today back into the future. When the query names an explicit calendar
+    // date, the parse already points at that specific day, and day-rolling it
+    // would silently walk the date forward — on Jul 30, "july twenty ninth at
+    // 3 pm" would become Jul 30 → Jul 31. Honour a named date as spoken.
+    if (queryNamesExplicitDate(query)) return this
+    return rolledToNextFutureOccurrence(
         now,
         TimeZone.currentSystemDefault(),
         ambiguousMeridiem = !queryHasExplicitMeridiem(query),
     )
+}
+
+/**
+ * True if [query] names an explicit calendar date (as opposed to only a clock
+ * time). Detects a month name, a numeric date (`6/29`, `2026-07-29`), or a
+ * day-of-month ordinal (`29th`, `the 29`). Deliberately does NOT match bare
+ * word ordinals ("second"/"third") — those collide with duration units and
+ * rankings; the reported cases pair the day with a month, which the month-name
+ * branch catches ("july twenty ninth").
+ */
+fun queryNamesExplicitDate(query: String): Boolean = EXPLICIT_DATE.containsMatchIn(query)
+
+private val EXPLICIT_DATE = Regex(
+    """(?ix)
+    \b(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|jun(e)?|jul(y)?
+       |aug(ust)?|sept?(ember)?|oct(ober)?|nov(ember)?|dec(ember)?)\b   # month name
+    | \b\d{1,2}\s*[/-]\s*\d{1,2}(\s*[/-]\s*\d{2,4})?\b                   # 6/29, 2026-07-29
+    | \b\d{1,2}(st|nd|rd|th)\b                                          # 29th
+    | \bthe\s+\d{1,2}\b                                                 # the 29
+    """,
+)
 
 /**
  * True if [query] disambiguates the half of the day a clock time falls in —
