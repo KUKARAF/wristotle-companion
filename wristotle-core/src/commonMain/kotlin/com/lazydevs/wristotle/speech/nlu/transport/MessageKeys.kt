@@ -69,6 +69,7 @@ object MessageKeys {
     const val BUTTON_ACTION_TASKS: Int     = 2
     const val BUTTON_ACTION_DICTATION: Int = 3
     const val BUTTON_ACTION_ALARMS: Int    = 4
+    const val BUTTON_ACTION_CODES: Int     = 5
 
     /** Alarms wire — companion → watch SET / CANCEL / LIST + watch → companion
      *  result + presence-only SHOW_LIST trigger. */

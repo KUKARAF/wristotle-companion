@@ -458,6 +458,7 @@ private fun ButtonActionDropdown(label: String, value: Int, onChange: (Int) -> U
         keys.BUTTON_ACTION_NOTES     to stringResource(R.string.watch_settings_button_action_notes),
         keys.BUTTON_ACTION_TASKS     to stringResource(R.string.watch_settings_button_action_tasks),
         keys.BUTTON_ACTION_ALARMS    to stringResource(R.string.watch_settings_button_action_alarms),
+        keys.BUTTON_ACTION_CODES     to stringResource(R.string.watch_settings_button_action_codes),
     )
     val display = choices.firstOrNull { it.first == value }?.second
         ?: stringResource(R.string.watch_settings_button_action_menu)

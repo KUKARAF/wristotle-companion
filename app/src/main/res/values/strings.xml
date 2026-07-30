@@ -628,6 +628,7 @@
     <string name="watch_settings_button_action_tasks">Tasks</string>
     <string name="watch_settings_button_action_dictation">Dictation</string>
     <string name="watch_settings_button_action_alarms">Alarms</string>
+    <string name="watch_settings_button_action_codes">Codes</string>
     <string name="watch_settings_vibrate_section">Vibration</string>
     <string name="watch_settings_vibrate_on_launch">On normal launch</string>
     <string name="watch_settings_vibrate_on_quick_launch">On quick launch</string>
