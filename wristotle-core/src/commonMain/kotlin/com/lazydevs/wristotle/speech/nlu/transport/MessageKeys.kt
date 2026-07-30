@@ -41,6 +41,9 @@ object MessageKeys {
     val SETTING_REMINDERS_TARGET: UInt         = 10016u
     val SETTING_CANCEL_TARGET: UInt            = 10017u
     val SETTING_QUICK_LAUNCH_AUTO_EXIT: UInt   = 10018u
+    // 10065 — next free key after SHOW_CODE_INDEX (10064); appended last in the
+    // watch package.json messageKeys so its positional id stays 10065.
+    val SETTING_CODE_DISPLAY_SECONDS: UInt     = 10065u
     val SETTING_VIBRATE_ON_LAUNCH: UInt        = 10019u
     val SETTING_VIBRATE_ON_QUICK_LAUNCH: UInt  = 10020u
     val SETTING_VIBRATE_RESPECT_QUIET: UInt    = 10021u
@@ -179,6 +182,7 @@ object MessageKeys {
         SETTING_REMINDERS_TARGET,
         SETTING_CANCEL_TARGET,
         SETTING_QUICK_LAUNCH_AUTO_EXIT,
+        SETTING_CODE_DISPLAY_SECONDS,
         SETTING_VIBRATE_ON_LAUNCH,
         SETTING_VIBRATE_ON_QUICK_LAUNCH,
         SETTING_VIBRATE_RESPECT_QUIET,

@@ -131,6 +131,7 @@ class WatchSettingsRepository(
             remindersTarget           = data.intSetting (MessageKeys.SETTING_REMINDERS_TARGET)        ?: previous?.remindersTarget           ?: TARGET_AUTO,
             cancelTarget              = data.intSetting (MessageKeys.SETTING_CANCEL_TARGET)           ?: previous?.cancelTarget              ?: TARGET_AUTO,
             quickLaunchAutoExitSeconds= data.intSetting (MessageKeys.SETTING_QUICK_LAUNCH_AUTO_EXIT)  ?: previous?.quickLaunchAutoExitSeconds?: 5,
+            codeDisplaySeconds        = data.intSetting (MessageKeys.SETTING_CODE_DISPLAY_SECONDS)    ?: previous?.codeDisplaySeconds        ?: 60,
             vibrateOnLaunch           = data.boolSetting(MessageKeys.SETTING_VIBRATE_ON_LAUNCH)       ?: previous?.vibrateOnLaunch           ?: true,
             vibrateOnQuickLaunch      = data.boolSetting(MessageKeys.SETTING_VIBRATE_ON_QUICK_LAUNCH) ?: previous?.vibrateOnQuickLaunch      ?: true,
             vibrateRespectQuiet       = data.boolSetting(MessageKeys.SETTING_VIBRATE_RESPECT_QUIET)   ?: previous?.vibrateRespectQuiet       ?: true,
@@ -189,6 +190,7 @@ class WatchSettingsRepository(
             int(MessageKeys.SETTING_REMINDERS_TARGET, baseline?.remindersTarget, updated.remindersTarget)
             int(MessageKeys.SETTING_CANCEL_TARGET, baseline?.cancelTarget, updated.cancelTarget)
             int(MessageKeys.SETTING_QUICK_LAUNCH_AUTO_EXIT, baseline?.quickLaunchAutoExitSeconds, updated.quickLaunchAutoExitSeconds)
+            int(MessageKeys.SETTING_CODE_DISPLAY_SECONDS, baseline?.codeDisplaySeconds, updated.codeDisplaySeconds)
             bool(MessageKeys.SETTING_VIBRATE_ON_LAUNCH, baseline?.vibrateOnLaunch, updated.vibrateOnLaunch)
             bool(MessageKeys.SETTING_VIBRATE_ON_QUICK_LAUNCH, baseline?.vibrateOnQuickLaunch, updated.vibrateOnQuickLaunch)
             bool(MessageKeys.SETTING_VIBRATE_RESPECT_QUIET, baseline?.vibrateRespectQuiet, updated.vibrateRespectQuiet)

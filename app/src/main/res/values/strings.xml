@@ -612,6 +612,8 @@
     <string name="watch_settings_quick_launch_auto_exit">Auto-exit after quick launch</string>
     <string name="watch_settings_auto_exit_off">Off</string>
     <string name="watch_settings_auto_exit_seconds">%1$d s</string>
+    <string name="watch_settings_code_display_time">Code display time</string>
+    <string name="watch_settings_code_display_until_back">Stay until back</string>
     <string name="watch_settings_quick_launch_action">Quick Launch opens</string>
     <string name="watch_settings_quick_launch_action_dictate">Dictation</string>
     <string name="watch_settings_quick_launch_action_notes">Notes</string>

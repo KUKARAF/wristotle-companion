@@ -179,6 +179,10 @@ private fun EditableBody(baseline: WatchSettings, onSave: (WatchSettings) -> Uni
             seconds = draft.quickLaunchAutoExitSeconds,
             onChange = { draft = draft.copy(quickLaunchAutoExitSeconds = it) },
         )
+        CodeDisplayDropdown(
+            seconds = draft.codeDisplaySeconds,
+            onChange = { draft = draft.copy(codeDisplaySeconds = it) },
+        )
         QuickLaunchActionDropdown(
             value = draft.quickLaunchAction,
             onChange = { draft = draft.copy(quickLaunchAction = it) },
@@ -288,6 +292,10 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
 
 private val AUTO_EXIT_CHOICES = listOf(0, 3, 5, 10)
 
+// How long a voice-recalled code stays on the watch. Longer than the auto-exit
+// choices because a barcode needs time to scan; 0 = stay until BACK.
+private val CODE_DISPLAY_CHOICES = listOf(0, 15, 30, 60, 120)
+
 // Mirrors the Clay options exactly so the picker round-trips with the
 // watch's whitelist. 0 maps to "Never" (no timer armed).
 private val CONFIRM_TIMEOUT_CHOICES = listOf(5, 10, 15, 30, 60, 0)
@@ -357,6 +365,43 @@ private fun AutoExitDropdown(seconds: Int, onChange: (Int) -> Unit) {
                             else stringResource(R.string.watch_settings_auto_exit_seconds, s)
                         )
                     },
+                    onClick = {
+                        onChange(s)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun codeDisplayLabel(seconds: Int): String =
+    if (seconds == 0) stringResource(R.string.watch_settings_code_display_until_back)
+    else stringResource(R.string.watch_settings_auto_exit_seconds, seconds)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CodeDisplayDropdown(seconds: Int, onChange: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = codeDisplayLabel(seconds),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.watch_settings_code_display_time)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            CODE_DISPLAY_CHOICES.forEach { s ->
+                DropdownMenuItem(
+                    text = { Text(codeDisplayLabel(s)) },
                     onClick = {
                         onChange(s)
                         expanded = false

@@ -21,6 +21,9 @@ data class WatchSettings(
     val remindersTarget: Int,
     val cancelTarget: Int,
     val quickLaunchAutoExitSeconds: Int,
+    /** How long (seconds) a voice-recalled code stays on the watch before the
+     *  quick-launch auto-exit closes it. 0 = stay until BACK. Default 60. */
+    val codeDisplaySeconds: Int,
     val vibrateOnLaunch: Boolean,
     val vibrateOnQuickLaunch: Boolean,
     val vibrateRespectQuiet: Boolean,

@@ -345,6 +345,7 @@ class DiagnosticsBuilder(
         appendLine("- SELECT short-press: ${buttonActionLabel(ws.selectAction)}")
         appendLine("- UP long-press: ${buttonActionLabel(ws.longPressUpAction)}")
         appendLine("- DOWN long-press: ${buttonActionLabel(ws.longPressDownAction)}")
+        appendLine("- Code display time: ${if (ws.codeDisplaySeconds == 0) "until back" else "${ws.codeDisplaySeconds}s"}")
         appendLine()
     }
 
