@@ -20,7 +20,17 @@ orgJson = "20231013"
 # MCP client — phase A of the AskAgent feature. Uses the official MCP SDK
 # over Ktor's OkHttp engine on Android. kotlinx-serialization is required
 # by both the SDK and Ktor's content negotiation.
-mcp = "0.8.3"
+# 0.9.0+ fixes SseClientTransport's endpoint resolution: an absolute-path
+# `endpoint` event (e.g. n8n's `/mcp/<flow>/messages`) now resolves against
+# the origin instead of being string-joined onto the SSE base path — 0.8.3
+# duplicated the path segment and every POST 404'd on servers that return an
+# absolute path (issue #20).
+# 0.14.0 is the ceiling for our current toolchain: 0.15.0 is built against
+# Kotlin 2.4.0 metadata, which the Kotlin 2.2.10 compiler can't read (it
+# reads up to 2.3.0). Moving past 0.14.0 requires a project-wide Kotlin
+# 2.4.x upgrade (+ matching KSP / Compose compiler), so bump this together
+# with `kotlin` when that happens.
+mcp = "0.14.0"
 ktor = "3.4.0"
 kotlinxSerialization = "1.7.3"
 # kotlinx-datetime — multiplatform replacement for java.util.{Date, Calendar,
