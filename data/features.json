@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-16-2-mcp-sse-endpoint-fix",
+      "date": "2026-08-10",
+      "companion_version": "v1.16.2",
+      "watch_version": null,
+      "title": "Ask Agent connects to more MCP servers",
+      "description": "Ask Agent can now reach MCP servers that use the older SSE transport, such as a self-hosted n8n; the connection no longer fails on a duplicated address.",
+      "sample_query": null,
+      "docs_path": null
+    },
+    {
       "id": "v1-16-1-wake-words-and-code-tweaks",
       "date": "2026-07-30",
       "companion_version": "v1.16.1",

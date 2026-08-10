@@ -1,0 +1,7 @@
+Fixes.
+
+- Ask Agent: connect to MCP servers that use the older
+  SSE transport (for example a self-hosted n8n). The
+  message endpoint URL was built with a duplicated path,
+  so every request failed with a "not registered" error.
+  Now fixed.

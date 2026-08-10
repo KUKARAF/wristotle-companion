@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-16-2-mcp-sse-endpoint-fix",
+            date = "2026-08-10",
+            companionVersion = "v1.16.2",
+            watchVersion = null,
+            title = "Ask Agent connects to more MCP servers",
+            description = "Ask Agent can now reach MCP servers that use the older SSE transport, such as a self-hosted n8n; the connection no longer fails on a duplicated address.",
+            sampleQuery = null,
+            docsPath = null,
+        ),
+        FeatureEntry(
             id = "v1-16-1-wake-words-and-code-tweaks",
             date = "2026-07-30",
             companionVersion = "v1.16.1",
