@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-17-0-failed-actions-stay-visible",
+            date = "2026-08-25",
+            companionVersion = "v1.17.0",
+            watchVersion = "v1.6.0",
+            title = "Failed actions stay on the watch",
+            description = "A failed or unrecognized voice command now stays on the watch screen, with the time you asked, until you press Back — instead of vanishing like a success.",
+            sampleQuery = null,
+            docsPath = null,
+        ),
+        FeatureEntry(
             id = "v1-16-2-mcp-sse-endpoint-fix",
             date = "2026-08-10",
             companionVersion = "v1.16.2",

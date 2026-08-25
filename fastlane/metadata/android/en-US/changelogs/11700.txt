@@ -1,0 +1,5 @@
+New: failed and unrecognized voice actions now stay on
+the watch instead of disappearing like a success. The
+failure waits on screen, with the time you asked, until
+you press Back, so a silent miss is hard to overlook.
+Needs Watch v1.6.0.
