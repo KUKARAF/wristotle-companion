@@ -138,6 +138,17 @@ object MessageKeys {
      *  response + [CARD_KIND]. */
     val CARD_DATA: UInt = 10058u
 
+    /** Companion → watch: result status paired with a response in the SAME
+     *  frame. Sent as text "1" ONLY when the action failed (contact not found,
+     *  unknown command, permission denied, …); absent ⇒ success. The watch
+     *  idles a failed result on-screen (cancels the quick-launch auto-exit) so
+     *  a silent failure stays visible until the user presses BACK. Old firmware
+     *  ignores the unknown key and keeps the pre-1.6 auto-exit behaviour. */
+    val RESULT_STATUS: UInt = 10066u
+
+    /** [RESULT_STATUS] value that means "the action failed". */
+    const val RESULT_STATUS_FAILED: String = "1"
+
     /** Watch → companion: the watch app's version string, piggybacked on the
      *  launch COMPANION_PING. Cached by the companion (a watchapp only runs when
      *  launched) and surfaced in the diagnostics bundle. */

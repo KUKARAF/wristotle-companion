@@ -109,6 +109,7 @@ suspend fun WatchTransport.sendForHint(
     text: String,
     cardKind: String? = null,
     cardData: String? = null,
+    success: Boolean = true,
 ): Boolean {
     val responseKey = when (hint) {
         Intent.Reminder -> MessageKeys.REMINDER_RESULT
@@ -117,11 +118,15 @@ suspend fun WatchTransport.sendForHint(
     }
     // Pair the response with its card-kind hint + optional structured card data
     // in ONE frame so the watch can render a full-screen (and visual) card;
-    // absent kind ⇒ plain chat bubble.
+    // absent kind ⇒ plain chat bubble. On failure we also pair a result_status
+    // flag in the same frame so the watch keeps the failed result on-screen
+    // (idle-until-BACK) instead of auto-exiting like a success. Sent only on
+    // failure so the success frame stays byte-identical to older releases.
     val payload = buildMap {
         put(responseKey, text)
         if (!cardKind.isNullOrEmpty()) put(MessageKeys.CARD_KIND, cardKind)
         if (!cardData.isNullOrEmpty()) put(MessageKeys.CARD_DATA, cardData)
+        if (!success) put(MessageKeys.RESULT_STATUS, MessageKeys.RESULT_STATUS_FAILED)
     }
     return if (payload.size == 1) sendText(responseKey, text) else sendTexts(payload)
 }
