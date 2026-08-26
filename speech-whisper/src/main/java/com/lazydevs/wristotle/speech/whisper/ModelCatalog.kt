@@ -49,6 +49,11 @@ object ModelCatalog {
 
     private const val HF_BASE = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main"
 
+    /** The model the first-run wizard auto-downloads for one-tap setup: the
+     *  BALANCED recommended pick — a sensible speed/accuracy trade-off on
+     *  modest phones. Users can switch tiers later under Settings → Models. */
+    fun recommendedDefault(): ModelInfo = all.first { it.tier == ModelTier.BALANCED && it.recommended }
+
     val all: List<ModelInfo> = listOf(
         // ── Recommended: one per tier, the curated default picker. ──
         // Quantized variants — ~50–60% the disk + memory footprint of the

@@ -78,6 +78,11 @@ enum class SettingsCategory(
      *  "Experimental" pill next to the label so users know to set
      *  expectations before opening it. */
     val experimental: Boolean = false,
+    /** Advanced categories are hidden on the Settings landing by default
+     *  (behind "Show advanced settings") so a new user sees a short, core
+     *  list instead of ~20 entries. Core = the essentials + everyday
+     *  features; advanced = optional integrations, experimental, diagnostics. */
+    val advanced: Boolean = false,
 ) {
     Setup(R.string.settings_section_setup, "🌟"),
     Watch(R.string.settings_section_watch, "⌚"),
@@ -86,17 +91,17 @@ enum class SettingsCategory(
     Codes(R.string.settings_section_codes, "🎟️"),
     Reminders(R.string.settings_section_reminders, "⏰"),
     Notifications(R.string.settings_section_notifications, "🔔"),
-    Weather(R.string.settings_section_weather, "☁️"),
-    Sport(R.string.settings_section_sport, "🏆"),
+    Weather(R.string.settings_section_weather, "☁️", advanced = true),
+    Sport(R.string.settings_section_sport, "🏆", advanced = true),
     Models(R.string.settings_section_models, "🧠"),
     Learning(R.string.settings_section_learning, "🎓"),
     Backup(R.string.settings_section_backup, "💾"),
-    Mcp(R.string.settings_section_mcp, "🔌"),
-    AskAgent(R.string.settings_section_askagent, "✨"),
-    HomeAssistant(R.string.settings_section_homeassistant, "🏠"),
-    Speech(R.string.settings_section_speech, "🔊", experimental = true),
-    Stats(R.string.settings_section_stats, "📊"),
-    Diagnostics(R.string.settings_section_diagnostics, "🔧"),
+    Mcp(R.string.settings_section_mcp, "🔌", advanced = true),
+    AskAgent(R.string.settings_section_askagent, "✨", advanced = true),
+    HomeAssistant(R.string.settings_section_homeassistant, "🏠", advanced = true),
+    Speech(R.string.settings_section_speech, "🔊", experimental = true, advanced = true),
+    Stats(R.string.settings_section_stats, "📊", advanced = true),
+    Diagnostics(R.string.settings_section_diagnostics, "🔧", advanced = true),
     Help(R.string.settings_section_help, "❓"),
     Support(R.string.settings_section_support, "❤️"),
 }
@@ -220,9 +225,12 @@ fun SettingsScreen(
     ) {
         val current = category
         if (current == null) {
+            val showAdvanced by app.setupSettings.settingsShowAdvanced.collectAsState()
             SettingsLanding(
                 onCategorySelected = { category = it },
                 attentionByCategory = attentionByCategory,
+                showAdvanced = showAdvanced,
+                onToggleAdvanced = { app.setupSettings.setSettingsShowAdvanced(it) },
             )
         } else {
             SettingsCategoryHeader(current, onBack = { category = null })
@@ -314,60 +322,92 @@ fun SettingsScreen(
 private fun SettingsLanding(
     onCategorySelected: (SettingsCategory) -> Unit,
     attentionByCategory: Map<SettingsCategory, Boolean> = emptyMap(),
+    showAdvanced: Boolean = false,
+    onToggleAdvanced: (Boolean) -> Unit = {},
 ) {
+    val core = SettingsCategory.entries.filter { !it.advanced }
+    val advanced = SettingsCategory.entries.filter { it.advanced }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column {
-            val categories = SettingsCategory.entries
-            categories.forEachIndexed { index, cat ->
-                val needsAttention = attentionByCategory[cat] == true
-                ListItem(
-                    leadingContent = {
-                        Text(
-                            cat.emoji,
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    },
-                    headlineContent = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(cat.labelRes))
-                            if (needsAttention) {
-                                Spacer(Modifier.width(8.dp))
-                                // Small red dot mirrors the bottom-nav badge — the
-                                // attention indicator that brought the user here is
-                                // pointed straight at the relevant category.
-                                Badge(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(8.dp),
-                                )
-                            }
-                            if (cat.experimental) {
-                                Spacer(Modifier.width(8.dp))
-                                androidx.compose.material3.Surface(
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                                ) {
-                                    Text(
-                                        "Experimental",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    trailingContent = {
-                        Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                        )
-                    },
-                    modifier = Modifier.clickable { onCategorySelected(cat) },
-                )
-                if (index < categories.lastIndex) HorizontalDivider()
+            core.forEachIndexed { index, cat ->
+                CategoryRow(cat, attentionByCategory[cat] == true, onCategorySelected)
+                if (index < core.lastIndex) HorizontalDivider()
+            }
+            HorizontalDivider()
+            // Advanced toggle — keeps the landing short for a new user while a
+            // power user reveals integrations / diagnostics with one tap. An
+            // advanced category needing attention still surfaces via the Setup
+            // card and its bottom-nav badge, so hiding it here is safe.
+            ListItem(
+                leadingContent = {
+                    Text("⚙️", style = MaterialTheme.typography.titleLarge)
+                },
+                headlineContent = { Text(stringResource(R.string.settings_show_advanced)) },
+                trailingContent = {
+                    Switch(checked = showAdvanced, onCheckedChange = onToggleAdvanced)
+                },
+                modifier = Modifier.clickable { onToggleAdvanced(!showAdvanced) },
+            )
+            if (showAdvanced) {
+                advanced.forEach { cat ->
+                    HorizontalDivider()
+                    CategoryRow(cat, attentionByCategory[cat] == true, onCategorySelected)
+                }
             }
         }
     }
+}
+
+@Composable
+private fun CategoryRow(
+    cat: SettingsCategory,
+    needsAttention: Boolean,
+    onCategorySelected: (SettingsCategory) -> Unit,
+) {
+    ListItem(
+        leadingContent = {
+            Text(
+                cat.emoji,
+                style = MaterialTheme.typography.titleLarge,
+            )
+        },
+        headlineContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(cat.labelRes))
+                if (needsAttention) {
+                    Spacer(Modifier.width(8.dp))
+                    // Small red dot mirrors the bottom-nav badge — the
+                    // attention indicator that brought the user here is
+                    // pointed straight at the relevant category.
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(8.dp),
+                    )
+                }
+                if (cat.experimental) {
+                    Spacer(Modifier.width(8.dp))
+                    androidx.compose.material3.Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                    ) {
+                        Text(
+                            "Experimental",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+            }
+        },
+        trailingContent = {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+            )
+        },
+        modifier = Modifier.clickable { onCategorySelected(cat) },
+    )
 }
 
 /**

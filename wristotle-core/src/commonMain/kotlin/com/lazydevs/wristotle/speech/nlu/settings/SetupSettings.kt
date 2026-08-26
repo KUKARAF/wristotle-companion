@@ -37,8 +37,22 @@ class SetupSettings(private val store: KeyValueStore) {
         _welcomeWizardDismissed.value = false
     }
 
+    private val _settingsShowAdvanced = MutableStateFlow(store.getBoolean(KEY_SHOW_ADVANCED, false))
+    /** The Settings landing shows only the core categories by default and keeps
+     *  the advanced ones (integrations, experimental, diagnostics) collapsed
+     *  behind a toggle, so a new user isn't met with a wall of ~20 categories.
+     *  A power user flips this once and it sticks. */
+    val settingsShowAdvanced: StateFlow<Boolean> = _settingsShowAdvanced.asStateFlow()
+
+    fun setSettingsShowAdvanced(show: Boolean) {
+        if (_settingsShowAdvanced.value == show) return
+        store.putBoolean(KEY_SHOW_ADVANCED, show)
+        _settingsShowAdvanced.value = show
+    }
+
     companion object {
         const val PREFS_NAME = "setup_state"
         private const val KEY_DISMISSED = "welcome_wizard_dismissed"
+        private const val KEY_SHOW_ADVANCED = "settings_show_advanced"
     }
 }

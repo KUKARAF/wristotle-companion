@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.setup.ActionId
 import com.lazydevs.wristotle.setup.RecommendedAction
 import com.lazydevs.wristotle.setup.SetupDrillTarget
 import com.lazydevs.wristotle.ui.nav.Screen
@@ -58,6 +59,11 @@ import com.lazydevs.wristotle.ui.nav.Screen
 @Composable
 fun WelcomeWizard(
     essentialActions: List<RecommendedAction>,
+    /** Inline auto-download hooks so the two model-download steps finish in
+     *  place — the user taps once and stays in the wizard, instead of being
+     *  routed into Settings → Models to pick a tier. */
+    whisperDownload: WizardModelDownload,
+    nluDownload: WizardModelDownload,
     /** Current step. **Hoisted to the caller** so the wizard's progress
      *  survives temporary hide/show cycles — e.g. when the user taps
      *  "Open settings", the wizard is removed from the tree while the
@@ -120,7 +126,11 @@ fun WelcomeWizard(
                     when {
                         isWelcome -> WelcomeStep(pendingCount = essentialActions.size)
                         isFinal -> FinalStep(skippedAny = clampedIndex > totalSteps - 1)
-                        currentAction != null -> ActionStep(action = currentAction)
+                        currentAction != null -> ActionStep(
+                            action = currentAction,
+                            whisperDownload = whisperDownload,
+                            nluDownload = nluDownload,
+                        )
                     }
                 }
 
@@ -179,8 +189,24 @@ private fun WelcomeStep(pendingCount: Int) {
     }
 }
 
+/**
+ * Inline auto-download hooks for a model-download wizard step. Lets the user
+ * finish the download in place rather than being sent into Settings → Models.
+ */
+data class WizardModelDownload(
+    val onStart: () -> Unit,
+    /** 0f..1f while downloading; null when idle or finished. */
+    val progress: Float?,
+    val approxSizeBytes: Long,
+    val error: String?,
+)
+
 @Composable
-private fun ActionStep(action: RecommendedAction) {
+private fun ActionStep(
+    action: RecommendedAction,
+    whisperDownload: WizardModelDownload,
+    nluDownload: WizardModelDownload,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             stringResource(action.titleRes),
@@ -191,6 +217,51 @@ private fun ActionStep(action: RecommendedAction) {
             stringResource(action.rationaleRes),
             style = MaterialTheme.typography.bodyMedium,
         )
+        // The two model-download essentials complete inline: one tap grabs the
+        // recommended model and the step auto-advances when it lands (the
+        // essentials list shrinks). Other actions keep the Open-settings flow.
+        when (action.id) {
+            ActionId.DownloadWhisperModel -> InlineDownload(whisperDownload)
+            ActionId.DownloadNluModel -> InlineDownload(nluDownload)
+            else -> {}
+        }
+    }
+}
+
+@Composable
+private fun InlineDownload(dl: WizardModelDownload) {
+    val downloading = dl.progress != null
+    val sizeMb = (dl.approxSizeBytes / 1_000_000L).toInt()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+            onClick = dl.onStart,
+            enabled = !downloading,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                if (downloading) {
+                    stringResource(R.string.setup_wizard_downloading)
+                } else {
+                    stringResource(
+                        R.string.setup_wizard_download_button,
+                        stringResource(R.string.setup_wizard_download_size_mb, sizeMb),
+                    )
+                },
+            )
+        }
+        if (downloading) {
+            LinearProgressIndicator(
+                progress = { dl.progress ?: 0f },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (dl.error != null) {
+            Text(
+                stringResource(R.string.setup_wizard_download_failed),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }
 

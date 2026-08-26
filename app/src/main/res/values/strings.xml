@@ -199,6 +199,7 @@
     <string name="settings_section_codes">Saved codes</string>
     <string name="settings_section_reminders">Alarms &amp; Reminders</string>
     <string name="settings_section_notifications">Notifications</string>
+    <string name="settings_show_advanced">Show advanced settings</string>
     <string name="settings_section_setup">Setup</string>
 
     <!-- Settings → 🌟 Setup card. Persistent home for recommended setup
@@ -238,6 +239,11 @@
 
     <!-- First-launch welcome wizard. Multi-step flow that surfaces the
          Essential recommended actions one screen at a time. -->
+    <!-- Inline model auto-download inside the welcome wizard -->
+    <string name="setup_wizard_download_button">Download now (%1$s)</string>
+    <string name="setup_wizard_downloading">Downloading…</string>
+    <string name="setup_wizard_download_failed">Download failed. Tap to retry.</string>
+    <string name="setup_wizard_download_size_mb">%1$d MB</string>
     <string name="setup_wizard_welcome_title">Welcome to Wristotle</string>
     <string name="setup_wizard_welcome_body">Wristotle works on a fresh install, but a few one-time setup steps unlock the full experience — local speech transcription, paraphrase recognition, contact lookups, and app launching by name.</string>
     <string name="setup_wizard_welcome_count">We\'ll walk through %1$d short step(s). Skip any time.</string>
