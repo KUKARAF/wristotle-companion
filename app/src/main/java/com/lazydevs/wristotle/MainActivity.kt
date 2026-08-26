@@ -224,6 +224,19 @@ class MainActivity : ComponentActivity() {
                 val nluRec = com.lazydevs.wristotle.speech.nlu.model.NluModelCatalog.recommendedDefault()
                 val whisperDlState = whisperModelStates.firstOrNull { it.info.id == whisperRec.id }
                 val nluDlState = nluModelStates.firstOrNull { it.info.id == nluRec.id }
+                // Recent conversation entries drive the wizard's watch
+                // round-trip self-test — it watches for the query the user
+                // speaks from the watch during that step.
+                val conversationEntries by conversationVm.entries.collectAsState()
+                val wizardSelfTest = com.lazydevs.wristotle.ui.WizardSelfTest(
+                    recentEntries = conversationEntries.take(20).map {
+                        com.lazydevs.wristotle.ui.SelfTestEntry(
+                            timestampEpochMs = it.timestampEpochMs,
+                            query = it.userQuery,
+                            success = it.success,
+                        )
+                    },
+                )
 
                 if (!wizardDismissed && !wizardHidden) {
                     com.lazydevs.wristotle.ui.WelcomeWizard(
@@ -240,6 +253,7 @@ class MainActivity : ComponentActivity() {
                             approxSizeBytes = nluRec.approxSizeBytes,
                             error = nluDlState?.errorMessage,
                         ),
+                        selfTest = wizardSelfTest,
                         stepIndex = wizardStepIndex,
                         onStepIndexChange = { wizardStepIndex = it },
                         onSkipWizard = { app.setupSettings.dismissWelcomeWizard() },
