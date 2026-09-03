@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-17-1-and-a-half-durations",
+            date = "2026-09-03",
+            companionVersion = "v1.17.1",
+            watchVersion = null,
+            title = "\"And a half\" timers and alarms",
+            description = "Durations like \"an hour and a half\" or \"two and a half hours from now\" are now understood for timers and alarms, instead of being misread.",
+            sampleQuery = "set a timer for an hour and a half",
+            docsPath = null,
+        ),
+        FeatureEntry(
             id = "v1-17-0-failed-actions-stay-visible",
             date = "2026-08-25",
             companionVersion = "v1.17.0",

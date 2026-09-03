@@ -1,0 +1,6 @@
+Fixes.
+
+- "And a half" durations now work for timers and alarms.
+  "Set a timer for an hour and a half" and "set an alarm
+  for two and a half hours from now" are understood
+  correctly instead of being misread.

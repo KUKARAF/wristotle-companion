@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-17-1-and-a-half-durations",
+      "date": "2026-09-03",
+      "companion_version": "v1.17.1",
+      "watch_version": null,
+      "title": "\"And a half\" timers and alarms",
+      "description": "Durations like \"an hour and a half\" or \"two and a half hours from now\" are now understood for timers and alarms, instead of being misread.",
+      "sample_query": "set a timer for an hour and a half",
+      "docs_path": null
+    },
+    {
       "id": "v1-17-0-failed-actions-stay-visible",
       "date": "2026-08-25",
       "companion_version": "v1.17.0",
