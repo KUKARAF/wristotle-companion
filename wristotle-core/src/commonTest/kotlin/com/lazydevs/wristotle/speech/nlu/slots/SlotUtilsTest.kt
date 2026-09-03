@@ -6,6 +6,7 @@ package lazydevs.wristotle.speech.nlu.slots
 import com.lazydevs.wristotle.speech.nlu.slots.*
 
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.Test
 
 class SlotUtilsTest {
@@ -161,5 +162,52 @@ class SlotUtilsTest {
         assertEquals(23, WORD_NUMBERS["twenty third"])
         assertEquals(31, WORD_NUMBERS["thirty first"])
         assertEquals(25, WORD_NUMBERS["twenty fifth"])
+    }
+
+    // ── parseDurationSeconds — "and a half" fractions (issue #22) ──────────────
+
+    @Test fun `n and a half hours - the reported case`() {
+        // "set an alarm for two and a half hours from now" used to return null
+        // here and fall through to the clock parser, which read "two" as 2:00.
+        assertEquals(9000, parseDurationSeconds("two and a half hours from now"))
+    }
+
+    @Test fun `an hour and a half keeps the half`() {
+        // Previously dropped the half and returned 3600.
+        assertEquals(5400, parseDurationSeconds("set a timer for an hour and a half"))
+    }
+
+    @Test fun `one and a half hours`() {
+        assertEquals(5400, parseDurationSeconds("one and a half hours"))
+    }
+
+    @Test fun `digit and a half hours`() {
+        assertEquals(9000, parseDurationSeconds("2 and a half hours"))
+    }
+
+    @Test fun `hours and a half trailing form`() {
+        assertEquals(9000, parseDurationSeconds("two hours and a half"))
+    }
+
+    @Test fun `half an hour`() {
+        assertEquals(1800, parseDurationSeconds("half an hour"))
+    }
+
+    @Test fun `half a minute`() {
+        assertEquals(30, parseDurationSeconds("half a minute"))
+    }
+
+    @Test fun `plain compound duration still sums`() {
+        assertEquals(3840, parseDurationSeconds("an hour and four minutes"))
+        assertEquals(5400, parseDurationSeconds("1 hour 30 minutes"))
+        assertEquals(600, parseDurationSeconds("10 minutes"))
+    }
+
+    @Test fun `bare number defaults to minutes`() {
+        assertEquals(600, parseDurationSeconds("10"))
+    }
+
+    @Test fun `no duration returns null`() {
+        assertNull(parseDurationSeconds("call mom"))
     }
 }

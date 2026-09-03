@@ -251,25 +251,84 @@ private fun durationUnitSeconds(unit: String): Int = when {
  * "one" would match the article in "set **a** timer" and add a phantom
  * minute. So only "ten minutes" / "an hour" counts, never bare "a" / "ten".
  */
+/** Number-token half of the "half"-fraction patterns: a digit run or any
+ *  `WORD_NUMBERS` word. */
+private val DURATION_NUMBER_ALT = "\\d+|$WORD_NUMBER_ALT"
+
+/** Unit half of the "half"-fraction patterns. Full-word forms only — the bare
+ *  single letters (s/m/h) only read as units glued to a digit, never around
+ *  the word "half". */
+private const val HALF_UNIT_ALT = "hours?|hrs?|minutes?|mins?|seconds?|secs?"
+
+// "<n> and a half <unit>"  → (n × unit) + ½ unit   e.g. "two and a half hours"
+private val HALF_NUM_THEN_UNIT =
+    Regex("(?i)\\b($DURATION_NUMBER_ALT)\\s+and\\s+a\\s+half\\s+($HALF_UNIT_ALT)\\b")
+// "<n> <unit> and a half"  → (n × unit) + ½ unit   e.g. "an hour and a half"
+private val HALF_UNIT_THEN_HALF =
+    Regex("(?i)\\b($DURATION_NUMBER_ALT)\\s+($HALF_UNIT_ALT)\\s+and\\s+a\\s+half\\b")
+// "half a(n) <unit>" / "half <unit>"  → ½ unit      e.g. "half an hour"
+private val HALF_LEADING =
+    Regex("(?i)\\bhalf\\s+(?:an?\\s+)?($HALF_UNIT_ALT)\\b")
+
+private fun wordOrDigit(token: String): Int? =
+    token.trim().toIntOrNull() ?: WORD_NUMBERS[token.trim()]
+
+/**
+ * Sums every `<n> <unit>` pair in [text] and returns the total in seconds, or
+ * null when no recognisable duration is present. Handles digit forms ("1 hour
+ * 30 minutes"), word forms ("an hour and four minutes"), and the "and a half"
+ * fraction in all three spoken shapes: "two and a half hours" (9000), "an hour
+ * and a half" (5400), and "half an hour" (1800).
+ *
+ * Used by [SetTimerSlots] for "timer for …" and by [SetAlarmSlots] for
+ * "set an alarm for … from now" — one source of truth so the two intents
+ * can't drift.
+ *
+ * Word-form pairs REQUIRE an explicit unit: without it "a" / "an" / "one"
+ * would match the article in "set **a** timer" and add a phantom minute.
+ */
 fun parseDurationSeconds(text: String): Int? {
-    val lower = text.lowercase()
+    var lower = text.lowercase()
     var total = 0
     var matchedAny = false
 
-    DURATION_DIGIT_UNIT.findAll(lower).forEach { m ->
-        val n = m.groupValues[1].toIntOrNull() ?: return@forEach
-        total += n * durationUnitSeconds(m.groupValues[2])
-        matchedAny = true
+    // Blank each matched span (preserving length, so word boundaries survive)
+    // as it is counted, so a later pass can't re-count the same tokens — the
+    // "<n> <unit>" inside "two and a half hours" must not also be summed by the
+    // generic word pass.
+    fun consume(re: Regex, secondsOf: (MatchResult) -> Int?) {
+        lower = re.replace(lower) { m ->
+            secondsOf(m)?.let { total += it; matchedAny = true }
+            " ".repeat(m.value.length)
+        }
     }
-    if (matchedAny) return total
 
-    DURATION_WORD_UNIT.findAll(lower).forEach { m ->
-        val unit = m.groupValues[2]
-        if (unit.isEmpty()) return@forEach
-        val n = WORD_NUMBERS[m.groupValues[1].trim()] ?: return@forEach
-        total += n * durationUnitSeconds(unit)
-        matchedAny = true
+    // Fractional "half" phrases first, longest shapes before the bare "half X".
+    consume(HALF_NUM_THEN_UNIT) { m ->
+        val n = wordOrDigit(m.groupValues[1]) ?: return@consume null
+        val u = durationUnitSeconds(m.groupValues[2])
+        n * u + u / 2
     }
+    consume(HALF_UNIT_THEN_HALF) { m ->
+        val n = wordOrDigit(m.groupValues[1]) ?: return@consume null
+        val u = durationUnitSeconds(m.groupValues[2])
+        n * u + u / 2
+    }
+    consume(HALF_LEADING) { m -> durationUnitSeconds(m.groupValues[1]) / 2 }
+
+    // Generic "<n> <unit>" pairs — digit form then word form, each blanking its
+    // matches so a mixed "1 hour thirty minutes" still sums both halves.
+    consume(DURATION_DIGIT_UNIT) { m ->
+        m.groupValues[1].toIntOrNull()?.let { it * durationUnitSeconds(m.groupValues[2]) }
+    }
+    consume(DURATION_WORD_UNIT) { m ->
+        if (m.groupValues[2].isEmpty()) {
+            null
+        } else {
+            WORD_NUMBERS[m.groupValues[1].trim()]?.let { it * durationUnitSeconds(m.groupValues[2]) }
+        }
+    }
+
     return if (matchedAny) total else null
 }
 
