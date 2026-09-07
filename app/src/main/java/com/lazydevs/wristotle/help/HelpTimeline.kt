@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-18-0-agent-routing-modes",
+            date = "2026-09-07",
+            companionVersion = "v1.18.0",
+            watchVersion = null,
+            title = "Route everything to Ask Agent",
+            description = "New routing modes send unrecognised speech — or every spoken command, with no wake word — straight to your Ask Agent provider.",
+            sampleQuery = null,
+            docsPath = "voice-commands/",
+        ),
+        FeatureEntry(
             id = "v1-17-1-and-a-half-durations",
             date = "2026-09-03",
             companionVersion = "v1.17.1",

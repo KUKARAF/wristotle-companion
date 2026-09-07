@@ -1,0 +1,9 @@
+New: Ask Agent routing modes (Settings > Ask Agent).
+
+- "Send unrecognised speech to Ask Agent" routes anything
+  the app doesn't recognise to your agent, while keeping
+  phone commands (call, text, timers) working.
+- "Ask Agent only" sends every spoken command straight to
+  your agent, with no wake word needed.
+
+Both are off by default and need a provider configured.

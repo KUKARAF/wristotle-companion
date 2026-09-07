@@ -2,6 +2,16 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-18-0-agent-routing-modes",
+      "date": "2026-09-07",
+      "companion_version": "v1.18.0",
+      "watch_version": null,
+      "title": "Route everything to Ask Agent",
+      "description": "New routing modes send unrecognised speech \u2014 or every spoken command, with no wake word \u2014 straight to your Ask Agent provider.",
+      "sample_query": null,
+      "docs_path": "voice-commands/"
+    },
+    {
       "id": "v1-17-1-and-a-half-durations",
       "date": "2026-09-03",
       "companion_version": "v1.17.1",
