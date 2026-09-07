@@ -5,6 +5,7 @@ package com.lazydevs.wristotle.backup
 
 import com.lazydevs.sportskapi.SportSubject
 import com.lazydevs.wristotle.speech.nlu.homeassistant.HomeAssistantClient
+import com.lazydevs.wristotle.speech.nlu.settings.AgentRoutingMode
 import com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings
 import com.lazydevs.wristotle.speech.nlu.settings.HomeAssistantSettings
 import com.lazydevs.wristotle.speech.nlu.settings.ReminderSettings
@@ -152,6 +153,7 @@ data class BackupManifest(
         val openaiApiKey: String? = null,
         val anthropicWebSearch: Boolean = false,
         val responseTimeoutSec: Int = AskAgentSettings.DEFAULT_RESPONSE_TIMEOUT_SEC,
+        val agentRoutingMode: String = AgentRoutingMode.OFF.name,
     )
 
     /** Home Assistant — base URL + language + timeout ride with the
@@ -373,6 +375,7 @@ object BackupManifestCodec {
                     put("system_prompt", a.systemPrompt)
                     put("anthropic_web_search", a.anthropicWebSearch)
                     put("response_timeout_sec", a.responseTimeoutSec)
+                    put("agent_routing_mode", a.agentRoutingMode)
                     if (a.anthropicApiKey != null) put("anthropic_api_key", a.anthropicApiKey)
                     if (a.openaiApiKey != null) put("openai_api_key", a.openaiApiKey)
                 })
@@ -601,6 +604,10 @@ object BackupManifestCodec {
                         responseTimeoutSec = a.optInt(
                             "response_timeout_sec",
                             AskAgentSettings.DEFAULT_RESPONSE_TIMEOUT_SEC,
+                        ),
+                        agentRoutingMode = a.optString(
+                            "agent_routing_mode",
+                            AgentRoutingMode.OFF.name,
                         ),
                     )
                 },

@@ -319,6 +319,11 @@
     <!-- Ask Agent card (phase B1 of the agent feature) -->
     <string name="settings_askagent_header">Ask Agent</string>
     <string name="settings_askagent_desc">Routes the "ask agent …" / "ask claude …" voice intent to an LLM. Phase B1 is plain Q&amp;A only — MCP tool calling (so the LLM can actually take actions) lands in phase B2. Pick a provider, paste your API key, and the next voice query goes through.</string>
+    <string name="settings_askagent_routing_label">Routing</string>
+    <string name="settings_askagent_routing_off">Off — reach the agent with a wake word (default)</string>
+    <string name="settings_askagent_routing_fallback">Send unrecognised speech to Ask Agent</string>
+    <string name="settings_askagent_routing_agent_only">Ask Agent only — send every command, no wake word</string>
+    <string name="settings_askagent_routing_hint">Fallback keeps phone commands (call, text, timers, notes) and routes anything unmatched to the agent. Ask Agent only skips phone commands and sends every spoken command straight to the agent. Both need a provider configured below.</string>
     <string name="settings_askagent_provider_label">Provider</string>
     <string name="settings_askagent_provider_anthropic">Anthropic (Claude)</string>
     <string name="settings_askagent_provider_openai">OpenAI-compatible (OpenAI / OpenRouter / Ollama / …)</string>

@@ -290,6 +290,7 @@ class DiagnosticsBuilder(
     private fun StringBuilder.appendAskAgentSection() {
         appendLine("### Ask Agent")
         val s = app.askAgentSettings
+        appendLine("- Routing mode: ${s.agentRoutingMode.value} (configured: ${s.isConfigured()})")
         appendLine("- Provider: ${s.provider.value}")
         appendLine("- Anthropic key: ${setState(s.anthropicApiKey.value)}; model: ${nonEmpty(s.anthropicModel.value)}")
         appendLine("- OpenAI-compat key: ${setState(s.openaiApiKey.value)}; model: ${nonEmpty(s.openaiModel.value)}")

@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.speech.nlu.settings.AgentRoutingMode
 import com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings
 import com.lazydevs.wristotle.speech.nlu.agent.LlmProvider
 import com.lazydevs.wristotle.ui.components.PasswordField
@@ -62,6 +63,40 @@ fun AskAgentSettingsCard(settings: AskAgentSettings) {
                 title = stringResource(R.string.settings_askagent_header),
                 description = stringResource(R.string.settings_askagent_desc),
             )
+
+            // ── Routing ─────────────────────────────────────────────────────
+            // How free voice reaches the agent. OFF (default) keeps the
+            // NLU-first behaviour (agent only via wake words); FALLBACK sends
+            // anything unmatched to the agent; AGENT_ONLY bypasses intent
+            // classification entirely. FALLBACK / AGENT_ONLY only take effect
+            // once a provider is configured below (VoicePipeline gates on it).
+            val routingMode by settings.agentRoutingMode.collectAsState()
+            Text(
+                stringResource(R.string.settings_askagent_routing_label),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            RadioRow(
+                label = stringResource(R.string.settings_askagent_routing_off),
+                selected = routingMode == AgentRoutingMode.OFF,
+                onSelect = { settings.setAgentRoutingMode(AgentRoutingMode.OFF) },
+            )
+            RadioRow(
+                label = stringResource(R.string.settings_askagent_routing_fallback),
+                selected = routingMode == AgentRoutingMode.FALLBACK,
+                onSelect = { settings.setAgentRoutingMode(AgentRoutingMode.FALLBACK) },
+            )
+            RadioRow(
+                label = stringResource(R.string.settings_askagent_routing_agent_only),
+                selected = routingMode == AgentRoutingMode.AGENT_ONLY,
+                onSelect = { settings.setAgentRoutingMode(AgentRoutingMode.AGENT_ONLY) },
+            )
+            Text(
+                stringResource(R.string.settings_askagent_routing_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(8.dp))
 
             // ── Provider ────────────────────────────────────────────────────
             Text(

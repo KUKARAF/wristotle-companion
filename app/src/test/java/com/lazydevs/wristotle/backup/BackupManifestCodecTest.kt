@@ -237,6 +237,7 @@ class BackupManifestCodecTest {
                     // Non-default so the round-trip actually proves the field
                     // travels (default would pass even if the codec dropped it).
                     responseTimeoutSec = 120,
+                    agentRoutingMode = "AGENT_ONLY",
                 ),
             ),
         )

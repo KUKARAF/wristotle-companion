@@ -72,6 +72,12 @@ class AskAgentSettings(
     )
     val responseTimeoutSec: StateFlow<Int> = _responseTimeoutSec
 
+    /** How free voice is routed relative to Ask Agent — see
+     *  [AgentRoutingMode]. Default [AgentRoutingMode.OFF] keeps the
+     *  NLU-first behaviour. */
+    private val _agentRoutingMode = MutableStateFlow(store.getEnum(KEY_AGENT_ROUTING_MODE, AgentRoutingMode.OFF))
+    val agentRoutingMode: StateFlow<AgentRoutingMode> = _agentRoutingMode
+
     fun setProvider(value: LlmProvider) {
         store.putString(KEY_PROVIDER, value.name)
         _provider.value = value
@@ -95,6 +101,24 @@ class AskAgentSettings(
         if (_responseTimeoutSec.value == clamped) return
         store.putInt(KEY_RESPONSE_TIMEOUT_SEC, clamped)
         _responseTimeoutSec.value = clamped
+    }
+
+    fun setAgentRoutingMode(value: AgentRoutingMode) {
+        if (_agentRoutingMode.value == value) return
+        store.putString(KEY_AGENT_ROUTING_MODE, value.name)
+        _agentRoutingMode.value = value
+    }
+
+    /**
+     * True when the active provider has enough configured to actually run:
+     * Anthropic needs an API key; an OpenAI-compatible endpoint (often a
+     * self-hosted server with no key) needs at least a base URL. Gates the
+     * [AgentRoutingMode] fallback/agent-only paths so enabling them without a
+     * provider can't silently swallow every query.
+     */
+    fun isConfigured(): Boolean = when (_provider.value) {
+        LlmProvider.ANTHROPIC -> _anthropicApiKey.value.isNotBlank()
+        LlmProvider.OPENAI_COMPATIBLE -> _openaiEndpoint.value.isNotBlank()
     }
 
     fun setCustomTriggers(rawText: String) {
@@ -164,6 +188,7 @@ class AskAgentSettings(
         private const val KEY_CUSTOM_TRIGGERS = "custom_triggers"
         private const val KEY_ANTHROPIC_WEB_SEARCH = "anthropic_web_search"
         private const val KEY_RESPONSE_TIMEOUT_SEC = "response_timeout_sec"
+        private const val KEY_AGENT_ROUTING_MODE = "agent_routing_mode"
 
         const val DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6"
         const val DEFAULT_OPENAI_MODEL = "gpt-4o-mini"

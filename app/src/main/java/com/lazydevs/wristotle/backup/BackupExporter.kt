@@ -370,6 +370,7 @@ class BackupExporter(private val app: WristotleApplication) {
                     .takeIf { sel.askAgentApiKeys && it.isNotEmpty() },
                 anthropicWebSearch = app.askAgentSettings.anthropicWebSearch.value,
                 responseTimeoutSec = app.askAgentSettings.responseTimeoutSec.value,
+                agentRoutingMode = app.askAgentSettings.agentRoutingMode.value.name,
             ) else null,
             homeAssistant = if (sel.homeAssistantSetup) BackupManifest.HomeAssistantPrefs(
                 baseUrl = app.homeAssistantSettings.baseUrl.value,

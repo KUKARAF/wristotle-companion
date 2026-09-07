@@ -9,6 +9,7 @@ import com.lazydevs.wristotle.speech.nlu.slots.*
 import com.lazydevs.wristotle.phone.ContactsRepository
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.PrefixHints
+import com.lazydevs.wristotle.speech.nlu.settings.AgentRoutingMode
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,6 +34,8 @@ class VoicePipelineTest {
         askAgentSubjects: List<String> = emptyList(),
         homeAssistantSubjects: List<String> = emptyList(),
         findContact: suspend (String) -> ResolvedContact? = { null },
+        agentRoutingMode: AgentRoutingMode = AgentRoutingMode.OFF,
+        agentConfigured: Boolean = false,
     ): VoicePipeline.Routed = runBlocking {
         val subjectsProvider = { askAgentSubjects }
         val haSubjectsProvider = { homeAssistantSubjects }
@@ -45,6 +48,8 @@ class VoicePipelineTest {
             ),
             askAgentSubjects = subjectsProvider,
             homeAssistantSubjects = haSubjectsProvider,
+            agentRoutingMode = { agentRoutingMode },
+            agentConfigured = { agentConfigured },
         ).route(query, watchHint)
     }
 
@@ -201,6 +206,77 @@ class VoicePipelineTest {
         val r = route("tell me a joke")
         assertEquals(Intent.Unknown, r.result.intent)
         assertTrue(r.result.slots.isEmpty())
+    }
+
+    // ── Agent routing modes (issue #23) ────────────────────────────────
+
+    @Test fun `fallback routes an unmatched query to AskAgent with the full query`() {
+        val r = route(
+            "tell me a joke",
+            agentRoutingMode = AgentRoutingMode.FALLBACK,
+            agentConfigured = true,
+        )
+        assertEquals(Intent.AskAgent, r.result.intent)
+        assertEquals("tell me a joke", r.result.slots[SlotKeys.Query])
+    }
+
+    @Test fun `fallback does not hijack a matched intent`() {
+        val r = route(
+            "set a timer for 5 minutes",
+            agentRoutingMode = AgentRoutingMode.FALLBACK,
+            agentConfigured = true,
+        )
+        assertEquals(Intent.SetTimer, r.result.intent)
+    }
+
+    @Test fun `fallback is inert when Ask Agent is not configured`() {
+        val r = route(
+            "tell me a joke",
+            agentRoutingMode = AgentRoutingMode.FALLBACK,
+            agentConfigured = false,
+        )
+        assertEquals(Intent.Unknown, r.result.intent)
+    }
+
+    @Test fun `agent-only bypasses classification for a normally-matchable query`() {
+        val r = route(
+            "set a timer for 5 minutes",
+            agentRoutingMode = AgentRoutingMode.AGENT_ONLY,
+            agentConfigured = true,
+        )
+        assertEquals(Intent.AskAgent, r.result.intent)
+        assertEquals("set a timer for 5 minutes", r.result.slots[SlotKeys.Query])
+    }
+
+    @Test fun `agent-only is inert when Ask Agent is not configured`() {
+        val r = route(
+            "set a timer for 5 minutes",
+            agentRoutingMode = AgentRoutingMode.AGENT_ONLY,
+            agentConfigured = false,
+        )
+        assertEquals(Intent.SetTimer, r.result.intent)
+    }
+
+    @Test fun `agent-only still honours an explicit watch-surface hint`() {
+        // A deliberate watch shortcut (non-null hint) skips the agent-only
+        // short-circuit so the picked surface still does its own thing.
+        val r = route(
+            "buy milk",
+            watchHint = Intent.Reminder,
+            classifier = FakeIntentClassifier { q -> classified(Intent.Reminder, 0.9f, q) },
+            agentRoutingMode = AgentRoutingMode.AGENT_ONLY,
+            agentConfigured = true,
+        )
+        assertEquals(Intent.Reminder, r.result.intent)
+    }
+
+    @Test fun `off mode leaves unmatched as Unknown even when configured`() {
+        val r = route(
+            "tell me a joke",
+            agentRoutingMode = AgentRoutingMode.OFF,
+            agentConfigured = true,
+        )
+        assertEquals(Intent.Unknown, r.result.intent)
     }
 
     // ── classified field preserves pre-refinement intent ───────────────

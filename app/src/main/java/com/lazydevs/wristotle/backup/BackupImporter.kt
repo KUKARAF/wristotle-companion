@@ -541,6 +541,8 @@ class BackupImporter(private val app: WristotleApplication) {
                 app.askAgentSettings.setSystemPrompt(a.systemPrompt)
                 app.askAgentSettings.setAnthropicWebSearch(a.anthropicWebSearch)
                 app.askAgentSettings.setResponseTimeoutSec(a.responseTimeoutSec)
+                runCatching { com.lazydevs.wristotle.speech.nlu.settings.AgentRoutingMode.valueOf(a.agentRoutingMode) }
+                    .onSuccess { app.askAgentSettings.setAgentRoutingMode(it) }
                 if (sel.askAgentApiKeys) {
                     a.anthropicApiKey?.let { app.askAgentSettings.setAnthropicApiKey(it) }
                     a.openaiApiKey?.let { app.askAgentSettings.setOpenAiApiKey(it) }

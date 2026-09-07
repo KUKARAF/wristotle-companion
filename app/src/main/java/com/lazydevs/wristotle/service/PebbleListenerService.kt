@@ -138,6 +138,8 @@ class PebbleListenerService : BasePebbleListenerService() {
             slotExtractors = app.slotExtractors,
             askAgentSubjects = { app.askAgentSettings.customTriggers.value },
             homeAssistantSubjects = { app.homeAssistantSettings.customTriggers.value },
+            agentRoutingMode = { app.askAgentSettings.agentRoutingMode.value },
+            agentConfigured = { app.askAgentSettings.isConfigured() },
             // through the multiplatform Logger interface.
             logger = com.lazydevs.wristotle.logging.WristotleLogger,
         )
