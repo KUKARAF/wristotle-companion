@@ -149,6 +149,14 @@ object MessageKeys {
     /** [RESULT_STATUS] value that means "the action failed". */
     const val RESULT_STATUS_FAILED: String = "1"
 
+    /** Companion → watch: paired with an Ask Agent answer when conversation
+     *  context is live (issue #25), so the chat UI can show a "context on"
+     *  indicator. Sent as text "1" only when active; absent ⇒ no context. */
+    val CONTEXT_ACTIVE: UInt = 10067u
+
+    /** [CONTEXT_ACTIVE] value meaning "conversation context is live". */
+    const val CONTEXT_ACTIVE_ON: String = "1"
+
     /** Watch → companion: the watch app's version string, piggybacked on the
      *  launch COMPANION_PING. Cached by the companion (a watchapp only runs when
      *  launched) and surfaced in the diagnostics bundle. */

@@ -442,9 +442,14 @@ class PebbleListenerService : BasePebbleListenerService() {
         }
         Log.d(TAG, "Sending response: ${dispatchResult.response}")
 
+        // Tell the watch when an Ask Agent answer leaves live conversation
+        // context, so its chat UI can show a "context on" indicator (issue #25).
+        val contextActive = routed.intent == Intent.AskAgent &&
+            app.agentConversationMemory.isActive()
         transport.sendForHint(
             watchHint, dispatchResult.response, dispatchResult.cardKind, dispatchResult.cardData,
             success = dispatchResult.success,
+            contextActive = contextActive,
         )
 
         // Per-intent TTS on the watch speaker. Master + per-intent toggle

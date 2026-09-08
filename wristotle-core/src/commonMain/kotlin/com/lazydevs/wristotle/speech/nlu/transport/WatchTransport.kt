@@ -110,6 +110,7 @@ suspend fun WatchTransport.sendForHint(
     cardKind: String? = null,
     cardData: String? = null,
     success: Boolean = true,
+    contextActive: Boolean = false,
 ): Boolean {
     val responseKey = when (hint) {
         Intent.Reminder -> MessageKeys.REMINDER_RESULT
@@ -127,6 +128,7 @@ suspend fun WatchTransport.sendForHint(
         if (!cardKind.isNullOrEmpty()) put(MessageKeys.CARD_KIND, cardKind)
         if (!cardData.isNullOrEmpty()) put(MessageKeys.CARD_DATA, cardData)
         if (!success) put(MessageKeys.RESULT_STATUS, MessageKeys.RESULT_STATUS_FAILED)
+        if (contextActive) put(MessageKeys.CONTEXT_ACTIVE, MessageKeys.CONTEXT_ACTIVE_ON)
     }
     return if (payload.size == 1) sendText(responseKey, text) else sendTexts(payload)
 }
