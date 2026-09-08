@@ -8,6 +8,7 @@ import com.lazydevs.wristotle.speech.nlu.transport.sendResponse
 import com.lazydevs.wristotle.logging.WristotleLogger
 import com.lazydevs.wristotle.mcp.HttpMcpIntegration
 import com.lazydevs.wristotle.mcp.McpServerRepository
+import com.lazydevs.wristotle.speech.nlu.agent.AgentConversationMemory
 import com.lazydevs.wristotle.speech.nlu.agent.AgentLoop
 import com.lazydevs.wristotle.speech.nlu.agent.LlmResult
 import com.lazydevs.wristotle.speech.nlu.handler.ActionHandler
@@ -46,6 +47,7 @@ class AskAgentHandler(
     private val settings: AskAgentSettings,
     private val mcpServers: McpServerRepository,
     private val transport: WatchTransport,
+    private val memory: AgentConversationMemory,
 ) : ActionHandler {
 
     override val tag: String = "ask-agent"
@@ -53,8 +55,24 @@ class AskAgentHandler(
     override val cardKind: String? = "agent_answer"
 
     override suspend fun handle(result: IntentResult): String {
-        val query = result.stringSlot(SlotKeys.Query)
-        if (query.isEmpty()) return NO_QUERY_HINT
+        val rawQuery = result.stringSlot(SlotKeys.Query)
+        if (rawQuery.isEmpty()) return NO_QUERY_HINT
+
+        // Conversation memory (issue #25): when history is enabled, a leading
+        // reset keyword ("new"/"forget"/"reset") clears context. Gated on
+        // memory being on so it can't swallow a query when the feature is off.
+        val memoryOn = settings.historyTurns.value > 0
+        var query = rawQuery
+        if (memoryOn) {
+            val reset = com.lazydevs.wristotle.speech.nlu.agent.AgentReset
+                .detect(rawQuery, settings.resetKeywords.value)
+            if (reset != null) {
+                memory.clear()
+                if (reset.remainder.isEmpty()) return RESET_ACK
+                query = reset.remainder
+            }
+        }
+
         // System prompt is the user-visible value from Settings (default
         // is the watch-friendly baseline; user can edit or clear it via
         // the card's "Reset to default" button). No hidden prepend —
@@ -63,15 +81,18 @@ class AskAgentHandler(
         val client = settings.activeClient()
 
         val enabled = mcpServers.listEnabled()
+        val history = if (memoryOn) memory.historyForNextTurn() else emptyList()
         // Both paths run inside a watch heartbeat (see withWatchHeartbeat) so a
         // slow model — a local reasoning model thinking for 30-60 s — doesn't
-        // leave the watch silent past its 15 s ceiling.
-        return withWatchHeartbeat {
+        // leave the watch silent past its 15 s ceiling. Each returns an [Answer]
+        // so a successful turn is recorded to memory before returning.
+        val answer = withWatchHeartbeat {
             // The chat/tool path is needed when EITHER the user has MCP servers
             // OR the active provider has built-in server tools (today: Anthropic
             // web_search). Otherwise the cheaper one-shot complete() suffices.
             if (enabled.isEmpty() && !settings.activeProviderHasServerTools()) {
-                renderComplete(client.complete(query, systemPrompt)).trimForWatch()
+                val r = client.complete(query, systemPrompt, history)
+                Answer(renderComplete(r), record = r is LlmResult.Success)
             } else {
                 val loop = AgentLoop(
                     llm = client,
@@ -97,6 +118,7 @@ class AskAgentHandler(
                     userQuery = query,
                     systemPrompt = systemPrompt,
                     servers = serverConfigs,
+                    history = history,
                     // Per-round watch status (B3): goes to the hint-bar slot via
                     // sendAgentStatus, NOT sendResponse (the chat surface renders
                     // one bubble per query — see feedback_watch_chat_single_bubble).
@@ -114,14 +136,21 @@ class AskAgentHandler(
                     },
                 )
                 when (outcome) {
-                    is AgentLoop.Outcome.Done -> outcome.text
-                    is AgentLoop.Outcome.HitMaxIterations ->
-                        outcome.partialText ?: "Agent: hit max iterations with no answer."
-                    is AgentLoop.Outcome.Failed -> "Agent: ${outcome.message}"
-                }.trimForWatch()
+                    is AgentLoop.Outcome.Done -> Answer(outcome.text, record = true)
+                    is AgentLoop.Outcome.HitMaxIterations -> Answer(
+                        outcome.partialText ?: "Agent: hit max iterations with no answer.",
+                        record = outcome.partialText != null,
+                    )
+                    is AgentLoop.Outcome.Failed -> Answer("Agent: ${outcome.message}", record = false)
+                }
             }
         }
+        if (memoryOn && answer.record) memory.recordTurn(query, answer.text)
+        return answer.text.trimForWatch()
     }
+
+    /** An LLM answer plus whether it should be remembered (failures aren't). */
+    private data class Answer(val text: String, val record: Boolean)
 
     /**
      * Runs [block] (the LLM work) while pinging the watch with a periodic
@@ -170,6 +199,7 @@ class AskAgentHandler(
     }
 
     private companion object {
+        const val RESET_ACK = "Started fresh."
         const val NO_QUERY_HINT =
             "Ask what?\nTry \"ask agent what's the capital of France\"."
         const val NO_KEY_HINT =

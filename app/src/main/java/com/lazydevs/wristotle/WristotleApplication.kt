@@ -225,6 +225,18 @@ class WristotleApplication : Application() {
         )
     }
 
+    /** App-singleton Ask Agent conversation memory — bounded, in-memory, so
+     *  follow-ups carry context across turns and the companion process dying
+     *  starts fresh. App-scoped (not service-scoped) because the
+     *  PebbleListenerService is recreated on every watch-app open. Bounds +
+     *  idle timeout read live from [askAgentSettings]. See issue #25. */
+    val agentConversationMemory: com.lazydevs.wristotle.speech.nlu.agent.AgentConversationMemory by lazy {
+        com.lazydevs.wristotle.speech.nlu.agent.AgentConversationMemory(
+            maxTurns = { askAgentSettings.historyTurns.value },
+            idleTimeoutMs = { askAgentSettings.contextIdleTimeoutSec.value * 1000L },
+        )
+    }
+
     /** Home Assistant preferences — base URL + long-lived token + custom
      *  wake words. Lazy like [askAgentSettings]: only touched when the user
      *  opens the Settings card, fires a HomeAssistant intent, or runs a

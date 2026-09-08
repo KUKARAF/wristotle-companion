@@ -51,7 +51,11 @@ class AnthropicLlmClient(
     private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
 ) : LlmClient {
 
-    override suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult {
+    override suspend fun complete(
+        userQuery: String,
+        systemPrompt: String?,
+        history: List<LlmMessage>,
+    ): LlmResult {
         if (apiKey.isBlank()) return LlmResult.Failure.NoKey()
         return try {
             val body = buildJsonObject {
@@ -59,6 +63,19 @@ class AnthropicLlmClient(
                 put("max_tokens", maxTokens)
                 if (!systemPrompt.isNullOrBlank()) put("system", systemPrompt)
                 put("messages", buildJsonArray {
+                    // Prior turns first (Anthropic keeps `system` top-level, so
+                    // history is only User/Assistant), then the current query.
+                    history.forEach { m ->
+                        when (m) {
+                            is LlmMessage.User -> add(buildJsonObject {
+                                put("role", "user"); put("content", m.text)
+                            })
+                            is LlmMessage.Assistant -> add(buildJsonObject {
+                                put("role", "assistant"); put("content", m.text ?: "")
+                            })
+                            else -> Unit
+                        }
+                    }
                     add(buildJsonObject {
                         put("role", "user")
                         put("content", userQuery)

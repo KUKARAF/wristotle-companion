@@ -212,6 +212,7 @@ class PebbleListenerService : BasePebbleListenerService() {
                 settings = app.askAgentSettings,
                 mcpServers = app.mcpServerRepository,
                 transport = app.transport,
+                memory = app.agentConversationMemory,
             ),
             com.lazydevs.wristotle.handlers.HomeAssistantHandler(
                 settings = app.homeAssistantSettings,

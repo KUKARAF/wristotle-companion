@@ -42,26 +42,28 @@ class OpenAiCompatibleLlmClient(
     private val model: String,
     private val maxTokens: Int = DEFAULT_MAX_TOKENS,
     private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
+    /** Extra HTTP headers merged onto every request (after the built-ins, so a
+     *  user header can override). Enables server-side session backends like
+     *  Hermes' X-Hermes-Session-Id without special-casing any provider. */
+    private val customHeaders: Map<String, String> = emptyMap(),
 ) : LlmClient {
 
-    override suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult {
+    override suspend fun complete(
+        userQuery: String,
+        systemPrompt: String?,
+        history: List<LlmMessage>,
+    ): LlmResult {
         if (endpointUrl.isBlank()) return LlmResult.Failure.Other("no endpoint URL configured")
         return try {
+            val msgs = buildList {
+                if (!systemPrompt.isNullOrBlank()) add(LlmMessage.System(systemPrompt))
+                addAll(history)
+                add(LlmMessage.User(userQuery))
+            }
             val body = buildJsonObject {
                 put("model", model)
                 put("max_tokens", maxTokens)
-                put("messages", buildJsonArray {
-                    if (!systemPrompt.isNullOrBlank()) {
-                        add(buildJsonObject {
-                            put("role", "system")
-                            put("content", systemPrompt)
-                        })
-                    }
-                    add(buildJsonObject {
-                        put("role", "user")
-                        put("content", userQuery)
-                    })
-                })
+                put("messages", openAiMessages(msgs))
             }.toString()
             val resp = httpPost(body)
             statusToCompleteResult(resp.status, resp.body, resp.error)
@@ -232,6 +234,7 @@ class OpenAiCompatibleLlmClient(
                 // Local self-hosted servers (Ollama, llama.cpp) work without auth;
                 // omit the header entirely when the key is blank.
                 if (apiKey.isNotBlank()) put("Authorization", "Bearer $apiKey")
+                putAll(customHeaders)
             },
             body = body.encodeToByteArray(),
             timeoutMs = readTimeoutMs,

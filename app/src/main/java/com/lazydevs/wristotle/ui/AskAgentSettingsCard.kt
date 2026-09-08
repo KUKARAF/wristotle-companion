@@ -98,6 +98,71 @@ fun AskAgentSettingsCard(settings: AskAgentSettings) {
 
             Spacer(Modifier.height(8.dp))
 
+            // ── Conversation memory (issue #25) ─────────────────────────────
+            Text(
+                stringResource(R.string.settings_askagent_memory_label),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            val historyTurns by settings.historyTurns.collectAsState()
+            var turnsText by remember(historyTurns) { mutableStateOf(historyTurns.toString()) }
+            OutlinedTextField(
+                value = turnsText,
+                onValueChange = { txt ->
+                    turnsText = txt.filter { it.isDigit() }.take(2)
+                    turnsText.toIntOrNull()?.let(settings::setHistoryTurns)
+                },
+                label = { Text(stringResource(R.string.settings_askagent_history_turns_label)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                stringResource(R.string.settings_askagent_history_turns_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val idleSec by settings.contextIdleTimeoutSec.collectAsState()
+            var idleText by remember(idleSec) { mutableStateOf(idleSec.toString()) }
+            OutlinedTextField(
+                value = idleText,
+                onValueChange = { txt ->
+                    idleText = txt.filter { it.isDigit() }.take(5)
+                    idleText.toIntOrNull()?.let(settings::setContextIdleTimeoutSec)
+                },
+                label = { Text(stringResource(R.string.settings_askagent_idle_label)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                stringResource(R.string.settings_askagent_idle_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // Local edit state (not the sanitised StateFlow) so trailing
+            // newlines survive while typing a second word — same trap the
+            // wake-word field hit. setResetKeywords still sanitises for storage.
+            val resetWords by settings.resetKeywords.collectAsState()
+            var resetText by remember { mutableStateOf(resetWords.joinToString("\n")) }
+            OutlinedTextField(
+                value = resetText,
+                onValueChange = {
+                    resetText = it
+                    settings.setResetKeywords(it)
+                },
+                label = { Text(stringResource(R.string.settings_askagent_reset_words_label)) },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2,
+            )
+            Text(
+                stringResource(R.string.settings_askagent_reset_words_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(8.dp))
+
             // ── Provider ────────────────────────────────────────────────────
             Text(
                 stringResource(R.string.settings_askagent_provider_label),
@@ -202,6 +267,29 @@ fun AskAgentSettingsCard(settings: AskAgentSettings) {
             )
             Text(
                 stringResource(R.string.settings_askagent_timeout_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── Custom headers (OpenAI-compatible; issue #25) ───────────────
+            // Local edit state initialised from the raw stored text so multi-
+            // line editing behaves.
+            var headersText by remember { mutableStateOf(settings.customHeadersRaw()) }
+            OutlinedTextField(
+                value = headersText,
+                onValueChange = {
+                    headersText = it
+                    settings.setCustomHeaders(it)
+                },
+                label = { Text(stringResource(R.string.settings_askagent_headers_label)) },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2,
+            )
+            Text(
+                stringResource(R.string.settings_askagent_headers_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

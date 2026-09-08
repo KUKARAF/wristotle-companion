@@ -154,6 +154,12 @@ data class BackupManifest(
         val anthropicWebSearch: Boolean = false,
         val responseTimeoutSec: Int = AskAgentSettings.DEFAULT_RESPONSE_TIMEOUT_SEC,
         val agentRoutingMode: String = AgentRoutingMode.OFF.name,
+        val historyTurns: Int = AskAgentSettings.DEFAULT_HISTORY_TURNS,
+        val contextIdleTimeoutSec: Int = AskAgentSettings.DEFAULT_CONTEXT_IDLE_SEC,
+        val resetKeywords: String = "",
+        /** Custom headers ride ONLY with the secret checkbox — they can carry
+         *  session tokens. Null when not included. */
+        val customHeaders: String? = null,
     )
 
     /** Home Assistant — base URL + language + timeout ride with the
@@ -376,8 +382,12 @@ object BackupManifestCodec {
                     put("anthropic_web_search", a.anthropicWebSearch)
                     put("response_timeout_sec", a.responseTimeoutSec)
                     put("agent_routing_mode", a.agentRoutingMode)
+                    put("history_turns", a.historyTurns)
+                    put("context_idle_sec", a.contextIdleTimeoutSec)
+                    put("reset_keywords", a.resetKeywords)
                     if (a.anthropicApiKey != null) put("anthropic_api_key", a.anthropicApiKey)
                     if (a.openaiApiKey != null) put("openai_api_key", a.openaiApiKey)
+                    if (a.customHeaders != null) put("custom_headers", a.customHeaders)
                 })
             }
             m.prefs.homeAssistant?.let { h ->
@@ -609,6 +619,16 @@ object BackupManifestCodec {
                             "agent_routing_mode",
                             AgentRoutingMode.OFF.name,
                         ),
+                        historyTurns = a.optInt(
+                            "history_turns",
+                            AskAgentSettings.DEFAULT_HISTORY_TURNS,
+                        ),
+                        contextIdleTimeoutSec = a.optInt(
+                            "context_idle_sec",
+                            AskAgentSettings.DEFAULT_CONTEXT_IDLE_SEC,
+                        ),
+                        resetKeywords = a.optString("reset_keywords", ""),
+                        customHeaders = a.optString("custom_headers").takeIf { it.isNotEmpty() },
                     )
                 },
                 homeAssistant = prefs.optJSONObject("home_assistant_settings")?.let { h ->

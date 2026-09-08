@@ -238,6 +238,10 @@ class BackupManifestCodecTest {
                     // travels (default would pass even if the codec dropped it).
                     responseTimeoutSec = 120,
                     agentRoutingMode = "AGENT_ONLY",
+                    historyTurns = 10,
+                    contextIdleTimeoutSec = 60,
+                    resetKeywords = "clear\nstart over",
+                    customHeaders = "X-Hermes-Session-Id: abc123",
                 ),
             ),
         )

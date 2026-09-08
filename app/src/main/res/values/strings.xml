@@ -319,6 +319,15 @@
     <!-- Ask Agent card (phase B1 of the agent feature) -->
     <string name="settings_askagent_header">Ask Agent</string>
     <string name="settings_askagent_desc">Routes the "ask agent …" / "ask claude …" voice intent to an LLM. Phase B1 is plain Q&amp;A only — MCP tool calling (so the LLM can actually take actions) lands in phase B2. Pick a provider, paste your API key, and the next voice query goes through.</string>
+    <string name="settings_askagent_memory_label">Conversation memory</string>
+    <string name="settings_askagent_history_turns_label">Turns to remember (0 = off)</string>
+    <string name="settings_askagent_history_turns_hint">How many recent turns are resent so follow-ups (\"and tomorrow?\") have context. Keep it small — history costs speed on the watch.</string>
+    <string name="settings_askagent_idle_label">Reset after idle (seconds)</string>
+    <string name="settings_askagent_idle_hint">Clear the conversation after this long with no use, e.g. 300 = 5 minutes. 0 = never.</string>
+    <string name="settings_askagent_reset_words_label">Reset words</string>
+    <string name="settings_askagent_reset_words_hint">Say one of these to start a fresh conversation. One per line.</string>
+    <string name="settings_askagent_headers_label">Custom headers (OpenAI-compatible)</string>
+    <string name="settings_askagent_headers_hint">Extra HTTP headers sent with each request, one \"Name: Value\" per line. For server-side sessions and similar.</string>
     <string name="settings_askagent_routing_label">Routing</string>
     <string name="settings_askagent_routing_off">Off — reach the agent with a wake word (default)</string>
     <string name="settings_askagent_routing_fallback">Send unrecognised speech to Ask Agent</string>

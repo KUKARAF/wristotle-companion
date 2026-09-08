@@ -543,9 +543,13 @@ class BackupImporter(private val app: WristotleApplication) {
                 app.askAgentSettings.setResponseTimeoutSec(a.responseTimeoutSec)
                 runCatching { com.lazydevs.wristotle.speech.nlu.settings.AgentRoutingMode.valueOf(a.agentRoutingMode) }
                     .onSuccess { app.askAgentSettings.setAgentRoutingMode(it) }
+                app.askAgentSettings.setHistoryTurns(a.historyTurns)
+                app.askAgentSettings.setContextIdleTimeoutSec(a.contextIdleTimeoutSec)
+                app.askAgentSettings.setResetKeywords(a.resetKeywords)
                 if (sel.askAgentApiKeys) {
                     a.anthropicApiKey?.let { app.askAgentSettings.setAnthropicApiKey(it) }
                     a.openaiApiKey?.let { app.askAgentSettings.setOpenAiApiKey(it) }
+                    a.customHeaders?.let { app.askAgentSettings.setCustomHeaders(it) }
                 }
             }
         }

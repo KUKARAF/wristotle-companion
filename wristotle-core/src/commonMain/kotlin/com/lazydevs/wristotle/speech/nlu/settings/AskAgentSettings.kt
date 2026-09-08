@@ -5,6 +5,7 @@ package com.lazydevs.wristotle.speech.nlu.settings
 
 import com.lazydevs.wristotle.speech.nlu.agent.AnthropicLlmClient
 import com.lazydevs.wristotle.speech.nlu.agent.LlmClient
+import com.lazydevs.wristotle.speech.nlu.agent.AgentReset
 import com.lazydevs.wristotle.speech.nlu.agent.LlmProvider
 import com.lazydevs.wristotle.speech.nlu.agent.OpenAiCompatibleLlmClient
 import com.lazydevs.wristotle.speech.nlu.http.HttpClient
@@ -78,6 +79,33 @@ class AskAgentSettings(
     private val _agentRoutingMode = MutableStateFlow(store.getEnum(KEY_AGENT_ROUTING_MODE, AgentRoutingMode.OFF))
     val agentRoutingMode: StateFlow<AgentRoutingMode> = _agentRoutingMode
 
+    /** How many prior Ask Agent turns to resend as context on each turn.
+     *  0 disables conversation memory (single-turn, pre-v1.19 behaviour). */
+    private val _historyTurns = MutableStateFlow(
+        store.getInt(KEY_HISTORY_TURNS, DEFAULT_HISTORY_TURNS).coerceIn(0, MAX_HISTORY_TURNS),
+    )
+    val historyTurns: StateFlow<Int> = _historyTurns
+
+    /** Idle window after which conversation context is dropped, so a question
+     *  from hours ago can't bleed into a fresh one. 0 = never expire. */
+    private val _contextIdleTimeoutSec = MutableStateFlow(
+        store.getInt(KEY_CONTEXT_IDLE_SEC, DEFAULT_CONTEXT_IDLE_SEC).coerceIn(0, MAX_CONTEXT_IDLE_SEC),
+    )
+    val contextIdleTimeoutSec: StateFlow<Int> = _contextIdleTimeoutSec
+
+    /** Spoken words that clear the conversation context ("new" / "forget" /
+     *  "reset" by default). Lower-cased + de-duplicated like the wake words. */
+    private val _resetKeywords = MutableStateFlow(
+        AskAgentTriggers.sanitise(store.getString(KEY_RESET_KEYWORDS, AgentReset.DEFAULTS.joinToString("\n"))),
+    )
+    val resetKeywords: StateFlow<List<String>> = _resetKeywords
+
+    /** Extra HTTP headers sent on every OpenAI-compatible request — one
+     *  "Name: Value" per line. Enables server-side session backends (e.g.
+     *  Hermes' X-Hermes-Session-Id) without special-casing any provider. */
+    private val _customHeaders = MutableStateFlow(parseHeaders(store.getString(KEY_CUSTOM_HEADERS, "")))
+    val customHeaders: StateFlow<Map<String, String>> = _customHeaders
+
     fun setProvider(value: LlmProvider) {
         store.putString(KEY_PROVIDER, value.name)
         _provider.value = value
@@ -121,6 +149,38 @@ class AskAgentSettings(
         LlmProvider.OPENAI_COMPATIBLE -> _openaiEndpoint.value.isNotBlank()
     }
 
+    fun setHistoryTurns(value: Int) {
+        val clamped = value.coerceIn(0, MAX_HISTORY_TURNS)
+        if (_historyTurns.value == clamped) return
+        store.putInt(KEY_HISTORY_TURNS, clamped)
+        _historyTurns.value = clamped
+    }
+
+    fun setContextIdleTimeoutSec(value: Int) {
+        val clamped = value.coerceIn(0, MAX_CONTEXT_IDLE_SEC)
+        if (_contextIdleTimeoutSec.value == clamped) return
+        store.putInt(KEY_CONTEXT_IDLE_SEC, clamped)
+        _contextIdleTimeoutSec.value = clamped
+    }
+
+    fun setResetKeywords(rawText: String) {
+        val sanitised = AskAgentTriggers.sanitise(rawText)
+        if (sanitised == _resetKeywords.value) return
+        store.putString(KEY_RESET_KEYWORDS, sanitised.joinToString("\n"))
+        _resetKeywords.value = sanitised
+    }
+
+    fun setCustomHeaders(rawText: String) {
+        val parsed = parseHeaders(rawText)
+        if (parsed == _customHeaders.value) return
+        store.putString(KEY_CUSTOM_HEADERS, rawText.trim())
+        _customHeaders.value = parsed
+    }
+
+    /** Raw stored form of [customHeaders] ("Name: Value" per line) — for the
+     *  Settings text field and Backup, which round-trip the text verbatim. */
+    fun customHeadersRaw(): String = store.getString(KEY_CUSTOM_HEADERS, "")
+
     fun setCustomTriggers(rawText: String) {
         val sanitised = AskAgentTriggers.sanitise(rawText)
         if (sanitised == _customTriggers.value) return
@@ -147,6 +207,7 @@ class AskAgentSettings(
             apiKey = _openaiApiKey.value,
             model = _openaiModel.value,
             readTimeoutMs = _responseTimeoutSec.value * 1000,
+            customHeaders = _customHeaders.value,
         )
     }
 
@@ -189,6 +250,10 @@ class AskAgentSettings(
         private const val KEY_ANTHROPIC_WEB_SEARCH = "anthropic_web_search"
         private const val KEY_RESPONSE_TIMEOUT_SEC = "response_timeout_sec"
         private const val KEY_AGENT_ROUTING_MODE = "agent_routing_mode"
+        private const val KEY_HISTORY_TURNS = "history_turns"
+        private const val KEY_CONTEXT_IDLE_SEC = "context_idle_sec"
+        private const val KEY_RESET_KEYWORDS = "reset_keywords"
+        private const val KEY_CUSTOM_HEADERS = "custom_headers"
 
         const val DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6"
         const val DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
@@ -200,6 +265,27 @@ class AskAgentSettings(
         const val DEFAULT_RESPONSE_TIMEOUT_SEC = 14
         const val MIN_RESPONSE_TIMEOUT_SEC = 5
         const val MAX_RESPONSE_TIMEOUT_SEC = 300
+
+        /** Conversation-memory defaults. History small by default — context
+         *  costs tokens + latency on every turn, and speed is the point on a
+         *  watch. Idle timeout 5 min so sporadic wrist use starts fresh. */
+        const val DEFAULT_HISTORY_TURNS = 5
+        const val MAX_HISTORY_TURNS = 20
+        const val DEFAULT_CONTEXT_IDLE_SEC = 300
+        const val MAX_CONTEXT_IDLE_SEC = 86_400
+
+        /** Parse a "Name: Value" per-line header block into a map. Blank lines
+         *  and lines without a colon (or an empty name) are skipped. */
+        fun parseHeaders(raw: String): Map<String, String> =
+            raw.lineSequence().mapNotNull { line ->
+                val t = line.trim()
+                if (t.isEmpty()) return@mapNotNull null
+                val idx = t.indexOf(':')
+                if (idx <= 0) return@mapNotNull null
+                val name = t.substring(0, idx).trim()
+                val value = t.substring(idx + 1).trim()
+                if (name.isEmpty()) null else name to value
+            }.toMap()
 
         /**
          * Watch-friendly baseline that lands as the visible default in

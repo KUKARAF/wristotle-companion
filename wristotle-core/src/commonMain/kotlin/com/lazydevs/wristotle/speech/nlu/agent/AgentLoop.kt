@@ -65,6 +65,7 @@ class AgentLoop(
         userQuery: String,
         systemPrompt: String?,
         servers: List<McpServerConfig>,
+        history: List<LlmMessage> = emptyList(),
         onStatus: suspend (Status) -> Unit = {},
     ): Outcome {
         val integrations = servers.map(integrationFactory)
@@ -75,7 +76,7 @@ class AgentLoop(
             if (tools.isEmpty()) {
                 log.w(TAG, "no tools across ${servers.size} servers; falling back to text-only")
             }
-            runLoop(userQuery, systemPrompt, session, tools, onStatus)
+            runLoop(userQuery, systemPrompt, history, session, tools, onStatus)
         } finally {
             runCatching { session.closeSession() }
         }
@@ -97,12 +98,14 @@ class AgentLoop(
     private suspend fun runLoop(
         userQuery: String,
         systemPrompt: String?,
+        history: List<LlmMessage>,
         session: McpSession,
         tools: List<LlmTool>,
         onStatus: suspend (Status) -> Unit,
     ): Outcome {
         val messages = mutableListOf<LlmMessage>()
         if (!systemPrompt.isNullOrBlank()) messages.add(LlmMessage.System(systemPrompt))
+        messages.addAll(history)
         messages.add(LlmMessage.User(userQuery))
 
         var lastAssistantText: String? = null

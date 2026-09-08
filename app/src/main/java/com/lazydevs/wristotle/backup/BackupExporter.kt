@@ -371,6 +371,11 @@ class BackupExporter(private val app: WristotleApplication) {
                 anthropicWebSearch = app.askAgentSettings.anthropicWebSearch.value,
                 responseTimeoutSec = app.askAgentSettings.responseTimeoutSec.value,
                 agentRoutingMode = app.askAgentSettings.agentRoutingMode.value.name,
+                historyTurns = app.askAgentSettings.historyTurns.value,
+                contextIdleTimeoutSec = app.askAgentSettings.contextIdleTimeoutSec.value,
+                resetKeywords = app.askAgentSettings.resetKeywords.value.joinToString("\n"),
+                customHeaders = app.askAgentSettings.customHeadersRaw()
+                    .takeIf { sel.askAgentApiKeys && it.isNotBlank() },
             ) else null,
             homeAssistant = if (sel.homeAssistantSetup) BackupManifest.HomeAssistantPrefs(
                 baseUrl = app.homeAssistantSettings.baseUrl.value,

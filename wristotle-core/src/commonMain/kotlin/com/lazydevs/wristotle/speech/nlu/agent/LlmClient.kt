@@ -14,10 +14,15 @@ package com.lazydevs.wristotle.speech.nlu.agent
 interface LlmClient {
 
     /**
-     * One-shot Q&A — no tools, no message history. Used by the AskAgent
-     * fallback path when no MCP servers are enabled (B1 behaviour).
+     * One-shot Q&A — no tools. [history] carries prior conversation turns
+     * (alternating User/Assistant, oldest first) to prepend before the current
+     * query so follow-ups have context; empty = single-turn.
      */
-    suspend fun complete(userQuery: String, systemPrompt: String?): LlmResult
+    suspend fun complete(
+        userQuery: String,
+        systemPrompt: String?,
+        history: List<LlmMessage> = emptyList(),
+    ): LlmResult
 
     /**
      * Multi-turn chat with optional tool-calling. The provider may
