@@ -1,0 +1,11 @@
+New: Ask Agent remembers your recent turns, so follow-ups
+work. Ask "weather in Rabat?" then "and tomorrow?" and it
+keeps the thread.
+
+- Choose how many turns to keep (Settings > Ask Agent), or
+  turn it off.
+- Say "new", "forget" or "reset" to start fresh; context
+  also clears after an idle timeout.
+- Custom HTTP headers for OpenAI-compatible providers.
+
+Needs Watch v1.7.0 for the "context on" indicator.
