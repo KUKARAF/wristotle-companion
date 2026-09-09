@@ -151,6 +151,10 @@ suspend fun WatchTransport.sendConfirmPrompt(text: String) =
 suspend fun WatchTransport.sendAgentStatus(text: String) =
     sendText(MessageKeys.AGENT_STATUS, text)
 
+/** Start a native on-watch countdown of [seconds] (issue: on-watch timer). */
+suspend fun WatchTransport.sendTimerStart(seconds: Int) =
+    sendInt32(MessageKeys.TIMER_START_SECONDS, seconds)
+
 suspend fun WatchTransport.sendSettingsRequest() =
     sendPresence(MessageKeys.REQUEST_SETTINGS)
 

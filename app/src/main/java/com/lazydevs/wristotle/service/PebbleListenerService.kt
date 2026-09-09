@@ -195,7 +195,7 @@ class PebbleListenerService : BasePebbleListenerService() {
                 dispatcher = app.alarmDispatcher,
                 settings = app.alarmSettings,
             ),
-            SetTimerHandler(this),
+            SetTimerHandler(this, transport, timerOnWatch = { app.timerSettings.timerOnWatch.value }),
             com.lazydevs.wristotle.speech.nlu.handlers.WorldTimeHandler(),
             com.lazydevs.wristotle.speech.nlu.handlers.CalculateHandler(),
             com.lazydevs.wristotle.handlers.WeatherHandler(

@@ -453,6 +453,7 @@ private fun SettingsCategoryContent(
             SettingsCategory.Watch -> {
                 WatchSettingsCard(vm = watchSettingsVm)
                 CardDisplaySettingsCard(settings = app.cardSettings)
+                TimerSettingsCard(settings = app.timerSettings)
             }
 
             SettingsCategory.Conversation -> {

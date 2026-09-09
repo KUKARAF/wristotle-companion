@@ -154,6 +154,11 @@ object MessageKeys {
      *  indicator. Sent as text "1" only when active; absent ⇒ no context. */
     val CONTEXT_ACTIVE: UInt = 10067u
 
+    /** Companion → watch: start a native on-watch countdown of this many
+     *  seconds (issue: on-watch timer). The watch schedules a Pebble wakeup
+     *  and buzzes when it fires, even if the app has closed. */
+    val TIMER_START_SECONDS: UInt = 10068u
+
     /** [CONTEXT_ACTIVE] value meaning "conversation context is live". */
     const val CONTEXT_ACTIVE_ON: String = "1"
 

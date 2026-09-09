@@ -585,6 +585,8 @@
     <string name="notes_sync_header">Sync to folder</string>
     <string name="notes_sync_desc">Write every note as a file in a folder you pick on this device — works with Obsidian vaults, Joplin/Logseq watch folders, Dropbox/Google Drive sync roots, git-versioned vaults, or any plain-text app. Markdown by default; the file format stays CommonMark-clean so it round-trips across every tool.\n\nHow to enable:\n1. Flip the toggle below.\n2. Tap \"Pick folder\" and choose the destination (e.g. your Obsidian vault).\n3. Optional: change format / granularity / delete behaviour.\n\nNotes write to \"Wristotle/notes/\" inside the picked folder; audio recordings go to \"Wristotle/notes/attachments/\". Cloud distribution is the picked folder\'s job — if you pick a folder inside Dropbox, Dropbox syncs it.</string>
     <string name="notes_sync_enabled_label">Sync notes to a folder</string>
+    <string name="timer_on_watch_label">Run timers on the watch</string>
+    <string name="timer_on_watch_hint">When on, \"set a timer for …\" counts down on your Pebble and buzzes when it\'s up, even if the app is closed — no phone needed. When off, timers open your phone\'s clock app as before.</string>
 
     <!-- Conversations folder sync — entity-specific strings only -->
     <string name="conv_sync_header">Sync to folder</string>
