@@ -196,6 +196,7 @@
     <string name="settings_section_stats">Stats</string>
     <string name="settings_section_speech">Speech</string>
     <string name="settings_section_notes">Notes</string>
+    <string name="settings_section_tasks">Tasks</string>
     <string name="settings_section_codes">Saved codes</string>
     <string name="settings_section_reminders">Alarms &amp; Reminders</string>
     <string name="settings_section_notifications">Notifications</string>
@@ -585,6 +586,9 @@
     <string name="notes_sync_header">Sync to folder</string>
     <string name="notes_sync_desc">Write every note as a file in a folder you pick on this device — works with Obsidian vaults, Joplin/Logseq watch folders, Dropbox/Google Drive sync roots, git-versioned vaults, or any plain-text app. Markdown by default; the file format stays CommonMark-clean so it round-trips across every tool.\n\nHow to enable:\n1. Flip the toggle below.\n2. Tap \"Pick folder\" and choose the destination (e.g. your Obsidian vault).\n3. Optional: change format / granularity / delete behaviour.\n\nNotes write to \"Wristotle/notes/\" inside the picked folder; audio recordings go to \"Wristotle/notes/attachments/\". Cloud distribution is the picked folder\'s job — if you pick a folder inside Dropbox, Dropbox syncs it.</string>
     <string name="notes_sync_enabled_label">Sync notes to a folder</string>
+    <string name="tasks_sync_header">Sync to folder</string>
+    <string name="tasks_sync_desc">Write your tasks to a folder you pick on this device — an Obsidian vault, a Dropbox/Drive sync root, a git-versioned folder, or any plain-text app. By default all tasks land in one continuously-updated Markdown checklist (\"Wristotle/tasks/tasks.md\") using GitHub-style \"- [ ]\" / \"- [x]\" lines, so completing a task flips its checkbox in place.\n\nHow to enable:\n1. Flip the toggle below.\n2. Tap \"Pick folder\" and choose the destination.\n3. Optional: switch to one file per task, or change format / delete behaviour.\n\nCloud distribution is the picked folder\'s job — if you pick a folder inside Dropbox, Dropbox syncs it.</string>
+    <string name="tasks_sync_enabled_label">Sync tasks to a folder</string>
 
     <!-- Conversations folder sync — entity-specific strings only -->
     <string name="conv_sync_header">Sync to folder</string>

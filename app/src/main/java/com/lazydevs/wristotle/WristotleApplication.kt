@@ -128,6 +128,10 @@ class WristotleApplication : Application() {
         private set
     lateinit var conversationsSyncCoordinator:
         com.lazydevs.wristotle.sync.FileSyncCoordinator<com.lazydevs.wristotle.history.ConversationEntry>
+
+    lateinit var tasksSyncSettings: com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings
+    lateinit var tasksSyncCoordinator:
+        com.lazydevs.wristotle.sync.FileSyncCoordinator<com.lazydevs.wristotle.tasks.TaskEntity>
         private set
 
     /** Tasks data layer (separate Room DB; checklist items, no due dates). */
@@ -603,9 +607,28 @@ class WristotleApplication : Application() {
         )
         conversationsSyncCoordinator.start()
 
+
         // Tasks — separate Room DB, no auto-prune (user-managed checklist).
         tasksDb = com.lazydevs.wristotle.tasks.TasksDatabase.build(this)
         taskRepository = com.lazydevs.wristotle.tasks.TaskRepository(tasksDb.taskDao())
+
+        tasksSyncSettings = com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings(
+            store = kvStore(com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings.prefsName("tasks"),
+            ),
+            // Default to a single live Markdown checklist rather than a file per
+            // task (which would flood the vault).
+            defaultGranularity = com.lazydevs.wristotle.speech.nlu.settings.FileSyncGranularity.AppendToSingleFile,
+        )
+        tasksSyncCoordinator = com.lazydevs.wristotle.sync.FileSyncCoordinator(
+            context = this,
+            settings = tasksSyncSettings,
+            renderer = com.lazydevs.wristotle.sync.TaskRenderer(),
+            entitiesFlow = taskRepository.observeAll(),
+            idOf = { it.id.toString() },
+            scope = "tasks",
+            appScope = appScope,
+        )
+        tasksSyncCoordinator.start()
 
         // mcpDb / mcpServerRepository / askAgentSettings / diagnosticsSettings
         // are `by lazy` — first access pays the init.

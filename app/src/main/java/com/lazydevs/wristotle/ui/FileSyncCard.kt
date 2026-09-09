@@ -44,6 +44,7 @@ import androidx.documentfile.provider.DocumentFile
 import com.lazydevs.wristotle.R
 import com.lazydevs.wristotle.history.ConversationEntry
 import com.lazydevs.wristotle.notes.Note
+import com.lazydevs.wristotle.tasks.TaskEntity
 import com.lazydevs.wristotle.sync.FileSyncCoordinator
 import com.lazydevs.wristotle.speech.nlu.settings.FileSyncFormat
 import com.lazydevs.wristotle.speech.nlu.settings.FileSyncGranularity
@@ -219,6 +220,22 @@ fun ConversationsSyncCard(
     headerRes = R.string.conv_sync_header,
     descriptionRes = R.string.conv_sync_desc,
     enabledLabelRes = R.string.conv_sync_enabled_label,
+    modifier = modifier,
+)
+
+/** Tasks sync card — same shape as [NotesSyncCard] with task-flavoured
+ *  strings. Defaults to a single continuously-updated Markdown checklist. */
+@Composable
+fun TasksSyncCard(
+    settings: FileSyncSettings,
+    coordinator: FileSyncCoordinator<TaskEntity>,
+    modifier: Modifier = Modifier,
+) = FileSyncCardBody(
+    settings = settings,
+    coordinator = coordinator,
+    headerRes = R.string.tasks_sync_header,
+    descriptionRes = R.string.tasks_sync_desc,
+    enabledLabelRes = R.string.tasks_sync_enabled_label,
     modifier = modifier,
 )
 

@@ -21,6 +21,9 @@ class TaskRepository(private val dao: TaskDao) {
     /** Live stream of completed tasks for the Tasks tab's collapsible section. */
     fun observeCompleted(): Flow<List<TaskEntity>> = dao.observeCompleted()
 
+    /** All tasks (pending first) as a Flow — backs the folder-sync export. */
+    fun observeAll(): Flow<List<TaskEntity>> = dao.observeAll()
+
     /**
      * Create a new pending task. Returns the row id (used by the watch
      * "task added — id N" path in Phase B).

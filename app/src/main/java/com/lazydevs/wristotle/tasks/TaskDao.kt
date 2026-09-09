@@ -36,6 +36,11 @@ interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY completed ASC, createdAtEpochMs DESC, completedAtEpochMs DESC")
     suspend fun listAll(): List<TaskEntity>
 
+    /** Reactive form of [listAll] — drives the file-sync export (issue: task
+     *  export to markdown). Pending first, then completed. */
+    @Query("SELECT * FROM tasks ORDER BY completed ASC, createdAtEpochMs DESC, completedAtEpochMs DESC")
+    fun observeAll(): Flow<List<TaskEntity>>
+
     /**
      * Most-recently-created pending task. Backs the *"complete the last
      * task"* / *"delete my latest task"* shortcut so users can act on a

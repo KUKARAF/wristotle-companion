@@ -83,6 +83,7 @@ enum class SettingsCategory(
     Watch(R.string.settings_section_watch, "⌚"),
     Conversation(R.string.settings_section_conversation, "💬"),
     Notes(R.string.settings_section_notes, "📝"),
+    Tasks(R.string.settings_section_tasks, "📋"),
     Codes(R.string.settings_section_codes, "🎟️"),
     Reminders(R.string.settings_section_reminders, "⏰"),
     Notifications(R.string.settings_section_notifications, "🔔"),
@@ -486,6 +487,13 @@ private fun SettingsCategoryContent(
                 NotesSyncCard(
                     settings = app.notesSyncSettings,
                     coordinator = app.notesSyncCoordinator,
+                )
+            }
+
+            SettingsCategory.Tasks -> {
+                TasksSyncCard(
+                    settings = app.tasksSyncSettings,
+                    coordinator = app.tasksSyncCoordinator,
                 )
             }
 
