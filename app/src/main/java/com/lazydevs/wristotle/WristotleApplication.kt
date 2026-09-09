@@ -218,6 +218,15 @@ class WristotleApplication : Application() {
     /** AskAgent preferences — LLM provider + API key + model. Lazy for
      *  the same reason as [mcpDb]: only touched when the user opens the
      *  Settings card, fires an AskAgent intent, or runs a backup. */
+    /** Which calendar voice-created events go to (issue: designate account).
+     *  Auto-pick by default. Lazy — only touched by the Calendar settings card
+     *  + the create-event path. */
+    val calendarSettings: com.lazydevs.wristotle.speech.nlu.settings.CalendarSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.CalendarSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.CalendarSettings.PREFS_NAME),
+        )
+    }
+
     val askAgentSettings: com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings by lazy {
         com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings(
             store = kvStore(com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings.PREFS_NAME),
