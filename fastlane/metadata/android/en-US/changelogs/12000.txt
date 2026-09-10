@@ -1,0 +1,9 @@
+New:
+
+- Export tasks to a folder as a Markdown checklist,
+  like notes (Settings > Tasks).
+- Choose which calendar new events are added to
+  (Settings > Calendar).
+- Run timers on the watch instead of the phone
+  (Settings > Watch). The watch buzzes when the timer's
+  up, even if the app is closed. Needs Watch v1.8.0.

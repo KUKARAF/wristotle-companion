@@ -2,6 +2,36 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-20-0-task-export",
+      "date": "2026-09-09",
+      "companion_version": "v1.20.0",
+      "watch_version": null,
+      "title": "Export your tasks to a folder",
+      "description": "Tasks now sync to a folder as a live Markdown checklist (Settings \u2192 Tasks), the same way notes do \u2014 Obsidian, Dropbox, git, any plain-text app.",
+      "sample_query": null,
+      "docs_path": "features/"
+    },
+    {
+      "id": "v1-20-0-calendar-picker",
+      "date": "2026-09-09",
+      "companion_version": "v1.20.0",
+      "watch_version": null,
+      "title": "Choose which calendar events go to",
+      "description": "Pick the calendar/account that voice-created events are added to (Settings \u2192 Calendar), instead of always the primary one.",
+      "sample_query": "schedule a meeting tomorrow at 3pm",
+      "docs_path": "voice-commands/"
+    },
+    {
+      "id": "v1-20-0-watch-timer",
+      "date": "2026-09-09",
+      "companion_version": "v1.20.0",
+      "watch_version": "v1.8.0",
+      "title": "Run timers on the watch",
+      "description": "\"Set a timer\" can now count down on your Pebble and buzz when it\u2019s up \u2014 even if the app is closed \u2014 instead of opening the phone\u2019s clock (Settings \u2192 Watch).",
+      "sample_query": "set a timer for 10 minutes",
+      "docs_path": "voice-commands/"
+    },
+    {
       "id": "v1-19-0-agent-conversation-memory",
       "date": "2026-09-09",
       "companion_version": "v1.19.0",

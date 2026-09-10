@@ -16,6 +16,36 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-20-0-task-export",
+            date = "2026-09-09",
+            companionVersion = "v1.20.0",
+            watchVersion = null,
+            title = "Export your tasks to a folder",
+            description = "Tasks now sync to a folder as a live Markdown checklist (Settings → Tasks), the same way notes do — Obsidian, Dropbox, git, any plain-text app.",
+            sampleQuery = null,
+            docsPath = "features/",
+        ),
+        FeatureEntry(
+            id = "v1-20-0-calendar-picker",
+            date = "2026-09-09",
+            companionVersion = "v1.20.0",
+            watchVersion = null,
+            title = "Choose which calendar events go to",
+            description = "Pick the calendar/account that voice-created events are added to (Settings → Calendar), instead of always the primary one.",
+            sampleQuery = "schedule a meeting tomorrow at 3pm",
+            docsPath = "voice-commands/",
+        ),
+        FeatureEntry(
+            id = "v1-20-0-watch-timer",
+            date = "2026-09-09",
+            companionVersion = "v1.20.0",
+            watchVersion = "v1.8.0",
+            title = "Run timers on the watch",
+            description = "\"Set a timer\" can now count down on your Pebble and buzz when it’s up — even if the app is closed — instead of opening the phone’s clock (Settings → Watch).",
+            sampleQuery = "set a timer for 10 minutes",
+            docsPath = "voice-commands/",
+        ),
+        FeatureEntry(
             id = "v1-19-0-agent-conversation-memory",
             date = "2026-09-09",
             companionVersion = "v1.19.0",
