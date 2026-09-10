@@ -12,6 +12,8 @@ import com.lazydevs.wristotle.speech.nlu.slots.SlotKeys
 import com.lazydevs.wristotle.speech.nlu.Intent
 import com.lazydevs.wristotle.speech.nlu.IntentResult
 import com.lazydevs.wristotle.speech.nlu.intSlot
+import com.lazydevs.wristotle.speech.nlu.transport.WatchTransport
+import com.lazydevs.wristotle.speech.nlu.transport.sendTimerStart
 
 private const val TAG = "SetTimerHandler"
 
@@ -23,7 +25,12 @@ private const val TAG = "SetTimerHandler"
  * `EXTRA_SKIP_UI`. Same SKIP_UI / OEM-fallback + background-activity-launch
  * caveats as [SetAlarmHandler].
  */
-class SetTimerHandler(private val context: Context) : ActionHandler {
+class SetTimerHandler(
+    private val context: Context,
+    private val transport: WatchTransport,
+    /** When true, run the countdown on the watch instead of the phone Clock. */
+    private val timerOnWatch: () -> Boolean = { false },
+) : ActionHandler {
 
     override val tag: String = "set_timer"
     override val intent: Intent = Intent.SetTimer
@@ -31,6 +38,15 @@ class SetTimerHandler(private val context: Context) : ActionHandler {
     override suspend fun handle(result: IntentResult): String {
         val seconds = result.intSlot(SlotKeys.Seconds)
             ?: return "Couldn't understand the duration.\nTry \"set a timer for 10 minutes\"."
+
+        // On-watch timer: send the duration to the watch, which runs a native
+        // countdown via the Pebble wakeup API. Fall back to the phone Clock if
+        // the watch doesn't ACK (out of range / app not bound).
+        if (timerOnWatch()) {
+            val ok = runCatching { transport.sendTimerStart(seconds) }.getOrDefault(false)
+            if (ok) return "Timer set on your watch for ${formatDuration(seconds)}."
+            Log.w(TAG, "watch timer send failed; falling back to phone Clock")
+        }
 
         // Deliberately NOT EXTRA_SKIP_UI=true (unlike SetAlarmHandler).
         // Google Clock, given SKIP_UI, runs the timer in the background and

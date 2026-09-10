@@ -231,6 +231,14 @@ class WristotleApplication : Application() {
         )
     }
 
+    /** Where "set a timer" runs — phone Clock (default) or a native on-watch
+     *  countdown. Companion-local; gates the SetTimer routing. */
+    val timerSettings: com.lazydevs.wristotle.speech.nlu.settings.TimerSettings by lazy {
+        com.lazydevs.wristotle.speech.nlu.settings.TimerSettings(
+            kvStore(com.lazydevs.wristotle.speech.nlu.settings.TimerSettings.PREFS_NAME),
+        )
+    }
+
     val askAgentSettings: com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings by lazy {
         com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings(
             store = kvStore(com.lazydevs.wristotle.speech.nlu.settings.AskAgentSettings.PREFS_NAME),

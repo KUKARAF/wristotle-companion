@@ -597,6 +597,9 @@
     <string name="calendar_target_unavailable">Automatic (chosen calendar unavailable)</string>
     <string name="calendar_target_no_calendars">No writable calendars found. Grant calendar access and make sure you have an account with a writable calendar.</string>
 
+    <string name="timer_on_watch_label">Run timers on the watch</string>
+    <string name="timer_on_watch_hint">When on, \"set a timer for …\" counts down on your Pebble and buzzes when it\'s up, even if the app is closed — no phone needed. When off, timers open your phone\'s clock app as before.</string>
+
 
     <!-- Conversations folder sync — entity-specific strings only -->
     <string name="conv_sync_header">Sync to folder</string>
