@@ -105,10 +105,17 @@ data class BackupManifest(
         val ttsProvider: TtsProviderPrefs? = null,
         val sport: SportPrefs? = null,
         val cards: CardsPrefs? = null,
+        val timer: TimerPrefs? = null,
     )
     /** Watch-card on/off — the set of DISABLED card kinds. Rides with the
      *  `appPreferences` umbrella (non-sensitive UI prefs). */
     data class CardsPrefs(val disabled: List<String>)
+
+    /** "Run timers on the watch" toggle — a device-agnostic pref, rides with the
+     *  `appPreferences` umbrella. (The folder-sync + calendar target settings are
+     *  deliberately NOT backed up: SAF folder URIs + calendar ids are
+     *  device-specific.) */
+    data class TimerPrefs(val onWatch: Boolean)
     data class NotesPrefs(val keepLast: Int, val appendAudioMode: String)
     data class ConversationPrefs(val retentionDays: Int)
     data class ConversationAudioPrefs(val captureEnabled: Boolean)
@@ -439,6 +446,9 @@ object BackupManifestCodec {
                     })
                 })
             }
+            m.prefs.timer?.let { t ->
+                put("timer", JSONObject().apply { put("on_watch", t.onWatch) })
+            }
             m.prefs.cards?.let { c ->
                 put("cards", JSONObject().apply {
                     put("disabled", JSONArray().also { arr ->
@@ -688,6 +698,9 @@ object BackupManifestCodec {
                     BackupManifest.CardsPrefs(
                         disabled = (0 until arr.length()).map { arr.getString(it) },
                     )
+                },
+                timer = prefs.optJSONObject("timer")?.let {
+                    BackupManifest.TimerPrefs(onWatch = it.optBoolean("on_watch", false))
                 },
             ),
             reminderPins = (0 until pinsArr.length()).map { i ->

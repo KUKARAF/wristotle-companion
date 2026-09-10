@@ -517,6 +517,7 @@ class BackupImporter(private val app: WristotleApplication) {
                 app.briefSettings.restoreDisabled(it.disabledSections.toSet())
             }
             p.cards?.let { app.cardSettings.restoreDisabled(it.disabled.toSet()) }
+            p.timer?.let { app.timerSettings.setTimerOnWatch(it.onWatch) }
         }
 
         if (sel.weatherSettings) {

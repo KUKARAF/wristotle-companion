@@ -410,6 +410,9 @@ class BackupExporter(private val app: WristotleApplication) {
             cards = if (sel.appPreferences) BackupManifest.CardsPrefs(
                 disabled = app.cardSettings.snapshotDisabled().toList(),
             ) else null,
+            timer = if (sel.appPreferences) BackupManifest.TimerPrefs(
+                onWatch = app.timerSettings.timerOnWatch.value,
+            ) else null,
         )
 }
 

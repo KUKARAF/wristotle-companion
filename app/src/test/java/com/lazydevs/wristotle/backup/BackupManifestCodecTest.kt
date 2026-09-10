@@ -178,6 +178,16 @@ class BackupManifestCodecTest {
         assertEquals(45, decoded.prefs.reminder?.defaultOffsetMin)
     }
 
+    @Test fun timerPrefs_roundTrip() {
+        val original = sampleManifest().copy(
+            prefs = sampleManifest().prefs.copy(
+                timer = BackupManifest.TimerPrefs(onWatch = true),
+            ),
+        )
+        val decoded = BackupManifestCodec.decode(BackupManifestCodec.encode(original))
+        assertEquals(true, decoded.prefs.timer?.onWatch)
+    }
+
     @Test fun cardsPrefs_roundTrip() {
         val disabled = listOf("task_create", "note_update", "agent_answer")
         val original = sampleManifest().copy(
