@@ -199,6 +199,7 @@
     <string name="settings_section_tasks">Tasks</string>
     <string name="settings_section_codes">Saved codes</string>
     <string name="settings_section_reminders">Alarms &amp; Reminders</string>
+    <string name="settings_section_calendar">Calendar</string>
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_section_setup">Setup</string>
 
@@ -589,6 +590,13 @@
     <string name="tasks_sync_header">Sync to folder</string>
     <string name="tasks_sync_desc">Write your tasks to a folder you pick on this device — an Obsidian vault, a Dropbox/Drive sync root, a git-versioned folder, or any plain-text app. By default all tasks land in one continuously-updated Markdown checklist (\"Wristotle/tasks/tasks.md\") using GitHub-style \"- [ ]\" / \"- [x]\" lines, so completing a task flips its checkbox in place.\n\nHow to enable:\n1. Flip the toggle below.\n2. Tap \"Pick folder\" and choose the destination.\n3. Optional: switch to one file per task, or change format / delete behaviour.\n\nCloud distribution is the picked folder\'s job — if you pick a folder inside Dropbox, Dropbox syncs it.</string>
     <string name="tasks_sync_enabled_label">Sync tasks to a folder</string>
+    <string name="calendar_target_header">Calendar for new events</string>
+    <string name="calendar_target_desc">Choose which calendar voice-created events (\"schedule a meeting …\") are added to. Automatic uses your primary calendar, or the first writable one. Pick a specific calendar/account to send events there instead.</string>
+    <string name="calendar_target_label">Target calendar</string>
+    <string name="calendar_target_auto">Automatic (primary calendar)</string>
+    <string name="calendar_target_unavailable">Automatic (chosen calendar unavailable)</string>
+    <string name="calendar_target_no_calendars">No writable calendars found. Grant calendar access and make sure you have an account with a writable calendar.</string>
+
 
     <!-- Conversations folder sync — entity-specific strings only -->
     <string name="conv_sync_header">Sync to folder</string>

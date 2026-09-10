@@ -86,6 +86,7 @@ enum class SettingsCategory(
     Tasks(R.string.settings_section_tasks, "📋"),
     Codes(R.string.settings_section_codes, "🎟️"),
     Reminders(R.string.settings_section_reminders, "⏰"),
+    Calendar(R.string.settings_section_calendar, "📅"),
     Notifications(R.string.settings_section_notifications, "🔔"),
     Weather(R.string.settings_section_weather, "☁️"),
     Sport(R.string.settings_section_sport, "🏆"),
@@ -495,6 +496,10 @@ private fun SettingsCategoryContent(
                     settings = app.tasksSyncSettings,
                     coordinator = app.tasksSyncCoordinator,
                 )
+            }
+
+            SettingsCategory.Calendar -> {
+                CalendarSettingsCard(settings = app.calendarSettings)
             }
 
             SettingsCategory.Codes -> {

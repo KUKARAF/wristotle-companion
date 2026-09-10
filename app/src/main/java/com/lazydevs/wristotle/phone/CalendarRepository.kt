@@ -19,7 +19,53 @@ import java.util.Calendar
 import java.util.TimeZone
 
 /** Read + create access to the device calendar via CalendarContract. */
-class CalendarRepository(private val context: Context) : CalendarReader {
+class CalendarRepository(
+    private val context: Context,
+    /** The user's chosen target calendar id, or null/0 for auto-pick. Read
+     *  live so a Settings change applies to the next event. */
+    private val preferredCalendarId: () -> Long? = { null },
+) : CalendarReader {
+
+    /** One writable calendar the user can pick as the event target. */
+    data class CalendarInfo(
+        val id: Long,
+        val displayName: String,
+        val accountName: String,
+        val isPrimary: Boolean,
+    )
+
+    /**
+     * Writable calendars on the device (contributor access or better), for the
+     * Settings picker. Empty without READ_CALENDAR permission.
+     */
+    fun listCalendars(): List<CalendarInfo> {
+        if (!hasPermission()) return emptyList()
+        val projection = arrayOf(
+            CalendarContract.Calendars._ID,
+            CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,
+            CalendarContract.Calendars.ACCOUNT_NAME,
+            CalendarContract.Calendars.IS_PRIMARY,
+            CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
+        )
+        val cursor = context.contentResolver.query(
+            CalendarContract.Calendars.CONTENT_URI, projection, null, null,
+            "${CalendarContract.Calendars.IS_PRIMARY} DESC, ${CalendarContract.Calendars.CALENDAR_DISPLAY_NAME} ASC",
+        ) ?: return emptyList()
+        val out = mutableListOf<CalendarInfo>()
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                val canWrite = c.getInt(4) >= CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR
+                if (!canWrite) continue
+                out += CalendarInfo(
+                    id = c.getLong(0),
+                    displayName = c.getString(1) ?: "(unnamed)",
+                    accountName = c.getString(2) ?: "",
+                    isPrimary = c.getInt(3) != 0,
+                )
+            }
+        }
+        return out
+    }
 
     /** Returns true if READ_CALENDAR permission has been granted. */
     override fun hasPermission(): Boolean =
@@ -143,8 +189,10 @@ class CalendarRepository(private val context: Context) : CalendarReader {
         val cursor = context.contentResolver.query(
             CalendarContract.Calendars.CONTENT_URI, projection, null, null, null,
         ) ?: return null
+        val preferred = preferredCalendarId()?.takeIf { it > 0L }
         var primary: Long? = null
         var firstWritable: Long? = null
+        var preferredIsWritable = false
         cursor.use { c ->
             while (c.moveToNext()) {
                 val id = c.getLong(0)
@@ -152,11 +200,17 @@ class CalendarRepository(private val context: Context) : CalendarReader {
                 val canWrite = c.getInt(2) >=
                     CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR
                 if (!canWrite) continue
-                if (isPrimary) { primary = id; break }
+                if (id == preferred) preferredIsWritable = true
+                if (isPrimary && primary == null) primary = id
                 if (firstWritable == null) firstWritable = id
             }
         }
-        return primary ?: firstWritable
+        // Honour the user's pick when it's still a writable calendar; otherwise
+        // fall back to primary / first-writable (pick was deleted, or unset).
+        return when {
+            preferred != null && preferredIsWritable -> preferred
+            else -> primary ?: firstWritable
+        }
     }
 
     private companion object {

@@ -151,7 +151,10 @@ class PebbleListenerService : BasePebbleListenerService() {
         watchRequests = WatchRequestRouter(app, transport)
         val media = app.activeMediaSession
         val appIndex = app.appIndex
-        val calendarRepo = CalendarRepository(this)
+        val calendarRepo = CalendarRepository(
+            this,
+            preferredCalendarId = { app.calendarSettings.targetCalendarId.value.takeIf { it > 0L } },
+        )
         registry = HandlerRegistry(listOf(
             CallHandler(contacts, com.lazydevs.wristotle.telephony.AndroidTelephony(this)),
             com.lazydevs.wristotle.handlers.SendMessageHandler(this, contacts),
