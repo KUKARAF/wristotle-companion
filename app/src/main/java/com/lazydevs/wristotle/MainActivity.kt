@@ -216,9 +216,44 @@ class MainActivity : ComponentActivity() {
                     },
                 )
 
+                // Recommended-model download state for the wizard's inline
+                // one-tap download (replaces the "open Settings → Models" punt).
+                val whisperModelStates by modelsVm.models.collectAsState()
+                val nluModelStates by nluModelsVm.models.collectAsState()
+                val whisperRec = com.lazydevs.wristotle.speech.whisper.ModelCatalog.recommendedDefault()
+                val nluRec = com.lazydevs.wristotle.speech.nlu.model.NluModelCatalog.recommendedDefault()
+                val whisperDlState = whisperModelStates.firstOrNull { it.info.id == whisperRec.id }
+                val nluDlState = nluModelStates.firstOrNull { it.info.id == nluRec.id }
+                // Recent conversation entries drive the wizard's watch
+                // round-trip self-test — it watches for the query the user
+                // speaks from the watch during that step.
+                val conversationEntries by conversationVm.entries.collectAsState()
+                val wizardSelfTest = com.lazydevs.wristotle.ui.WizardSelfTest(
+                    recentEntries = conversationEntries.take(20).map {
+                        com.lazydevs.wristotle.ui.SelfTestEntry(
+                            timestampEpochMs = it.timestampEpochMs,
+                            query = it.userQuery,
+                            success = it.success,
+                        )
+                    },
+                )
+
                 if (!wizardDismissed && !wizardHidden) {
                     com.lazydevs.wristotle.ui.WelcomeWizard(
                         essentialActions = essentials,
+                        whisperDownload = com.lazydevs.wristotle.ui.WizardModelDownload(
+                            onStart = { modelsVm.download(whisperRec.id) },
+                            progress = whisperDlState?.progress,
+                            approxSizeBytes = whisperRec.approxSizeBytes,
+                            error = whisperDlState?.errorMessage,
+                        ),
+                        nluDownload = com.lazydevs.wristotle.ui.WizardModelDownload(
+                            onStart = { nluModelsVm.download(nluRec.id) },
+                            progress = nluDlState?.progress,
+                            approxSizeBytes = nluRec.approxSizeBytes,
+                            error = nluDlState?.errorMessage,
+                        ),
+                        selfTest = wizardSelfTest,
                         stepIndex = wizardStepIndex,
                         onStepIndexChange = { wizardStepIndex = it },
                         onSkipWizard = { app.setupSettings.dismissWelcomeWizard() },

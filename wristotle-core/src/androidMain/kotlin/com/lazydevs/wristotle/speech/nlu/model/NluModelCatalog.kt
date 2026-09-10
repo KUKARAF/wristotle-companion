@@ -26,4 +26,7 @@ object NluModelCatalog {
     )
 
     fun byId(id: String): NluModelInfo? = all.firstOrNull { it.id == id }
+
+    /** The model the first-run wizard auto-downloads (the sole NLU model today). */
+    fun recommendedDefault(): NluModelInfo = all.first()
 }

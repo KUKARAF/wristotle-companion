@@ -13,14 +13,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -29,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lazydevs.wristotle.R
+import com.lazydevs.wristotle.setup.ActionId
 import com.lazydevs.wristotle.setup.RecommendedAction
 import com.lazydevs.wristotle.setup.SetupDrillTarget
 import com.lazydevs.wristotle.ui.nav.Screen
@@ -58,6 +62,14 @@ import com.lazydevs.wristotle.ui.nav.Screen
 @Composable
 fun WelcomeWizard(
     essentialActions: List<RecommendedAction>,
+    /** Inline auto-download hooks so the two model-download steps finish in
+     *  place — the user taps once and stays in the wizard, instead of being
+     *  routed into Settings → Models to pick a tier. */
+    whisperDownload: WizardModelDownload,
+    nluDownload: WizardModelDownload,
+    /** Recent conversation entries (newest first) driving the watch
+     *  round-trip self-test step. */
+    selfTest: WizardSelfTest,
     /** Current step. **Hoisted to the caller** so the wizard's progress
      *  survives temporary hide/show cycles — e.g. when the user taps
      *  "Open settings", the wizard is removed from the tree while the
@@ -74,11 +86,14 @@ fun WelcomeWizard(
     onOpenTopLevelTab: (Screen) -> Unit,
     onFinish: () -> Unit,
 ) {
-    val totalSteps = essentialActions.size + 2 // welcome + actions + final
+    val totalSteps = essentialActions.size + 3 // welcome + actions + self-test + final
     val clampedIndex = stepIndex.coerceAtMost(totalSteps - 1)
     val isWelcome = clampedIndex == 0
     val isFinal = clampedIndex == totalSteps - 1
-    val currentAction = if (!isWelcome && !isFinal) essentialActions[clampedIndex - 1] else null
+    val isSelfTest = clampedIndex == totalSteps - 2
+    // Action steps occupy indices 1..N (N = number of essentials); everything
+    // else is welcome / self-test / final.
+    val currentAction = if (clampedIndex in 1..essentialActions.size) essentialActions[clampedIndex - 1] else null
 
     Dialog(
         onDismissRequest = { /* Disable accidental dismiss — user must use a button. */ },
@@ -120,13 +135,19 @@ fun WelcomeWizard(
                     when {
                         isWelcome -> WelcomeStep(pendingCount = essentialActions.size)
                         isFinal -> FinalStep(skippedAny = clampedIndex > totalSteps - 1)
-                        currentAction != null -> ActionStep(action = currentAction)
+                        isSelfTest -> SelfTestStep(selfTest)
+                        currentAction != null -> ActionStep(
+                            action = currentAction,
+                            whisperDownload = whisperDownload,
+                            nluDownload = nluDownload,
+                        )
                     }
                 }
 
                 WizardControls(
                     isWelcome = isWelcome,
                     isFinal = isFinal,
+                    isSelfTest = isSelfTest,
                     onSkipStep = { onStepIndexChange(clampedIndex + 1) },
                     onOpenSettings = {
                         // The Open Settings button is only rendered on
@@ -179,8 +200,79 @@ private fun WelcomeStep(pendingCount: Int) {
     }
 }
 
+/** Input for the wizard's watch round-trip self-test — recent conversation
+ *  entries (newest first) so the step can spot the query the user just spoke
+ *  from the watch. */
+data class WizardSelfTest(
+    val recentEntries: List<SelfTestEntry>,
+)
+
+data class SelfTestEntry(
+    val timestampEpochMs: Long,
+    val query: String,
+    val success: Boolean,
+)
+
 @Composable
-private fun ActionStep(action: RecommendedAction) {
+private fun SelfTestStep(selfTest: WizardSelfTest) {
+    // Snapshot the newest entry's timestamp when this step first appears; any
+    // entry newer than that is the test query the user just spoke.
+    val baseline = remember { selfTest.recentEntries.firstOrNull()?.timestampEpochMs ?: 0L }
+    val hit = selfTest.recentEntries.firstOrNull { it.timestampEpochMs > baseline }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            stringResource(R.string.setup_wizard_selftest_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            stringResource(R.string.setup_wizard_selftest_body),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        when {
+            hit == null -> Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text(
+                    stringResource(R.string.setup_wizard_selftest_waiting),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            hit.success -> Text(
+                stringResource(R.string.setup_wizard_selftest_success, hit.query),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            else -> Text(
+                stringResource(R.string.setup_wizard_selftest_failed, hit.query),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+/**
+ * Inline auto-download hooks for a model-download wizard step. Lets the user
+ * finish the download in place rather than being sent into Settings → Models.
+ */
+data class WizardModelDownload(
+    val onStart: () -> Unit,
+    /** 0f..1f while downloading; null when idle or finished. */
+    val progress: Float?,
+    val approxSizeBytes: Long,
+    val error: String?,
+)
+
+@Composable
+private fun ActionStep(
+    action: RecommendedAction,
+    whisperDownload: WizardModelDownload,
+    nluDownload: WizardModelDownload,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             stringResource(action.titleRes),
@@ -191,6 +283,51 @@ private fun ActionStep(action: RecommendedAction) {
             stringResource(action.rationaleRes),
             style = MaterialTheme.typography.bodyMedium,
         )
+        // The two model-download essentials complete inline: one tap grabs the
+        // recommended model and the step auto-advances when it lands (the
+        // essentials list shrinks). Other actions keep the Open-settings flow.
+        when (action.id) {
+            ActionId.DownloadWhisperModel -> InlineDownload(whisperDownload)
+            ActionId.DownloadNluModel -> InlineDownload(nluDownload)
+            else -> {}
+        }
+    }
+}
+
+@Composable
+private fun InlineDownload(dl: WizardModelDownload) {
+    val downloading = dl.progress != null
+    val sizeMb = (dl.approxSizeBytes / 1_000_000L).toInt()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+            onClick = dl.onStart,
+            enabled = !downloading,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                if (downloading) {
+                    stringResource(R.string.setup_wizard_downloading)
+                } else {
+                    stringResource(
+                        R.string.setup_wizard_download_button,
+                        stringResource(R.string.setup_wizard_download_size_mb, sizeMb),
+                    )
+                },
+            )
+        }
+        if (downloading) {
+            LinearProgressIndicator(
+                progress = { dl.progress ?: 0f },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (dl.error != null) {
+            Text(
+                stringResource(R.string.setup_wizard_download_failed),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }
 
@@ -218,6 +355,7 @@ private fun FinalStep(skippedAny: Boolean) {
 private fun WizardControls(
     isWelcome: Boolean,
     isFinal: Boolean,
+    isSelfTest: Boolean,
     onSkipStep: () -> Unit,
     onOpenSettings: () -> Unit,
     onSkipWizard: () -> Unit,
@@ -236,6 +374,14 @@ private fun WizardControls(
             isFinal -> {
                 Button(onClick = onAdvance, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.setup_wizard_done))
+                }
+            }
+            isSelfTest -> {
+                Button(onClick = onAdvance, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.setup_wizard_selftest_next))
+                }
+                TextButton(onClick = onSkipWizard, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.setup_wizard_skip_all))
                 }
             }
             else -> {
