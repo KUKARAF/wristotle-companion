@@ -2,6 +2,26 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-21-0-simple-settings",
+      "date": "2026-09-09",
+      "companion_version": "v1.21.0",
+      "watch_version": null,
+      "title": "Simpler Settings",
+      "description": "Settings opens to a short core list, with a \"Show advanced settings\" toggle that reveals the optional integrations and diagnostics \u2014 less to wade through.",
+      "sample_query": null,
+      "docs_path": "features/"
+    },
+    {
+      "id": "v1-21-0-guided-setup",
+      "date": "2026-09-09",
+      "companion_version": "v1.21.0",
+      "watch_version": null,
+      "title": "Guided first-run setup",
+      "description": "The welcome guide now downloads the models it needs with one tap (no digging into Settings) and finishes with a quick \"try it on your watch\" check.",
+      "sample_query": null,
+      "docs_path": null
+    },
+    {
       "id": "v1-20-0-task-export",
       "date": "2026-09-09",
       "companion_version": "v1.20.0",

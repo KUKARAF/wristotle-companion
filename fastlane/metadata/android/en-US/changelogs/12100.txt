@@ -1,0 +1,8 @@
+Simpler setup:
+
+- Settings now opens to a short core list, with a
+  "Show advanced settings" toggle for the optional extras
+  (integrations, diagnostics).
+- The first-run guide downloads the models it needs with
+  one tap — no digging into Settings — and ends with a
+  quick "try it on your watch" check.

@@ -16,6 +16,26 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-21-0-simple-settings",
+            date = "2026-09-09",
+            companionVersion = "v1.21.0",
+            watchVersion = null,
+            title = "Simpler Settings",
+            description = "Settings opens to a short core list, with a \"Show advanced settings\" toggle that reveals the optional integrations and diagnostics — less to wade through.",
+            sampleQuery = null,
+            docsPath = "features/",
+        ),
+        FeatureEntry(
+            id = "v1-21-0-guided-setup",
+            date = "2026-09-09",
+            companionVersion = "v1.21.0",
+            watchVersion = null,
+            title = "Guided first-run setup",
+            description = "The welcome guide now downloads the models it needs with one tap (no digging into Settings) and finishes with a quick \"try it on your watch\" check.",
+            sampleQuery = null,
+            docsPath = null,
+        ),
+        FeatureEntry(
             id = "v1-20-0-task-export",
             date = "2026-09-09",
             companionVersion = "v1.20.0",
