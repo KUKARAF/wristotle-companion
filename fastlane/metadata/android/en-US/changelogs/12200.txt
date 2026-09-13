@@ -1,0 +1,10 @@
+Reorganized Settings:
+
+- Categories are now grouped under section headers
+  (Watch, Voice & AI, Features, Data & system, About),
+  with a few related screens folded together for fewer
+  top-level rows.
+- A search box filters Settings by name or keyword.
+- Busy sub-menus carry thin theme labels to scan faster.
+- Prefer the old flat list? A toggle switches back to
+  the classic layout (grouped stays the default).

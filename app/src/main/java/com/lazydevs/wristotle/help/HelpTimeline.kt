@@ -16,6 +16,16 @@ package com.lazydevs.wristotle.help
 internal object HelpTimeline {
     val timeline: List<FeatureEntry> = listOf(
         FeatureEntry(
+            id = "v1-22-0-settings-groups",
+            date = "2026-09-13",
+            companionVersion = "v1.22.0",
+            watchVersion = null,
+            title = "Reorganized Settings",
+            description = "Settings now groups categories under section headers with a search box, and a layout toggle brings back the old flat list if you prefer it.",
+            sampleQuery = null,
+            docsPath = "features/",
+        ),
+        FeatureEntry(
             id = "v1-21-0-simple-settings",
             date = "2026-09-09",
             companionVersion = "v1.21.0",

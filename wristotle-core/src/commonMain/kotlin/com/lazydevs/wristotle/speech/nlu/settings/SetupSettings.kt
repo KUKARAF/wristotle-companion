@@ -50,9 +50,23 @@ class SetupSettings(private val store: KeyValueStore) {
         _settingsShowAdvanced.value = show
     }
 
+    private val _useClassicSettingsLayout = MutableStateFlow(store.getBoolean(KEY_CLASSIC_LAYOUT, false))
+    /** The Settings landing groups categories under section headers and folds a
+     *  few near-duplicate categories into their parent (the "grouped" layout,
+     *  default). Opting into classic restores the pre-grouping flat list +
+     *  "Show advanced" toggle for users who prefer it. */
+    val useClassicSettingsLayout: StateFlow<Boolean> = _useClassicSettingsLayout.asStateFlow()
+
+    fun setUseClassicSettingsLayout(classic: Boolean) {
+        if (_useClassicSettingsLayout.value == classic) return
+        store.putBoolean(KEY_CLASSIC_LAYOUT, classic)
+        _useClassicSettingsLayout.value = classic
+    }
+
     companion object {
         const val PREFS_NAME = "setup_state"
         private const val KEY_DISMISSED = "welcome_wizard_dismissed"
         private const val KEY_SHOW_ADVANCED = "settings_show_advanced"
+        private const val KEY_CLASSIC_LAYOUT = "settings_classic_layout"
     }
 }

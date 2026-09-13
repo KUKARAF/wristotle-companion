@@ -202,6 +202,31 @@
     <string name="settings_section_calendar">Calendar</string>
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_show_advanced">Show advanced settings</string>
+    <!-- Settings layout: section headers, modern relabels, search, classic toggle -->
+    <string name="settings_group_watch">Watch</string>
+    <string name="settings_group_voice_ai">Voice &amp; AI</string>
+    <string name="settings_group_features">Features</string>
+    <string name="settings_group_data_system">Data &amp; system</string>
+    <string name="settings_group_about">About</string>
+    <string name="settings_section_models_modern">Models &amp; learning</string>
+    <string name="settings_section_system_modern">System</string>
+    <string name="settings_section_about_modern">About</string>
+    <string name="settings_search_hint">Search settings</string>
+    <string name="settings_search_no_results">No settings match \"%1$s\"</string>
+    <string name="settings_use_classic_layout">Use classic layout</string>
+    <string name="settings_use_grouped_layout">Use grouped layout</string>
+    <!-- Theme labels grouping related cards inside a category's drill-down. -->
+    <string name="settings_grp_interaction">Interaction</string>
+    <string name="settings_grp_display">Display</string>
+    <string name="settings_grp_timer">Timer</string>
+    <string name="settings_grp_stored_on_phone">Stored on phone</string>
+    <string name="settings_grp_sync_export">Sync &amp; export</string>
+    <string name="settings_grp_storage">Storage</string>
+    <string name="settings_grp_morning_brief">Morning brief</string>
+    <string name="settings_grp_speech_to_text">Speech-to-text</string>
+    <string name="settings_grp_language_model">Language model</string>
+    <string name="settings_grp_aliases">Aliases</string>
+    <string name="settings_grp_learned_phrases">Learned phrases</string>
     <string name="settings_section_setup">Setup</string>
 
     <!-- Settings → 🌟 Setup card. Persistent home for recommended setup

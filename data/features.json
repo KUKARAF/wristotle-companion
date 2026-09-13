@@ -2,12 +2,22 @@
   "$schema_note": "Canonical source for Wristotle's user-facing features. Drives the app's Settings → ❓ Help page (via codegen) AND, eventually, the docs site's features table. Hand-edited; companion repo carries a synced copy at data/features.json. Newest first. Each release that ships a user-facing feature gets one entry; internals-only patches are intentionally omitted (no Help page row, no docs feature-table row). Style guide for each field lives in app/.../help/HelpContent.kt's file-level KDoc.",
   "features": [
     {
+      "id": "v1-22-0-settings-groups",
+      "date": "2026-09-13",
+      "companion_version": "v1.22.0",
+      "watch_version": null,
+      "title": "Reorganized Settings",
+      "description": "Settings now groups categories under section headers with a search box, and a layout toggle brings back the old flat list if you prefer it.",
+      "sample_query": null,
+      "docs_path": "features/"
+    },
+    {
       "id": "v1-21-0-simple-settings",
       "date": "2026-09-09",
       "companion_version": "v1.21.0",
       "watch_version": null,
       "title": "Simpler Settings",
-      "description": "Settings opens to a short core list, with a \"Show advanced settings\" toggle that reveals the optional integrations and diagnostics \u2014 less to wade through.",
+      "description": "Settings opens to a short core list, with a \"Show advanced settings\" toggle that reveals the optional integrations and diagnostics — less to wade through.",
       "sample_query": null,
       "docs_path": "features/"
     },
@@ -27,7 +37,7 @@
       "companion_version": "v1.20.0",
       "watch_version": null,
       "title": "Export your tasks to a folder",
-      "description": "Tasks now sync to a folder as a live Markdown checklist (Settings \u2192 Tasks), the same way notes do \u2014 Obsidian, Dropbox, git, any plain-text app.",
+      "description": "Tasks now sync to a folder as a live Markdown checklist (Settings → Tasks), the same way notes do — Obsidian, Dropbox, git, any plain-text app.",
       "sample_query": null,
       "docs_path": "features/"
     },
@@ -37,7 +47,7 @@
       "companion_version": "v1.20.0",
       "watch_version": null,
       "title": "Choose which calendar events go to",
-      "description": "Pick the calendar/account that voice-created events are added to (Settings \u2192 Calendar), instead of always the primary one.",
+      "description": "Pick the calendar/account that voice-created events are added to (Settings → Calendar), instead of always the primary one.",
       "sample_query": "schedule a meeting tomorrow at 3pm",
       "docs_path": "voice-commands/"
     },
@@ -47,7 +57,7 @@
       "companion_version": "v1.20.0",
       "watch_version": "v1.8.0",
       "title": "Run timers on the watch",
-      "description": "\"Set a timer\" can now count down on your Pebble and buzz when it\u2019s up \u2014 even if the app is closed \u2014 instead of opening the phone\u2019s clock (Settings \u2192 Watch).",
+      "description": "\"Set a timer\" can now count down on your Pebble and buzz when it’s up — even if the app is closed — instead of opening the phone’s clock (Settings → Watch).",
       "sample_query": "set a timer for 10 minutes",
       "docs_path": "voice-commands/"
     },
@@ -67,7 +77,7 @@
       "companion_version": "v1.18.0",
       "watch_version": null,
       "title": "Route everything to Ask Agent",
-      "description": "New routing modes send unrecognised speech \u2014 or every spoken command, with no wake word \u2014 straight to your Ask Agent provider.",
+      "description": "New routing modes send unrecognised speech — or every spoken command, with no wake word — straight to your Ask Agent provider.",
       "sample_query": null,
       "docs_path": "voice-commands/"
     },
@@ -87,7 +97,7 @@
       "companion_version": "v1.17.0",
       "watch_version": "v1.6.0",
       "title": "Failed actions stay on the watch",
-      "description": "A failed or unrecognized voice command now stays on the watch screen, with the time you asked, until you press Back \u2014 instead of vanishing like a success.",
+      "description": "A failed or unrecognized voice command now stays on the watch screen, with the time you asked, until you press Back — instead of vanishing like a success.",
       "sample_query": null,
       "docs_path": null
     },

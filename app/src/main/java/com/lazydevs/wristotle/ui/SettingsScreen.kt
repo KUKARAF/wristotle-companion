@@ -21,7 +21,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
@@ -71,6 +73,16 @@ import kotlinx.coroutines.launch
  * landing visually distinct from Material's standard chrome and avoids
  * pulling in `material-icons-extended` symbols just for eight glyphs.
  */
+/** Modern-layout section headers grouping the categories on the Settings
+ *  landing. Classic layout ignores these. */
+enum class SettingsSection(@param:StringRes val labelRes: Int) {
+    Watch(R.string.settings_group_watch),
+    VoiceAi(R.string.settings_group_voice_ai),
+    Features(R.string.settings_group_features),
+    DataSystem(R.string.settings_group_data_system),
+    About(R.string.settings_group_about),
+}
+
 enum class SettingsCategory(
     @param:StringRes val labelRes: Int,
     val emoji: String,
@@ -83,30 +95,72 @@ enum class SettingsCategory(
      *  list instead of ~20 entries. Core = the essentials + everyday
      *  features; advanced = optional integrations, experimental, diagnostics. */
     val advanced: Boolean = false,
+    /** Modern layout: which section header this category groups under. */
+    val section: SettingsSection = SettingsSection.Features,
+    /** Modern layout: optional relabel of the drill-down title (e.g. Models →
+     *  "Models & learning" when it absorbs the Learning cards). */
+    @param:StringRes val modernLabelRes: Int? = null,
+    /** Extra search terms so the Settings search finds this category by more
+     *  than its visible label (e.g. "api key" → Ask Agent). */
+    val keywords: List<String> = emptyList(),
 ) {
-    Setup(R.string.settings_section_setup, "🌟"),
-    Watch(R.string.settings_section_watch, "⌚"),
-    Conversation(R.string.settings_section_conversation, "💬"),
-    Notes(R.string.settings_section_notes, "📝"),
-    Tasks(R.string.settings_section_tasks, "📋"),
-    Codes(R.string.settings_section_codes, "🎟️"),
-    Reminders(R.string.settings_section_reminders, "⏰"),
-    Calendar(R.string.settings_section_calendar, "📅"),
-    Notifications(R.string.settings_section_notifications, "🔔"),
-    Weather(R.string.settings_section_weather, "☁️", advanced = true),
-    Sport(R.string.settings_section_sport, "🏆", advanced = true),
-    Models(R.string.settings_section_models, "🧠"),
-    Learning(R.string.settings_section_learning, "🎓"),
-    Backup(R.string.settings_section_backup, "💾"),
-    Mcp(R.string.settings_section_mcp, "🔌", advanced = true),
-    AskAgent(R.string.settings_section_askagent, "✨", advanced = true),
-    HomeAssistant(R.string.settings_section_homeassistant, "🏠", advanced = true),
-    Speech(R.string.settings_section_speech, "🔊", experimental = true, advanced = true),
-    Stats(R.string.settings_section_stats, "📊", advanced = true),
-    Diagnostics(R.string.settings_section_diagnostics, "🔧", advanced = true),
-    Help(R.string.settings_section_help, "❓"),
-    Support(R.string.settings_section_support, "❤️"),
+    Setup(R.string.settings_section_setup, "🌟", section = SettingsSection.Watch,
+        keywords = listOf("setup", "getting started")),
+    Watch(R.string.settings_section_watch, "⌚", section = SettingsSection.Watch,
+        keywords = listOf("watch", "timer", "vibrate", "quick launch", "buttons", "cards", "shortcuts")),
+    Conversation(R.string.settings_section_conversation, "💬", section = SettingsSection.VoiceAi,
+        keywords = listOf("history", "retention", "audio")),
+    Notes(R.string.settings_section_notes, "📝", section = SettingsSection.Features,
+        keywords = listOf("notes", "sync", "export", "folder")),
+    Tasks(R.string.settings_section_tasks, "📋", section = SettingsSection.Features,
+        keywords = listOf("tasks", "todo", "export", "checklist", "sync")),
+    Codes(R.string.settings_section_codes, "🎟️", section = SettingsSection.Watch,
+        keywords = listOf("qr", "barcode", "loyalty", "codes")),
+    Reminders(R.string.settings_section_reminders, "⏰", section = SettingsSection.Features,
+        keywords = listOf("reminder", "alarm", "nag")),
+    Calendar(R.string.settings_section_calendar, "📅", section = SettingsSection.Features,
+        keywords = listOf("calendar", "event", "account")),
+    Notifications(R.string.settings_section_notifications, "🔔", section = SettingsSection.Features,
+        keywords = listOf("notifications", "morning brief")),
+    Weather(R.string.settings_section_weather, "☁️", advanced = true, section = SettingsSection.Features,
+        keywords = listOf("weather", "temperature", "forecast")),
+    Sport(R.string.settings_section_sport, "🏆", advanced = true, section = SettingsSection.Features,
+        keywords = listOf("sports", "scores", "teams", "leagues")),
+    Models(R.string.settings_section_models, "🧠", section = SettingsSection.VoiceAi,
+        modernLabelRes = R.string.settings_section_models_modern,
+        keywords = listOf("whisper", "model", "speech", "download", "learning", "aliases", "nlu")),
+    Learning(R.string.settings_section_learning, "🎓", section = SettingsSection.VoiceAi,
+        keywords = listOf("learning", "aliases", "contacts", "apps", "nlu", "phrases")),
+    Backup(R.string.settings_section_backup, "💾", section = SettingsSection.DataSystem,
+        keywords = listOf("backup", "restore", "export", "import", "zip")),
+    Mcp(R.string.settings_section_mcp, "🔌", advanced = true, section = SettingsSection.VoiceAi,
+        keywords = listOf("mcp", "tools", "servers")),
+    AskAgent(R.string.settings_section_askagent, "✨", advanced = true, section = SettingsSection.VoiceAi,
+        keywords = listOf("ask agent", "llm", "ai", "claude", "api key", "openai", "routing", "headers", "mcp", "memory")),
+    HomeAssistant(R.string.settings_section_homeassistant, "🏠", advanced = true, section = SettingsSection.VoiceAi,
+        keywords = listOf("home assistant", "ha", "smart home")),
+    Speech(R.string.settings_section_speech, "🔊", experimental = true, advanced = true, section = SettingsSection.VoiceAi,
+        keywords = listOf("speech", "tts", "speak", "voice", "on-watch")),
+    Stats(R.string.settings_section_stats, "📊", advanced = true, section = SettingsSection.DataSystem,
+        modernLabelRes = R.string.settings_section_system_modern,
+        keywords = listOf("stats", "activity", "system", "diagnostics", "logs")),
+    Diagnostics(R.string.settings_section_diagnostics, "🔧", advanced = true, section = SettingsSection.DataSystem,
+        keywords = listOf("diagnostics", "logs", "bug report")),
+    Help(R.string.settings_section_help, "❓", section = SettingsSection.About,
+        modernLabelRes = R.string.settings_section_about_modern,
+        keywords = listOf("help", "about", "version", "changelog", "support", "donate")),
+    Support(R.string.settings_section_support, "❤️", section = SettingsSection.About,
+        keywords = listOf("support", "donate", "funding")),
 }
+
+/** Modern layout only: each key category is folded INTO its parent's drill-down
+ *  (its cards render under the parent; it doesn't get its own landing row).
+ *  Classic layout ignores this and shows every category standalone. */
+val SETTINGS_MERGES: Map<SettingsCategory, SettingsCategory> = mapOf(
+    SettingsCategory.Mcp to SettingsCategory.AskAgent,
+    SettingsCategory.Learning to SettingsCategory.Models,
+    SettingsCategory.Diagnostics to SettingsCategory.Stats,
+)
 
 /**
  * Settings tab — drill-down navigation. The landing page is a short list
@@ -181,6 +235,9 @@ fun SettingsScreen(
     // Drill-down: null = landing, non-null = that category's sub-screen.
     // System back resets to null when on a sub-screen.
     var category by remember { mutableStateOf<SettingsCategory?>(null) }
+    // Landing-only search text. Cleared whenever the user drills into a
+    // category so it doesn't linger when they come back.
+    var searchQuery by remember { mutableStateOf("") }
     BackHandler(enabled = category != null) { category = null }
 
     // First-launch-after-install/update: drill straight into Help with
@@ -226,18 +283,12 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val current = category
-        if (current == null) {
-            val showAdvanced by app.setupSettings.settingsShowAdvanced.collectAsState()
-            SettingsLanding(
-                onCategorySelected = { category = it },
-                attentionByCategory = attentionByCategory,
-                showAdvanced = showAdvanced,
-                onToggleAdvanced = { app.setupSettings.setSettingsShowAdvanced(it) },
-            )
-        } else {
-            SettingsCategoryHeader(current, onBack = { category = null })
+        // One content renderer reused for the open category and — in the
+        // grouped (modern) layout — for any child categories folded into it,
+        // so the merge shows the child's cards inline under the parent.
+        val renderContent: @Composable (SettingsCategory) -> Unit = { cat ->
             SettingsCategoryContent(
-                category = current,
+                category = cat,
                 modelsVm = modelsVm,
                 nluModelsVm = nluModelsVm,
                 nluSettingsVm = nluSettingsVm,
@@ -259,7 +310,7 @@ fun SettingsScreen(
                 onOpenTopLevelTab = onOpenTopLevelTab,
                 onShowClearLearnedConfirm = { showClearLearnedConfirm = true },
                 onShowClearAudioConfirm = { showClearAudioConfirm = true },
-                helpHighlightVersion = capturedPrefill,
+                helpHighlightVersion = if (cat == SettingsCategory.Help) capturedPrefill else null,
                 onHelpHighlightConsumed = { capturedPrefill = null },
                 onShrinkRequest = { newDays ->
                     val currentDays = conversationVm.retentionDays.value
@@ -273,6 +324,70 @@ fun SettingsScreen(
                     }
                 },
             )
+        }
+        val useClassic by app.setupSettings.useClassicSettingsLayout.collectAsState()
+        if (current == null) {
+            val showAdvanced by app.setupSettings.settingsShowAdvanced.collectAsState()
+            // Search box sits above whichever landing layout is active.
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                placeholder = { Text(stringResource(R.string.settings_search_hint)) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.settings_back))
+                        }
+                    }
+                },
+            )
+            val query = searchQuery.trim()
+            when {
+                query.isNotEmpty() -> SettingsSearchResults(
+                    query = query,
+                    onCategorySelected = { category = it },
+                    attentionByCategory = attentionByCategory,
+                )
+                useClassic -> {
+                    SettingsLanding(
+                        onCategorySelected = { category = it },
+                        attentionByCategory = attentionByCategory,
+                        showAdvanced = showAdvanced,
+                        onToggleAdvanced = { app.setupSettings.setSettingsShowAdvanced(it) },
+                    )
+                    LayoutToggleRow(
+                        classic = true,
+                        onToggle = { app.setupSettings.setUseClassicSettingsLayout(it) },
+                    )
+                }
+                else -> {
+                    SettingsLandingModern(
+                        onCategorySelected = { category = it },
+                        attentionByCategory = attentionByCategory,
+                        showAdvanced = showAdvanced,
+                        onToggleAdvanced = { app.setupSettings.setSettingsShowAdvanced(it) },
+                    )
+                    LayoutToggleRow(
+                        classic = false,
+                        onToggle = { app.setupSettings.setUseClassicSettingsLayout(it) },
+                    )
+                }
+            }
+        } else {
+            val modern = !useClassic
+            SettingsCategoryHeader(current, onBack = { category = null }, modern = modern)
+            renderContent(current)
+            if (modern) {
+                // Grouped layout: fold each merged child's cards in under the
+                // parent with a sub-header so they read as one screen.
+                SETTINGS_MERGES.filter { it.value == current }.keys.forEach { child ->
+                    SettingsSubHeader(stringResource(child.labelRes), child.emoji)
+                    renderContent(child)
+                }
+            }
         }
     }
 
@@ -360,11 +475,142 @@ private fun SettingsLanding(
     }
 }
 
+/**
+ * Grouped ("modern") landing — the default. Categories are bucketed under
+ * [SettingsSection] headers, and any category folded into a parent via
+ * [SETTINGS_MERGES] is omitted here (its cards render under the parent's
+ * drill-down instead). Advanced categories stay hidden until the toggle at
+ * the bottom, same as the classic landing.
+ */
+@Composable
+private fun SettingsLandingModern(
+    onCategorySelected: (SettingsCategory) -> Unit,
+    attentionByCategory: Map<SettingsCategory, Boolean> = emptyMap(),
+    showAdvanced: Boolean = false,
+    onToggleAdvanced: (Boolean) -> Unit = {},
+) {
+    val standalone = SettingsCategory.entries.filter { it !in SETTINGS_MERGES.keys }
+    SettingsSection.entries.forEach { section ->
+        val inSection = standalone.filter { it.section == section }
+        val shown = inSection.filter { !it.advanced } +
+            if (showAdvanced) inSection.filter { it.advanced } else emptyList()
+        if (shown.isEmpty()) return@forEach
+        Text(
+            stringResource(section.labelRes),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+        )
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                shown.forEachIndexed { index, cat ->
+                    CategoryRow(
+                        cat,
+                        attentionByCategory[cat] == true,
+                        onCategorySelected,
+                        labelRes = cat.modernLabelRes ?: cat.labelRes,
+                    )
+                    if (index < shown.lastIndex) HorizontalDivider()
+                }
+            }
+        }
+    }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        ListItem(
+            leadingContent = { Text("⚙️", style = MaterialTheme.typography.titleLarge) },
+            headlineContent = { Text(stringResource(R.string.settings_show_advanced)) },
+            trailingContent = {
+                Switch(checked = showAdvanced, onCheckedChange = onToggleAdvanced)
+            },
+            modifier = Modifier.clickable { onToggleAdvanced(!showAdvanced) },
+        )
+    }
+}
+
+/**
+ * Flat filtered list shown while the search box has text. Matches a
+ * category by its visible label, its enum name, or any of its [keywords],
+ * across every category (including merged children — searching "mcp" still
+ * drills straight to the MCP cards).
+ */
+@Composable
+private fun SettingsSearchResults(
+    query: String,
+    onCategorySelected: (SettingsCategory) -> Unit,
+    attentionByCategory: Map<SettingsCategory, Boolean> = emptyMap(),
+) {
+    val q = query.lowercase()
+    val matches = SettingsCategory.entries
+        .map { it to stringResource(it.labelRes) }
+        .filter { (cat, label) ->
+            label.lowercase().contains(q) ||
+                cat.name.lowercase().contains(q) ||
+                cat.keywords.any { it.contains(q) }
+        }
+        .map { it.first }
+    if (matches.isEmpty()) {
+        Text(
+            stringResource(R.string.settings_search_no_results, query),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(16.dp),
+        )
+    } else {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                matches.forEachIndexed { index, cat ->
+                    CategoryRow(cat, attentionByCategory[cat] == true, onCategorySelected)
+                    if (index < matches.lastIndex) HorizontalDivider()
+                }
+            }
+        }
+    }
+}
+
+/** Footer toggle to flip between the grouped (default) and classic flat
+ *  landing. [classic] is the current state; tapping flips it. */
+@Composable
+private fun LayoutToggleRow(classic: Boolean, onToggle: (Boolean) -> Unit) {
+    TextButton(onClick = { onToggle(!classic) }) {
+        Text(
+            stringResource(
+                if (classic) R.string.settings_use_grouped_layout
+                else R.string.settings_use_classic_layout,
+            ),
+        )
+    }
+}
+
+/** Sub-header shown above a merged child's cards in the grouped layout. */
+@Composable
+private fun SettingsSubHeader(label: String, emoji: String) {
+    Text(
+        "$emoji  $label",
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 8.dp, start = 4.dp),
+    )
+}
+
+/** Thin theme label grouping several cards inside one category's drill-down
+ *  (a level finer than [SettingsSubHeader]). Coarser than each card's own
+ *  title so it adds a scannable layer instead of echoing it. */
+@Composable
+private fun SettingsGroupLabel(@StringRes labelRes: Int) {
+    Text(
+        stringResource(labelRes).uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 4.dp, start = 4.dp),
+    )
+}
+
 @Composable
 private fun CategoryRow(
     cat: SettingsCategory,
     needsAttention: Boolean,
     onCategorySelected: (SettingsCategory) -> Unit,
+    @StringRes labelRes: Int = cat.labelRes,
 ) {
     ListItem(
         leadingContent = {
@@ -375,7 +621,7 @@ private fun CategoryRow(
         },
         headlineContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(cat.labelRes))
+                Text(stringResource(labelRes))
                 if (needsAttention) {
                     Spacer(Modifier.width(8.dp))
                     // Small red dot mirrors the bottom-nav badge — the
@@ -417,7 +663,11 @@ private fun CategoryRow(
  * since the global TopAppBar shows the app name across all tabs.
  */
 @Composable
-private fun SettingsCategoryHeader(category: SettingsCategory, onBack: () -> Unit) {
+private fun SettingsCategoryHeader(
+    category: SettingsCategory,
+    onBack: () -> Unit,
+    modern: Boolean = false,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onBack) {
             Icon(
@@ -426,7 +676,7 @@ private fun SettingsCategoryHeader(category: SettingsCategory, onBack: () -> Uni
             )
         }
         Text(
-            stringResource(category.labelRes),
+            stringResource(if (modern) category.modernLabelRes ?: category.labelRes else category.labelRes),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(start = 4.dp),
         )
@@ -493,8 +743,11 @@ private fun SettingsCategoryContent(
                 )
 
             SettingsCategory.Watch -> {
+                SettingsGroupLabel(R.string.settings_grp_interaction)
                 WatchSettingsCard(vm = watchSettingsVm)
+                SettingsGroupLabel(R.string.settings_grp_display)
                 CardDisplaySettingsCard(settings = app.cardSettings)
+                SettingsGroupLabel(R.string.settings_grp_timer)
                 TimerSettingsCard(settings = app.timerSettings)
             }
 
@@ -502,6 +755,7 @@ private fun SettingsCategoryContent(
                 val retentionDays by conversationVm.retentionDays.collectAsState()
                 val audioCaptureEnabled by conversationVm.audioCaptureEnabled.collectAsState()
                 val companion by conversationVm.pebbleCompanion.collectAsState()
+                SettingsGroupLabel(R.string.settings_grp_stored_on_phone)
                 HistoryRetentionCard(
                     selectedDays = retentionDays,
                     options = conversationVm.retentionOptions,
@@ -518,6 +772,7 @@ private fun SettingsCategoryContent(
                         onClearAudio = onShowClearAudioConfirm,
                     )
                 }
+                SettingsGroupLabel(R.string.settings_grp_sync_export)
                 ConversationsSyncCard(
                     settings = app.conversationsSyncSettings,
                     coordinator = app.conversationsSyncCoordinator,
@@ -525,7 +780,9 @@ private fun SettingsCategoryContent(
             }
 
             SettingsCategory.Notes -> {
+                SettingsGroupLabel(R.string.settings_grp_storage)
                 NotesSettingsCard(vm = notesVm)
+                SettingsGroupLabel(R.string.settings_grp_sync_export)
                 NotesSyncCard(
                     settings = app.notesSyncSettings,
                     coordinator = app.notesSyncCoordinator,
@@ -575,6 +832,7 @@ private fun SettingsCategoryContent(
                     app.notificationLogDb.notificationPostDao()
                         .observeCountSince(com.lazydevs.wristotle.speech.nlu.briefing.TodayRange.now().startMs)
                 }.collectAsState(initial = 0)
+                SettingsGroupLabel(R.string.settings_grp_morning_brief)
                 MorningBriefCard(
                     logEnabled = notifLogEnabled,
                     logCount = notifLogCount,
@@ -591,15 +849,19 @@ private fun SettingsCategoryContent(
                 SportSettingsCard(settings = app.sportSettings, source = app.sportSource)
 
             SettingsCategory.Models -> {
+                SettingsGroupLabel(R.string.settings_grp_speech_to_text)
                 SttProviderCard(settings = app.sttProviderSettings)
                 WhisperModelsCard(vm = modelsVm)
             }
 
             SettingsCategory.Learning -> {
+                SettingsGroupLabel(R.string.settings_grp_language_model)
                 NluModelsCard(vm = nluModelsVm)
+                SettingsGroupLabel(R.string.settings_grp_aliases)
                 AppIndexCard(vm = appIndexVm)
                 AppAliasesCard(vm = appAliasesVm)
                 ContactAliasesCard(vm = contactAliasesVm)
+                SettingsGroupLabel(R.string.settings_grp_learned_phrases)
                 val learnedExamples by nluSettingsVm.learnedExamples.collectAsState()
                 val learningEnabled by nluSettingsVm.learningEnabled.collectAsState()
                 IntentLearningCard(
