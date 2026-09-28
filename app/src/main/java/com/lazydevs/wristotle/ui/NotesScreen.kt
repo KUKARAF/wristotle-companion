@@ -36,6 +36,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,6 +69,8 @@ import java.util.Date
 fun NotesScreen(vm: NotesViewModel) {
     val notes by vm.notes.collectAsState()
     val query by vm.query.collectAsState()
+    val serverConnected by vm.serverConnected.collectAsState()
+    LaunchedEffect(Unit) { vm.refreshFromServer() }
 
     // Shared MediaPlayer. Each note can have multiple audio clips (SEPARATE
     // append-audio mode produces one per append) — we render one play button
@@ -165,7 +168,9 @@ fun NotesScreen(vm: NotesViewModel) {
                         },
                     )
                 }
-                item {
+                // Hidden while synced with the notes server (the list then
+                // mirrors all server notes — never mass-delete those).
+                if (!serverConnected) item {
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = { pendingDeleteAll = true }) {
                         Text(stringResource(R.string.notes_delete_all))

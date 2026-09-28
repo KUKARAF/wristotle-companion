@@ -111,9 +111,9 @@ enum class SettingsCategory(
     Conversation(R.string.settings_section_conversation, "💬", section = SettingsSection.VoiceAi,
         keywords = listOf("history", "retention", "audio")),
     Notes(R.string.settings_section_notes, "📝", section = SettingsSection.Features,
-        keywords = listOf("notes", "sync", "export", "folder")),
+        keywords = listOf("notes", "sync", "export", "folder", "server", "osmosis", "login")),
     Tasks(R.string.settings_section_tasks, "📋", section = SettingsSection.Features,
-        keywords = listOf("tasks", "todo", "export", "checklist", "sync")),
+        keywords = listOf("tasks", "todo", "export", "checklist", "sync", "server", "osmosis", "login")),
     Codes(R.string.settings_section_codes, "🎟️", section = SettingsSection.Watch,
         keywords = listOf("qr", "barcode", "loyalty", "codes")),
     Reminders(R.string.settings_section_reminders, "⏰", section = SettingsSection.Features,
@@ -780,6 +780,7 @@ private fun SettingsCategoryContent(
             }
 
             SettingsCategory.Notes -> {
+                NotesServerCard()
                 SettingsGroupLabel(R.string.settings_grp_storage)
                 NotesSettingsCard(vm = notesVm)
                 SettingsGroupLabel(R.string.settings_grp_sync_export)
@@ -790,6 +791,7 @@ private fun SettingsCategoryContent(
             }
 
             SettingsCategory.Tasks -> {
+                NotesServerCard()
                 TasksSyncCard(
                     settings = app.tasksSyncSettings,
                     coordinator = app.tasksSyncCoordinator,

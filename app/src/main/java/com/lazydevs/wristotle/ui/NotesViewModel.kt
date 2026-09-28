@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -44,6 +45,18 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
         (app as WristotleApplication).noteRepository
     private val settings: NoteSettings =
         (app as WristotleApplication).noteSettings
+
+    private val notesServer = (app as WristotleApplication).notesServerSync
+
+    /** Signed in to notes.osmosis.page — the list mirrors the server then. */
+    val serverConnected: StateFlow<Boolean> =
+        (app as WristotleApplication).notesServerAuth.account.map { it != null }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** Pull from the notes server when the screen opens (no-op when signed out). */
+    fun refreshFromServer() = viewModelScope.launch {
+        notesServer.syncIfStale(maxAgeMs = 10_000, timeoutMs = 30_000)
+    }
 
     /** User-typed search filter; case-insensitive substring match on body. */
     private val _query = MutableStateFlow("")

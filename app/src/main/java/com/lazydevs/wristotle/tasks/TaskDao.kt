@@ -5,6 +5,7 @@ package com.lazydevs.wristotle.tasks
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.Update
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
@@ -12,6 +13,9 @@ import kotlinx.coroutines.flow.Flow
 interface TaskDao {
     @Insert
     suspend fun insert(task: TaskEntity): Long
+
+    @Update
+    suspend fun update(task: TaskEntity)
 
     /** Pending tasks, newest first. Flow so the Tasks tab updates live. */
     @Query("SELECT * FROM tasks WHERE completed = 0 ORDER BY createdAtEpochMs DESC")

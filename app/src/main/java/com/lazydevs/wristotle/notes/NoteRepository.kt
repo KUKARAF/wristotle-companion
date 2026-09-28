@@ -4,6 +4,7 @@
 package com.lazydevs.wristotle.notes
 
 import android.util.Log
+import com.lazydevs.wristotle.notesserver.RemoteSyncHooks
 import com.lazydevs.wristotle.speech.nlu.settings.AppendAudioMode
 import com.lazydevs.wristotle.speech.nlu.settings.NoteSettings
 import com.lazydevs.wristotle.speech.nlu.settings.NoteSettingsView
@@ -25,6 +26,9 @@ class NoteRepository(
     private val settings: NoteSettingsView,
 ) {
 
+    /** Set when the notes-server sync is wired; null keeps notes purely local. */
+    var syncHooks: RemoteSyncHooks? = null
+
     fun observeAll(): Flow<List<Note>> = dao.observeAllNewestFirst()
 
     suspend fun count(): Int = dao.count()
@@ -43,6 +47,7 @@ class NoteRepository(
     suspend fun insert(body: String, source: String, createdAtEpochMs: Long): Long {
         val id = dao.insert(Note(body = body, source = source, createdAtEpochMs = createdAtEpochMs))
         prune()
+        syncHooks?.onLocalCreate()
         return id
     }
 
@@ -79,9 +84,10 @@ class NoteRepository(
         atEpochMs: Long,
         conversationAudioFile: File? = null,
     ): Note? {
-        val previous = dao.findMostRecent() ?: return null
+        val previous = appendTarget() ?: return null
         val combined = "${previous.body}\n$body"
         dao.updateBodyAndTimestamp(previous.id, combined, atEpochMs)
+        syncHooks?.onNoteAppended(previous.id, body)
         var audioPath = previous.audioFilePath
         if (conversationAudioFile != null && conversationAudioFile.exists()) {
             val prior = NoteAudioPaths.parse(previous.audioFilePath)
@@ -119,15 +125,40 @@ class NoteRepository(
         return previous.copy(body = combined, createdAtEpochMs = atEpochMs, audioFilePath = audioPath)
     }
 
+    /** Most recent note, skipping server notes that weren't written from
+     *  Wristotle when the notes server is connected. */
+    private suspend fun appendTarget(): Note? {
+        val hooks = syncHooks?.takeIf { it.isActive } ?: return dao.findMostRecent()
+        val skip = hooks.notAppendableNoteIds()
+        return dao.notesBeyond(offset = 0, limit = APPEND_SCAN_LIMIT).firstOrNull { it.id !in skip }
+    }
+
     suspend fun delete(id: Long) {
+        syncHooks?.onNoteDeleting(id)
+        deleteLocalOnly(id)
+    }
+
+    /** Drops the local copy only — used when the server says it's gone. */
+    suspend fun deleteLocalOnly(id: Long) {
         val note = dao.findById(id) ?: return
         NoteAudioPaths.parse(note.audioFilePath).forEach(audioStore::delete)
         dao.deleteById(id)
     }
 
+    /**
+     * Deletes every note. With the notes server connected this only covers
+     * notes written from Wristotle — the rest of the server's notes are
+     * mirrored here but never mass-deleted from the phone.
+     */
     suspend fun deleteAll() {
-        audioStore.deleteAll()
-        dao.deleteAll()
+        val hooks = syncHooks?.takeIf { it.isActive }
+        if (hooks == null) {
+            audioStore.deleteAll()
+            dao.deleteAll()
+            return
+        }
+        val skip = hooks.notAppendableNoteIds()
+        dao.allForBackup().filter { it.id !in skip }.forEach { delete(it.id) }
     }
 
     /**
@@ -136,6 +167,8 @@ class NoteRepository(
      * No-op when the user has [NoteSettings.UNLIMITED] selected (default).
      */
     suspend fun prune() {
+        // The server holds the notes; a local cap would delete them there.
+        if (syncHooks?.isActive == true) return
         val cap = settings.keepLast.value
         if (cap <= NoteSettings.UNLIMITED) return
         val total = dao.count()
@@ -149,5 +182,9 @@ class NoteRepository(
             dao.deleteById(note.id)
         }
         if (evict.isNotEmpty()) Log.d(TAG, "pruned ${evict.size} notes beyond cap=$cap")
+    }
+
+    private companion object {
+        const val APPEND_SCAN_LIMIT = 200
     }
 }

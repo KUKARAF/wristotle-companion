@@ -20,6 +20,9 @@ import java.util.concurrent.atomic.AtomicReference
 
 private const val TAG = "WatchRequestRouter"
 
+/** Upper bound on the pre-answer notes-server refresh, so the watch never waits long. */
+private const val WATCH_SYNC_TIMEOUT_MS = 3_000L
+
 /**
  * Handles the four watch-initiated request/response pairs that aren't
  * voice queries:
@@ -60,6 +63,7 @@ class WatchRequestRouter(
     }
 
     private suspend fun handleNotesRequest() {
+        app.notesServerSync.syncIfStale(timeoutMs = WATCH_SYNC_TIMEOUT_MS)
         val notes = app.noteRepository.mostRecent(NotesResponseFormatter.MAX_NOTES)
         lastNotesSnapshot.set(notes)
         val payload = NotesResponseFormatter.format(notes)
@@ -68,6 +72,7 @@ class WatchRequestRouter(
     }
 
     private suspend fun handleTasksRequest(data: PebbleDictionary) {
+        app.notesServerSync.syncIfStale(timeoutMs = WATCH_SYNC_TIMEOUT_MS)
         val filter = data.int32(MessageKeys.TASKS_REQUEST) ?: MessageKeys.TASKS_FILTER_PENDING
         val list = when (filter) {
             MessageKeys.TASKS_FILTER_COMPLETED -> app.taskRepository.listCompleted()

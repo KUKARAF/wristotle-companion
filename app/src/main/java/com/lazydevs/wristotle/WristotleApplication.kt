@@ -134,6 +134,12 @@ class WristotleApplication : Application() {
         com.lazydevs.wristotle.sync.FileSyncCoordinator<com.lazydevs.wristotle.tasks.TaskEntity>
         private set
 
+    /** notes.osmosis.page account + two-way sync of notes and tasks. */
+    lateinit var notesServerAuth: com.lazydevs.wristotle.notesserver.NotesServerAuth
+        private set
+    lateinit var notesServerSync: com.lazydevs.wristotle.notesserver.NotesServerSync
+        private set
+
     /** Tasks data layer (separate Room DB; checklist items, no due dates). */
     lateinit var taskRepository: com.lazydevs.wristotle.tasks.TaskRepository
         private set
@@ -565,7 +571,7 @@ class WristotleApplication : Application() {
             audioStore = notesAudioStore,
             settings = noteSettings,
         )
-        appScope.launch { noteRepository.prune() }
+        // Startup prune runs after the notes-server hooks are wired (below).
 
         // Saved codes (QR / barcode) — Room DB + repository + watch sync.
         codesDb = com.lazydevs.wristotle.codes.CodeDatabase.build(this)
@@ -628,6 +634,24 @@ class WristotleApplication : Application() {
         // Tasks — separate Room DB, no auto-prune (user-managed checklist).
         tasksDb = com.lazydevs.wristotle.tasks.TasksDatabase.build(this)
         taskRepository = com.lazydevs.wristotle.tasks.TaskRepository(tasksDb.taskDao())
+
+        // Notes server — local Room stays the working copy; this mirrors it
+        // to/from notes.osmosis.page while signed in.
+        notesServerAuth = com.lazydevs.wristotle.notesserver.NotesServerAuth(this)
+        notesServerSync = com.lazydevs.wristotle.notesserver.NotesServerSync(
+            context = this,
+            auth = notesServerAuth,
+            api = com.lazydevs.wristotle.notesserver.NotesServerApi(tokenProvider = { notesServerAuth.token }),
+            syncDao = com.lazydevs.wristotle.notesserver.SyncDatabase.build(this).syncDao(),
+            noteDao = notesDb.noteDao(),
+            taskDao = tasksDb.taskDao(),
+            deleteLocalNote = noteRepository::deleteLocalOnly,
+            scope = appScope,
+        )
+        noteRepository.syncHooks = notesServerSync
+        taskRepository.syncHooks = notesServerSync
+        notesServerSync.start()
+        appScope.launch { noteRepository.prune() }
 
         tasksSyncSettings = com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings(
             store = kvStore(com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings.prefsName("tasks"),

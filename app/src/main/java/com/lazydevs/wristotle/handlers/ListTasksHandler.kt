@@ -30,6 +30,7 @@ class ListTasksHandler(
     override val cardKind: String? = "task_list"
 
     override suspend fun handle(result: IntentResult): String {
+        tasks.refreshFromServer()
         // `filter` slot (set by ListTasksSlots) selects pending vs
         // completed. Absent → pending (default — most common case).
         return when (result.optStringSlot(SlotKeys.Filter)?.lowercase()) {

@@ -12,6 +12,7 @@ import com.lazydevs.wristotle.tasks.TaskRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -32,6 +33,18 @@ class TasksViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository: TaskRepository =
         (app as WristotleApplication).taskRepository
+
+    private val notesServer = (app as WristotleApplication).notesServerSync
+
+    /** Signed in to notes.osmosis.page — the list mirrors the server then. */
+    val serverConnected: StateFlow<Boolean> =
+        (app as WristotleApplication).notesServerAuth.account.map { it != null }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** Pull from the notes server when the screen opens (no-op when signed out). */
+    fun refreshFromServer() = viewModelScope.launch {
+        notesServer.syncIfStale(maxAgeMs = 10_000, timeoutMs = 30_000)
+    }
 
     val pending: StateFlow<List<TaskEntity>> =
         repository.observePending()

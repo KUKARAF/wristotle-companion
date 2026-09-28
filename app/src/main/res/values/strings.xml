@@ -786,4 +786,16 @@
     <string name="settings_morning_brief_log_count">Logged today: %1$d</string>
     <string name="settings_morning_brief_log_clear">Clear log</string>
     <string name="settings_morning_brief_log_cleared">Notification log cleared.</string>
+    <!-- notes.osmosis.page sync -->
+    <string name="notes_server_header">Notes server</string>
+    <string name="notes_server_desc">Keep notes and tasks on notes.osmosis.page. New notes land in the wristotle/ folder; every other server note shows up here too. Tasks are the checkboxes in your daily notes (diary/YYYY-MM-DD) — new ones go into today\'s note. Works offline: changes upload once you\'re back online. Notes and tasks you already have are uploaded on first sign-in.</string>
+    <string name="notes_server_signed_out">Not connected — notes and tasks are stored on this phone only.</string>
+    <string name="notes_server_login">Log in</string>
+    <string name="notes_server_login_browser">Use browser</string>
+    <string name="notes_server_signed_in">Connected as %1$s</string>
+    <string name="notes_server_syncing">Syncing…</string>
+    <string name="notes_server_error">Last sync failed: %1$s</string>
+    <string name="notes_server_last_sync">Last synced %1$s</string>
+    <string name="notes_server_sync_now">Sync now</string>
+    <string name="notes_server_logout">Log out</string>
 </resources>

@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +78,8 @@ import com.lazydevs.wristotle.ui.components.ConfirmDialog
 fun TasksScreen(vm: TasksViewModel) {
     val pending by vm.pending.collectAsState()
     val completed by vm.completed.collectAsState()
+    val serverConnected by vm.serverConnected.collectAsState()
+    LaunchedEffect(Unit) { vm.refreshFromServer() }
 
     var draft by rememberSaveable { mutableStateOf("") }
     var completedExpanded by rememberSaveable { mutableStateOf(false) }
@@ -95,7 +98,9 @@ fun TasksScreen(vm: TasksViewModel) {
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
-            if (pending.isNotEmpty() || completed.isNotEmpty()) {
+            // Hidden while synced with the notes server: it would strip every
+            // task out of the daily notes there.
+            if (!serverConnected && (pending.isNotEmpty() || completed.isNotEmpty())) {
                 TextButton(onClick = { showClearAllDialog = true }) {
                     Text(stringResource(R.string.tasks_clear_all))
                 }

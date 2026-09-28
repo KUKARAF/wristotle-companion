@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools" >
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
@@ -97,6 +98,29 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- notes.osmosis.page sign-in (WebView catches the token redirect). -->
+        <activity
+            android:name=".notesserver.NotesServerLoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Wristotle" />
+
+        <!-- Browser-login fallback: receives rust_note's app redirect. Disabled
+             until the user picks "log in with browser", then disabled again,
+             so it never competes with the rust-note app for this scheme. -->
+        <activity
+            android:name=".notesserver.NotesServerRedirectActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dev.rustnote.app" android:host="auth" />
             </intent-filter>
         </activity>
 

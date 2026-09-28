@@ -3,6 +3,7 @@
 
 package com.lazydevs.wristotle.tasks
 
+import com.lazydevs.wristotle.notesserver.RemoteSyncHooks
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -14,6 +15,9 @@ import kotlinx.coroutines.flow.Flow
  * methods are surfaced as-is with handler-friendly names.
  */
 class TaskRepository(private val dao: TaskDao) {
+
+    /** Set when the notes-server sync is wired; null keeps tasks purely local. */
+    var syncHooks: RemoteSyncHooks? = null
 
     /** Live stream of pending tasks for the Tasks tab + watch list view. */
     fun observePending(): Flow<List<TaskEntity>> = dao.observePending()
@@ -28,8 +32,8 @@ class TaskRepository(private val dao: TaskDao) {
      * Create a new pending task. Returns the row id (used by the watch
      * "task added — id N" path in Phase B).
      */
-    suspend fun add(text: String, source: String, nowMs: Long = System.currentTimeMillis()): Long =
-        dao.insert(
+    suspend fun add(text: String, source: String, nowMs: Long = System.currentTimeMillis()): Long {
+        val id = dao.insert(
             TaskEntity(
                 text = text,
                 completed = false,
@@ -38,6 +42,14 @@ class TaskRepository(private val dao: TaskDao) {
                 source = source,
             )
         )
+        syncHooks?.onLocalCreate()
+        return id
+    }
+
+    /** Pull fresh tasks from the notes server first (bounded; no-op when signed out). */
+    suspend fun refreshFromServer(timeoutMs: Long = 3_000) {
+        syncHooks?.refreshIfStale(timeoutMs)
+    }
 
     /** Snapshot of pending tasks, newest first. */
     suspend fun listPending(): List<TaskEntity> = dao.listPending()
@@ -59,17 +71,26 @@ class TaskRepository(private val dao: TaskDao) {
 
     suspend fun markCompleted(id: Long, nowMs: Long = System.currentTimeMillis()) {
         dao.markCompleted(id, nowMs)
+        syncHooks?.onTaskDoneChanged(id, done = true)
     }
 
     suspend fun markPending(id: Long) {
         dao.markPending(id)
+        syncHooks?.onTaskDoneChanged(id, done = false)
     }
 
     suspend fun delete(id: Long) {
+        syncHooks?.onTaskDeleting(id)
         dao.deleteById(id)
     }
 
+    /** With the notes server connected, "clear all" removes the tasks
+     *  shown here from their daily notes one by one. */
     suspend fun deleteAll() {
+        if (syncHooks?.isActive == true) {
+            dao.listAll().forEach { delete(it.id) }
+            return
+        }
         dao.deleteAll()
     }
 
