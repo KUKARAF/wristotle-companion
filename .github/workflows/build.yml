@@ -1,0 +1,156 @@
+# Builds a signed release APK on every push and publishes it as a GitHub
+# release. Pushes to `main` produce a regular release; pushes to any other
+# branch produce a pre-release (handy for testing feature branches).
+#
+# Required repository secrets:
+#   WRISTOTLE_KEYSTORE_BASE64    base64-encoded release keystore
+#   WRISTOTLE_KEYSTORE_PASSWORD  keystore password
+#   WRISTOTLE_KEY_ALIAS          key alias
+#   WRISTOTLE_KEY_PASSWORD       key password
+#
+# The upstream Codeberg pipeline lives in .forgejo/ and is untouched.
+
+name: Build & release APK
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['**']
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Compute version
+        id: version
+        shell: bash
+        run: |
+          set -eu
+          BASE_NAME=$(sed -nE 's/.*versionName\s*=\s*"([^"]+)".*/\1/p' app/build.gradle.kts | head -1)
+          BASE_CODE=$(sed -nE 's/.*versionCode\s*=\s*([0-9]+).*/\1/p' app/build.gradle.kts | head -1)
+          RUN=${GITHUB_RUN_NUMBER}
+          BRANCH="${GITHUB_REF_NAME}"
+          SLUG=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g')
+          # Monotonic across upstream bumps: 1.22.0 (12200) run 7 -> 122000007.
+          CODE=$((BASE_CODE * 10000 + RUN % 10000))
+          if [ "$BRANCH" = "main" ]; then
+            NAME="${BASE_NAME}-osm.${RUN}"
+            TAG="v${NAME}"
+            PRERELEASE=false
+          else
+            NAME="${BASE_NAME}-${SLUG}.${RUN}"
+            TAG="v${NAME}"
+            PRERELEASE=true
+          fi
+          sed -i -E "s/(versionCode\s*=\s*)[0-9]+/\1${CODE}/; s/(versionName\s*=\s*)\"[^\"]+\"/\1\"${NAME}\"/" app/build.gradle.kts
+          grep -nE 'versionCode|versionName' app/build.gradle.kts | grep -v '//'
+          {
+            echo "name=$NAME"
+            echo "code=$CODE"
+            echo "tag=$TAG"
+            echo "prerelease=$PRERELEASE"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install pinned NDK + CMake
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;30.0.14904198" "cmake;3.22.1" > /dev/null
+
+      - name: Cache native build outputs
+        uses: actions/cache@v4
+        with:
+          path: speech-whisper/.cxx
+          key: cxx-${{ runner.os }}-${{ hashFiles('.gitmodules', 'speech-whisper/src/main/cpp/CMakeLists.txt', 'speech-whisper/src/main/cpp/*.cpp', 'speech-whisper/build.gradle.kts') }}-${{ github.sha }}
+          restore-keys: |
+            cxx-${{ runner.os }}-${{ hashFiles('.gitmodules', 'speech-whisper/src/main/cpp/CMakeLists.txt', 'speech-whisper/src/main/cpp/*.cpp', 'speech-whisper/build.gradle.kts') }}-
+
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.WRISTOTLE_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          test -s "$RUNNER_TEMP/release.keystore"
+
+      - name: Build release APK
+        env:
+          WRISTOTLE_KEYSTORE_FILE: ${{ runner.temp }}/release.keystore
+          WRISTOTLE_KEYSTORE_PASSWORD: ${{ secrets.WRISTOTLE_KEYSTORE_PASSWORD }}
+          WRISTOTLE_KEY_ALIAS: ${{ secrets.WRISTOTLE_KEY_ALIAS }}
+          WRISTOTLE_KEY_PASSWORD: ${{ secrets.WRISTOTLE_KEY_PASSWORD }}
+        run: ./gradlew --stacktrace :app:assembleRelease
+
+      - name: Stage APK + checksum
+        run: |
+          set -eu
+          APK="wristotle-companion-${{ steps.version.outputs.name }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          sha256sum "$APK" > sha256sums.txt
+          cat sha256sums.txt
+          echo "APK=$APK" >> "$GITHUB_ENV"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK }}
+          path: |
+            ${{ env.APK }}
+            sha256sums.txt
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        shell: bash
+        run: |
+          set -eu
+          PREV_TAG=$(gh release list --limit 20 --json tagName,isPrerelease \
+            --jq "[.[] | select(.isPrerelease == ${PRERELEASE})][0].tagName // empty")
+          if [ -n "$PREV_TAG" ] && git fetch --quiet origin "refs/tags/${PREV_TAG}:refs/tags/${PREV_TAG}" 2>/dev/null; then
+            CHANGES=$(git log "${PREV_TAG}..HEAD" --no-merges --pretty=format:'- %s' | head -50)
+          else
+            CHANGES=$(git log -10 --no-merges --pretty=format:'- %s')
+          fi
+          NOTES=$(printf 'Built from `%s` @ %s.\n\n%s\n' "${GITHUB_REF_NAME}" "$(git rev-parse --short HEAD)" "${CHANGES:-- (no changes)}")
+          FLAGS=(--target "$GITHUB_SHA" --title "Wristotle Companion ${{ steps.version.outputs.name }}" --notes "$NOTES")
+          if [ "$PRERELEASE" = "true" ]; then FLAGS+=(--prerelease); else FLAGS+=(--latest); fi
+          gh release create "$TAG" "$APK" sha256sums.txt "${FLAGS[@]}"
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests (JVM only, no native build)
+        run: ./gradlew -PskipNativeBuild=true :app:testDebugUnitTest :wristotle-core:testAndroidHostTest
