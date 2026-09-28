@@ -11,6 +11,7 @@ import com.lazydevs.wristotle.notes.NoteDao
 import com.lazydevs.wristotle.tasks.TaskDao
 import com.lazydevs.wristotle.tasks.TaskEntity
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,7 @@ import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "NotesServerSync"
@@ -85,7 +87,7 @@ class NotesServerSync(
     val status: StateFlow<NotesServerStatus> = _status.asStateFlow()
 
     @Volatile private var syncRequested = false
-    @Volatile private var workerRunning = false
+    private val workerRunning = AtomicBoolean(false)
 
     override val isActive: Boolean get() = auth.token != null
 
@@ -94,7 +96,8 @@ class NotesServerSync(
         // what uploads pre-existing local notes + tasks the first time).
         scope.launch {
             auth.account.distinctUntilChangedBy { it?.token }.collect { account ->
-                if (account != null) requestSync() else _status.value = NotesServerStatus()
+                // Keep lastError on sign-out so "session expired" stays visible.
+                if (account != null) requestSync() else _status.update { it.copy(syncing = false) }
             }
         }
         scope.launch {
@@ -117,8 +120,7 @@ class NotesServerSync(
     fun requestSync() {
         if (!isActive) return
         syncRequested = true
-        if (workerRunning) return
-        workerRunning = true
+        if (!workerRunning.compareAndSet(false, true)) return
         scope.launch {
             try {
                 while (syncRequested) {
@@ -127,7 +129,7 @@ class NotesServerSync(
                     mutex.withLock { runSync() }
                 }
             } finally {
-                workerRunning = false
+                workerRunning.set(false)
             }
             if (syncRequested) requestSync()
         }
@@ -138,12 +140,17 @@ class NotesServerSync(
     suspend fun syncIfStale(maxAgeMs: Long = STALE_MS, timeoutMs: Long = 5_000) {
         if (!isActive) return
         if (System.currentTimeMillis() - _status.value.lastSuccessMs < maxAgeMs) return
-        withTimeoutOrNull(timeoutMs) { mutex.withLock { runSync() } }
+        // The sync itself runs in the app scope: a caller giving up must never
+        // cancel it half-way (e.g. after a POST but before the link is saved,
+        // which would duplicate the note on the next run).
+        val job = scope.async { mutex.withLock { runSync() } }
+        withTimeoutOrNull(timeoutMs) { job.await() }
     }
 
     suspend fun logout() {
         api.logout()
         auth.clear()
+        _status.value = NotesServerStatus()
     }
 
     // ---------------------------------------------------------------- hooks
@@ -266,8 +273,8 @@ class NotesServerSync(
             try {
                 applyOp(op)
             } catch (e: NotesServerHttpException) {
-                // Auth / transient server trouble: keep the op, abort this sync.
-                if (e.status == 401 || e.status == 408 || e.status == 429 || e.status >= 500) throw e
+                // Auth / conflict / transient server trouble: keep the op, abort this sync.
+                if (e.status == 401 || e.status == 408 || e.status == 409 || e.status == 429 || e.status >= 500) throw e
                 Log.w(TAG, "dropping op ${op.kind} on ${op.noteId}: ${e.message}")
             }
             syncDao.deleteOps(listOf(op.id))
