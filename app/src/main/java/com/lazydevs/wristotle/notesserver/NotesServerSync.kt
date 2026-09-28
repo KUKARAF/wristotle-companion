@@ -72,8 +72,7 @@ data class NotesServerStatus(
  * unsent local changes.
  */
 class NotesServerSync(
-    private val context: Context,
-    private val auth: NotesServerAuth,
+    private val auth: NotesServerSession,
     private val api: NotesServerApi,
     private val syncDao: SyncDao,
     private val noteDao: NoteDao,
@@ -91,7 +90,7 @@ class NotesServerSync(
 
     override val isActive: Boolean get() = auth.token != null
 
-    fun start() {
+    fun start(context: Context) {
         // Sign-in / sign-out edge: sync immediately on sign-in (this is also
         // what uploads pre-existing local notes + tasks the first time).
         scope.launch {

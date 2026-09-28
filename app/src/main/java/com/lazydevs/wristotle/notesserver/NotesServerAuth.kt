@@ -11,25 +11,32 @@ import kotlinx.coroutines.flow.asStateFlow
 /** Who we're signed in as on the notes server. */
 data class NotesServerAccount(val token: String, val label: String)
 
+/** What the sync engine needs from the sign-in state (fakeable in tests). */
+interface NotesServerSession {
+    val account: StateFlow<NotesServerAccount?>
+    val token: String?
+    fun clear()
+}
+
 /**
  * Persists the rust_note device token. The token is opaque, slides to 90
  * days after last use and has no refresh flow — a 401 means "log in again".
  * Stored in app-private prefs, like the MCP server credentials.
  */
-class NotesServerAuth(context: Context) {
+class NotesServerAuth(context: Context) : NotesServerSession {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _account = MutableStateFlow(load())
-    val account: StateFlow<NotesServerAccount?> = _account.asStateFlow()
+    override val account: StateFlow<NotesServerAccount?> = _account.asStateFlow()
 
-    val token: String? get() = _account.value?.token
+    override val token: String? get() = _account.value?.token
 
     fun save(token: String, label: String) {
         prefs.edit().putString(KEY_TOKEN, token).putString(KEY_LABEL, label).apply()
         _account.value = NotesServerAccount(token, label)
     }
 
-    fun clear() {
+    override fun clear() {
         prefs.edit().clear().apply()
         _account.value = null
     }

@@ -639,7 +639,6 @@ class WristotleApplication : Application() {
         // to/from notes.osmosis.page while signed in.
         notesServerAuth = com.lazydevs.wristotle.notesserver.NotesServerAuth(this)
         notesServerSync = com.lazydevs.wristotle.notesserver.NotesServerSync(
-            context = this,
             auth = notesServerAuth,
             api = com.lazydevs.wristotle.notesserver.NotesServerApi(tokenProvider = { notesServerAuth.token }),
             syncDao = com.lazydevs.wristotle.notesserver.SyncDatabase.build(this).syncDao(),
@@ -650,7 +649,7 @@ class WristotleApplication : Application() {
         )
         noteRepository.syncHooks = notesServerSync
         taskRepository.syncHooks = notesServerSync
-        notesServerSync.start()
+        notesServerSync.start(this)
         appScope.launch { noteRepository.prune() }
 
         tasksSyncSettings = com.lazydevs.wristotle.speech.nlu.settings.FileSyncSettings(
