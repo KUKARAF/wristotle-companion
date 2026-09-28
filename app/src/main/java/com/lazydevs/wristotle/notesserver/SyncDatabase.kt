@@ -3,6 +3,7 @@
 package com.lazydevs.wristotle.notesserver
 
 import android.content.Context
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -12,6 +13,9 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.Update
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * Local note row ↔ server note id. A local note without a link has never
@@ -42,7 +46,14 @@ data class TaskLink(
 /**
  * Queued remote mutation that can't be derived from local state alone
  * (the local row may already be gone, or the op is a delta like an
- * append). Creates are not queued — an unlinked local row *is* the op.
+ * append). Note/task creates are not queued — an unlinked local row *is*
+ * the op.
+ *
+ * Task ops stay queued after they're applied ([verifyUntilMs] > 0) until
+ * `/api/todos` — which reads the live web-editor copy — shows the change.
+ * If the daily note is open in rust_note's editor, the editor's autosave
+ * overwrites our REST write; the op is then re-applied (idempotently) on
+ * later syncs until it sticks or the window runs out.
  */
 @Entity(tableName = "pending_ops")
 data class PendingOp(
@@ -53,6 +64,10 @@ data class PendingOp(
     val rawText: String = "",
     val text: String = "",
     val createdAtMs: Long = System.currentTimeMillis(),
+    /** 0 = not applied yet; otherwise applied and awaiting confirmation until this time. */
+    @ColumnInfo(defaultValue = "0") val verifyUntilMs: Long = 0,
+    /** TASK_CREATE: the checkbox state the line was written with. */
+    @ColumnInfo(defaultValue = "0") val done: Boolean = false,
 ) {
     companion object {
         const val NOTE_APPEND = "note_append"
@@ -60,6 +75,8 @@ data class PendingOp(
         const val TASK_DONE = "task_done"
         const val TASK_REOPEN = "task_reopen"
         const val TASK_DELETE = "task_delete"
+        const val TASK_CREATE = "task_create"
+        val TASK_KINDS = setOf(TASK_DONE, TASK_REOPEN, TASK_DELETE, TASK_CREATE)
     }
 }
 
@@ -95,6 +112,9 @@ interface SyncDao {
     @Query("SELECT * FROM pending_ops ORDER BY id")
     suspend fun pendingOps(): List<PendingOp>
 
+    @Update
+    suspend fun updateOp(op: PendingOp)
+
     @Query("SELECT COUNT(*) FROM pending_ops")
     suspend fun pendingOpCount(): Int
 
@@ -113,7 +133,7 @@ interface SyncDao {
 
 @Database(
     entities = [NoteLink::class, TaskLink::class, PendingOp::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class SyncDatabase : RoomDatabase() {
@@ -122,6 +142,14 @@ abstract class SyncDatabase : RoomDatabase() {
     companion object {
         fun build(context: Context): SyncDatabase =
             Room.databaseBuilder(context.applicationContext, SyncDatabase::class.java, "wristotle-notes-server.db")
+                .addMigrations(MIGRATION_1_2)
                 .build()
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE pending_ops ADD COLUMN verifyUntilMs INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE pending_ops ADD COLUMN done INTEGER NOT NULL DEFAULT 0")
+            }
+        }
     }
 }

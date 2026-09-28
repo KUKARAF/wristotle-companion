@@ -41,6 +41,10 @@ import java.time.LocalDate
  *   RUSTNOTE_ENV=dev RUSTNOTE_BIND_ADDR=127.0.0.1:18080 cargo run -p server
  *   NOTES_SERVER_IT_URL=http://127.0.0.1:18080 ./gradlew :app:testDebugUnitTest \
  *       --tests '*NotesServerSyncIntegrationTest*'
+ *
+ * Set `NOTES_SERVER_IT_RUST_NOTE_WEB=<rust_note>/web` (with node_modules
+ * installed) to also run the open-web-editor scenario, driven by
+ * tools/notes-server-editor-sim.cjs.
  */
 class NotesServerSyncIntegrationTest {
 
@@ -55,6 +59,7 @@ class NotesServerSyncIntegrationTest {
     private lateinit var tasks: TaskRepository
     private lateinit var sync: NotesServerSync
     private val session = FakeSession()
+    private val syncDao = FakeSyncDao()
     private val daily = NoteMarkdown.dailyNoteId(LocalDate.now())
 
     @Before fun setUp() {
@@ -68,7 +73,7 @@ class NotesServerSyncIntegrationTest {
         sync = NotesServerSync(
             auth = session,
             api = NotesServerApi(tokenProvider = { session.token }, baseUrl = baseUrl),
-            syncDao = FakeSyncDao(),
+            syncDao = syncDao,
             noteDao = noteDao,
             taskDao = taskDao,
             deleteLocalNote = notes::deleteLocalOnly,
@@ -157,6 +162,72 @@ class NotesServerSyncIntegrationTest {
         syncNow()
         val created = api.listNotes().single { it.id.startsWith("wristotle/") }
         assertEquals("Remember the milk\n", serverContent(created.id))
+
+        editorOpenScenario()
+    }
+
+    /**
+     * Today's daily note is open in the web editor: our REST writes don't
+     * reach the editor's live copy and its autosave overwrites them. The
+     * task must survive locally and end up on the server once, after the
+     * editor closes.
+     */
+    private suspend fun editorOpenScenario() {
+        val webDir = System.getenv("NOTES_SERVER_IT_RUST_NOTE_WEB") ?: return
+        val text = "added while editor open"
+        EditorSim(webDir, baseUrl!!.replaceFirst("http", "ws"), daily).use { editor ->
+            editor.await("ready")
+            val id = tasks.add(text, "watch")
+            syncNow()
+            assertNotNull("local task kept", taskDao.findById(id))
+            assertTrue(syncDao.pendingOps().any { it.kind == PendingOp.TASK_CREATE })
+
+            editor.send("type", expect = "typed")
+            Thread.sleep(8_000) // room autosave debounce is 5 s
+            assertFalse("editor autosave clobbered the line", serverContent(daily)!!.contains(text))
+
+            syncNow() // re-applied
+            assertNotNull(taskDao.findById(id))
+            tasks.markCompleted(id)
+            syncNow()
+            assertTrue("local state is the user's intent", taskDao.findById(id)!!.completed)
+            editor.send("close", expect = "closed")
+        }
+        Thread.sleep(12_000) // 10 s room reap grace + final flush
+        syncNow()
+        syncNow()
+        val content = serverContent(daily)!!
+        assertEquals(content, 1, Regex(Regex.escape(text)).findAll(content).count())
+        assertTrue(content, content.contains("- [x] $text"))
+        assertTrue("all ops confirmed", syncDao.pendingOps().isEmpty())
+        assertTrue(taskDao.findById(taskDao.rows.single { it.text == text }.id)!!.completed)
+    }
+
+    private class EditorSim(webDir: String, wsBase: String, noteId: String) : AutoCloseable {
+        private val script = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .map { java.io.File(it, "tools/notes-server-editor-sim.cjs") }.first { it.exists() }
+        private val process = ProcessBuilder("node", script.path, webDir, wsBase, noteId)
+            .redirectErrorStream(true).start()
+        private val out = process.inputStream.bufferedReader()
+        private val input = process.outputStream.bufferedWriter()
+
+        fun await(line: String) {
+            val deadline = System.currentTimeMillis() + 15_000
+            while (System.currentTimeMillis() < deadline) {
+                val got = out.readLine() ?: break
+                if (got.trim() == line) return
+            }
+            throw AssertionError("editor sim never printed '$line'")
+        }
+
+        fun send(cmd: String, expect: String) {
+            input.write(cmd); input.newLine(); input.flush()
+            await(expect)
+        }
+
+        override fun close() {
+            process.destroy()
+        }
     }
 
     // ------------------------------------------------------------------ fakes
@@ -225,6 +296,10 @@ class NotesServerSyncIntegrationTest {
         override suspend fun deleteTaskLink(localId: Long) { tasks.remove(localId) }
         override suspend fun enqueue(op: PendingOp): Long = nextOp++.also { ops += op.copy(id = it) }
         override suspend fun pendingOps() = ops.toList()
+        override suspend fun updateOp(op: PendingOp) {
+            val i = ops.indexOfFirst { it.id == op.id }
+            if (i >= 0) ops[i] = op
+        }
         override suspend fun pendingOpCount() = ops.size
         override suspend fun deleteOps(ids: List<Long>) { ops.removeAll { it.id in ids } }
         override suspend fun clearNoteLinks() = notes.clear()

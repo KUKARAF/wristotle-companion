@@ -87,6 +87,7 @@ class NotesServerSync(
 
     @Volatile private var syncRequested = false
     private val workerRunning = AtomicBoolean(false)
+    private val verifyRetryScheduled = AtomicBoolean(false)
 
     override val isActive: Boolean get() = auth.token != null
 
@@ -268,15 +269,29 @@ class NotesServerSync(
     }
 
     private suspend fun pushOps() {
+        val now = System.currentTimeMillis()
         for (op in syncDao.pendingOps()) {
+            if (op.verifyUntilMs != 0L && now > op.verifyUntilMs) {
+                Log.w(TAG, "giving up on ${op.kind} '${op.rawText}' in ${op.noteId}: never showed up in /api/todos")
+                syncDao.deleteOps(listOf(op.id))
+                continue
+            }
             try {
+                // Task ops are idempotent, so re-applying one that already
+                // landed is a GET with no PUT.
                 applyOp(op)
             } catch (e: NotesServerHttpException) {
                 // Auth / conflict / transient server trouble: keep the op, abort this sync.
                 if (e.status == 401 || e.status == 408 || e.status == 409 || e.status == 429 || e.status >= 500) throw e
                 Log.w(TAG, "dropping op ${op.kind} on ${op.noteId}: ${e.message}")
+                syncDao.deleteOps(listOf(op.id))
+                continue
             }
-            syncDao.deleteOps(listOf(op.id))
+            when {
+                op.kind !in PendingOp.TASK_KINDS -> syncDao.deleteOps(listOf(op.id))
+                // Confirmed (or re-applied) against the live copy in pullTasks.
+                op.verifyUntilMs == 0L -> syncDao.updateOp(op.copy(verifyUntilMs = now + VERIFY_WINDOW_MS))
+            }
         }
     }
 
@@ -287,6 +302,10 @@ class NotesServerSync(
             PendingOp.TASK_DONE -> editNote(op.noteId) { NoteMarkdown.setDone(it, op.line, op.rawText, done = true) }
             PendingOp.TASK_REOPEN -> editNote(op.noteId) { NoteMarkdown.setDone(it, op.line, op.rawText, done = false) }
             PendingOp.TASK_DELETE -> editNote(op.noteId) { NoteMarkdown.removeTask(it, op.line, op.rawText) }
+            PendingOp.TASK_CREATE -> editNote(op.noteId) { content ->
+                if (NoteMarkdown.locate(content.split('\n'), op.line, op.rawText) != null) null
+                else NoteMarkdown.appendTasks(content, listOf(op.rawText to op.done)).first
+            }
             else -> Log.w(TAG, "unknown op kind ${op.kind}")
         }
     }
@@ -325,9 +344,18 @@ class NotesServerSync(
             lineNumbers = lines
             updated
         } ?: throw NotesServerHttpException(404, "daily note $noteId disappeared")
+        val verifyUntil = System.currentTimeMillis() + VERIFY_WINDOW_MS
         unlinked.forEachIndexed { i, task ->
             val link = TaskLink(task.id, noteId, lineNumbers[i], NoteMarkdown.taskLineText(task.text))
             syncDao.putTaskLink(link)
+            // Already written; kept until /api/todos confirms the line survived
+            // (an open web editor would otherwise silently drop it).
+            syncDao.enqueue(
+                PendingOp(
+                    kind = PendingOp.TASK_CREATE, noteId = noteId, line = link.line, rawText = link.rawText,
+                    done = task.completed, verifyUntilMs = verifyUntil,
+                )
+            )
             // Changed locally while we were uploading (no op was queued
             // because the row wasn't linked yet): reconcile now.
             val current = taskDao.findById(task.id)
@@ -374,10 +402,15 @@ class NotesServerSync(
     private suspend fun pullTasks() {
         val today = LocalDate.now()
         val cutoff = today.minusDays(DONE_WINDOW_DAYS)
-        val todos = api.todos(scope = "diary", includeDone = true).filter { todo ->
+        // /api/todos reads the live web-editor copy when a note is open, so
+        // it's the truth about what will survive the editor's next autosave.
+        val allTodos = api.todos(scope = "diary", includeDone = true)
+        confirmTaskOps(allTodos)
+        val todos = allTodos.filter { todo ->
             !todo.done || (todo.date?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today) >= cutoff
         }
         val links = syncDao.taskLinks()
+        // Keys with unconfirmed ops keep their local state (the user's intent).
         val busy = syncDao.pendingOps().mapTo(HashSet()) { it.noteId to it.rawText.trim() }
         val byKey = links.groupBy { it.noteId to it.rawText.trim() }.mapValues { it.value.toMutableList() }
         val seen = HashSet<Long>()
@@ -401,6 +434,8 @@ class NotesServerSync(
                 continue
             }
             if (link != null) syncDao.deleteTaskLink(link.localId)
+            // Deleted here, delete not confirmed yet — don't resurrect it.
+            if (key in busy) continue
             val id = taskDao.insert(
                 TaskEntity(
                     text = display,
@@ -417,6 +452,36 @@ class NotesServerSync(
             if (link.localId in seen || (link.noteId to link.rawText.trim()) in busy) continue
             taskDao.deleteById(link.localId)
             syncDao.deleteTaskLink(link.localId)
+        }
+    }
+
+    /** Drops applied task ops whose effect is visible in [todos]. */
+    private suspend fun confirmTaskOps(todos: List<RemoteTodo>) {
+        val states = todos.groupBy({ it.noteId to it.text.trim() }, { it.done })
+        val confirmed = syncDao.pendingOps()
+            .filter { it.kind in PendingOp.TASK_KINDS && it.verifyUntilMs != 0L }
+            .filter { op ->
+                val seen = states[op.noteId to op.rawText.trim()]
+                when (op.kind) {
+                    PendingOp.TASK_CREATE -> seen != null
+                    PendingOp.TASK_DONE -> seen?.contains(true) == true
+                    PendingOp.TASK_REOPEN -> seen?.contains(false) == true
+                    PendingOp.TASK_DELETE -> seen == null
+                    else -> false
+                }
+            }
+        if (confirmed.isNotEmpty()) syncDao.deleteOps(confirmed.map { it.id })
+        if (syncDao.pendingOps().any { it.verifyUntilMs != 0L }) scheduleVerifyRetry()
+    }
+
+    /** One follow-up sync while ops await confirmation (the editor autosaves
+     *  within ~30 s of going idle, so a couple of minutes is plenty). */
+    private fun scheduleVerifyRetry() {
+        if (!verifyRetryScheduled.compareAndSet(false, true)) return
+        scope.launch {
+            delay(VERIFY_RETRY_MS)
+            verifyRetryScheduled.set(false)
+            requestSync()
         }
     }
 
@@ -442,5 +507,7 @@ class NotesServerSync(
         private const val MAX_CONFLICT_RETRIES = 4
         private const val MAX_PULLED_NOTES = 300
         private const val DONE_WINDOW_DAYS = 14L
+        private const val VERIFY_WINDOW_MS = 30 * 60_000L
+        private const val VERIFY_RETRY_MS = 2 * 60_000L
     }
 }
